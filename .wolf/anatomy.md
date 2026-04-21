@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T22:34:40.957Z
-> Files: 1021 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T23:07:12.559Z
+> Files: 1029 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -41,6 +41,10 @@
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` (~238 tok)
+
+## ../../../.claude/skills/bead-chain/
+
+- `SKILL.md` — Bead Chain — Gated Development Workflow (~3436 tok)
 
 ## ../../../.config/pai/
 
@@ -1496,6 +1500,12 @@
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~869 tok)
 - `vouch-manage.yml` — CI: "Vouch: Manage by Issue" (~214 tok)
 
+## .develop/
+
+- `provmon-drift-detection-phase-b.md` — Phase B Analysis: provmon-drift-detection (~7749 tok)
+- `provmon-drift-detection-quality-report.md` — Quality Review: provmon-drift-detection implementation plan (~1040 tok)
+- `provmon-drift-detection.json` (~665 tok)
+
 ## .develop/seeder-specs/
 
 - `amp-rules.yaml` (~1942 tok)
@@ -1721,7 +1731,7 @@
 
 - `trust_test.go` — TestTrustTier_String, TestUserFacingBadge, TestTrustBadge_LabelAndGlyph, TestTrustDescription, TestC (~1586 tok)
 - `trust.go` — UserFacingBadge, TrustDescription (~1467 tok)
-- `types.go` — Struct: RegistrySource (~1789 tok)
+- `types.go` — Struct: RegistrySource (~2213 tok)
 
 ## cli/internal/config/
 
@@ -1812,7 +1822,7 @@
 - `noninteractive_test.go` — TestExitCodeFor_AllFourFailureClasses, TestExitCodeFor_NoneReturnsSuccess, TestExitCodeFor_UnknownRe (~1947 tok)
 - `noninteractive.go` — — non-interactive failure classification (ADR 0007 G-18). (~1928 tok)
 - `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~3368 tok)
-- `producer.go` — EnrichFromMOATManifests, ScanAndEnrich (~2589 tok)
+- `producer.go` — EnrichFromMOATManifests, ScanAndEnrich (~3096 tok)
 - `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
 - `rekor.go` — Struct: rekorEntry (~860 tok)
 - `revocation_test.go` — TestRevocationStatus_String, TestRevocationSet_AddFromManifest_RegistrySourceBlocks, TestRevocationS (~3692 tok)
@@ -1900,18 +1910,21 @@
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14666 tok)
-- `app_update.go` — Declares checkbox (~4658 tok)
+- `app_update.go` — Declares checkbox (~4705 tok)
 - `app_view.go` (~958 tok)
 - `app.go` — Struct: App (~4219 tok)
+- `cards.go` — Struct: cardData (~3324 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
+- `contents.go` — Struct: contentGroup (~2275 tok)
 - `cross_model_transitions_test.go` — TestCrossModel_InstallFlowPreservesLibraryTabAndSyncsItems, TestCrossModel_AddWizardEscPreservesCont (~2362 tok)
 - `doc.go` — is the terminal UI for syllago. (~35 tok)
 - `explorer_test.go` — TestExplorer_MetaBarTotal_IsLinesPlusSeparator, TestExplorer_DetailTreeWidth_Responsive, TestExplore (~5539 tok)
 - `explorer.go` — Struct: itemSelectedMsg (~7177 tok)
 - `gallery_mouse_test.go` — TestGalleryMouse_CardClickSelects, TestGalleryMouse_CardDoubleClickDrills, TestGalleryMouse_CardClic (~2277 tok)
 - `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~2585 tok)
-- `gallery.go` — Struct: cardSelectedMsg (~3546 tok)
+- `gallery_trust_test.go` — TestRegistryTrustGlyph_States, TestRegistryTrustSummaryFrom_NilReturnsZero, TestRegistryTrustSummary (~3073 tok)
+- `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
 - `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1882 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
@@ -1929,8 +1942,9 @@
 - `table.go` — Struct: tableModel (~6120 tok)
 - `testhelpers_test.go` (~1816 tok)
 - `topbar.go` — Struct: tabGroup (~2912 tok)
+- `trust_debug_test.go` — TestDebugRegistryTrustZone (~386 tok)
 - `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~3388 tok)
-- `trust_inspector.go` — Struct: RegistryTrustSummary (~2227 tok)
+- `trust_inspector.go` — Struct: RegistryTrustSummary (~2507 tok)
 
 ## cli/internal/updater/
 
@@ -1953,7 +1967,7 @@
 - `2026-04-20-moat-tui-trust-surfacing-spec.md` — MOAT Phase 2c — TUI Trust Surfacing (Spec) (~11479 tok)
 - `2026-04-20-test-quality-audit.md` — Test Quality Audit — 2026-04-20 (~5354 tok)
 - `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
-- `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17320 tok)
+- `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17385 tok)
 
 ## docs/provider-capabilities/
 

@@ -484,6 +484,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case registryTrustInspectMsg:
+		if msg.card != nil && msg.card.trust != nil {
+			a.trustInspector.OpenForRegistry(registryTrustSummaryFrom(msg.card.trust))
+		}
+		return a, nil
+
 	case libraryCloseMsg:
 		a.updateNavState()
 		return a, nil

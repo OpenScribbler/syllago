@@ -1,77 +1,12 @@
 {
-  "session_id": "session-2026-04-21-1531",
-  "started": "2026-04-21T22:31:46.087Z",
-  "files_read": {
-    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md": {
-      "count": 9,
-      "tokens": 17320,
-      "first_read": "2026-04-21T22:31:47.338Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/provmon/manifest.go": {
-      "count": 2,
-      "tokens": 0,
-      "first_read": "2026-04-21T22:32:21.034Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/cmd/provider-monitor/main.go": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-21T22:32:40.166Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/table.go": {
-      "count": 1,
-      "tokens": 6120,
-      "first_read": "2026-04-21T22:32:52.097Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/moat-library-60x20.golden": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-04-21T22:33:06.323Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/provmon/checker.go": {
-      "count": 1,
-      "tokens": 1539,
-      "first_read": "2026-04-21T22:33:57.222Z"
-    }
-  },
-  "files_written": [
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_moat_test.go",
-      "action": "edit",
-      "tokens": 119,
-      "at": "2026-04-21T22:31:53.285Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
-      "action": "edit",
-      "tokens": 163,
-      "at": "2026-04-21T22:34:08.293Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
-      "action": "edit",
-      "tokens": 262,
-      "at": "2026-04-21T22:34:24.662Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
-      "action": "edit",
-      "tokens": 12,
-      "at": "2026-04-21T22:34:33.550Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
-      "action": "edit",
-      "tokens": 63,
-      "at": "2026-04-21T22:34:40.966Z"
-    }
-  ],
-  "edit_counts": {
-    "cli/internal/tui/golden_moat_test.go": 1,
-    "docs/plans/2026-04-21-provmon-drift-detection-implementation.md": 4
-  },
-  "anatomy_hits": 3,
-  "anatomy_misses": 3,
-  "repeated_reads_warned": 9,
+  "session_id": "session-2026-04-21-1608",
+  "started": "2026-04-21T23:08:14.196Z",
+  "files_read": {},
+  "files_written": [],
+  "edit_counts": {},
+  "anatomy_hits": 0,
+  "anatomy_misses": 0,
+  "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

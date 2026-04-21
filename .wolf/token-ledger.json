@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 3768748,
-    "total_reads": 2013,
-    "total_writes": 1675,
-    "total_sessions": 238,
-    "anatomy_hits": 664,
-    "anatomy_misses": 985,
-    "repeated_reads_blocked": 628,
-    "estimated_savings_vs_bare_cli": 2068761
+    "total_tokens_estimated": 3900294,
+    "total_reads": 2051,
+    "total_writes": 1720,
+    "total_sessions": 240,
+    "anatomy_hits": 691,
+    "anatomy_misses": 995,
+    "repeated_reads_blocked": 663,
+    "estimated_savings_vs_bare_cli": 2530779
   },
   "sessions": [
     {
@@ -24684,6 +24684,509 @@
         "writes_count": 11,
         "repeated_reads_blocked": 1,
         "anatomy_lookups": 15
+      }
+    },
+    {
+      "id": "session-2026-04-21-1531",
+      "started": "2026-04-21T22:31:46.087Z",
+      "ended": "2026-04-21T22:38:29.499Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 17316,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/manifest.go",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/provider-monitor/main.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/table.go",
+          "tokens_estimated": 6120,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/moat-library-60x20.golden",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/checker.go",
+          "tokens_estimated": 1539,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich.go",
+          "tokens_estimated": 1873,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 3546,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/cards.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_inspector.go",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",
+          "tokens_estimated": 1789,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/producer.go",
+          "tokens_estimated": 2589,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/checker_test.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/manifest.go",
+          "tokens_estimated": 3786,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/lockfile.go",
+          "tokens_estimated": 4766,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_moat_test.go",
+          "tokens_estimated": 119,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 163,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 12,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 63,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 89,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 101,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 52,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 75,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 67,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 114,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 39,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 64,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 166,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 135,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 175,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 231,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",
+          "tokens_estimated": 545,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection-quality-report.md",
+          "tokens_estimated": 1189,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection.json",
+          "tokens_estimated": 338,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/producer.go",
+          "tokens_estimated": 684,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 47506,
+        "output_tokens_estimated": 4829,
+        "reads_count": 15,
+        "writes_count": 24,
+        "repeated_reads_blocked": 16,
+        "anatomy_lookups": 11
+      }
+    },
+    {
+      "id": "session-2026-04-21-1542",
+      "started": "2026-04-21T22:42:26.783Z",
+      "ended": "2026-04-21T22:48:19.001Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection.json",
+          "tokens_estimated": 282,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 282,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-21-1542",
+      "started": "2026-04-21T22:42:26.783Z",
+      "ended": "2026-04-21T23:07:21.589Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_inspector.go",
+          "tokens_estimated": 2227,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 3546,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/library.go",
+          "tokens_estimated": 5703,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_update.go",
+          "tokens_estimated": 4658,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 17385,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/checker.go",
+          "tokens_estimated": 1539,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/manifest.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/checker_test.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/provider-monitor/main.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_test.go",
+          "tokens_estimated": 2585,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/formatdoc.go",
+          "tokens_estimated": 1614,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_moat_test.go",
+          "tokens_estimated": 1882,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/provmon/manifest_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/testhelpers_test.go",
+          "tokens_estimated": 1816,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/cards.go",
+          "tokens_estimated": 3324,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_mouse_test.go",
+          "tokens_estimated": 2277,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/confirm_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/install_mouse_test.go",
+          "tokens_estimated": 4562,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_debug_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_view.go",
+          "tokens_estimated": 958,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/bead-chain/SKILL.md",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection-phase-b.md",
+          "tokens_estimated": 7749,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection.json",
+          "tokens_estimated": 282,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 123,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 186,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 179,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_update.go",
+          "tokens_estimated": 84,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_inspector.go",
+          "tokens_estimated": 345,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_trust_test.go",
+          "tokens_estimated": 2598,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_trust_test.go",
+          "tokens_estimated": 195,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_debug_test.go",
+          "tokens_estimated": 368,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_debug_test.go",
+          "tokens_estimated": 85,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_debug_test.go",
+          "tokens_estimated": 33,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/trust_debug_test.go",
+          "tokens_estimated": 51,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_trust_test.go",
+          "tokens_estimated": 254,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_trust_test.go",
+          "tokens_estimated": 137,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery_trust_test.go",
+          "tokens_estimated": 610,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
+          "tokens_estimated": 118,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/bead-chain/SKILL.md",
+          "tokens_estimated": 468,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.claude/skills/bead-chain/SKILL.md",
+          "tokens_estimated": 81,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection-phase-b.md",
+          "tokens_estimated": 8856,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/provmon-drift-detection.json",
+          "tokens_estimated": 96,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 63780,
+        "output_tokens_estimated": 15149,
+        "reads_count": 23,
+        "writes_count": 20,
+        "repeated_reads_blocked": 19,
+        "anatomy_lookups": 16
       }
     }
   ],

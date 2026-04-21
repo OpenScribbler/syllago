@@ -1,0 +1,30 @@
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts                                        │
+│                                                           [a] Add registry   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ moat-registry                             Registry  1 items  Source: /tmp/...│
+│ Status: 1 items  0 Agents, 0 Commands, 0 Hooks, 0 MCP Servers, 0 Rules, 1 Ski│
+│                                     [S] Sync      [d] Remove      [e] Edit   │
+├──────────────────────────────────────────────────────┬───────────────────────┤
+│╭──────────────────────────╮                          │Name: moat-registry    │
+││✓ moat-registry           │                          │                       │
+││  0 Agents                │                          │Contents               │
+││  0 Commands              │                          │Trust                  │
+││  0 Hooks                 │                          │Tier: Signed           │
+││  0 MCP Servers           │                          │Issuer: Example Corp   │
+││  0 Rules                 │                          │Status: Fresh          │
+││  1 Skills                │                          │Items: 1 total · 1 veri│
+││Source: /tmp/fake         │                          │[t] Inspect trust      │
+│╰──────────────────────────╯                          │                       │
+│                                                      │Skills                 │
+│                                                      │  alpha-skill          │
+│                                                      │                       │
+│                                                      │                       │
+│                                                      │                       │
+│                                                      │                       │
+╰──────────────────────────────────────────────────────┴───────────────────────╯
+1/2/3 groups · tab items · arrows grid · enter select       syllago v0.0.0-test
+tab grid/contents · / search · a add · S sync · d remove · e edit · R refresh · ? help · q back

@@ -25,6 +25,12 @@ type cardData struct {
 	status   string                // "local", "registry", etc.
 	items    []catalog.ContentItem // items inside this card
 	path     string                // directory path for metadata editing
+
+	// Registry-scoped trust aggregate. Non-nil only for cards built from a
+	// MOAT-type registry whose manifest was parsed during enrichment. The
+	// gallery consumes this for the card trust glyph, sidebar Trust section,
+	// and [t]/click routing to the Trust Inspector.
+	trust *catalog.RegistryTrust
 }
 
 // allContentTypeLabels is the fixed list of content type labels shown on every card.
@@ -204,8 +210,20 @@ func (m cardGridModel) renderCard(index int) string {
 	innerH := fixedCardHeight - borderSize
 	var lines []string
 
-	// Name line
-	name := truncate(sanitizeLine(c.name), cardWidth)
+	// Name line — prepend aggregate trust glyph when a MOAT registry has
+	// something to report. The glyph is purely visual; clicks on the card
+	// body open the contents sidebar (existing behavior), and [t] or the
+	// sidebar Trust section (zone-marked separately) open the Trust
+	// Inspector.
+	glyph := registryTrustGlyph(c.trust)
+	nameBudget := cardWidth
+	if glyph != "" {
+		nameBudget -= 2 // glyph + space
+	}
+	name := truncate(sanitizeLine(c.name), nameBudget)
+	if glyph != "" {
+		name = glyph + " " + name
+	}
 	if isSelected && m.focused {
 		lines = append(lines, boldStyle.Render(name))
 	} else {
@@ -292,6 +310,9 @@ func buildLoadoutCards(items []catalog.ContentItem, cat *catalog.Catalog) []card
 }
 
 // buildRegistryCards creates card data from registry sources and catalog.
+// MOAT-type registries get a trust aggregate attached so the card can show
+// a trust glyph and the sidebar can render a Trust section. Non-MOAT
+// registries leave card.trust nil — no trust surfaces are drawn.
 func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) []cardData {
 	cards := make([]cardData, 0, len(sources))
 	for _, src := range sources {
@@ -329,9 +350,44 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 			}
 		}
 
+		if cat != nil {
+			if rt, ok := cat.RegistryTrusts[src.Name]; ok {
+				c.trust = rt
+			}
+		}
+
 		cards = append(cards, c)
 	}
 	return cards
+}
+
+// registryTrustGlyph returns the aggregate health glyph for a registry card.
+// Follows the AD-7 Panel C9 collapse rule for the library row badge, adapted
+// to registry aggregates:
+//
+//   - "R" if any item is recalled (hardest signal takes precedence).
+//   - "✓" if the registry is Fresh AND at least one item verified.
+//   - "⏰" if the registry is Stale, Expired, or Missing (user needs to sync).
+//   - ""  for non-MOAT registries or a Fresh MOAT registry with zero
+//     verified items (nothing to report).
+//
+// Kept deliberately narrow — the card glyph is a "is anything wrong here?"
+// signal, not a tier display. Full tier/issuer detail lives in the Trust
+// Inspector.
+func registryTrustGlyph(rt *catalog.RegistryTrust) string {
+	if rt == nil {
+		return ""
+	}
+	if rt.RecalledItems > 0 {
+		return "R"
+	}
+	if rt.Staleness != "" && rt.Staleness != "Fresh" {
+		return "\u23f0" // clock face — stale/expired/missing
+	}
+	if rt.VerifiedItems > 0 {
+		return "\u2713"
+	}
+	return ""
 }
 
 // ensureAllTypes returns a counts map that has all 6 content type labels,

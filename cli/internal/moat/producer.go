@@ -161,7 +161,8 @@ func EnrichFromMOATManifests(
 			continue
 		}
 
-		switch status := CheckRegistry(lf, reg.ManifestURI, m, now); status {
+		status := CheckRegistry(lf, reg.ManifestURI, m, now)
+		switch status {
 		case StalenessFresh:
 			EnrichCatalog(cat, reg.Name, m)
 		case StalenessStale, StalenessExpired:
@@ -171,9 +172,73 @@ func EnrichFromMOATManifests(
 			cat.Warnings = append(cat.Warnings,
 				fmt.Sprintf("MOAT cache returned unknown staleness status for registry %q; trust decisions disabled", reg.Name))
 		}
+
+		// Populate registry-level trust aggregate regardless of staleness so
+		// the TUI can render a card glyph and preview panel for every MOAT
+		// registry. Stale/Expired downgrade Tier to Unsigned (trust claim is
+		// not currently valid) but keep the rest of the manifest metadata so
+		// users can still see the registry identity.
+		attachRegistryTrust(cat, reg, m, lf, status)
 	}
 
 	return nil
+}
+
+// attachRegistryTrust records the registry-level aggregate on the catalog.
+// Counts iterate cat.Items post-EnrichCatalog so verified/recalled/private
+// reflect the same state the per-row glyphs will show. A Stale or Expired
+// registry gets Tier=Unsigned on the assumption that "cache says Signed but
+// the claim is too old to trust" is a Unsigned situation for UI purposes —
+// the Staleness string carries the nuance for the inspector.
+func attachRegistryTrust(
+	cat *catalog.Catalog,
+	reg *config.Registry,
+	m *Manifest,
+	lf *Lockfile,
+	status StalenessStatus,
+) {
+	if cat.RegistryTrusts == nil {
+		cat.RegistryTrusts = make(map[string]*catalog.RegistryTrust)
+	}
+
+	tier := catalog.TrustTierSigned
+	if status != StalenessFresh {
+		tier = catalog.TrustTierUnsigned
+	}
+
+	rt := &catalog.RegistryTrust{
+		Name:        reg.Name,
+		Tier:        tier,
+		Issuer:      m.RegistrySigningProfile.Issuer,
+		Subject:     m.RegistrySigningProfile.Subject,
+		Operator:    m.Operator,
+		ManifestURI: reg.ManifestURI,
+		Staleness:   status.String(),
+	}
+	if lf != nil {
+		if lockState, ok := lf.Registries[reg.ManifestURI]; ok {
+			rt.FetchedAt = lockState.FetchedAt
+		}
+	}
+
+	for _, item := range cat.Items {
+		if item.Registry != reg.Name {
+			continue
+		}
+		rt.TotalItems++
+		switch item.TrustTier {
+		case catalog.TrustTierSigned, catalog.TrustTierDualAttested:
+			rt.VerifiedItems++
+		}
+		if item.Recalled {
+			rt.RecalledItems++
+		}
+		if item.PrivateRepo {
+			rt.PrivateItems++
+		}
+	}
+
+	cat.RegistryTrusts[reg.Name] = rt
 }
 
 // manifestCachePathsFor constructs (manifestPath, bundlePath) under
