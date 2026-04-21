@@ -56,6 +56,14 @@ type App struct {
 	installWizard *installWizardModel // nil when not active
 	addWizard     *addWizardModel     // nil when not active
 
+	// Publisher-warn install gate: when the wizard emits an install for a
+	// publisher-revoked item, we stash the pending result here and open the
+	// shared confirmModal. On confirm, handleConfirmResult dispatches the
+	// stashed install; on cancel, it is cleared. Exactly one of pendingInstall
+	// / pendingInstallAll is non-nil at a time.
+	pendingInstall    *installResultMsg
+	pendingInstallAll *installAllResultMsg
+
 	// Dimensions
 	width, height int
 
