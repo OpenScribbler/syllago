@@ -32,6 +32,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.remove.height = ch
 		a.registryAdd.width = msg.Width
 		a.registryAdd.height = ch
+		a.trustInspector.SetSize(msg.Width, ch)
 		if a.installWizard != nil {
 			a.installWizard.width = msg.Width
 			a.installWizard.height = a.contentHeight()
@@ -88,6 +89,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.registryAdd.active {
 			var cmd tea.Cmd
 			a.registryAdd, cmd = a.registryAdd.Update(msg)
+			return a, cmd
+		}
+		if a.trustInspector.active {
+			var cmd tea.Cmd
+			a.trustInspector, cmd = a.trustInspector.Update(msg)
 			return a, cmd
 		}
 		if a.help.active {
@@ -166,6 +172,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.registryAdd, cmd = a.registryAdd.Update(msg)
+			return a, cmd
+		}
+
+		// Trust inspector modal captures all key input when active (except ctrl+c)
+		if a.trustInspector.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.trustInspector, cmd = a.trustInspector.Update(msg)
 			return a, cmd
 		}
 

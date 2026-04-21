@@ -39,17 +39,18 @@ type App struct {
 	projectRoot     string
 
 	// Sub-models
-	topBar      topBarModel
-	library     libraryModel  // Library tab: table + drill-in
-	explorer    explorerModel // Content/Loadout tabs: items list + preview
-	gallery     galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
-	helpBar     helpBarModel
-	modal       editModal        // reusable edit overlay (name + description)
-	confirm     confirmModal     // reusable confirm overlay (uninstall + simple confirms)
-	remove      removeModal      // multi-step remove overlay (library item removal)
-	help        helpOverlay      // keyboard shortcut reference (? key)
-	toast       toastModel       // bottom-right notification overlay
-	registryAdd registryAddModal // registry add overlay
+	topBar         topBarModel
+	library        libraryModel  // Library tab: table + drill-in
+	explorer       explorerModel // Content/Loadout tabs: items list + preview
+	gallery        galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
+	helpBar        helpBarModel
+	modal          editModal           // reusable edit overlay (name + description)
+	confirm        confirmModal        // reusable confirm overlay (uninstall + simple confirms)
+	remove         removeModal         // multi-step remove overlay (library item removal)
+	help           helpOverlay         // keyboard shortcut reference (? key)
+	toast          toastModel          // bottom-right notification overlay
+	registryAdd    registryAddModal    // registry add overlay
+	trustInspector trustInspectorModel // reusable trust inspector (library + registries)
 
 	// Wizard mode — when active, captures all key/mouse input
 	wizardMode    wizardKind
@@ -115,6 +116,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
 		registryAdd:     newRegistryAddModal(),
+		trustInspector:  newTrustInspectorModel(),
 
 		telemetryNotice: showTelemetryNotice,
 	}
