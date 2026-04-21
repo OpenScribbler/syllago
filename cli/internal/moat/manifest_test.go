@@ -192,6 +192,136 @@ func TestParseManifest_TrustTiers(t *testing.T) {
 	}
 }
 
+// TestParseManifest_AttestationHashMismatchDowngrade covers the G-13
+// contract: when `attestation_hash_mismatch: true` is set, TrustTier() MUST
+// return Signed (never Dual-Attested) even if signing_profile is populated.
+// The spec has the Registry Action downgrade server-side; this test locks
+// the defensive client-side enforcement so a misbehaving or compromised
+// registry cannot re-elevate the tier by leaving stale signing_profile on
+// a mismatched entry.
+//
+// Also verifies the bounds of the rule: an Unsigned entry (no rekor index)
+// stays Unsigned regardless of the flag — mismatch does not synthesize a
+// trust anchor where none existed.
+func TestParseManifest_AttestationHashMismatchDowngrade(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		entryJSON string
+		wantTier  TrustTier
+	}{
+		{
+			// Publisher attested, registry detected mismatch, registry
+			// LEFT signing_profile in the entry. A naive tier check would
+			// return DUAL-ATTESTED. The downgrade rule forces SIGNED.
+			name: "mismatch_with_signing_profile_downgrades_to_signed",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "signing_profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "repo:pub/pub:ref:refs/heads/main"
+      },
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierSigned,
+		},
+		{
+			// Mismatch set but no signing_profile — already Signed; rule
+			// doesn't flip the tier in either direction. Guards against
+			// an accidental Unsigned demotion.
+			name: "mismatch_without_signing_profile_stays_signed",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierSigned,
+		},
+		{
+			// No rekor index → Unsigned. Mismatch flag MUST NOT synthesize
+			// a trust anchor. This locks the rule's precondition: the
+			// downgrade operates on existing Signed/Dual-Attested tiers,
+			// not on Unsigned entries.
+			name: "mismatch_without_rekor_stays_unsigned",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "attestation_hash_mismatch": true
+    }`,
+			wantTier: TrustTierUnsigned,
+		},
+		{
+			// Absence of the flag must still allow Dual-Attested to
+			// compute cleanly. Guards against accidental false-default
+			// behavior (e.g., treating zero-valued bool as "true").
+			name: "no_mismatch_flag_with_signing_profile_dual_attested",
+			entryJSON: `{
+      "name": "item", "display_name": "Item", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "source_uri": "https://example.com/r",
+      "attested_at": "2026-04-08T00:00:00Z", "private_repo": false,
+      "rekor_log_index": 42,
+      "signing_profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "repo:pub/pub:ref:refs/heads/main"
+      }
+    }`,
+			wantTier: TrustTierDualAttested,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			data := buildManifest(t, tt.entryJSON)
+			m, err := ParseManifest(data)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			if got := m.Content[0].TrustTier(); got != tt.wantTier {
+				t.Errorf("TrustTier() = %v; want %v (entry: %s)",
+					got, tt.wantTier, tt.entryJSON)
+			}
+		})
+	}
+}
+
+// TestContentEntry_TrustTierDowngradeDirect exercises the downgrade without
+// the JSON parser in the loop. If the parse test fails, this narrows the
+// blame to the tier function itself versus struct-tag wiring.
+func TestContentEntry_TrustTierDowngradeDirect(t *testing.T) {
+	t.Parallel()
+
+	idx := int64(42)
+	profile := &SigningProfile{
+		Issuer:  "https://token.actions.githubusercontent.com",
+		Subject: "repo:pub/pub:ref:refs/heads/main",
+	}
+
+	// Baseline: without the flag, rekor + profile → Dual-Attested.
+	clean := ContentEntry{RekorLogIndex: &idx, SigningProfile: profile}
+	if got := clean.TrustTier(); got != TrustTierDualAttested {
+		t.Fatalf("baseline (no mismatch) should be DUAL-ATTESTED, got %v", got)
+	}
+
+	// With the flag set, even the identical attestation surface MUST
+	// downgrade to Signed. This is the G-13 defensive rule: the client
+	// never returns DUAL-ATTESTED when the publisher's attestation does
+	// not cover the current content.
+	mismatched := clean
+	mismatched.AttestationHashMismatch = true
+	if got := mismatched.TrustTier(); got != TrustTierSigned {
+		t.Errorf("downgrade rule violated: mismatch + profile should be SIGNED, got %v", got)
+	}
+}
+
 // TestParseManifest_ValidationErrors locks the exact contract for malformed
 // manifests. Every case names a REQUIRED field that is missing or invalid.
 func TestParseManifest_ValidationErrors(t *testing.T) {
@@ -529,4 +659,134 @@ func buildManifest(t *testing.T, entryJSON string) []byte {
 	out := strings.Replace(minimalManifestJSON, `"content": []`,
 		`"content": [`+entryJSON+`]`, 1)
 	return []byte(out)
+}
+
+// TestContentEntry_IsPrivate covers the per-item accessor. ADR 0007 G-10
+// requires conforming clients to read visibility from the per-item flag,
+// not from a registry-level default or probe result.
+func TestContentEntry_IsPrivate(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name  string
+		entry *ContentEntry
+		want  bool
+	}{
+		{"public_item", &ContentEntry{PrivateRepo: false}, false},
+		{"private_item", &ContentEntry{PrivateRepo: true}, true},
+		{"nil_receiver_treated_as_public", nil, false},
+	}
+	for _, tc := range cases {
+		if got := tc.entry.IsPrivate(); got != tc.want {
+			t.Errorf("%s: IsPrivate() = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestParseManifest_PerItemPrivateRepoRoundTrip proves that per-item
+// visibility survives JSON round-trip with independent values. This is the
+// G-10 headline invariant: a manifest mixing private and public items
+// MUST preserve both flags per-entry after parsing. If this regresses,
+// the whole manifest would collapse to a single visibility label and
+// private items could leak via bulk install flows.
+func TestParseManifest_PerItemPrivateRepoRoundTrip(t *testing.T) {
+	t.Parallel()
+	raw := buildManifest(t, `{
+      "name": "public-tool", "display_name": "Public Tool", "type": "skill",
+      "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "source_uri": "https://example.com/pub", "attested_at": "2026-04-08T00:00:00Z",
+      "private_repo": false
+    },
+    {
+      "name": "private-tool", "display_name": "Private Tool", "type": "skill",
+      "content_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "source_uri": "https://example.com/priv", "attested_at": "2026-04-08T00:00:00Z",
+      "private_repo": true
+    }`)
+
+	m, err := ParseManifest(raw)
+	if err != nil {
+		t.Fatalf("ParseManifest: %v", err)
+	}
+	if len(m.Content) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(m.Content))
+	}
+
+	byName := map[string]ContentEntry{}
+	for _, c := range m.Content {
+		byName[c.Name] = c
+	}
+
+	pub := byName["public-tool"]
+	priv := byName["private-tool"]
+	if pub.IsPrivate() {
+		t.Error("public-tool: IsPrivate()=true, want false — per-item flag collapsed")
+	}
+	if !priv.IsPrivate() {
+		t.Error("private-tool: IsPrivate()=false, want true — per-item flag lost")
+	}
+}
+
+// TestManifest_HasPrivateContent covers the install/sync-flow gate. A
+// mixed-visibility manifest MUST surface the private item, so confirmation
+// prompts fire before bulk install.
+func TestManifest_HasPrivateContent(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		m    *Manifest
+		want bool
+	}{
+		{"nil_manifest", nil, false},
+		{"empty_content", &Manifest{}, false},
+		{"all_public", &Manifest{Content: []ContentEntry{
+			{PrivateRepo: false}, {PrivateRepo: false},
+		}}, false},
+		{"all_private", &Manifest{Content: []ContentEntry{
+			{PrivateRepo: true}, {PrivateRepo: true},
+		}}, true},
+		{"mixed_first_private", &Manifest{Content: []ContentEntry{
+			{PrivateRepo: true}, {PrivateRepo: false},
+		}}, true},
+		{"mixed_last_private", &Manifest{Content: []ContentEntry{
+			{PrivateRepo: false}, {PrivateRepo: true},
+		}}, true},
+	}
+	for _, tc := range cases {
+		if got := tc.m.HasPrivateContent(); got != tc.want {
+			t.Errorf("%s: HasPrivateContent() = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestManifest_PrivateContent_PreservesOrder locks the ordering contract:
+// PrivateContent() returns entries in the manifest's own order so
+// downstream prompts and summaries present the same layout the publisher
+// emitted. Also covers nil receiver → nil and all-public → nil.
+func TestManifest_PrivateContent_PreservesOrder(t *testing.T) {
+	t.Parallel()
+	var nilM *Manifest
+	if got := nilM.PrivateContent(); got != nil {
+		t.Errorf("nil receiver: PrivateContent() = %v, want nil", got)
+	}
+
+	allPublic := &Manifest{Content: []ContentEntry{
+		{Name: "a", PrivateRepo: false}, {Name: "b", PrivateRepo: false},
+	}}
+	if got := allPublic.PrivateContent(); got != nil {
+		t.Errorf("all_public: PrivateContent() = %v, want nil", got)
+	}
+
+	mixed := &Manifest{Content: []ContentEntry{
+		{Name: "first", PrivateRepo: true},
+		{Name: "second", PrivateRepo: false},
+		{Name: "third", PrivateRepo: true},
+		{Name: "fourth", PrivateRepo: false},
+	}}
+	got := mixed.PrivateContent()
+	if len(got) != 2 {
+		t.Fatalf("PrivateContent() len = %d, want 2", len(got))
+	}
+	if got[0].Name != "first" || got[1].Name != "third" {
+		t.Errorf("ordering lost: got [%s, %s], want [first, third]", got[0].Name, got[1].Name)
+	}
 }

@@ -98,6 +98,13 @@ var (
 	// Risk highlight — warm red tint for flagged lines in file preview.
 	// Slightly darker than initial values for better contrast against primaryText.
 	highlightBG = lipgloss.AdaptiveColor{Light: "#F5D5D2", Dark: "#4A2320"}
+
+	// MOAT trust-surfacing styles (spec §7). Pre-composed here so render
+	// sites never allocate lipgloss.NewStyle() inline (per project convention).
+	trustVerifiedStyle    = lipgloss.NewStyle().Foreground(successColor).Bold(true)
+	trustRecalledStyle    = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
+	privateIndicatorStyle = lipgloss.NewStyle().Foreground(mutedColor)
+	revocationBannerStyle = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
 )
 
 // itoa converts int to string without importing strconv.

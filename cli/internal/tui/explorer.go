@@ -99,11 +99,33 @@ func (e *explorerModel) SetSize(width, height int) {
 	}
 }
 
+// currentMetaItem returns the item whose metadata is displayed for the
+// current mode: detailItem in detail mode, or items.Selected() otherwise.
+// Used by metaBarLines() for per-item height computation.
+func (e explorerModel) currentMetaItem() *catalog.ContentItem {
+	if e.mode == explorerDetail {
+		return e.detailItem
+	}
+	return e.items.Selected()
+}
+
+// metaBarLines returns the dynamic number of metadata content lines for
+// the currently-selected item (varies with TrustTier/Recalled/PrivateRepo).
+// Non-MOAT items return metaBarLinesBase (3) so existing layouts are stable.
+func (e explorerModel) metaBarLines() int {
+	return metaBarLinesFor(e.currentMetaItem())
+}
+
+// metaBarTotal returns metaBarLines + 1 for the shared separator line.
+func (e explorerModel) metaBarTotal() int {
+	return e.metaBarLines() + 1
+}
+
 // sizeBrowsePanes calculates sizes for browse mode (items + preview).
 func (e *explorerModel) sizeBrowsePanes() {
 	innerW := max(0, e.width-borderSize)
-	// Reserve space for metadata (3 lines) + separator (1) + top/bottom borders (2)
-	paneH := max(3, e.height-borderSize-metaBarLines-1)
+	// Reserve space for metadata (3-5 lines) + separator (1) + top/bottom borders (2)
+	paneH := max(3, e.height-borderSize-e.metaBarLines()-1)
 
 	if e.stacked {
 		e.items.SetSize(innerW, paneH)
@@ -122,7 +144,7 @@ func (e *explorerModel) sizeBrowsePanes() {
 func (e *explorerModel) sizeDetailPanes() {
 	treeOuterW := e.detailTreeWidth()
 	previewOuterW := e.width - treeOuterW
-	paneH := max(0, e.height-metaBarTotal)
+	paneH := max(0, e.height-e.metaBarTotal())
 	innerH := max(0, paneH-borderSize)
 
 	e.tree.SetSize(max(0, treeOuterW-borderSize), innerH)
@@ -660,7 +682,7 @@ func (e explorerModel) viewSideBySide() string {
 	itemsOuterW := e.itemsWidth()
 	itemsInnerW := max(0, itemsOuterW-1) // -1 for vertical divider
 	previewInnerW := max(0, innerW-itemsInnerW-1)
-	paneH := max(3, e.height-borderSize-metaBarLines-1)
+	paneH := max(3, e.height-borderSize-e.metaBarLines()-1)
 
 	// Adjust items height for search bar
 	searchH := e.searchBarHeight()
@@ -727,8 +749,8 @@ func (e explorerModel) viewDetail() string {
 	innerW := e.width - borderSize
 	totalInnerH := e.height - borderSize
 
-	// Metadata gets metaBarLines, separator gets 1, panes get the rest
-	paneH := max(3, totalInnerH-metaBarLines-1)
+	// Metadata gets metaBarLines (3-5 per item), separator gets 1, panes get the rest
+	paneH := max(3, totalInnerH-e.metaBarLines()-1)
 
 	treeOuterW := e.detailTreeWidth()
 	treeInnerW := max(0, treeOuterW-1) // -1 for the vertical divider
@@ -884,7 +906,7 @@ func (e explorerModel) renderMetadataContent(width int) string {
 // viewStacked renders metadata + single bordered pane based on focus.
 func (e explorerModel) viewStacked() string {
 	innerW := e.width - borderSize
-	paneH := max(3, e.height-borderSize-metaBarLines-1)
+	paneH := max(3, e.height-borderSize-e.metaBarLines()-1)
 
 	metaContent := e.renderMetadataContent(innerW)
 

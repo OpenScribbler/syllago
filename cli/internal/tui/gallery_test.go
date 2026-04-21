@@ -159,6 +159,47 @@ func TestContentsSidebar_NilCard(t *testing.T) {
 	}
 }
 
+// TestContentsSidebar_ScrollUpDown pins ScrollUp (contents.go:87) and
+// ScrollDown (contents.go:94). Offset increments/decrements with clamps at 0
+// and total-height. Ensures wheel scrolling on the sidebar-focused gallery
+// actually moves the offset.
+func TestContentsSidebar_ScrollUpDown(t *testing.T) {
+	card := &cardData{
+		name: "Test",
+		items: []catalog.ContentItem{
+			{Name: "a", Type: catalog.Skills},
+			{Name: "b", Type: catalog.Skills},
+			{Name: "c", Type: catalog.Skills},
+			{Name: "d", Type: catalog.Skills},
+			{Name: "e", Type: catalog.Skills},
+			{Name: "f", Type: catalog.Skills},
+		},
+	}
+	sidebar := newContentsSidebarModel()
+	sidebar.SetSize(30, 3) // small height forces scrolling
+	sidebar.SetCard(card)
+
+	// ScrollUp at offset 0 is a no-op.
+	sidebar.ScrollUp()
+	if sidebar.offset != 0 {
+		t.Errorf("ScrollUp at offset 0 should stay at 0, got %d", sidebar.offset)
+	}
+
+	// ScrollDown should increment until it hits total-height.
+	before := sidebar.offset
+	sidebar.ScrollDown()
+	if sidebar.offset <= before {
+		t.Errorf("ScrollDown should advance offset from %d, got %d", before, sidebar.offset)
+	}
+
+	// ScrollUp should now reverse.
+	afterDown := sidebar.offset
+	sidebar.ScrollUp()
+	if sidebar.offset >= afterDown {
+		t.Errorf("ScrollUp should decrement offset from %d, got %d", afterDown, sidebar.offset)
+	}
+}
+
 // --- Gallery model ---
 
 func TestGallery_TabTogglesFocus(t *testing.T) {
@@ -263,6 +304,14 @@ func TestGoldenGallery_80x30(t *testing.T) {
 	}
 	a = m.(App)
 
+	// Semantic assertions — pin behaviour independently of the golden so
+	// that a buggy render blessed via -update-golden still fails this test.
+	view := a.View()
+	assertContains(t, view, "Python-Web")      // loadout display name from catalog
+	assertContains(t, view, "[a] Add loadout") // Loadouts-tab action button
+	assertContains(t, view, "Loadout")         // card subtitle / type label
+	assertNotContains(t, view, "Add registry") // not on Registries sub-tab
+
 	requireGolden(t, "gallery-80x30", snapshotApp(t, a))
 }
 
@@ -286,6 +335,16 @@ func TestGoldenGallery_120x40(t *testing.T) {
 		m, _ = m.Update(cmd())
 	}
 	a = m.(App)
+
+	// Semantic assertions for Registries gallery at 120x40 — both registry
+	// items must appear in the contents sidebar, and the Registries-specific
+	// action button must be present.
+	view := a.View()
+	assertContains(t, view, "my-registry")      // registry name from source
+	assertContains(t, view, "alpha-skill")      // Skills item in registry
+	assertContains(t, view, "beta-rule")        // Rules item in registry
+	assertContains(t, view, "[a] Add registry") // Registries-tab action button
+	assertNotContains(t, view, "Add loadout")   // not on Loadouts sub-tab
 
 	requireGolden(t, "gallery-registries-120x40", snapshotApp(t, a))
 }

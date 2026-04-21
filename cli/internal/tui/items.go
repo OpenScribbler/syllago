@@ -192,13 +192,17 @@ func (m itemsModel) renderItem(index int) string {
 	item := m.items[index]
 	isCursor := index == m.cursor
 
-	// Build the display text
+	// Build the display text: cursor indicator + trust/visibility prefix.
+	// The 3-char trust prefix (see trustPrefix in table.go) is always
+	// reserved so column alignment is stable whether or not the row has
+	// MOAT surface. Non-MOAT items just get three spaces.
 	var text string
 	if isCursor {
 		text = " > "
 	} else {
 		text = "   "
 	}
+	text += trustPrefix(item)
 
 	name := item.Name
 	if item.DisplayName != "" {
@@ -218,7 +222,7 @@ func (m itemsModel) renderItem(index int) string {
 	}
 
 	// Calculate available width for name and source
-	prefixW := 3 // " > " or "   "
+	prefixW := 6 // " > " or "   " + 3-char trustPrefix
 	badgeW := 0
 	if m.mixed {
 		badgeW = lipgloss.Width(typeBadge)

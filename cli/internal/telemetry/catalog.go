@@ -123,6 +123,20 @@ func EventCatalog() []EventDef {
 					Example:     2,
 					Commands:    []string{"registry_sync"},
 				},
+				{
+					Name:        "moat_tier",
+					Type:        "string",
+					Description: "Resolved MOAT trust tier for the item (UNSIGNED, SIGNED, DUAL-ATTESTED)",
+					Example:     "SIGNED",
+					Commands:    []string{"install"},
+				},
+				{
+					Name:        "moat_gated",
+					Type:        "string",
+					Description: "MOAT install-gate outcome (proceed, hard-block, publisher-warn, private-prompt, tier-below-policy)",
+					Example:     "proceed",
+					Commands:    []string{"install"},
+				},
 			},
 		},
 		{

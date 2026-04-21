@@ -3,6 +3,7 @@ package converter
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -14,7 +15,15 @@ import (
 // Assumption: all registered structs are flat (no embedded struct fields).
 // If nested/embedded structs are added in the future, RegisterFrontmatter must
 // be updated to recurse into them.
-var frontmatterRegistry = map[catalog.ContentType]map[string][]string{}
+//
+// frontmatterRegistryMu guards the map. Production callers Register from
+// init() (sequential) and Lookup from request handlers, but parallel tests
+// mix both on the same goroutines — the mutex keeps the race detector happy
+// without forcing tests to serialize.
+var (
+	frontmatterRegistryMu sync.RWMutex
+	frontmatterRegistry   = map[catalog.ContentType]map[string][]string{}
+)
 
 // RegisterFrontmatter reflects on example to extract YAML/TOML tag names and
 // stores the resulting []string in the registry. Must be called from init()
@@ -70,6 +79,8 @@ func RegisterFrontmatter(ct catalog.ContentType, slug string, example interface{
 		fields = append(fields, name)
 	}
 
+	frontmatterRegistryMu.Lock()
+	defer frontmatterRegistryMu.Unlock()
 	if frontmatterRegistry[ct] == nil {
 		frontmatterRegistry[ct] = map[string][]string{}
 	}
@@ -80,6 +91,8 @@ func RegisterFrontmatter(ct catalog.ContentType, slug string, example interface{
 // (content type, provider slug) pair. Returns nil if no registration exists —
 // callers should treat nil as "no frontmatter data" rather than an error.
 func FrontmatterFieldsFor(ct catalog.ContentType, slug string) []string {
+	frontmatterRegistryMu.RLock()
+	defer frontmatterRegistryMu.RUnlock()
 	ctMap, ok := frontmatterRegistry[ct]
 	if !ok {
 		return nil

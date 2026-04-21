@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 func TestCheckboxList_Navigation(t *testing.T) {
@@ -252,6 +253,87 @@ func TestCheckboxList_ViewDisabled(t *testing.T) {
 	// Disabled item renders [-]
 	if !strings.Contains(view, "[-]") {
 		t.Fatal("expected [-] for disabled item")
+	}
+}
+
+// TestCheckboxList_HandleClickNoPrefix pins the guard at checkbox_list.go:190.
+// HandleClick must return (0, false) when zonePrefix is unset — prevents
+// accidental zone collisions with other lists in the same render.
+//
+// Not t.Parallel() — bubblezone uses global state (see scanZones comment).
+func TestCheckboxList_HandleClickNoPrefix(t *testing.T) {
+	c := newCheckboxList([]checkboxItem{{label: "one"}})
+	c = c.SetSize(40, 10)
+
+	idx, ok := c.HandleClick(tea.MouseMsg{X: 0, Y: 0})
+	if ok {
+		t.Errorf("HandleClick without zonePrefix should return false, got (%d, true)", idx)
+	}
+}
+
+// TestCheckboxList_HandleClickFindsRow pins the loop at checkbox_list.go:193-197
+// and the View zone-mark branch at checkbox_list.go:178-180. After rendering
+// and scanning zones, clicking a row's coordinates must return that index.
+func TestCheckboxList_HandleClickFindsRow(t *testing.T) {
+	c := newCheckboxList([]checkboxItem{
+		{label: "alpha"},
+		{label: "beta"},
+		{label: "gamma"},
+	})
+	c = c.SetSize(40, 10)
+	c.zonePrefix = "cbl-find"
+
+	scanZones(c.View())
+
+	z := zone.Get("cbl-find-1")
+	if z.IsZero() {
+		t.Fatal("zone cbl-find-1 should be registered after View()")
+	}
+	idx, ok := c.HandleClick(tea.MouseMsg{
+		X: z.StartX, Y: z.StartY,
+		Action: tea.MouseActionPress, Button: tea.MouseButtonLeft,
+	})
+	if !ok {
+		t.Fatal("HandleClick should find row 1")
+	}
+	if idx != 1 {
+		t.Errorf("expected index 1, got %d", idx)
+	}
+}
+
+// TestCheckboxList_HandleClickOutOfBounds pins the fall-through at
+// checkbox_list.go:198. A click outside all row zones returns (0, false) —
+// callers rely on `ok=false` to let the click fall through to other handlers.
+func TestCheckboxList_HandleClickOutOfBounds(t *testing.T) {
+	c := newCheckboxList([]checkboxItem{{label: "only"}})
+	c = c.SetSize(40, 10)
+	c.zonePrefix = "cbl-oob"
+	scanZones(c.View())
+
+	idx, ok := c.HandleClick(tea.MouseMsg{X: 500, Y: 500})
+	if ok {
+		t.Errorf("out-of-bounds click should return false, got (%d, true)", idx)
+	}
+}
+
+// TestCheckboxList_HomeEndKeys pins Home/End at checkbox_list.go:132-138.
+// Not previously covered by scroll tests because they used PgUp/PgDn.
+func TestCheckboxList_HomeEndKeys(t *testing.T) {
+	t.Parallel()
+	items := make([]checkboxItem, 5)
+	for i := range items {
+		items[i] = checkboxItem{label: "item"}
+	}
+	c := newCheckboxList(items)
+	c = c.SetSize(40, 10)
+
+	c, _ = c.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	if c.cursor != 4 {
+		t.Errorf("End should move cursor to 4, got %d", c.cursor)
+	}
+	c, _ = c.Update(tea.KeyMsg{Type: tea.KeyHome})
+	if c.cursor != 0 {
+		t.Errorf("Home should move cursor to 0, got %d", c.cursor)
 	}
 }
 

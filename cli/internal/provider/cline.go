@@ -15,19 +15,27 @@ func ClineMCPSettingsPath() string {
 	if err != nil {
 		return ""
 	}
+	return clineMCPSettingsPathFor(runtime.GOOS, home, os.Getenv("APPDATA"))
+}
+
+// clineMCPSettingsPathFor computes the settings path for a given OS, home,
+// and APPDATA value. Separated from ClineMCPSettingsPath so unit tests can
+// cover every runtime branch — runtime.GOOS is a compile-time constant on
+// any single test run, so the live function only ever exercises one branch
+// per platform.
+func clineMCPSettingsPathFor(goos, home, appdata string) string {
 	const ext = "saoudrizwan.claude-dev"
 	rel := filepath.Join("settings", "cline_mcp_settings.json")
 
-	switch runtime.GOOS {
+	switch goos {
 	case "darwin":
 		return filepath.Join(home, "Library", "Application Support", "Code", "User", "globalStorage", ext, rel)
 	case "windows":
-		appdata := os.Getenv("APPDATA")
 		if appdata == "" {
 			appdata = filepath.Join(home, "AppData", "Roaming")
 		}
 		return filepath.Join(appdata, "Code", "User", "globalStorage", ext, rel)
-	default: // linux
+	default: // linux and other non-mac/win unix-likes
 		return filepath.Join(home, ".config", "Code", "User", "globalStorage", ext, rel)
 	}
 }

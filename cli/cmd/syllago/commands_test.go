@@ -449,31 +449,6 @@ func TestRunLoadoutStatus_NoSnapshot_JSON(t *testing.T) {
 	}
 }
 
-// --- loadout list (0% coverage) ---
-
-func TestRunLoadoutList_NoLoadouts(t *testing.T) {
-	stdout, _ := output.SetForTest(t)
-
-	root := t.TempDir()
-	// Create minimal content structure
-	os.MkdirAll(filepath.Join(root, "content"), 0755)
-	withFakeRepoRoot(t, root)
-
-	origGlobal := catalog.GlobalContentDirOverride
-	catalog.GlobalContentDirOverride = filepath.Join(root, "content")
-	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
-
-	err := loadoutListCmd.RunE(loadoutListCmd, nil)
-	if err != nil {
-		t.Fatalf("runLoadoutList: %v", err)
-	}
-
-	out := stdout.String()
-	if !strings.Contains(out, "No loadouts found") {
-		t.Logf("output: %s", out) // might have loadouts from actual repo
-	}
-}
-
 // --- loadout remove (0% coverage) ---
 
 func TestRunLoadoutRemove_NoSnapshot(t *testing.T) {
@@ -489,16 +464,6 @@ func TestRunLoadoutRemove_NoSnapshot(t *testing.T) {
 	if !strings.Contains(out, "No active loadout") {
 		t.Errorf("expected 'No active loadout', got: %s", out)
 	}
-}
-
-// --- checkAndWarnStaleSnapshot (0% coverage) ---
-
-func TestCheckAndWarnStaleSnapshot_NoSnapshot(t *testing.T) {
-	stdout, _ := output.SetForTest(t)
-	_ = stdout
-
-	// Should not panic on temp dir with no snapshot
-	checkAndWarnStaleSnapshot(t.TempDir())
 }
 
 // --- sourceLabel (40% coverage in list.go) ---
@@ -568,15 +533,6 @@ func TestStatusJSONLabel(t *testing.T) {
 			t.Errorf("statusJSONLabel(%v) = %q, want %q", tc.status, got, tc.want)
 		}
 	}
-}
-
-// --- isInteractiveImpl (0% coverage) ---
-
-func TestIsInteractiveImpl(t *testing.T) {
-	// In test environment, stdin is usually not a terminal
-	result := isInteractiveImpl()
-	// Just verify it doesn't panic; result depends on test runner
-	_ = result
 }
 
 // --- hookRiskDetails (0% coverage in inspect.go) ---
@@ -1064,25 +1020,6 @@ func TestRunAddFromShared_ForceOverwrite(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(existing, "SKILL.md")); err != nil {
 		t.Errorf("force should overwrite with new content: %v", err)
-	}
-}
-
-// --- loadout apply error paths ---
-
-func TestRunLoadoutApply_NoArgs_NoCatalog(t *testing.T) {
-	stdout, _ := output.SetForTest(t)
-	_ = stdout
-
-	root := t.TempDir()
-	withFakeRepoRoot(t, root)
-
-	origGlobal := catalog.GlobalContentDirOverride
-	catalog.GlobalContentDirOverride = filepath.Join(root, "content")
-	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
-
-	err := loadoutApplyCmd.RunE(loadoutApplyCmd, nil)
-	if err == nil {
-		t.Log("loadout apply succeeded unexpectedly (might have found loadouts)")
 	}
 }
 

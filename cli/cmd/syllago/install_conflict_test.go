@@ -54,10 +54,14 @@ func addConflictProviders(t *testing.T, installerSlug, readerSlug, sharedDir, re
 		}
 	}
 
-	provider.AllProviders = append(provider.AllProviders,
+	// Replace (not append) so --to-all only reaches the two test providers.
+	// Appending leaves real providers like Cursor detected on developer
+	// machines, causing these tests to install skills into $HOME/.cursor/
+	// and pollute TUI golden tests that read the real user home.
+	provider.AllProviders = []provider.Provider{
 		mkProv(installerSlug, installerSlug, sharedDir, ""),
 		mkProv(readerSlug, readerSlug, readerDir, sharedDir),
-	)
+	}
 	t.Cleanup(func() { provider.AllProviders = orig })
 }
 
