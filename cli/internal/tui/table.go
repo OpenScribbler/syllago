@@ -554,7 +554,12 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 		prefix = " > "
 	}
 
-	row := prefix
+	// MOAT trust + visibility prefix (3 chars: <trust><private><space>).
+	// Glyphs are intentionally monochrome here — the row's selection style
+	// would override any foreground color, and the colored chips in the
+	// metapanel drill-down carry the reinforcing semantics. Non-MOAT rows
+	// render 3 spaces so column alignment stays stable.
+	row := prefix + trustPrefix(t.items[index])
 	row += padRight(truncate(r.name, c.name), c.name)
 	row += " " + padRight(truncate(r.contentType, c.ctype), c.ctype)
 	row += " " + padRight(truncate(r.scope, c.scope), c.scope)
@@ -589,6 +594,27 @@ func (t tableModel) renderEmpty() string {
 		Align(lipgloss.Center, lipgloss.Center).
 		Foreground(mutedColor).
 		Render("No content in library.\nPress [a] to add your first item.")
+}
+
+// trustPrefix returns a fixed 3-character badge prefix for a content item:
+//   - byte 0: trust glyph ("✓", "R", or " ")
+//   - byte 1: visibility glyph ("P" for private, else " ")
+//   - byte 2: trailing space separator
+//
+// The prefix is emitted by both the library table and the explorer items
+// list so MOAT trust surfacing is consistent across surfaces. Non-MOAT
+// items (TrustTierUnknown + not Recalled + not PrivateRepo) emit three
+// spaces so column alignment stays stable for legacy content.
+func trustPrefix(item catalog.ContentItem) string {
+	tg := " "
+	if g := catalog.UserFacingBadge(item.TrustTier, item.Recalled).Glyph(); g != "" {
+		tg = g
+	}
+	pg := " "
+	if item.PrivateRepo {
+		pg = "P"
+	}
+	return tg + pg + " "
 }
 
 // sanitizeLine strips newlines, carriage returns, and tabs from a string
