@@ -112,8 +112,8 @@ func printReports(reports []*provmon.CheckReport) {
 
 		// Show version drift.
 		if r.VersionDrift != nil && r.VersionDrift.Drifted {
-			fmt.Printf("  DRIFT   manifest=%s  latest=%s\n",
-				r.VersionDrift.ManifestVersion, r.VersionDrift.LatestVersion)
+			fmt.Printf("  DRIFT   baseline=%s  latest=%s\n",
+				r.VersionDrift.Baseline, r.VersionDrift.LatestVersion)
 		}
 
 		// Show stale verification.

@@ -27,10 +27,6 @@
       "description": "ISO date when URLs and data were last confirmed accurate.",
       "format": "date"
     },
-    "provider_version": {
-      "type": "string",
-      "description": "Provider version at time of last verification. Empty string if no public versioning."
-    },
     "slug": {
       "type": "string",
       "description": "Lowercase kebab-case identifier matching syllago's provider ID.",
@@ -94,18 +90,22 @@
     "change_detection": {
       "type": "object",
       "description": "How to detect when this provider's content has changed.",
-      "required": ["method", "endpoint"],
+      "required": ["method"],
       "additionalProperties": false,
       "properties": {
         "method": {
           "type": "string",
           "description": "Detection strategy.",
-          "enum": ["github-releases", "github-commits", "content-hash"]
+          "enum": ["github-releases", "source-hash"]
         },
         "endpoint": {
           "type": "string",
-          "description": "URL to check for changes (releases API, commits API, or page URL for hashing).",
+          "description": "URL for this method. Required for github-releases (points at releases API); informational for source-hash (primary docs landing URL — actual per-source baselines live in the FormatDoc).",
           "format": "uri"
+        },
+        "baseline": {
+          "type": "string",
+          "description": "Opaque comparison reference. For github-releases: the pinned release tag (e.g. 'v2.1.86'). Empty for source-hash (per-source hashes live in docs/provider-formats/<slug>.yaml)."
         }
       }
     },

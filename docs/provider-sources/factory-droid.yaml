@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-30"
-provider_version: "" # Not pinned to a specific version
 
 slug: factory-droid
 display_name: Factory Droid
@@ -16,6 +15,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/Factory-AI/factory/releases/latest
+  baseline: "" # Not pinned to a specific version
 
 changelog:
   - url: https://docs.factory.ai/llms.txt

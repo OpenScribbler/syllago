@@ -12,7 +12,6 @@ func TestLoadManifest(t *testing.T) {
 	yaml := `
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "v1.0.0"
 slug: test-provider
 display_name: Test Provider
 vendor: Test Corp
@@ -23,6 +22,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/test/repo/releases/latest
+  baseline: "v1.0.0"
 changelog:
   - url: https://example.com/changelog
     label: Changelog
@@ -101,7 +101,7 @@ vendor: Test
 status: active
 fetch_tier: gh-api
 change_detection:
-  method: content-hash
+  method: source-hash
   endpoint: https://example.com
 content_types:
   rules:
@@ -167,7 +167,7 @@ vendor: Test
 status: active
 fetch_tier: gh-api
 change_detection:
-  method: content-hash
+  method: source-hash
   endpoint: https://example.com
 content_types:
   rules:

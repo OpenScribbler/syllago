@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "" # No public version tracking
 
 slug: cursor
 display_name: Cursor
@@ -14,9 +13,9 @@ fetch_tier: html-scrape
 # No public repos under getcursor or anysphere orgs.
 
 change_detection:
-  method: content-hash
+  method: source-hash
   endpoint: https://cursor.com/changelog
-  # No releases API, no public repo. Watch changelog page + content hash docs pages.
+  # method: source-hash — per-source baselines in docs/provider-formats/cursor.yaml
 
 changelog:
   - url: https://cursor.com/changelog

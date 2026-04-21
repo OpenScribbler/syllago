@@ -84,11 +84,11 @@ func TestCheckVersion_GitHubReleases(t *testing.T) {
 	t.Cleanup(func() { httpClient = orig })
 
 	m := &Manifest{
-		Slug:            "test",
-		ProviderVersion: "v1.0.0",
+		Slug: "test",
 		ChangeDetection: ChangeDetection{
 			Method:   "github-releases",
 			Endpoint: server.URL + "/releases/latest",
+			Baseline: "v1.0.0",
 		},
 	}
 
@@ -101,8 +101,8 @@ func TestCheckVersion_GitHubReleases(t *testing.T) {
 	if !drift.Drifted {
 		t.Error("expected drift, got none")
 	}
-	if drift.ManifestVersion != "v1.0.0" {
-		t.Errorf("ManifestVersion = %q, want %q", drift.ManifestVersion, "v1.0.0")
+	if drift.Baseline != "v1.0.0" {
+		t.Errorf("Baseline = %q, want %q", drift.Baseline, "v1.0.0")
 	}
 	if drift.LatestVersion != "v2.0.0" {
 		t.Errorf("LatestVersion = %q, want %q", drift.LatestVersion, "v2.0.0")
@@ -123,11 +123,11 @@ func TestCheckVersion_NoDrift(t *testing.T) {
 	t.Cleanup(func() { httpClient = orig })
 
 	m := &Manifest{
-		Slug:            "test",
-		ProviderVersion: "v1.0.0",
+		Slug: "test",
 		ChangeDetection: ChangeDetection{
 			Method:   "github-releases",
 			Endpoint: server.URL + "/releases/latest",
+			Baseline: "v1.0.0",
 		},
 	}
 
@@ -153,8 +153,7 @@ func TestCheckVersion_UnimplementedMethods(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct{ name, method string }{
-		{"content-hash used by windsurf/kiro/cursor", "content-hash"},
-		{"github-commits used by amp/copilot-cli", "github-commits"},
+		{"source-hash stub until Task 19 lands", "source-hash"},
 	}
 
 	for _, tc := range cases {
@@ -226,15 +225,15 @@ func TestRunCheck(t *testing.T) {
 	t.Cleanup(func() { httpClient = orig })
 
 	m := &Manifest{
-		Slug:            "test",
-		DisplayName:     "Test",
-		Status:          "active",
-		FetchTier:       "gh-api",
-		ProviderVersion: "v1.0.0",
-		LastVerified:    time.Now().AddDate(0, 0, -10).Format("2006-01-02"),
+		Slug:         "test",
+		DisplayName:  "Test",
+		Status:       "active",
+		FetchTier:    "gh-api",
+		LastVerified: time.Now().AddDate(0, 0, -10).Format("2006-01-02"),
 		ChangeDetection: ChangeDetection{
 			Method:   "github-releases",
 			Endpoint: server.URL + "/releases",
+			Baseline: "v1.0.0",
 		},
 		ContentTypes: ContentTypes{
 			Rules: ContentType{Sources: []SourceEntry{

@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-04-09"
-provider_version: "v3.76.0"
 
 slug: cline
 display_name: Cline
@@ -17,6 +16,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/cline/cline/releases/latest
+  baseline: "v3.76.0"
 
 changelog:
   - url: https://raw.githubusercontent.com/cline/cline/main/CHANGELOG.md

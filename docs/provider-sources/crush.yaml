@@ -3,7 +3,6 @@
 
 schema_version: "1" # Manifest format version — bump when the schema changes
 last_verified: "2026-03-30" # When URLs and data were last confirmed accurate
-provider_version: "" # Provider version at time of last verification (not pinned)
 
 slug: crush
 display_name: Crush
@@ -15,8 +14,9 @@ repo_branch: main
 
 # How to detect when this provider's content has changed
 change_detection:
-  method: github-releases # github-releases | github-commits | content-hash
+  method: github-releases # github-releases | source-hash
   endpoint: https://api.github.com/repos/charmbracelet/crush/releases/latest
+  baseline: "" # Not pinned — accept any tag
 
 changelog:
   - url: https://github.com/charmbracelet/crush/releases

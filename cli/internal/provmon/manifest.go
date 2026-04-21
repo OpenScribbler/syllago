@@ -20,7 +20,6 @@ import (
 type Manifest struct {
 	SchemaVersion   string          `yaml:"schema_version"`
 	LastVerified    string          `yaml:"last_verified"`
-	ProviderVersion string          `yaml:"provider_version"`
 	Slug            string          `yaml:"slug"`
 	DisplayName     string          `yaml:"display_name"`
 	Vendor          string          `yaml:"vendor"`
@@ -46,8 +45,9 @@ type Successor struct {
 
 // ChangeDetection defines how to detect when provider content changes.
 type ChangeDetection struct {
-	Method   string `yaml:"method"` // github-releases | github-commits | content-hash
-	Endpoint string `yaml:"endpoint"`
+	Method   string `yaml:"method"`             // github-releases | source-hash
+	Endpoint string `yaml:"endpoint,omitempty"` // informational for source-hash; required for github-releases
+	Baseline string `yaml:"baseline,omitempty"` // version tag (github-releases) — opaque comparison reference
 }
 
 // LabeledURL is a URL with a human-readable label.

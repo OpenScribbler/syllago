@@ -3,7 +3,6 @@
 
 schema_version: "1" # Manifest format version — bump when the schema changes
 last_verified: "2026-03-28" # When URLs and data were last confirmed accurate
-provider_version: "v0.35.3" # Provider version at time of last verification
 
 slug: gemini-cli
 display_name: Gemini CLI
@@ -15,8 +14,9 @@ repo_branch: main
 
 # How to detect when this provider's content has changed
 change_detection:
-  method: github-releases # github-releases | github-commits | content-hash
+  method: github-releases # github-releases | source-hash
   endpoint: https://api.github.com/repos/google-gemini/gemini-cli/releases/latest
+  baseline: "v0.35.3"
   # As of 2026-03-27: latest stable v0.35.2, preview v0.36.0-preview.5
 
 changelog:

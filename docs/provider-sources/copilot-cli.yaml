@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-04-16"
-provider_version: "" # No version tracking — CLI is distributed as binary, no public version tags
 
 slug: copilot-cli
 display_name: Copilot CLI
@@ -15,10 +14,9 @@ repo: github/docs # Docs content repo (not CLI source)
 repo_branch: main
 
 change_detection:
-  method: github-commits
+  method: source-hash
   endpoint: https://api.github.com/repos/github/docs/commits?path=content/copilot/reference
-  # Track commits to the reference docs specifically. The github/docs repo is extremely active
-  # but most commits are unrelated to Copilot CLI content.
+  # method: source-hash — per-source baselines in docs/provider-formats/copilot-cli.yaml
 
 changelog:
   - url: https://raw.githubusercontent.com/github/copilot-cli/main/changelog.md

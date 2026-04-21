@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-30"
-provider_version: "0.64.0"
 
 slug: pi
 display_name: Pi
@@ -17,6 +16,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: "https://api.github.com/repos/badlogic/pi-mono/releases"
+  baseline: "0.64.0"
 
 changelog:
   - url: "https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/CHANGELOG.md"
