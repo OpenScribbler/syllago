@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-04-09"
-provider_version: "v2.1.86"
 
 slug: claude-code
 display_name: Claude Code
@@ -17,6 +16,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/anthropics/claude-code/releases/latest
+  baseline: "v2.1.86"
   # Very frequent releases (multiple per week).
 
 changelog:

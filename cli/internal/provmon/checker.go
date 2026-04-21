@@ -38,23 +38,23 @@ func (r URLResult) OK() bool {
 
 // CheckReport is the full report for one provider manifest.
 type CheckReport struct {
-	Slug            string
-	DisplayName     string
-	Status          string // active | archived | beta
-	FetchTier       string
-	URLResults      []URLResult
-	VersionDrift    *VersionDrift // nil if change detection not applicable
-	TotalURLs       int
-	FailedURLs      int
-	LastVerified    string
-	ProviderVersion string
+	Slug         string
+	DisplayName  string
+	Status       string // active | archived | beta
+	FetchTier    string
+	URLResults   []URLResult
+	VersionDrift *VersionDrift // nil if change detection not applicable
+	TotalURLs    int
+	FailedURLs   int
+	LastVerified string
+	Baseline     string
 }
 
 // VersionDrift describes when the provider's latest version differs from what was last verified.
 type VersionDrift struct {
-	ManifestVersion string // what the manifest says
-	LatestVersion   string // what the API says
-	Drifted         bool
+	Baseline      string // what the manifest records (version tag, for github-releases)
+	LatestVersion string // what the API says
+	Drifted       bool
 }
 
 // CheckURLs performs concurrent HEAD requests against all URLs in a manifest.
@@ -118,7 +118,7 @@ func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
 	switch m.ChangeDetection.Method {
 	case "github-releases":
 		// fall through to the implementation below
-	case "content-hash", "github-commits":
+	case "source-hash":
 		return nil, fmt.Errorf("%w: %s", ErrUnimplementedDetectionMethod, m.ChangeDetection.Method)
 	default:
 		return nil, nil
@@ -154,9 +154,9 @@ func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
 	}
 
 	return &VersionDrift{
-		ManifestVersion: m.ProviderVersion,
-		LatestVersion:   release.TagName,
-		Drifted:         m.ProviderVersion != "" && release.TagName != m.ProviderVersion,
+		Baseline:      m.ChangeDetection.Baseline,
+		LatestVersion: release.TagName,
+		Drifted:       m.ChangeDetection.Baseline != "" && release.TagName != m.ChangeDetection.Baseline,
 	}, nil
 }
 
@@ -172,15 +172,15 @@ func RunCheck(ctx context.Context, m *Manifest, maxConcurrent int) *CheckReport 
 	}
 
 	report := &CheckReport{
-		Slug:            m.Slug,
-		DisplayName:     m.DisplayName,
-		Status:          m.Status,
-		FetchTier:       m.FetchTier,
-		URLResults:      urlResults,
-		TotalURLs:       len(urlResults),
-		FailedURLs:      failed,
-		LastVerified:    m.LastVerified,
-		ProviderVersion: m.ProviderVersion,
+		Slug:         m.Slug,
+		DisplayName:  m.DisplayName,
+		Status:       m.Status,
+		FetchTier:    m.FetchTier,
+		URLResults:   urlResults,
+		TotalURLs:    len(urlResults),
+		FailedURLs:   failed,
+		LastVerified: m.LastVerified,
+		Baseline:     m.ChangeDetection.Baseline,
 	}
 
 	drift, err := CheckVersion(ctx, m)

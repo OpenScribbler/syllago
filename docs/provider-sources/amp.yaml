@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-04-16"
-provider_version: "" # No public version tracking
 
 slug: amp
 display_name: Amp
@@ -14,9 +13,9 @@ repo: sourcegraph/amp-examples-and-guides
 repo_branch: main
 
 change_detection:
-  method: github-commits
+  method: source-hash
   endpoint: https://api.github.com/repos/sourcegraph/amp-examples-and-guides/commits
-  # Also track sourcegraph/amp-contrib for community tools.
+  # method: source-hash — per-source baselines in docs/provider-formats/amp.yaml
 
 changelog:
   - url: https://ampcode.com/llms.txt

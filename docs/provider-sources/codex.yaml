@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "rust-v0.117.0" # Latest stable. Alpha: rust-v0.118.0-alpha.3
 
 slug: codex
 display_name: Codex
@@ -16,6 +15,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/openai/codex/releases/latest
+  baseline: "rust-v0.117.0" # Latest stable. Alpha: rust-v0.118.0-alpha.3
 
 changelog:
   # CHANGELOG.md is a stub redirecting to GitHub releases. Uses git-cliff (cliff.toml).

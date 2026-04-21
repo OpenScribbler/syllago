@@ -5,7 +5,6 @@
 
 schema_version: "1"
 last_verified: "2026-04-09"
-provider_version: "" # No public version tracking
 
 slug: kiro
 display_name: Kiro
@@ -15,9 +14,9 @@ fetch_tier: html-scrape
 # No useful public repo. aws-samples/sample-kiro-assistant has minimal samples only.
 
 change_detection:
-  method: content-hash
+  method: source-hash
   endpoint: https://kiro.dev/docs/
-  # No releases API, no public repo. Content hash the docs pages.
+  # method: source-hash — per-source baselines in docs/provider-formats/kiro.yaml
 
 content_types:
   # ── Support summary ───────────────────────────────────────────────────

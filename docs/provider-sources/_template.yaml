@@ -3,7 +3,6 @@
 
 schema_version: "1" # Manifest format version — bump when the schema changes
 last_verified: "YYYY-MM-DD" # When URLs and data were last confirmed accurate
-provider_version: "" # Provider version at time of last verification
 
 slug: provider-slug # Lowercase kebab-case, matches syllago provider ID
 display_name: Provider Name
@@ -22,8 +21,9 @@ repo_branch: main # Default branch name
 
 # How to detect when this provider's content has changed
 change_detection:
-  method: github-releases # github-releases | github-commits | content-hash
-  endpoint: "" # API URL for change detection (releases endpoint, commits endpoint, or page URL for hashing)
+  method: github-releases # github-releases | source-hash
+  endpoint: "" # Required for github-releases (releases API); informational for source-hash (primary docs landing URL)
+  baseline: "" # github-releases: pinned release tag (e.g. "v2.1.86"); source-hash: omit — per-source baselines live in docs/provider-formats/<slug>.yaml
 
 # Changelog sources for human review and release tracking
 changelog:

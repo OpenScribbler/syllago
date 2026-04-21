@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "" # No public version tracking
 
 slug: windsurf
 display_name: Windsurf
@@ -14,9 +13,9 @@ fetch_tier: llms-txt
 # No useful public repo (codeiumdev/windsurf is an empty POC).
 
 change_detection:
-  method: content-hash
+  method: source-hash
   endpoint: https://docs.windsurf.com/llms.txt
-  # Re-fetch llms.txt periodically and compare page list. Then hash individual pages.
+  # method: source-hash — per-source baselines in docs/provider-formats/windsurf.yaml
 
 content_types:
 

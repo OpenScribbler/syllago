@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "v3.51.1"
 
 slug: roo-code
 display_name: Roo Code
@@ -16,6 +15,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/RooVetGit/Roo-Code/releases/latest
+  baseline: "v3.51.1"
   # Uses changesets (.changeset/) for versioning.
 
 changelog:

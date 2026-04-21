@@ -3,7 +3,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "v0.53.0" # Crush version. OpenCode final: v0.0.55
 
 slug: opencode
 display_name: OpenCode
@@ -25,6 +24,7 @@ successor:
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/charmbracelet/crush/releases/latest
+  baseline: "v0.53.0" # Crush version. OpenCode final: v0.0.55
   # Track the successor for active changes. OpenCode is frozen.
 
 changelog:

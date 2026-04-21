@@ -4,7 +4,6 @@
 
 schema_version: "1"
 last_verified: "2026-03-27"
-provider_version: "v0.229.0"
 
 slug: zed
 display_name: Zed
@@ -17,6 +16,7 @@ repo_branch: main
 change_detection:
   method: github-releases
   endpoint: https://api.github.com/repos/zed-industries/zed/releases/latest
+  baseline: "v0.229.0"
   # Very frequent releases.
 
 changelog:
