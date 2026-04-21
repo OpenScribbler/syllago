@@ -346,7 +346,7 @@ func TestRunSession_PreflightCheckFails(t *testing.T) {
 	// Should fail at either dir safety or pre-flight check
 	errStr := err.Error()
 	if !strings.Contains(errStr, "pre-flight") && !strings.Contains(errStr, "blocked") {
-		t.Logf("RunSession error (expected pre-flight or dir-safety): %s", errStr)
+		t.Errorf("RunSession error should mention 'pre-flight' or 'blocked' (dir safety), got: %s", errStr)
 	}
 }
 

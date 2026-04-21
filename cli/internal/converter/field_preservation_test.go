@@ -395,6 +395,277 @@ func TestFieldPreservation_Skills(t *testing.T) {
 }
 
 // =============================================================================
+// SKILLS — Fan-out across every skill-capable provider
+// =============================================================================
+//
+// TestFieldPreservation_Skills_FanOut mirrors TestFieldPreservation_RulesScoped:
+// a single canonical skill is rendered to every provider that has a case in
+// SkillsConverter.Render (plus Codex, which falls through to the Claude default),
+// and each target gets format-specific contains/absent assertions.
+//
+// Two distinct coping strategies are pinned:
+//   - "warnings-only" (cursor, windsurf, gemini-cli, copilot-cli, kiro): hooks
+//     surface as Result.Warnings text; unsupported structured fields become
+//     prose notes inside a <!-- syllago:converted --> block.
+//   - "prose-embed" (amp, cline, roo-code, opencode): hooks are embedded as
+//     plain-English "**Hooks:**" lines via buildSkillProseNotes; no warnings.
+//
+// Test also pins the tool-translation boundary: providers that route through
+// TranslateTools emit native names (e.g. "read_file" for Cursor), while
+// buildSkillProseNotes renders canonical names (e.g. "file_read") because it
+// does not call TranslateTools. This inconsistency is deliberately frozen
+// here so future refactors can't change it silently.
+func TestFieldPreservation_Skills_FanOut(t *testing.T) {
+	input := []byte("---\nname: code-review\ndescription: Code review skill\nlicense: MIT\ncompatibility: \">=1.0\"\nallowed-tools:\n  - Read\n  - Grep\ndisallowed-tools:\n  - Bash\nmodel: opus\neffort: high\ncontext: fork\nuser-invocable: true\nargument-hint: \"<pr-url>\"\ndisable-model-invocation: true\nhooks:\n  pre_tool_use:\n    - command: \"echo check\"\n---\n\nReview code for best practices and security.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	runFieldTests(t, conv, canonical.Content, []fieldTest{
+		// Claude Code — full frontmatter preserved; tool names translated back to CC native.
+		{
+			name:   "to Claude Code",
+			target: provider.ClaudeCode,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"license: MIT",
+				"allowed-tools:",
+				"- Read",
+				"- Grep",
+				"disallowed-tools:",
+				"- Bash",
+				"model: opus",
+				"effort: high",
+				"context: fork",
+				"user-invocable: true",
+				"argument-hint: <pr-url>",
+				"disable-model-invocation: true",
+				"hooks:",
+				"echo check",
+				"Review code for best practices",
+			},
+			// No conversion marker on the identity render.
+			absent:   []string{"syllago:converted"},
+			filename: "SKILL.md",
+		},
+		// Gemini — name+description frontmatter only; CC-specific fields embedded as prose;
+		// tools translated; hooks surface as warnings (hookConfigHints["gemini-cli"]).
+		{
+			name:   "to Gemini",
+			target: provider.GeminiCLI,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"read_file",         // Read translated
+				"grep_search",       // Grep translated
+				"run_shell_command", // Bash translated (disallowed-tools prose)
+				"Effort level: high",
+				"isolated context", // context: fork
+				"command menu",     // user-invocable
+				"<pr-url>",         // argument-hint
+				"syllago:converted",
+				"Review code for best practices",
+			},
+			absent:   []string{"allowed-tools:", "context: fork", "user-invocable:", "echo check", "hooks:"},
+			minWarns: 1, // hook warning
+			filename: "SKILL.md",
+		},
+		// OpenCode — 5-field frontmatter (name, description, license, compatibility, metadata);
+		// CC fields as prose via buildSkillProseNotes (canonical tool names — no TranslateTools).
+		{
+			name:   "to OpenCode",
+			target: provider.OpenCode,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"license: MIT",
+				"Tool restriction", // allowed-tools prose
+				"file_read",        // canonical name (buildSkillProseNotes does not translate)
+				"search",           // canonical search (from Grep)
+				"model: opus",
+				"Effort level: high",
+				"isolated context",
+				"command menu",
+				"Hooks:", // hooks embedded as prose (no warnings for OpenCode)
+				"syllago:converted",
+				"Review code for best practices",
+			},
+			absent:   []string{"allowed-tools:", "echo check", "read_file", "grep_search"},
+			filename: "SKILL.md",
+		},
+		// Kiro — 5-field frontmatter + prose for CC-only fields + hook warnings
+		// (Kiro is the only provider that emits BOTH prose AND warnings for hooks).
+		{
+			name:   "to Kiro",
+			target: provider.Kiro,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"license: MIT",
+				"Tool restriction",
+				"file_read",
+				"command menu",
+				"Hooks:",
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			absent:   []string{"allowed-tools:", "echo check"},
+			minWarns: 1,
+			filename: "SKILL.md",
+		},
+		// Cursor — cursor frontmatter subset (name/description/license/compatibility/metadata/
+		// disable-model-invocation); tools translated via TranslateTools; hooks as warnings only.
+		{
+			name:   "to Cursor",
+			target: provider.Cursor,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"license: MIT",
+				"disable-model-invocation: true",
+				"Tool restriction",
+				"read_file",        // Cursor translation
+				"grep_search",      // Cursor translation
+				"run_terminal_cmd", // shell → run_terminal_cmd on Cursor
+				"command menu",
+				"<pr-url>",
+				"syllago:converted",
+				"Review code for best practices",
+			},
+			// Cursor's hooks surface as warnings, NOT as prose in the body.
+			absent:   []string{"allowed-tools:", "echo check", "Hooks:", "hooks:"},
+			minWarns: 1,
+			filename: "SKILL.md",
+		},
+		// Windsurf — minimal frontmatter (name + description); translation path used.
+		{
+			name:   "to Windsurf",
+			target: provider.Windsurf,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"Tool restriction",
+				"view_line_range", // Windsurf translation of file_read
+				"grep_search",     // Windsurf translation of search
+				"run_command",     // Windsurf translation of shell
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			// Windsurf emits hook warnings but not prose; license/compatibility not in frontmatter.
+			absent:   []string{"allowed-tools:", "echo check", "Hooks:", "license:", "compatibility:"},
+			minWarns: 1,
+			filename: "SKILL.md",
+		},
+		// Amp — minimal frontmatter (name + description); buildSkillProseNotes → canonical tool
+		// names in prose; hooks as prose (no warnings — amp not in hookConfigHints).
+		{
+			name:   "to Amp",
+			target: provider.Amp,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"Tool restriction",
+				"file_read", // canonical name (prose path does not translate)
+				"search",
+				"Hooks:", // embedded as prose
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			// License/compatibility not in Amp frontmatter; no warnings.
+			absent:   []string{"allowed-tools:", "echo check", "license:", "compatibility:"},
+			filename: "SKILL.md",
+		},
+		// Cline — same shape as Amp (name + description frontmatter; prose via buildSkillProseNotes).
+		{
+			name:   "to Cline",
+			target: provider.Cline,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"Tool restriction",
+				"file_read",
+				"search",
+				"Hooks:",
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			absent:   []string{"allowed-tools:", "echo check", "license:"},
+			filename: "SKILL.md",
+		},
+		// RooCode — same shape as Amp/Cline.
+		{
+			name:   "to RooCode",
+			target: provider.RooCode,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"Tool restriction",
+				"file_read",
+				"search",
+				"Hooks:",
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			absent:   []string{"allowed-tools:", "echo check", "license:"},
+			filename: "SKILL.md",
+		},
+		// Copilot-CLI — frontmatter subset (name/description/license/argument-hint/
+		// user-invocable/disable-model-invocation); TranslateTools used; hooks surface as warnings.
+		{
+			name:   "to Copilot",
+			target: provider.CopilotCLI,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"license: MIT",
+				"argument-hint: <pr-url>",
+				"user-invocable: true",
+				"disable-model-invocation: true",
+				"Tool restriction",
+				"view", // Copilot translation of file_read
+				"grep", // Copilot translation of search
+				"bash", // Copilot translation of shell (disallowed-tools)
+				"model: opus",
+				"Effort level: high",
+				"Review code for best practices",
+				"syllago:converted",
+			},
+			// Hooks as warnings only; Hooks prose NOT emitted for Copilot (uses formatSkillHookWarnings).
+			// (copilotSkillMeta doesn't include the compatibility field.)
+			absent:   []string{"allowed-tools:", "echo check", "compatibility:"},
+			minWarns: 1,
+			filename: "SKILL.md",
+		},
+		// Codex — no case in Render switch, falls through to renderClaudeSkill (full CC frontmatter).
+		// This pins the current observed behavior; if Codex gets its own renderer later, this
+		// test will flag the change.
+		{
+			name:   "to Codex",
+			target: provider.Codex,
+			contains: []string{
+				"name: code-review",
+				"description: Code review skill",
+				"allowed-tools:",
+				"- Read",
+				"- Grep",
+				"model: opus",
+				"hooks:",
+				"echo check",
+				"Review code for best practices",
+			},
+			// Codex path renders identical to Claude Code — no conversion marker since
+			// renderClaudeSkill doesn't call BuildConversionNotes.
+			absent:   []string{"syllago:converted"},
+			filename: "SKILL.md",
+		},
+	})
+}
+
+// =============================================================================
 // COMMANDS — Kitchen sink with behavioral fields
 // =============================================================================
 

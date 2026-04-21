@@ -1987,6 +1987,16 @@ func TestGolden_RegistryAddModal_Buttons_80x30(t *testing.T) {
 	}
 	a = m.(App)
 
+	// Semantic assertions — this golden exists to pin the Registries-tab
+	// action-button layout. The test is worthless if the buttons don't
+	// actually appear, so assert each label directly.
+	view := a.View()
+	assertContains(t, view, "[a] Add registry") // Add button (active-tab context)
+	assertContains(t, view, "[S] Sync")         // Sync button (selected-registry action)
+	assertContains(t, view, "[d] Remove")       // Remove button
+	assertContains(t, view, "[e] Edit")         // Edit button
+	assertContains(t, view, "my-registry")      // the selected registry itself
+
 	requireGolden(t, "gallery-registries-buttons-80x30", snapshotApp(t, a))
 }
 

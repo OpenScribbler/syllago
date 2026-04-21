@@ -104,6 +104,43 @@ func TestKitchenSinkSkillRoundTrip(t *testing.T) {
 			sourceSlug:    "windsurf",
 			bodySubstring: "Kitchen Sink Skill",
 		},
+		// Amp/Cline/RooCode — minimal frontmatter renderers (name+description only).
+		// Name and description survive as YAML; CC-specific fields are embedded as prose.
+		{
+			name:          "amp",
+			provider:      provider.Amp,
+			sourceSlug:    "amp",
+			bodySubstring: "Kitchen Sink Skill",
+		},
+		{
+			name:          "cline",
+			provider:      provider.Cline,
+			sourceSlug:    "cline",
+			bodySubstring: "Kitchen Sink Skill",
+		},
+		{
+			name:          "roo-code",
+			provider:      provider.RooCode,
+			sourceSlug:    "roo-code",
+			bodySubstring: "Kitchen Sink Skill",
+		},
+		// Copilot-CLI — subset frontmatter (includes name, description, license,
+		// argument-hint, user-invocable, disable-model-invocation).
+		{
+			name:          "copilot-cli",
+			provider:      provider.CopilotCLI,
+			sourceSlug:    "copilot-cli",
+			bodySubstring: "Kitchen Sink Skill",
+		},
+		// Codex — no dedicated case in SkillsConverter.Render; falls through to
+		// renderClaudeSkill. Pins current behavior — if Codex gets its own renderer
+		// later, this round-trip test will surface the change.
+		{
+			name:          "codex",
+			provider:      provider.Codex,
+			sourceSlug:    "codex",
+			bodySubstring: "Kitchen Sink Skill",
+		},
 	}
 
 	for _, tt := range targets {
