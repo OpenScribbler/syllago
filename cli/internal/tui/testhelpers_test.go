@@ -58,6 +58,62 @@ func testCatalogWithItems(t *testing.T) *catalog.Catalog {
 	}
 }
 
+// testCatalogWithMOATItems creates a catalog exercising every MOAT trust
+// surface so goldens verify row prefixes, metapanel trust line, revocation
+// banner, and the private-repo visibility chip render correctly.
+//
+// Fixture layout (intentional order — pins trust surfaces at row 0 / 1 / 2
+// so golden diffs are easy to read):
+//
+//	row 0: verified     — ✓ DualAttested, no other flags
+//	row 1: recalled     — Recalled (publisher), R glyph + banner
+//	row 2: private      — PrivateRepo + Signed
+//	row 3: vanilla      — no MOAT surface (control)
+func testCatalogWithMOATItems(t *testing.T) *catalog.Catalog {
+	t.Helper()
+	return &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{
+				Name: "verified-skill", Type: catalog.Skills, Source: "moat-registry",
+				Registry:  "moat-registry",
+				Files:     []string{"SKILL.md"},
+				TrustTier: catalog.TrustTierDualAttested,
+			},
+			{
+				Name: "recalled-skill", Type: catalog.Skills, Source: "moat-registry",
+				Registry:         "moat-registry",
+				Files:            []string{"SKILL.md"},
+				TrustTier:        catalog.TrustTierSigned,
+				Recalled:         true,
+				RecallSource:     "publisher",
+				RecallReason:     "key compromise",
+				RecallIssuer:     "ops@example.com",
+				RecallDetailsURL: "https://example.com/recall/123",
+			},
+			{
+				Name: "private-skill", Type: catalog.Skills, Source: "moat-registry",
+				Registry:    "moat-registry",
+				Files:       []string{"SKILL.md"},
+				TrustTier:   catalog.TrustTierSigned,
+				PrivateRepo: true,
+			},
+			{
+				Name: "vanilla-skill", Type: catalog.Skills, Source: "library",
+				Files: []string{"SKILL.md"},
+			},
+		},
+	}
+}
+
+// testAppWithMOATItems creates an App populated with MOAT fixture items at
+// the given dimensions. Used by MOAT golden tests.
+func testAppWithMOATItems(t *testing.T, w, h int) App {
+	t.Helper()
+	app := NewApp(testCatalogWithMOATItems(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
+}
+
 func testProviders() []provider.Provider {
 	return nil
 }
