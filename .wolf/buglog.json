@@ -4950,6 +4950,38 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-21T16:37:44.158Z"
+    },
+    {
+      "id": "bug-310",
+      "timestamp": "2026-04-21T16:58:34.506Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/explorer.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T16:58:34.506Z"
+    },
+    {
+      "id": "bug-311",
+      "timestamp": "2026-04-21T16:58:44.179Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/tui/explorer.go",
+      "root_cause": "Was returning: e, nil",
+      "fix": "Now returns: e, func() tea.Msg { return explorerCloseMsg{} }",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T16:58:44.179Z"
     }
   ]
 }
