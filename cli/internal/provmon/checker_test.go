@@ -2,6 +2,7 @@ package provmon
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -141,25 +142,67 @@ func TestCheckVersion_NoDrift(t *testing.T) {
 	}
 }
 
-func TestCheckVersion_ContentHash(t *testing.T) {
+// TestCheckVersion_UnimplementedMethods ensures that declared-but-unimplemented
+// detection methods surface a sentinel error rather than silently returning
+// (nil, nil). The previous version of this test pinned the silent no-op and
+// would have passed even if detection were removed entirely — see
+// syllago-p0phh. A real implementation of either method lives in follow-up
+// bead syllago-5gthn; when that lands, update this test to exercise the
+// new happy path rather than assert the sentinel.
+func TestCheckVersion_UnimplementedMethods(t *testing.T) {
 	t.Parallel()
 
-	// Content-hash method should return nil (not applicable).
+	cases := []struct{ name, method string }{
+		{"content-hash used by windsurf/kiro/cursor", "content-hash"},
+		{"github-commits used by amp/copilot-cli", "github-commits"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := &Manifest{
+				Slug: "test",
+				ChangeDetection: ChangeDetection{
+					Method:   tc.method,
+					Endpoint: "https://example.com",
+				},
+			}
+
+			drift, err := CheckVersion(context.Background(), m)
+			if drift != nil {
+				t.Errorf("regression: CheckVersion returned non-nil drift for unimplemented method %q — that would mean we are silently fabricating drift data; got %+v", tc.method, drift)
+			}
+			if !errors.Is(err, ErrUnimplementedDetectionMethod) {
+				t.Errorf("regression: CheckVersion must return ErrUnimplementedDetectionMethod for %q so callers can distinguish 'no drift' from 'we never tried' — got %v", tc.method, err)
+			}
+		})
+	}
+}
+
+// TestCheckVersion_UnknownMethod verifies that a method string we have never
+// heard of still returns (nil, nil). That matches the legacy behavior for
+// completely unrecognized values — only the two documented-but-unimplemented
+// methods get the sentinel. Without this test, we could regress by treating
+// "anything not github-releases" as unimplemented and breaking forward
+// compatibility with future manifest schema values.
+func TestCheckVersion_UnknownMethod(t *testing.T) {
+	t.Parallel()
+
 	m := &Manifest{
 		Slug: "test",
 		ChangeDetection: ChangeDetection{
-			Method:   "content-hash",
+			Method:   "some-future-method",
 			Endpoint: "https://example.com",
 		},
 	}
 
-	ctx := context.Background()
-	drift, err := CheckVersion(ctx, m)
+	drift, err := CheckVersion(context.Background(), m)
 	if err != nil {
-		t.Fatalf("CheckVersion() error: %v", err)
+		t.Errorf("unknown methods must return (nil, nil) for forward compat, not an error; got %v", err)
 	}
 	if drift != nil {
-		t.Error("expected nil drift for content-hash method")
+		t.Errorf("unknown methods must return nil drift, got %+v", drift)
 	}
 }
 
