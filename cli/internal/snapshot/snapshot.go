@@ -1,6 +1,8 @@
 package snapshot
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,14 +20,23 @@ import (
 var ErrNoSnapshot = errors.New("no active snapshot")
 
 // SnapshotManifest is written to .syllago/snapshots/<timestamp>/manifest.json.
+//
+// BackedUpHashes carries hex-encoded sha256 of each backup file at Create
+// time, keyed by the same relative path used in BackedUpFiles. Restore
+// recomputes each hash before overwriting the target and refuses if the
+// stored digest does not match — guarding against truncation or bit-rot
+// between Create and Restore. The field is omitempty so manifests written
+// by older versions still Load without error; Restore no-ops the check for
+// any entry missing a recorded hash.
 type SnapshotManifest struct {
-	Source        string          `json:"source"`
-	LoadoutName   string          `json:"loadoutName"`
-	Mode          string          `json:"mode"` // "try" or "keep"
-	CreatedAt     time.Time       `json:"createdAt"`
-	BackedUpFiles []string        `json:"backedUpFiles"` // relative paths inside snapshot/files/
-	Symlinks      []SymlinkRecord `json:"symlinks"`
-	HookScripts   []string        `json:"hookScripts,omitempty"` // informational only
+	Source         string            `json:"source"`
+	LoadoutName    string            `json:"loadoutName"`
+	Mode           string            `json:"mode"` // "try" or "keep"
+	CreatedAt      time.Time         `json:"createdAt"`
+	BackedUpFiles  []string          `json:"backedUpFiles"`            // relative paths inside snapshot/files/
+	BackedUpHashes map[string]string `json:"backedUpHashes,omitempty"` // rel path -> hex sha256 at Create time
+	Symlinks       []SymlinkRecord   `json:"symlinks"`
+	HookScripts    []string          `json:"hookScripts,omitempty"` // informational only
 }
 
 // SymlinkRecord tracks a symlink created during apply.
@@ -60,6 +71,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 	}
 
 	var backedUp []string
+	hashes := make(map[string]string)
 	for _, absPath := range filesToBackup {
 		// Compute relative path from home dir for storage
 		rel, err := filepath.Rel(home, absPath)
@@ -77,16 +89,26 @@ func Create(projectRoot string, loadoutName string, mode string,
 			return "", fmt.Errorf("backing up %s: %w", absPath, err)
 		}
 		backedUp = append(backedUp, rel)
+
+		// Hash the backup we just wrote, not the source — if anything
+		// corrupted the content during the copy, this anchor catches that
+		// too. Restore recomputes from the backup on disk.
+		digest, err := hashFile(destPath)
+		if err != nil {
+			return "", fmt.Errorf("hashing backup %s: %w", destPath, err)
+		}
+		hashes[rel] = digest
 	}
 
 	manifest := SnapshotManifest{
-		Source:        loadoutName,
-		LoadoutName:   loadoutName,
-		Mode:          mode,
-		CreatedAt:     time.Now().UTC(),
-		BackedUpFiles: backedUp,
-		Symlinks:      symlinks,
-		HookScripts:   hookScripts,
+		Source:         loadoutName,
+		LoadoutName:    loadoutName,
+		Mode:           mode,
+		CreatedAt:      time.Now().UTC(),
+		BackedUpFiles:  backedUp,
+		BackedUpHashes: hashes,
+		Symlinks:       symlinks,
+		HookScripts:    hookScripts,
 	}
 
 	manifestData, err := json.MarshalIndent(manifest, "", "  ")
@@ -159,6 +181,13 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 
 // Restore reads backed-up files from snapshotDir and writes them back to their
 // original absolute paths. Does not remove symlinks (caller does that).
+//
+// Each destination is lstat'd before it is opened for write: if a path is
+// currently a symlink, Restore refuses to write through it. This blocks the
+// TOCTOU attack where a hostile process swaps a real file for a symlink
+// pointing at an arbitrary location between Create and Restore. The refusal
+// is reported so the caller can surface it; all other paths continue to
+// restore normally.
 func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -170,7 +199,21 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 		srcPath := filepath.Join(filesDir, rel)
 		destPath := filepath.Join(home, rel)
 
-		if err := copyFile(srcPath, destPath); err != nil {
+		// Integrity check: if the manifest recorded a sha256 for this path,
+		// recompute it against the backup on disk and refuse the restore if
+		// it has changed. Manifests from earlier versions have no hashes
+		// and we fall through to the copy — documented on SnapshotManifest.
+		if want, ok := manifest.BackedUpHashes[rel]; ok {
+			got, err := hashFile(srcPath)
+			if err != nil {
+				return fmt.Errorf("restoring %s: hashing backup: %w", rel, err)
+			}
+			if got != want {
+				return fmt.Errorf("restoring %s: %w (want %s, got %s)", rel, ErrRestoreCorruptBackup, want, got)
+			}
+		}
+
+		if err := restoreToFile(srcPath, destPath); err != nil {
 			return fmt.Errorf("restoring %s: %w", rel, err)
 		}
 	}
@@ -178,9 +221,52 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 	return nil
 }
 
+// ErrRestoreSymlinkTarget is returned by Restore when a destination path is
+// currently a symlink. The snapshot created a regular file; if the target is
+// now a symlink, some other process has modified the path and writing
+// through the symlink could clobber an attacker-chosen location.
+var ErrRestoreSymlinkTarget = errors.New("refusing to restore through symlink at destination")
+
+// ErrRestoreCorruptBackup is returned by Restore when the sha256 of a backup
+// file on disk does not match the digest recorded in the manifest. The
+// restore is aborted before the destination is touched, so the on-disk
+// target retains whatever post-apply content apply wrote (callers typically
+// surface this as a manual-intervention prompt rather than a silent failure).
+var ErrRestoreCorruptBackup = errors.New("backup file hash does not match manifest")
+
+// hashFile returns the hex-encoded sha256 of the file at path.
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 // Delete removes the snapshot directory entirely.
 func Delete(snapshotDir string) error {
 	return os.RemoveAll(snapshotDir)
+}
+
+// restoreToFile copies src to dest with a pre-open lstat check: if dest is a
+// symlink, it refuses to restore rather than follow the link. This narrows
+// but does not eliminate the TOCTOU window (O_NOFOLLOW would close it on
+// POSIX, but is not portable). copyFile is kept for Create's own writes into
+// snapshotDir, where the threat shape doesn't apply.
+func restoreToFile(src, dest string) error {
+	if info, err := os.Lstat(dest); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%w: %s", ErrRestoreSymlinkTarget, dest)
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("lstat %s: %w", dest, err)
+	}
+	return copyFile(src, dest)
 }
 
 // copyFile copies a file from src to dest, creating parent directories as needed.
