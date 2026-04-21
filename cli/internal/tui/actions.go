@@ -176,7 +176,29 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 }
 
 // handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
+//
+// Publisher-warn install stash has priority: if the operator just confirmed
+// a recalled-item install, re-dispatch that install. On cancel, clear the
+// stash and push a toast. Only one of pendingInstall / pendingInstallAll is
+// ever set (see handleInstallResult / handleInstallAllResult).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
+	if a.pendingInstall != nil {
+		pending := *a.pendingInstall
+		a.pendingInstall = nil
+		if !msg.confirmed {
+			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
+		}
+		return a, a.doInstallCmd(pending)
+	}
+	if a.pendingInstallAll != nil {
+		pending := *a.pendingInstallAll
+		a.pendingInstallAll = nil
+		if !msg.confirmed {
+			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
+		}
+		return a, a.doInstallAllCmd(pending)
+	}
+
 	if !msg.confirmed {
 		return a, nil
 	}
@@ -501,11 +523,33 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 }
 
 // handleInstallResult receives the wizard's confirmation and kicks off the async install.
+//
+// Publisher-revoked items are intercepted here: the wizard closes, the
+// installResultMsg is stashed on App, and a confirmModal prompts for
+// acknowledgement. handleConfirmResult re-dispatches doInstallCmd if the
+// operator confirms, or clears the stash on cancel. See publisher_warn.go
+// and ADR 0007 G-8 for the two-tier revocation contract.
 func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
 	a.wizardMode = wizardNone
 	a.updateNavState()
+
+	if isPublisherRevoked(msg.item) {
+		stashed := msg
+		a.pendingInstall = &stashed
+		a.pendingInstallAll = nil
+		a.confirm.OpenForItem(
+			publisherWarnTitle(msg.item),
+			publisherWarnBody(msg.item),
+			"Install anyway",
+			true, // danger = red border
+			nil,  // no checkboxes
+			msg.item,
+		)
+		return a, nil
+	}
+
 	return a, a.doInstallCmd(msg)
 }
 
@@ -545,10 +589,30 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 
 // handleInstallAllResult receives the "install to all" wizard confirmation and
 // kicks off async installs to each provider in the filtered list.
+//
+// The publisher-warn gate (see handleInstallResult) applies here too — the
+// same item is installed to N providers, so a single confirm covers the
+// whole batch.
 func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd) {
 	a.installWizard = nil
 	a.wizardMode = wizardNone
 	a.updateNavState()
+
+	if isPublisherRevoked(msg.item) {
+		stashed := msg
+		a.pendingInstallAll = &stashed
+		a.pendingInstall = nil
+		a.confirm.OpenForItem(
+			publisherWarnTitle(msg.item),
+			publisherWarnBody(msg.item),
+			"Install anyway",
+			true,
+			nil,
+			msg.item,
+		)
+		return a, nil
+	}
+
 	return a, a.doInstallAllCmd(msg)
 }
 
