@@ -81,9 +81,6 @@ linters:
         linters:
           - gocyclo
           - revive
-      - path: internal/tui_v1/
-        linters:
-          - gocyclo
       - path: cmd/syllago/install_cmd\.go
         linters:
           - gocyclo
