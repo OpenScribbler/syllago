@@ -50,11 +50,13 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 }
 
 // metaBarLinesFor reports how many lines renderMetaPanel will emit for the
-// given item. Returns metaBarLinesBase (3) for non-MOAT items so existing
-// layouts stay unchanged. MOAT items with any trust surface (Verified,
-// Unsigned, Recalled, or PrivateRepo) gain Line 4 (chip row); Recalled
-// items additionally gain Line 5 (revocation banner). Callers use this to
-// size the metadata region in viewBrowse/viewDetail/viewStacked.
+// given item. Returns metaBarLinesBase (3) for non-MOAT items so the
+// hundreds of existing golden snapshots stay unchanged. MOAT items (any
+// TrustTier, PrivateRepo, or Recalled) gain exactly one Line 4 that
+// always carries both Trust and Visibility fields — recalled items now
+// collapse their reason/issuer/URL details into the Trust Inspector
+// rather than a multi-line banner, eliminating overflow jank at narrow
+// widths.
 //
 // Nil-item case returns metaBarLinesBase — the "no selection" placeholder
 // renders blank lines matching the baseline so height math is stable.
@@ -62,14 +64,10 @@ func metaBarLinesFor(item *catalog.ContentItem) int {
 	if item == nil {
 		return metaBarLinesBase
 	}
-	extra := 0
 	if item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled {
-		extra++ // Line 4: trust + visibility chips
+		return metaBarLinesBase + 1
 	}
-	if item.Recalled {
-		extra++ // Line 5: revocation banner
-	}
-	return metaBarLinesBase + extra
+	return metaBarLinesBase
 }
 
 // renderMetaPanel renders the variable-height metadata content for a content
@@ -203,54 +201,59 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	// Recalled flag, or PrivateRepo. Zero-value items (git registries,
 	// local content) skip this line per AD-7 "absence is not a negative
 	// signal" — their layout stays at 3 lines.
+	//
+	// Both Trust and Visibility fields always render when shown, so the
+	// row layout is stable whether an item is verified, unsigned, or
+	// recalled. Recalled items collapse reason/issuer/URL details into
+	// the Trust Inspector (opened via the clickable Trust field or [t])
+	// rather than emitting a second multi-line banner.
 	showChips := item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled
 	if showChips {
-		line4 := " "
-		desc := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
-		if desc != "" {
-			// Trust label uses semantic color per state: recalled→danger,
-			// verified→success, unsigned→muted. Pre-composed styles avoid
-			// lipgloss allocation inside the hot render path.
-			var labelStyle lipgloss.Style
-			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
-			switch badge {
-			case catalog.TrustBadgeRecalled:
-				labelStyle = trustRecalledStyle
-			case catalog.TrustBadgeVerified:
-				labelStyle = trustVerifiedStyle
-			default:
-				labelStyle = mutedStyle
-			}
-			line4 += boldStyle.Render("Trust: ") + labelStyle.Render(sanitizeLine(desc))
+		// Trust value style: recalled→danger, verified→success, else muted.
+		var trustValStyle lipgloss.Style
+		badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+		switch badge {
+		case catalog.TrustBadgeRecalled:
+			trustValStyle = trustRecalledStyle
+		case catalog.TrustBadgeVerified:
+			trustValStyle = trustVerifiedStyle
+		default:
+			trustValStyle = mutedStyle
 		}
-		if item.PrivateRepo {
-			if len(line4) > 1 {
-				line4 += gap
-			}
-			line4 += boldStyle.Render("Visibility: ") + privateIndicatorStyle.Render("Private")
-		}
-		out += "\n" + pad(line4)
-	}
 
-	// --- Line 5: revocation banner (Recalled items only) ---
-	// Format: "RECALLED (<source>) — <reason>. Issued by <issuer>. <details_url>"
-	// Optional pieces collapse gracefully when absent; reason is pre-sanitized
-	// at enrich boundary, so we only strip ANSI/bidi here defensively.
-	if item.Recalled {
-		banner := "RECALLED"
-		if item.RecallSource != "" {
-			banner += " (" + sanitizeLine(item.RecallSource) + ")"
+		var trustValue string
+		if item.Recalled {
+			// Collapse recalled details to a single short summary. Reason
+			// may be empty when a feed omits it; we still surface the
+			// "Recalled" state so users see the warning.
+			trustValue = "Recalled"
+			if item.RecallReason != "" {
+				trustValue += " \u2014 " + sanitizeLine(item.RecallReason)
+			}
+		} else {
+			trustValue = sanitizeLine(catalog.TrustDescription(item.TrustTier, false, ""))
 		}
-		if item.RecallReason != "" {
-			banner += " — " + sanitizeLine(item.RecallReason)
+
+		trustField := boldStyle.Render("Trust: ") + trustValStyle.Render(trustValue)
+		line4 := " " + zone.Mark("meta-trust", trustField)
+
+		// Visibility always renders when the chip row is shown so layout
+		// stays stable across public/private items in a mixed list.
+		visibility := "Public"
+		visibilityStyle := mutedStyle
+		if item.PrivateRepo {
+			visibility = "Private"
+			visibilityStyle = privateIndicatorStyle
 		}
-		if item.RecallIssuer != "" {
-			banner += ". Issued by " + sanitizeLine(item.RecallIssuer)
+		line4 += gap + boldStyle.Render("Visibility: ") + visibilityStyle.Render(visibility)
+
+		if item.Recalled {
+			// Give users an explicit affordance to see the full recall
+			// breakdown (source, issuer, details URL) in the inspector.
+			line4 += gap + mutedStyle.Render("[t] Inspect trust")
 		}
-		if item.RecallDetailsURL != "" {
-			banner += ". " + sanitizeLine(item.RecallDetailsURL)
-		}
-		out += "\n" + pad(" "+revocationBannerStyle.Render(banner))
+
+		out += "\n" + pad(line4)
 	}
 
 	return out

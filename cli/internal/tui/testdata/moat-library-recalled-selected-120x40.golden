@@ -8,14 +8,14 @@
 │ recalled-skill                            Type: Skill     Files: 1   Origin: syllago      Installed: --              │
 │ Scope: project   Registry: moat-registry                                                                             │
 │                                                                                                           [e] Edit   │
-│ Trust: Recalled — key compromise                                                                                     │
-│ RECALLED (publisher) — key compromise. Issued by ops@example.com. https://example.com/recall/123                     │
+│ Trust: Recalled — key compromise  Visibility: Public  [t] Inspect trust                                              │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│   Name ▲                 Type      Scope        Files Installed      Description                                     │
+│   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │   ✓P private-skill          Skill     moat-regi... 1     --                                                          │
 │ > R  recalled-skill         Skill     moat-regi... 1     --                                                          │
 │      vanilla-skill          Skill     library      1     --                                                          │
 │   ✓  verified-skill         Skill     moat-regi... 1     --                                                          │
+│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │

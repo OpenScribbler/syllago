@@ -11,8 +11,10 @@ import (
 
 // TestMetaBarLinesFor verifies the dynamic line-count contract for the
 // metadata panel. Non-MOAT items stay at 3 lines (protecting the hundreds
-// of existing golden snapshots); adding a trust surface bumps to 4; a
-// revocation banner bumps to 5.
+// of existing golden snapshots). Any trust surface (known TrustTier,
+// PrivateRepo, or Recalled) bumps to 4 lines — recalled items collapse
+// their reason/issuer/URL details into the Trust Inspector rather than
+// emitting a multi-line banner, so the total never exceeds 4.
 func TestMetaBarLinesFor(t *testing.T) {
 	tests := []struct {
 		name string
@@ -66,22 +68,22 @@ func TestMetaBarLinesFor(t *testing.T) {
 			want: metaBarLinesBase + 1,
 		},
 		{
-			name: "Recalled item adds both chip line and banner",
+			name: "Recalled item collapses to single chip line (no banner)",
 			item: &catalog.ContentItem{
 				Name:         "foo",
 				TrustTier:    catalog.TrustTierDualAttested,
 				Recalled:     true,
 				RecallReason: "publisher revoked",
 			},
-			want: metaBarLinesBase + 2,
+			want: metaBarLinesBase + 1,
 		},
 		{
-			name: "Recalled without tier still adds chip + banner",
+			name: "Recalled without tier also collapses to chip line",
 			item: &catalog.ContentItem{
 				Name:     "foo",
 				Recalled: true,
 			},
-			want: metaBarLinesBase + 2,
+			want: metaBarLinesBase + 1,
 		},
 	}
 	for _, tt := range tests {
@@ -149,7 +151,7 @@ func TestRenderMetaPanel_TrustLine(t *testing.T) {
 			wants: []string{"Trust:", "Unsigned (registry declares no attestation)"},
 		},
 		{
-			name: "Recalled with reason",
+			name: "Recalled with reason collapses to single line with [t] hint",
 			item: catalog.ContentItem{
 				Name: "foo", TrustTier: catalog.TrustTierDualAttested,
 				Recalled: true, RecallReason: "publisher revoked 2026-04-18",
@@ -157,9 +159,12 @@ func TestRenderMetaPanel_TrustLine(t *testing.T) {
 			wants: []string{
 				"Trust:",
 				"Recalled \u2014 publisher revoked 2026-04-18",
-				"RECALLED",
+				"Visibility: Public",
+				"[t] Inspect trust",
 			},
-			notWant: []string{"Verified"},
+			// Recall details (issuer, URL) moved to the Trust Inspector;
+			// the metapanel must not re-emit the multi-line banner.
+			notWant: []string{"Verified", "RECALLED", "Issued by"},
 		},
 		{
 			name: "Private-repo visibility chip",
@@ -167,6 +172,13 @@ func TestRenderMetaPanel_TrustLine(t *testing.T) {
 				Name: "foo", TrustTier: catalog.TrustTierSigned, PrivateRepo: true,
 			},
 			wants: []string{"Visibility: Private"},
+		},
+		{
+			name: "Signed public item always renders Visibility: Public",
+			item: catalog.ContentItem{
+				Name: "foo", TrustTier: catalog.TrustTierSigned,
+			},
+			wants: []string{"Trust:", "Visibility: Public"},
 		},
 		{
 			name:    "Unknown tier suppresses line 4 entirely",
@@ -191,9 +203,12 @@ func TestRenderMetaPanel_TrustLine(t *testing.T) {
 	}
 }
 
-// TestRenderMetaPanel_RevocationBanner verifies the Line 5 banner format
-// preserves all four source/reason/issuer/details fields when present.
-func TestRenderMetaPanel_RevocationBanner(t *testing.T) {
+// TestRenderMetaPanel_RecalledCollapsed verifies that recall details that
+// used to live in a multi-line Line 5 banner (source / issuer / details
+// URL) are no longer rendered in the metapanel — they are surfaced by the
+// Trust Inspector instead. The metapanel keeps a short summary + a clear
+// affordance to open the inspector.
+func TestRenderMetaPanel_RecalledCollapsed(t *testing.T) {
 	item := catalog.ContentItem{
 		Name:             "foo",
 		TrustTier:        catalog.TrustTierSigned,
@@ -205,15 +220,29 @@ func TestRenderMetaPanel_RevocationBanner(t *testing.T) {
 	}
 	out := renderMetaPanel(&item, metaPanelData{installed: "--"}, 200)
 
+	// Short summary + hint present.
 	for _, want := range []string{
-		"RECALLED",
-		"(publisher)",
-		"key compromise",
-		"Issued by registry-admin@example.com",
-		"https://example.com/recall/123",
+		"Trust:",
+		"Recalled \u2014 key compromise",
+		"Visibility: Public",
+		"[t] Inspect trust",
 	} {
 		if !strings.Contains(out, want) {
-			t.Errorf("revocation banner missing %q:\n%s", want, out)
+			t.Errorf("expected %q in collapsed output:\n%s", want, out)
+		}
+	}
+
+	// Banner-only text stays out of the metapanel — those belong in the
+	// inspector so narrow-width rendering does not overflow.
+	for _, reject := range []string{
+		"RECALLED",
+		"(publisher)",
+		"Issued by",
+		"registry-admin@example.com",
+		"https://example.com/recall/123",
+	} {
+		if strings.Contains(out, reject) {
+			t.Errorf("banner text %q leaked into metapanel:\n%s", reject, out)
 		}
 	}
 }

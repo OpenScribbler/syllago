@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -299,7 +300,15 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		projectRoot = root
 	}
 
-	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
+	// MOAT enrichment inputs — matches the TUI rescan path (app.go) so trust
+	// surfaces appear on first-load instead of only after an implicit rescan.
+	// Fix for syllago-scgjl: startup used to call ScanWithGlobalAndRegistries
+	// directly, bypassing EnrichFromMOATManifests. A non-MOAT config is a
+	// no-op here.
+	cacheDir, _ := config.GlobalDirPath()
+	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
+
+	cat, err := moat.ScanAndEnrich(cfg, root, projectRoot, regSources, lf, cacheDir, time.Now())
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "catalog scan failed", "Check that the content directory exists and is readable", err.Error())
 	}
@@ -311,7 +320,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 		}
 		// Rescan after cleanup
-		cat, err = catalog.ScanWithGlobalAndRegistries(root, projectRoot, regSources)
+		cat, err = moat.ScanAndEnrich(cfg, root, projectRoot, regSources, lf, cacheDir, time.Now())
 		if err != nil {
 			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "error rescanning catalog", "Check that the content directory exists and is readable", err.Error())
 		}

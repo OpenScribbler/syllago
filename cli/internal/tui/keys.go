@@ -24,4 +24,5 @@ const (
 	keyRefresh   = "R"
 	keySync      = "S"
 	keyHelp      = "?"
+	keyTrust     = "t"
 )

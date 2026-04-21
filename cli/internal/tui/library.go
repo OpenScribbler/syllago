@@ -42,6 +42,13 @@ type libraryUninstallMsg struct{}
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
 
+// libraryTrustInspectMsg is sent when the user opens the Trust Inspector
+// for the currently selected library item (via [t] or clicking the Trust
+// field in the metapanel).
+type libraryTrustInspectMsg struct {
+	item *catalog.ContentItem
+}
+
 // libraryModel manages the Library tab: full-width table with drill-in detail view.
 type libraryModel struct {
 	table   tableModel
@@ -145,6 +152,13 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		if item := l.table.Selected(); item != nil {
 			l.drillIn(item)
 			return l, func() tea.Msg { return libraryDrillMsg{item: item} }
+		}
+	case keyTrust:
+		// [t] opens the Trust Inspector for the focused row. No-op for
+		// non-MOAT items — the inspector shows "Unknown / No trust claim"
+		// which is honest about the absence rather than hiding the affordance.
+		if item := l.table.Selected(); item != nil {
+			return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
 		}
 	case keySearch:
 		l.table.StartSearch()
@@ -275,6 +289,11 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 			if zone.Get("meta-uninstall").InBounds(msg) {
 				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
+			if zone.Get("meta-trust").InBounds(msg) {
+				if item := l.table.Selected(); item != nil {
+					return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
+				}
+			}
 
 			// Column header clicks for sorting
 			colZones := []struct {
@@ -322,6 +341,12 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 			}
 			if zone.Get("meta-uninstall").InBounds(msg) {
 				return l, func() tea.Msg { return libraryUninstallMsg{} }
+			}
+			if zone.Get("meta-trust").InBounds(msg) {
+				if l.detailItem != nil {
+					item := l.detailItem
+					return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
+				}
 			}
 			// Click on file tree nodes
 			for i := range l.tree.nodes {

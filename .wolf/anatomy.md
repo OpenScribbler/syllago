@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T16:58:44.169Z
-> Files: 1013 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T22:34:40.957Z
+> Files: 1021 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1552,6 +1552,7 @@
 
 ## cli/
 
+- `.golangci.yml` (~747 tok)
 - `go.mod` — Go module definition (~1837 tok)
 - `Makefile` (~617 tok)
 
@@ -1585,7 +1586,7 @@
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
 - `loadout_create.go` (~1656 tok)
 - `loadout_remove_test.go` — TestRunLoadoutRemove, TestRunLoadoutRemove_InteractiveConfirmsRemoval, TestRunLoadoutRemove_Interact (~2831 tok)
-- `main.go` (~4031 tok)
+- `main.go` (~4164 tok)
 - `moat_cmd_test.go` — TestRunMoatTrustStatus_Human_Fresh, TestRunMoatTrustStatus_Human_Warn, TestRunMoatTrustStatus_Human_ (~1481 tok)
 - `moat_cmd.go` — Struct: trustStatusJSON (~1491 tok)
 - `registry_cmd_test.go` — TestRegistryAddRejectsDisallowedURL, TestRegistryAddAllowsURLWhenNoPolicy, TestRegistryAddAllowsURLI (~5422 tok)
@@ -1899,32 +1900,37 @@
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14666 tok)
-- `app_update.go` — Declares checkbox (~4510 tok)
-- `app.go` — Struct: App (~4175 tok)
+- `app_update.go` — Declares checkbox (~4658 tok)
+- `app_view.go` (~958 tok)
+- `app.go` — Struct: App (~4219 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
 - `cross_model_transitions_test.go` — TestCrossModel_InstallFlowPreservesLibraryTabAndSyncsItems, TestCrossModel_AddWizardEscPreservesCont (~2362 tok)
+- `doc.go` — is the terminal UI for syllago. (~35 tok)
 - `explorer_test.go` — TestExplorer_MetaBarTotal_IsLinesPlusSeparator, TestExplorer_DetailTreeWidth_Responsive, TestExplore (~5539 tok)
 - `explorer.go` — Struct: itemSelectedMsg (~7177 tok)
 - `gallery_mouse_test.go` — TestGalleryMouse_CardClickSelects, TestGalleryMouse_CardDoubleClickDrills, TestGalleryMouse_CardClic (~2277 tok)
 - `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~2585 tok)
 - `gallery.go` — Struct: cardSelectedMsg (~3546 tok)
-- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1604 tok)
+- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1882 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
 - `install_update.go` (~4511 tok)
 - `install_view.go` — Struct: conflictOpt (~5496 tok)
 - `items.go` — Struct: itemsModel (~2269 tok)
-- `library.go` — Struct: libraryDrillMsg (~5447 tok)
-- `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~1925 tok)
-- `metapanel.go` — Struct: metaPanelData (~2358 tok)
+- `keys.go` (~190 tok)
+- `library.go` — Struct: libraryDrillMsg (~5703 tok)
+- `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
+- `metapanel.go` — Struct: metaPanelData (~2420 tok)
 - `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestHandleInstallResult_NonRe (~2481 tok)
 - `publisher_warn.go` (~583 tok)
 - `responsive_test.go` — TestResponsive_FramedLinesNeverExceedTerminal, TestResponsive_LibraryColumnCount_ByWidth, TestRespon (~2026 tok)
 - `styles.go` (~1460 tok)
-- `table.go` — Struct: tableModel (~5829 tok)
+- `table.go` — Struct: tableModel (~6120 tok)
 - `testhelpers_test.go` (~1816 tok)
 - `topbar.go` — Struct: tabGroup (~2912 tok)
+- `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~3388 tok)
+- `trust_inspector.go` — Struct: RegistryTrustSummary (~2227 tok)
 
 ## cli/internal/updater/
 
@@ -1934,7 +1940,8 @@
 ## docs/adr/
 
 - `0007-moat-g3-slice-1-scope.md` — ADR 0007: MOAT G-3 Slice-1 Scope and Trusted Root Strategy (~3788 tok)
-- `INDEX.md` — ADR Index (~480 tok)
+- `0008-capmon-synthetic-fixtures-correct.md` — ADR 0008: Synthetic Fixtures Are Correct for capmon Extractor Tests (~1516 tok)
+- `INDEX.md` — ADR Index (~566 tok)
 
 ## docs/plans/
 
@@ -1945,7 +1952,8 @@
 - `2026-04-20-moat-tui-trust-surfacing-findings.md` — MOAT TUI Trust Surfacing Spec — Expert Panel Findings (Synthesis) (~5783 tok)
 - `2026-04-20-moat-tui-trust-surfacing-spec.md` — MOAT Phase 2c — TUI Trust Surfacing (Spec) (~11479 tok)
 - `2026-04-20-test-quality-audit.md` — Test Quality Audit — 2026-04-20 (~5354 tok)
-- `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~2095 tok)
+- `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
+- `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17320 tok)
 
 ## docs/provider-capabilities/
 

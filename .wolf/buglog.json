@@ -4982,6 +4982,134 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-21T16:58:44.179Z"
+    },
+    {
+      "id": "bug-312",
+      "timestamp": "2026-04-21T21:27:12.295Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→7 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T21:27:12.295Z"
+    },
+    {
+      "id": "bug-313",
+      "timestamp": "2026-04-21T21:28:26.753Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T21:28:26.753Z"
+    },
+    {
+      "id": "bug-314",
+      "timestamp": "2026-04-21T22:03:04.694Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→98 lines (2 removed) | Also: Continue brainstorm through Decisions 4-5 before h; - **Decision 4:** Error propagation for unreachabl",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-21T22:03:21.288Z"
+    },
+    {
+      "id": "bug-315",
+      "timestamp": "2026-04-21T22:14:48.999Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→8 lines (4 removed) | Also: ### New capmon helper (to be added in this bead); ```go | Also: For provmon to read baselines, the five affected p; - Verify `docs/provider-capabilities/<slug>.yaml`  | Also: ## Decision 5 — Baseline seeding for the 5 affecte; _(pending)_ | Also: 1. **Schema migration (commit 1):** Rename and rel; 2. **Detection implementation (commit 2):** Add `c | Also: | What happens when a source's `content_hash` is e; | How does CI widen the fail set? | `--fail-on=<li | Also: One decision remaining before handoff to the Plan ; - **Decision 5:** Baseline seeding strategy — whic",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 7,
+      "last_seen": "2026-04-21T22:20:30.213Z"
+    },
+    {
+      "id": "bug-316",
+      "timestamp": "2026-04-21T22:17:15.558Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/main.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 22→30 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T22:17:15.558Z"
+    },
+    {
+      "id": "bug-317",
+      "timestamp": "2026-04-21T22:25:12.002Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/table.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 29→38 lines (5 removed) | Also: // The prefix is emitted by both the library table; // list so MOAT trust surfacing is consistent acro",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-21T22:25:49.584Z"
+    },
+    {
+      "id": "bug-318",
+      "timestamp": "2026-04-21T22:28:40.215Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/metapanel_test.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 25→35 lines (3 removed) | Also: // TestRenderMetaPanel_RevocationBanner verifies t; // preserves all four source/reason/issuer/details",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-21T22:28:54.607Z"
+    },
+    {
+      "id": "bug-319",
+      "timestamp": "2026-04-21T22:29:09.000Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/golden_moat_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→37 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-21T22:29:09.000Z"
     }
   ]
 }

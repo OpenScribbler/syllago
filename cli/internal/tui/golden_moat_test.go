@@ -124,7 +124,7 @@ func TestMOAT_LibraryRowsContainGlyphs(t *testing.T) {
 	assertContains(t, out, "P private-skill")   // private glyph adjacent to row name
 }
 
-func TestMOAT_RecalledMetapanelShowsBanner(t *testing.T) {
+func TestMOAT_RecalledMetapanelShowsCollapsedSummary(t *testing.T) {
 	app := testAppWithMOATItems(t, 120, 40)
 	app = cursorToMOATRow(t, app, "recalled-skill")
 	out := snapshotApp(t, app)
@@ -132,7 +132,36 @@ func TestMOAT_RecalledMetapanelShowsBanner(t *testing.T) {
 	assertContains(t, out, "Trust:")
 	assertContains(t, out, "Recalled")
 	assertContains(t, out, "key compromise")
-	assertContains(t, out, "RECALLED")
+	// Collapsed layout — banner text stays out; details live in the inspector.
+	assertNotContains(t, out, "RECALLED")
+	assertNotContains(t, out, "ops@example.com")
+	assertNotContains(t, out, "example.com/recall/123")
+	// Discoverable affordance so users know how to see full recall details.
+	assertContains(t, out, "[t] Inspect trust")
+}
+
+func TestMOAT_RecalledInspectorSurfacesFullDetails(t *testing.T) {
+	app := testAppWithMOATItems(t, 120, 40)
+	app = cursorToMOATRow(t, app, "recalled-skill")
+
+	// Press [t] to open the Trust Inspector for the recalled row. The
+	// library emits libraryTrustInspectMsg via a tea.Cmd, which must be
+	// executed and re-dispatched to App.Update so the inspector opens.
+	m, cmd := app.Update(keyRune('t'))
+	app = m.(App)
+	if cmd != nil {
+		m, _ = app.Update(cmd())
+		app = m.(App)
+	}
+
+	if !app.trustInspector.active {
+		t.Fatalf("expected trust inspector to open after [t]")
+	}
+
+	out := snapshotApp(t, app)
+	assertContains(t, out, "Trust: recalled-skill")
+	assertContains(t, out, "Recalled")
+	assertContains(t, out, "key compromise")
 	assertContains(t, out, "ops@example.com")
 	assertContains(t, out, "example.com/recall/123")
 }
