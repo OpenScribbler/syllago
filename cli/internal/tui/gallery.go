@@ -67,7 +67,7 @@ func (g *galleryModel) SetSize(width, height int) {
 	g.height = height
 
 	innerW := max(0, width-borderSize)
-	paneH := max(3, height-borderSize-metaBarLines-1)
+	paneH := max(3, height-borderSize-metaBarLinesBase-1)
 
 	sidebarW := max(20, innerW*30/100)
 	gridW := max(20, innerW-sidebarW-1) // -1 for vertical divider
@@ -381,7 +381,7 @@ func (g galleryModel) View() string {
 	}
 
 	innerW := max(0, g.width-borderSize)
-	paneH := max(3, g.height-borderSize-metaBarLines-1)
+	paneH := max(3, g.height-borderSize-metaBarLinesBase-1)
 
 	sidebarW := max(20, innerW*30/100)
 	gridW := max(20, innerW-sidebarW-1)

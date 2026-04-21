@@ -64,6 +64,31 @@ func newLibraryModel(items []catalog.ContentItem, provs []provider.Provider, rep
 	}
 }
 
+// currentMetaItem returns the item whose metadata is displayed for the
+// current mode: the selected row in browse mode, or the drill-in item in
+// detail mode. Used by metaBarLines() for per-item height computation.
+func (l libraryModel) currentMetaItem() *catalog.ContentItem {
+	switch l.mode {
+	case libraryDetail:
+		return l.detailItem
+	default:
+		return l.table.Selected()
+	}
+}
+
+// metaBarLines returns the dynamic number of metadata content lines for
+// the currently-selected item (varies with TrustTier/Recalled/PrivateRepo).
+// Non-MOAT items return metaBarLinesBase (3) so existing layouts are stable.
+func (l libraryModel) metaBarLines() int {
+	return metaBarLinesFor(l.currentMetaItem())
+}
+
+// metaBarTotal returns metaBarLines + 1 for the shared separator line
+// drawn between the metadata section and the content pane.
+func (l libraryModel) metaBarTotal() int {
+	return l.metaBarLines() + 1
+}
+
 // SetSize updates layout dimensions.
 func (l *libraryModel) SetSize(width, height int) {
 	l.width = width
@@ -73,7 +98,7 @@ func (l *libraryModel) SetSize(width, height int) {
 	case libraryBrowse:
 		innerH := height - borderSize
 		if l.table.Len() > 0 {
-			innerH = max(3, innerH-metaBarTotal)
+			innerH = max(3, innerH-l.metaBarTotal())
 		}
 		l.table.SetSize(width-borderSize, innerH)
 	case libraryDetail:
@@ -394,7 +419,7 @@ func (l *libraryModel) loadSelectedFile() {
 func (l *libraryModel) sizeDetailPanes() {
 	treeOuterW := l.detailTreeWidth()
 	previewOuterW := l.width - treeOuterW
-	paneH := max(0, l.height-metaBarTotal)
+	paneH := max(0, l.height-l.metaBarTotal())
 	innerH := max(0, paneH-borderSize)
 
 	l.tree.SetSize(max(0, treeOuterW-borderSize), innerH)
@@ -430,16 +455,21 @@ func (l libraryModel) View() string {
 	}
 }
 
-// metaBarLines is the number of content lines in the metadata section.
+// metaBarLinesBase is the minimum number of content lines in the metadata
+// section. All items emit at least these three:
 // Line 1: name, type, files, origin, installed
 // Line 2: scope, registry, path
 // Line 3: type-specific detail + rename button (or just rename button)
-// The shared border separator (├────┤) is drawn by the view, not counted here.
-const metaBarLines = 3
-
-// metaBarTotal is the total lines consumed by the metadata section
-// including the shared separator line (metaBarLines + 1).
-const metaBarTotal = metaBarLines + 1
+//
+// MOAT-sourced items may emit up to two additional lines:
+// Line 4: trust + visibility chips (when item has any trust surface)
+// Line 5: revocation banner (when item is Recalled)
+//
+// The per-item count is computed by metaBarLinesFor(item); layout sites
+// use that function rather than this constant so heights are accurate
+// for items with trust state. The shared border separator (├────┤) is
+// drawn by the view, not counted here.
+const metaBarLinesBase = 3
 
 // viewBrowse renders a unified panel: metadata section + separator + table.
 func (l libraryModel) viewBrowse() string {
@@ -452,9 +482,9 @@ func (l libraryModel) viewBrowse() string {
 		return borderedPanel(l.table.View(), innerW, innerH, focusedBorderFg)
 	}
 
-	// metadata (3 lines) + separator (1 line) + table (rest)
+	// metadata (3-5 lines) + separator (1 line) + table (rest)
 	sepLines := 1
-	tableH := max(3, innerH-metaBarLines-sepLines)
+	tableH := max(3, innerH-l.metaBarLines()-sepLines)
 	l.table.SetSize(innerW, tableH)
 
 	metaContent := l.renderMetadataContent(innerW)
@@ -493,8 +523,8 @@ func (l libraryModel) viewDetail() string {
 	innerW := l.width - borderSize
 	totalInnerH := l.height - borderSize
 
-	// Metadata gets metaBarLines, separator gets 1, panes get the rest
-	paneH := max(3, totalInnerH-metaBarLines-1)
+	// Metadata gets metaBarLines (3-5 per item), separator gets 1, panes get the rest
+	paneH := max(3, totalInnerH-l.metaBarLines()-1)
 
 	treeOuterW := l.detailTreeWidth()
 	treeInnerW := max(0, treeOuterW-1) // -1 for the vertical divider
