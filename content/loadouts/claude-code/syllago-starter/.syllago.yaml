@@ -1,0 +1,6 @@
+id: syllago-starter
+name: syllago-starter
+description: Starter loadout for Claude Code, Gemini CLI, Codex, and Pi
+tags:
+  - starter
+  - multi-provider

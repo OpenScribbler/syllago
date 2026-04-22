@@ -18,9 +18,10 @@ type ItemRef struct {
 
 // Manifest represents a parsed loadout.yaml file.
 type Manifest struct {
-	Kind        string    `yaml:"kind"`               // must be "loadout"
-	Version     int       `yaml:"version"`            // must be 1
-	Provider    string    `yaml:"provider,omitempty"` // e.g. "claude-code"; optional, can be set via --to flag
+	Kind        string    `yaml:"kind"`                // must be "loadout"
+	Version     int       `yaml:"version"`             // must be 1
+	Provider    string    `yaml:"provider,omitempty"`  // single-provider target; mutually exclusive with Providers
+	Providers   []string  `yaml:"providers,omitempty"` // multi-provider targets; when set, applied to all listed providers
 	Name        string    `yaml:"name"`
 	Description string    `yaml:"description"`
 	Rules       []ItemRef `yaml:"rules,omitempty"`
@@ -29,6 +30,19 @@ type Manifest struct {
 	Agents      []ItemRef `yaml:"agents,omitempty"`
 	MCP         []ItemRef `yaml:"mcp,omitempty"`
 	Commands    []ItemRef `yaml:"commands,omitempty"`
+}
+
+// EffectiveProviders returns the list of provider slugs this loadout targets.
+// Providers[] takes precedence over the legacy Provider field.
+// Returns nil when neither is set (caller falls back to --to flag or default).
+func (m *Manifest) EffectiveProviders() []string {
+	if len(m.Providers) > 0 {
+		return m.Providers
+	}
+	if m.Provider != "" {
+		return []string{m.Provider}
+	}
+	return nil
 }
 
 // Parse reads and validates a loadout.yaml file.

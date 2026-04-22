@@ -3375,3 +3375,47 @@
 | 14:24 | Created tests/smoke/moat-trust-surfacing.sh | — | ~2279 |
 | 14:25 | Edited tests/smoke/moat-trust-surfacing.sh | modified test_moat_registry_add() | ~236 |
 | 14:26 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | expanded (+71 lines) | ~1330 |
+| 14:28 | Edited cli/internal/moat/dev_signer.go | — | ~0 |
+| 14:28 | Edited cli/internal/moat/dev_signer.go | 7→6 lines | ~33 |
+| 14:29 | Edited cli/internal/moat/dev_signer.go | 12→11 lines | ~58 |
+
+## Session: 2026-04-22 14:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 14:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 14:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 14:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:08 | Edited cli/internal/loadout/manifest.go | expanded (+14 lines) | ~324 |
+| 16:09 | Edited cli/internal/loadout/resolve.go | modified Resolve() | ~476 |
+| 16:09 | Edited cli/internal/loadout/apply.go | 2→2 lines | ~29 |
+| 16:09 | Edited cli/internal/loadout/resolve_test.go | inline fix | ~15 |
+| 16:09 | Edited cli/internal/loadout/resolve_test.go | inline fix | ~14 |
+| 16:10 | Edited cli/cmd/syllago/loadout_apply.go | modified printLoadoutActions() | ~1109 |
+| 16:11 | Edited cli/internal/loadout/manifest_test.go | modified TestEffectiveProviders() | ~547 |
+| 16:11 | Edited cli/internal/loadout/resolve_test.go | modified TestResolve_PrecedenceFirstWins() | ~572 |
+| 16:13 | Created content/rules/claude-code/concise-comments/rule.md | — | ~152 |
+| 16:13 | Created content/rules/claude-code/no-placeholders/rule.md | — | ~136 |
+| 16:13 | Created content/skills/code-review/SKILL.md | — | ~327 |
+| 16:13 | Created content/skills/code-review/.syllago.yaml | — | ~48 |
+| 16:14 | Created content/loadouts/claude-code/syllago-starter/loadout.yaml | — | ~114 |
+| 16:14 | Created content/loadouts/claude-code/syllago-starter/.syllago.yaml | — | ~44 |
+| 16:17 | Edited cli/internal/catalog/precedence.go | modified applyPrecedence() | ~250 |
+| 16:18 | Edited cli/internal/catalog/scanner_test.go | modified TestOverridesFor() | ~570 |
+
+## Session: 2026-04-22 16:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

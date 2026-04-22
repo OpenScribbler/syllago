@@ -59,7 +59,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}
 
 	// Step 1: Resolve all manifest references to catalog items
-	refs, err := Resolve(manifest, cat)
+	refs, err := Resolve(manifest, cat, prov.Slug)
 	if err != nil {
 		return nil, fmt.Errorf("resolving references: %w", err)
 	}

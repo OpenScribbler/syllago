@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T21:26:27.800Z
-> Files: 1100 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T23:18:46.286Z
+> Files: 1113 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1640,6 +1640,7 @@
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
 - `list_test.go` — TestListShowsAllItems, TestListFilterByType, TestListFilterBySource, TestListJSON, TestListEmpty (~2018 tok)
 - `list.go` — Struct: listResult (~1253 tok)
+- `loadout_apply.go` (~2836 tok)
 - `loadout_create.go` (~1656 tok)
 - `loadout_remove_test.go` — TestRunLoadoutRemove, TestRunLoadoutRemove_InteractiveConfirmsRemoval, TestRunLoadoutRemove_Interact (~2831 tok)
 - `main.go` (~4164 tok)
@@ -1780,6 +1781,8 @@
 
 ## cli/internal/catalog/
 
+- `precedence.go` — Struct: key (~603 tok)
+- `scanner_test.go` — TestScan, TestApplyPrecedence (~8244 tok)
 - `trust_test.go` — TestTrustTier_String, TestUserFacingBadge, TestTrustBadge_LabelAndGlyph, TestTrustDescription, TestC (~1586 tok)
 - `trust.go` — UserFacingBadge, TrustDescription (~1467 tok)
 - `types.go` — Struct: RegistrySource (~2213 tok)
@@ -1839,8 +1842,12 @@
 
 ## cli/internal/loadout/
 
-- `apply.go` — Struct: ApplyOptions (~4128 tok)
+- `apply.go` — Struct: ApplyOptions (~4131 tok)
 - `integration_test.go` — TestTryRoundTrip_ApplyAndAutoRevert, TestKeepRoundTrip_ApplyStatusRemove (~6900 tok)
+- `manifest_test.go` — TestParse_Valid, TestParse_MissingKind, TestParse_WrongKind, TestParse_MissingProvider, TestParse_Em (~2007 tok)
+- `manifest.go` — Struct: ItemRef (~1201 tok)
+- `resolve_test.go` — TestResolve_AllFound, TestResolve_MissingRule, TestResolve_MultipleErrors, TestResolve_ProviderScope (~1612 tok)
+- `resolve.go` — Struct: ResolvedRef (~710 tok)
 
 ## cli/internal/metadata/
 
@@ -1857,7 +1864,7 @@
 - `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
 - `cert.go` — ExtractIdentityFromRekorRaw (~850 tok)
 - `dev_signer_test.go` — TestSignManifestDev_HappyPath, TestSignManifestDev_DifferentManifestFails, TestSignManifestDev_Wrong (~700 tok)
-- `dev_signer.go` — Struct: bytesSliceReader (~2983 tok)
+- `dev_signer.go` — SignManifestDev (~2358 tok)
 - `enrich_test.go` — TestFindContentEntry_NilManifest, TestFindContentEntry_EmptyContent, TestFindContentEntry_Hit, TestF (~8036 tok)
 - `enrich_verify_cache_test.go` — TestVerifyCached_MemoizesWithinProcess, TestVerifyCached_MtimeInvalidation, TestVerifyCached_SizeInv (~4442 tok)
 - `enrich_verify_cache.go` — Struct: verifyCacheKey (~1781 tok)
@@ -2028,6 +2035,24 @@
 
 - `updater_test.go` — TestAssetName, TestCheckLatest, TestCheckLatestServerError, TestChecksumVerification, TestVersionNew (~7192 tok)
 - `updater.go` — checks for and installs updates from GitHub Releases. (~3165 tok)
+
+## content/loadouts/claude-code/syllago-starter/
+
+- `.syllago.yaml` (~44 tok)
+- `loadout.yaml` (~114 tok)
+
+## content/rules/claude-code/concise-comments/
+
+- `rule.md` — Declares instead (~143 tok)
+
+## content/rules/claude-code/no-placeholders/
+
+- `rule.md` — Declares bodies (~127 tok)
+
+## content/skills/code-review/
+
+- `.syllago.yaml` (~48 tok)
+- `SKILL.md` — Code Review (~307 tok)
 
 ## docs/
 

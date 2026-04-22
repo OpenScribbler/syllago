@@ -1,0 +1,6 @@
+id: code-review
+name: code-review
+description: Systematic code review checklist covering correctness, clarity, safety, and completeness
+tags:
+  - review
+  - starter

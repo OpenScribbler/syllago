@@ -208,6 +208,87 @@ func TestParse_InvalidName(t *testing.T) {
 	}
 }
 
+func TestEffectiveProviders(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		manifest Manifest
+		want     []string
+	}{
+		{
+			name:     "providers[] wins over provider",
+			manifest: Manifest{Provider: "claude-code", Providers: []string{"gemini-cli", "codex"}},
+			want:     []string{"gemini-cli", "codex"},
+		},
+		{
+			name:     "legacy provider field",
+			manifest: Manifest{Provider: "claude-code"},
+			want:     []string{"claude-code"},
+		},
+		{
+			name:     "multi-provider only",
+			manifest: Manifest{Providers: []string{"claude-code", "gemini-cli", "codex", "pi"}},
+			want:     []string{"claude-code", "gemini-cli", "codex", "pi"},
+		},
+		{
+			name:     "neither field set returns nil",
+			manifest: Manifest{},
+			want:     nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := tc.manifest.EffectiveProviders()
+			if len(got) != len(tc.want) {
+				t.Fatalf("EffectiveProviders() len: got %d, want %d (got %v)", len(got), len(tc.want), got)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("EffectiveProviders()[%d]: got %q, want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestParse_ProvidersField(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	f := filepath.Join(tmp, "loadout.yaml")
+	os.WriteFile(f, []byte(`kind: loadout
+version: 1
+name: multi-provider-starter
+description: starter for many providers
+providers:
+  - claude-code
+  - gemini-cli
+  - codex
+  - pi
+skills:
+  - code-review
+`), 0644)
+
+	m, err := Parse(f)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(m.Providers) != 4 {
+		t.Fatalf("providers count: got %d, want 4", len(m.Providers))
+	}
+	if m.Provider != "" {
+		t.Errorf("provider field should be empty when providers[] is used, got %q", m.Provider)
+	}
+	if m.Providers[0] != "claude-code" || m.Providers[3] != "pi" {
+		t.Errorf("providers: got %v", m.Providers)
+	}
+	if len(m.Skills) != 1 {
+		t.Errorf("skills count: got %d, want 1", len(m.Skills))
+	}
+}
+
 func TestRefsByType(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{

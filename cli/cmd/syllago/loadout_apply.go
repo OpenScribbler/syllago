@@ -174,31 +174,11 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
 	}
 
-	// Resolve target provider: --to flag > manifest field > default to claude-code
 	toSlug, _ := cmd.Flags().GetString("to")
 	methodStr, _ := cmd.Flags().GetString("method")
 	method := installer.MethodSymlink
 	if methodStr == "copy" {
 		method = installer.MethodCopy
-	}
-
-	var prov provider.Provider
-	if toSlug != "" {
-		p := findProviderBySlug(toSlug)
-		if p == nil {
-			slugs := providerSlugs()
-			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(slugs, ", "))
-		}
-		prov = *p
-	} else if manifest.Provider != "" {
-		p := findProviderBySlug(manifest.Provider)
-		if p == nil {
-			return output.NewStructuredError(output.ErrLoadoutProvider, "loadout manifest specifies unknown provider: "+manifest.Provider, "Run 'syllago info providers' to see supported providers")
-		}
-		prov = *p
-	} else {
-		// Default to ClaudeCode for backwards compatibility
-		prov = provider.ClaudeCode
 	}
 
 	opts := loadout.ApplyOptions{
@@ -209,12 +189,73 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		Resolver:    resolver,
 	}
 
+	// Multi-provider path: manifest declares providers[] and --to is not set.
+	// Apply to each listed provider independently; each gets its own snapshot.
+	// Run 'syllago loadout remove' once per provider to undo.
+	effectiveProviders := manifest.EffectiveProviders()
+	if toSlug == "" && len(effectiveProviders) > 1 {
+		totalActions := 0
+		for _, slug := range effectiveProviders {
+			p := findProviderBySlug(slug)
+			if p == nil {
+				fmt.Fprintf(output.ErrWriter, "Warning: unknown provider %q in loadout manifest — skipping\n", slug)
+				continue
+			}
+			result, err := loadout.Apply(manifest, cat, *p, opts)
+			if err != nil {
+				return output.NewStructuredErrorDetail(output.ErrInstallConflict,
+					fmt.Sprintf("applying loadout to %s", slug),
+					"Check error details and resolve conflicts", err.Error())
+			}
+			if !output.JSON {
+				if mode == "preview" {
+					fmt.Fprintf(output.Writer, "[%s] Preview:\n", slug)
+				} else {
+					fmt.Fprintf(output.Writer, "[%s] Applied (%s mode):\n", slug, mode)
+				}
+				printLoadoutActions(result.Actions)
+				for _, w := range result.Warnings {
+					fmt.Fprintf(output.ErrWriter, "  Warning: %s\n", w)
+				}
+				fmt.Fprintln(output.Writer)
+			} else {
+				output.Print(result)
+			}
+			totalActions += len(result.Actions)
+		}
+		if mode == "try" {
+			fmt.Fprintln(output.Writer, "This loadout is temporary. It will auto-revert when the session ends.")
+			fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
+		}
+		telemetry.Enrich("provider", strings.Join(effectiveProviders, ","))
+		telemetry.Enrich("mode", mode)
+		telemetry.Enrich("action_count", totalActions)
+		return nil
+	}
+
+	// Single-provider path: --to flag > manifest.Providers[0] > manifest.Provider > default claude-code
+	var prov provider.Provider
+	targetSlug := toSlug
+	if targetSlug == "" && len(effectiveProviders) == 1 {
+		targetSlug = effectiveProviders[0]
+	}
+	if targetSlug != "" {
+		p := findProviderBySlug(targetSlug)
+		if p == nil {
+			slugs := providerSlugs()
+			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+targetSlug, "Available: "+strings.Join(slugs, ", "))
+		}
+		prov = *p
+	} else {
+		// Default to ClaudeCode for backwards compatibility
+		prov = provider.ClaudeCode
+	}
+
 	result, err := loadout.Apply(manifest, cat, prov, opts)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrInstallConflict, "applying loadout", "Check error details and resolve conflicts", err.Error())
 	}
 
-	// Print results
 	if output.JSON {
 		output.Print(result)
 		return nil
@@ -226,7 +267,26 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Applied loadout %q (%s mode):\n\n", manifest.Name, mode)
 	}
 
-	for _, action := range result.Actions {
+	printLoadoutActions(result.Actions)
+
+	for _, w := range result.Warnings {
+		fmt.Fprintf(output.ErrWriter, "\nWarning: %s\n", w)
+	}
+
+	if mode == "try" {
+		fmt.Fprintln(output.Writer, "\nThis loadout is temporary. It will auto-revert when the session ends.")
+		fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
+	}
+
+	telemetry.Enrich("provider", prov.Slug)
+	telemetry.Enrich("mode", mode)
+	telemetry.Enrich("action_count", len(result.Actions))
+	return nil
+}
+
+// printLoadoutActions prints a formatted list of planned actions.
+func printLoadoutActions(actions []loadout.PlannedAction) {
+	for _, action := range actions {
 		symbol := "  "
 		switch action.Action {
 		case "create-symlink":
@@ -243,18 +303,4 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.Writer, "    %s\n", action.Problem)
 		}
 	}
-
-	for _, w := range result.Warnings {
-		fmt.Fprintf(output.ErrWriter, "\nWarning: %s\n", w)
-	}
-
-	if mode == "try" {
-		fmt.Fprintln(output.Writer, "\nThis loadout is temporary. It will auto-revert when the session ends.")
-		fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
-	}
-
-	telemetry.Enrich("provider", prov.Slug)
-	telemetry.Enrich("mode", mode)
-	telemetry.Enrich("action_count", len(result.Actions))
-	return nil
 }
