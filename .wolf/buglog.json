@@ -5462,6 +5462,50 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-22T21:17:29.261Z"
+    },
+    {
+      "id": "bug-342",
+      "timestamp": "2026-04-22T23:08:58.426Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/loadout/manifest.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 14→28 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T23:08:58.426Z"
+    },
+    {
+      "id": "bug-343",
+      "timestamp": "2026-04-22T23:10:06.713Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/loadout_apply.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 84→130 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T23:10:06.713Z"
+    },
+    {
+      "id": "bug-344",
+      "timestamp": "2026-04-22T16:30:00.000Z",
+      "error_message": "Multi-provider loadout apply fails: 'concise-comments not found' for gemini-cli even though content/rules/gemini-cli/concise-comments/ exists on disk",
+      "file": "cli/internal/catalog/precedence.go",
+      "root_cause": "applyPrecedence used (name, type) as dedup key for all types. Same-named rules for different providers all hashed to the same key; only the alphabetically-first provider (claude-code) survived, others went to Overridden.",
+      "fix": "Include provider in dedup key for all non-universal types (Rules, Hooks, Commands, Loadouts). Universal types keep empty provider key since they are provider-agnostic.",
+      "tags": ["catalog", "multi-provider", "loadout", "precedence", "deduplication", "rules"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T16:30:00.000Z"
     }
   ]
 }

@@ -1,0 +1,17 @@
+kind: loadout
+version: 1
+name: syllago-starter
+description: >
+  Starter loadout for Claude Code, Gemini CLI, Codex, and Pi.
+  Installs two style rules (concise-comments, no-placeholders) and a code-review
+  skill. Rules are provider-specific; skills are universal.
+providers:
+  - claude-code
+  - gemini-cli
+  - codex
+  - pi
+rules:
+  - concise-comments
+  - no-placeholders
+skills:
+  - code-review

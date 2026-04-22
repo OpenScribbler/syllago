@@ -363,6 +363,49 @@ func TestApplyPrecedence(t *testing.T) {
 			t.Errorf("expected 0 overridden items, got %d", len(cat.Overridden))
 		}
 	})
+
+	t.Run("same-named rules for different providers are not deduplicated", func(t *testing.T) {
+		t.Parallel()
+		// Multi-provider loadouts create same-named rules for each provider.
+		// These must coexist in the catalog — they are distinct items, not duplicates.
+		cat := &Catalog{
+			Items: []ContentItem{
+				{Name: "concise-comments", Type: Rules, Provider: "claude-code"},
+				{Name: "concise-comments", Type: Rules, Provider: "gemini-cli"},
+				{Name: "concise-comments", Type: Rules, Provider: "codex"},
+				{Name: "concise-comments", Type: Rules, Provider: "pi"},
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 4 {
+			t.Errorf("expected 4 items (one per provider), got %d: %v",
+				len(cat.Items), cat.Items)
+		}
+		if len(cat.Overridden) != 0 {
+			t.Errorf("expected 0 overridden (different providers are distinct), got %d", len(cat.Overridden))
+		}
+	})
+
+	t.Run("same-named rule same provider still deduplicates by precedence", func(t *testing.T) {
+		t.Parallel()
+		// Same name + same provider = true duplicate; keep highest-precedence.
+		cat := &Catalog{
+			Items: []ContentItem{
+				{Name: "concise-comments", Type: Rules, Provider: "claude-code", Library: false}, // shared
+				{Name: "concise-comments", Type: Rules, Provider: "claude-code", Library: true},  // local wins
+			},
+		}
+		applyPrecedence(cat)
+		if len(cat.Items) != 1 {
+			t.Fatalf("expected 1 item after dedup (same provider), got %d", len(cat.Items))
+		}
+		if !cat.Items[0].Library {
+			t.Error("library item should win over shared")
+		}
+		if len(cat.Overridden) != 1 {
+			t.Errorf("expected 1 overridden item, got %d", len(cat.Overridden))
+		}
+	})
 }
 
 func TestOverridesFor(t *testing.T) {

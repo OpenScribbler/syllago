@@ -1,0 +1,6 @@
+id: no-placeholders
+name: no-placeholders
+description: Complete implementations — no TODOs or placeholder code
+tags:
+  - style
+  - starter

@@ -24,7 +24,7 @@ func TestResolve_AllFound(t *testing.T) {
 		MCP:      []ItemRef{{Name: "test-server"}},
 	}
 
-	refs, err := Resolve(manifest, cat)
+	refs, err := Resolve(manifest, cat, manifest.Provider)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestResolve_MissingRule(t *testing.T) {
 		Rules:    []ItemRef{{Name: "security-conventions"}},
 	}
 
-	_, err := Resolve(manifest, cat)
+	_, err := Resolve(manifest, cat, manifest.Provider)
 	if err == nil {
 		t.Fatal("expected error for missing rule")
 	}
@@ -68,7 +68,7 @@ func TestResolve_MultipleErrors(t *testing.T) {
 		MCP:      []ItemRef{{Name: "missing-mcp"}},
 	}
 
-	_, err := Resolve(manifest, cat)
+	_, err := Resolve(manifest, cat, manifest.Provider)
 	if err == nil {
 		t.Fatal("expected error for missing refs")
 	}
@@ -98,7 +98,7 @@ func TestResolve_ProviderScopedLookup(t *testing.T) {
 		Rules:    []ItemRef{{Name: "my-rule"}},
 	}
 
-	_, err := Resolve(manifest, cat)
+	_, err := Resolve(manifest, cat, manifest.Provider)
 	if err == nil {
 		t.Fatal("expected error: rule exists for cursor but manifest targets claude-code")
 	}
@@ -121,7 +121,7 @@ func TestResolve_UniversalIgnoresProvider(t *testing.T) {
 		Skills:   []ItemRef{{Name: "my-skill"}},
 	}
 
-	refs, err := Resolve(manifest, cat)
+	refs, err := Resolve(manifest, cat, manifest.Provider)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestResolve_EmptyManifest(t *testing.T) {
 		// No rules, hooks, skills, etc.
 	}
 
-	refs, err := Resolve(manifest, cat)
+	refs, err := Resolve(manifest, cat, manifest.Provider)
 	if err != nil {
 		t.Fatalf("unexpected error for empty manifest: %v", err)
 	}
@@ -167,11 +167,52 @@ func TestResolve_PrecedenceFirstWins(t *testing.T) {
 		Skills:   []ItemRef{{Name: "my-skill"}},
 	}
 
-	refs, err := Resolve(manifest, cat)
+	refs, err := Resolve(manifest, cat, manifest.Provider)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if refs[0].Item.Path != "/local/skills/my-skill" {
 		t.Errorf("expected local item (first in catalog), got path: %s", refs[0].Item.Path)
+	}
+}
+
+// TestResolve_MultiProviderSlugOverride verifies that providerSlug is used for
+// provider-specific lookup instead of manifest.Provider, enabling multi-provider apply.
+// When applying a multi-provider loadout to gemini-cli, rules for gemini-cli must
+// resolve even though manifest.Providers is set and manifest.Provider is empty.
+func TestResolve_MultiProviderSlugOverride(t *testing.T) {
+	t.Parallel()
+
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "concise-comments", Type: catalog.Rules, Provider: "claude-code"},
+			{Name: "concise-comments", Type: catalog.Rules, Provider: "gemini-cli"},
+			{Name: "my-skill", Type: catalog.Skills},
+		},
+	}
+	// Multi-provider manifest: no single Provider field set.
+	manifest := &Manifest{
+		Providers: []string{"claude-code", "gemini-cli"},
+		Rules:     []ItemRef{{Name: "concise-comments"}},
+		Skills:    []ItemRef{{Name: "my-skill"}},
+	}
+
+	// Resolve for gemini-cli — should find gemini-cli's rule, not claude-code's.
+	refs, err := Resolve(manifest, cat, "gemini-cli")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var ruleRef *ResolvedRef
+	for i := range refs {
+		if refs[i].Type == catalog.Rules {
+			ruleRef = &refs[i]
+			break
+		}
+	}
+	if ruleRef == nil {
+		t.Fatal("expected a rule ref, got none")
+	}
+	if ruleRef.Item.Provider != "gemini-cli" {
+		t.Errorf("expected gemini-cli rule, got provider %q", ruleRef.Item.Provider)
 	}
 }

@@ -16,15 +16,19 @@ func itemPrecedence(item ContentItem) int {
 	return 3 // built-in (lowest)
 }
 
-// applyPrecedence deduplicates items by (name, type), keeping the highest-precedence
-// version in Items and moving others to Overridden.
-// Loadouts include provider in the dedup key because the same loadout name under
-// different providers represents distinct loadouts (different content references).
+// applyPrecedence deduplicates items by (name, type, provider), keeping the
+// highest-precedence version in Items and moving others to Overridden.
+//
+// Provider is included in the key for all provider-specific types (Rules, Hooks,
+// Commands, Loadouts) because same-named items for different providers are distinct
+// content (e.g., a "concise-comments" rule for claude-code and one for gemini-cli
+// are separate items, not duplicates). Universal types (Skills, Agents, MCP) use
+// an empty provider key since they are provider-agnostic.
 func applyPrecedence(cat *Catalog) {
 	type key struct {
 		name     string
 		typ      ContentType
-		provider string // only set for Loadouts
+		provider string
 	}
 
 	best := make(map[key]int) // key → index in kept of winning item
@@ -34,7 +38,7 @@ func applyPrecedence(cat *Catalog) {
 
 	for _, item := range cat.Items {
 		k := key{strings.ToLower(item.Name), item.Type, ""}
-		if item.Type == Loadouts {
+		if !item.Type.IsUniversal() {
 			k.provider = item.Provider
 		}
 		winIdx, exists := best[k]
