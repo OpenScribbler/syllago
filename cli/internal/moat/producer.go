@@ -9,11 +9,15 @@ package moat
 // through `syllago registry sync`, which is the only component authorized
 // to cryptographically verify a manifest.
 //
-// Trust boundary: enrich-time trusts the filesystem under cacheDir.
-// Re-verification of signature.bundle at enrich time is deliberately out of
-// scope (follow-up bead syllago-dwjcy). The assumption is that a manifest
-// on disk was persisted by a successful `registry sync`, whose verification
-// is authoritative.
+// Trust boundary: enrich-time re-verifies the cached manifest against its
+// cached bundle once per (file-metadata) tuple per process, closing the
+// same-user local-write gap between syncs (ADR 0007 Addendum 1, bead
+// syllago-dwjcy). The first enrich call in a fresh `syllago` process runs
+// full sigstore verification; subsequent calls hit a process-local memo
+// keyed on (manifest mtime+size, bundle mtime+size) and skip the crypto
+// work. File changes flip the key automatically. See
+// enrich_verify_cache.go for the cache implementation and cache-scope
+// rationale.
 //
 // Fail-closed posture (G-9): any condition that could produce incorrect or
 // outdated trust state results in "no badge" for the affected registry's
@@ -28,6 +32,7 @@ package moat
 // shows the collapsed signal.
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -96,6 +101,18 @@ func EnrichFromMOATManifests(
 		return fmt.Errorf("EnrichFromMOATManifests: config is nil")
 	}
 
+	// Short-circuit when the bundled trusted root is unusable: every
+	// per-registry verify would hit the same failure, and rendering N
+	// identical warnings per rescan drowns the signal. One warning at the
+	// top of the loop is louder and correct.
+	trInfo := BundledTrustedRoot(now)
+	switch trInfo.Status {
+	case TrustedRootStatusExpired, TrustedRootStatusMissing, TrustedRootStatusCorrupt:
+		cat.Warnings = append(cat.Warnings,
+			fmt.Sprintf("MOAT producer: %s; trust decisions disabled for all MOAT registries", StalenessMessage(trInfo)))
+		return nil
+	}
+
 	// Pre-resolve the absolute cacheDir once so the per-registry
 	// filepath.Rel escape check is stable across symlinks. An unreachable
 	// cacheDir (non-existent, unreadable) produces a single warning and
@@ -158,6 +175,31 @@ func EnrichFromMOATManifests(
 		if err != nil {
 			cat.Warnings = append(cat.Warnings,
 				fmt.Sprintf("MOAT cache unparseable for registry %q: %v; trust decisions disabled", reg.Name, err))
+			continue
+		}
+
+		// Enrich-time verification (ADR 0007 Addendum 1). Re-verify the
+		// cached manifest+bundle against the pinned signing profile,
+		// memoized per process to amortize the crypto cost across
+		// rescans. Unpinned profiles (SigningProfile nil or zero) cannot
+		// be verified safely at enrich time — no user is present to
+		// approve a TOFU-captured identity — so we fail-closed with
+		// MOAT_IDENTITY_UNPINNED. The sync-time path does TOFU self-match
+		// because the user is present to accept; enrich-time does not.
+		pinned := pinnedProfileForEnrich(reg)
+		if pinned == nil {
+			cat.Warnings = append(cat.Warnings,
+				fmt.Sprintf("%s: registry %q has no pinned signing profile; run `syllago registry approve %s`", CodeIdentityUnpinned, reg.Name, reg.Name))
+			continue
+		}
+		if _, err := enrichVerifyFn(manifestPath, bundlePath, pinned, trInfo.Bytes); err != nil {
+			code := CodeInvalid
+			var ve *VerifyError
+			if errors.As(err, &ve) && ve.Code != "" {
+				code = ve.Code
+			}
+			cat.Warnings = append(cat.Warnings,
+				fmt.Sprintf("%s: MOAT manifest verification failed for registry %q: %v; trust decisions disabled", code, reg.Name, err))
 			continue
 		}
 
@@ -239,6 +281,34 @@ func attachRegistryTrust(
 	}
 
 	cat.RegistryTrusts[reg.Name] = rt
+}
+
+// pinnedProfileForEnrich translates a config.SigningProfile to the moat
+// package shape for enrich-time verification, returning nil if the
+// registry has no pinned profile.
+//
+// Unlike pinnedProfileForVerify (sync.go), this helper has NO wire-profile
+// fallback. Sync-time is interactive — the user is present to approve a
+// TOFU-captured identity — so falling back to the manifest's own claimed
+// profile still yields a well-typed verify run whose result is then
+// surfaced for human approval. Enrich-time has no interactive escape
+// hatch, so the fallback would be equivalent to self-matching the cert
+// against itself: a tautological pass. The correct fail-closed behavior
+// for an unpinned profile at enrich time is to skip verification entirely
+// and emit MOAT_IDENTITY_UNPINNED.
+func pinnedProfileForEnrich(reg *config.Registry) *SigningProfile {
+	if reg == nil || reg.SigningProfile == nil || reg.SigningProfile.IsZero() {
+		return nil
+	}
+	return &SigningProfile{
+		Issuer:            reg.SigningProfile.Issuer,
+		Subject:           reg.SigningProfile.Subject,
+		ProfileVersion:    reg.SigningProfile.ProfileVersion,
+		SubjectRegex:      reg.SigningProfile.SubjectRegex,
+		IssuerRegex:       reg.SigningProfile.IssuerRegex,
+		RepositoryID:      reg.SigningProfile.RepositoryID,
+		RepositoryOwnerID: reg.SigningProfile.RepositoryOwnerID,
+	}
 }
 
 // manifestCachePathsFor constructs (manifestPath, bundlePath) under

@@ -54,6 +54,41 @@ func moatCfg(name, manifestURI string) *config.Config {
 	}
 }
 
+// moatCfgPinned is moatCfg plus a minimal pinned SigningProfile. Happy-path
+// tests pass enrich-time verification (ADR 0007 Addendum 1) only when a
+// profile is pinned and enrichVerifyFn is stubbed to return success.
+func moatCfgPinned(name, manifestURI string) *config.Config {
+	return &config.Config{
+		Registries: []config.Registry{
+			{
+				Name:        name,
+				Type:        config.RegistryTypeMOAT,
+				ManifestURI: manifestURI,
+				SigningProfile: &config.SigningProfile{
+					Issuer:  "https://token.actions.githubusercontent.com",
+					Subject: "https://github.com/example/registry/.github/workflows/publish.yml@refs/heads/main",
+				},
+			},
+		},
+	}
+}
+
+// stubEnrichVerifyOK swaps enrichVerifyFn with a always-success stub for
+// the lifetime of the test. Restores the original on cleanup.
+func stubEnrichVerifyOK(t *testing.T) {
+	t.Helper()
+	orig := enrichVerifyFn
+	enrichVerifyFn = func(_, _ string, _ *SigningProfile, _ []byte) (*VerificationResult, error) {
+		return &VerificationResult{
+			SignatureValid:        true,
+			CertificateChainValid: true,
+			RekorProofValid:       true,
+			IdentityMatches:       true,
+		}, nil
+	}
+	t.Cleanup(func() { enrichVerifyFn = orig })
+}
+
 // --- Nil guards --------------------------------------------------------
 
 func TestEnrichFromMOATManifests_NilCatalog(t *testing.T) {
@@ -95,11 +130,11 @@ func TestEnrichFromMOATManifests_NoMOATRegistries(t *testing.T) {
 // --- Happy path: fresh cache → enrichment runs -------------------------
 
 func TestEnrichFromMOATManifests_FreshCacheEnriches(t *testing.T) {
-	t.Parallel()
+	stubEnrichVerifyOK(t)
 	cache := t.TempDir()
 	writeManifestCache(t, cache, "example-reg", fixtureManifestJSON, true)
 
-	cfg := moatCfg("example-reg", "https://registry.example.com/manifest.json")
+	cfg := moatCfgPinned("example-reg", "https://registry.example.com/manifest.json")
 
 	// Lockfile registers a fetched_at inside the 72h window so
 	// CheckRegistry returns Fresh.
@@ -126,11 +161,11 @@ func TestEnrichFromMOATManifests_FreshCacheEnriches(t *testing.T) {
 // end-to-end populate: manifest lists an item, catalog has the matching
 // row, and the post-enrich row carries the expected tier.
 func TestEnrichFromMOATManifests_FreshCacheWithContent(t *testing.T) {
-	t.Parallel()
+	stubEnrichVerifyOK(t)
 	cache := t.TempDir()
 	writeManifestCache(t, cache, "example-reg", manifestWithRevocations(t), true)
 
-	cfg := moatCfg("example-reg", "https://registry.example.com/manifest.json")
+	cfg := moatCfgPinned("example-reg", "https://registry.example.com/manifest.json")
 
 	now := time.Now().UTC()
 	lf := &Lockfile{}
@@ -213,11 +248,11 @@ func TestEnrichFromMOATManifests_UnparseableManifest(t *testing.T) {
 // TestEnrichFromMOATManifests_Stale: lockfile fetched_at older than 72h.
 // CheckRegistry should return StalenessStale → warning emitted, no enrich.
 func TestEnrichFromMOATManifests_Stale(t *testing.T) {
-	t.Parallel()
+	stubEnrichVerifyOK(t)
 	cache := t.TempDir()
 	writeManifestCache(t, cache, "example-reg", fixtureManifestJSON, true)
 
-	cfg := moatCfg("example-reg", "https://registry.example.com/manifest.json")
+	cfg := moatCfgPinned("example-reg", "https://registry.example.com/manifest.json")
 	now := time.Now().UTC()
 	lf := &Lockfile{}
 	// 73h old fetch — past the 72h DefaultStalenessThreshold.
@@ -263,14 +298,18 @@ func TestEnrichFromMOATManifests_InvalidRegistryName(t *testing.T) {
 // one Missing. First enriches, second warns. Proves per-registry
 // independence — one failure does not mask another's success.
 func TestEnrichFromMOATManifests_MultiRegistryMixed(t *testing.T) {
-	t.Parallel()
+	stubEnrichVerifyOK(t)
 	cache := t.TempDir()
 	writeManifestCache(t, cache, "good-reg", fixtureManifestJSON, true)
 	// "bad-reg" intentionally has no cache.
 
+	pinned := &config.SigningProfile{
+		Issuer:  "https://token.actions.githubusercontent.com",
+		Subject: "https://github.com/example/registry/.github/workflows/publish.yml@refs/heads/main",
+	}
 	cfg := &config.Config{Registries: []config.Registry{
-		{Name: "good-reg", Type: config.RegistryTypeMOAT, ManifestURI: "https://good.example.com/manifest.json"},
-		{Name: "bad-reg", Type: config.RegistryTypeMOAT, ManifestURI: "https://bad.example.com/manifest.json"},
+		{Name: "good-reg", Type: config.RegistryTypeMOAT, ManifestURI: "https://good.example.com/manifest.json", SigningProfile: pinned},
+		{Name: "bad-reg", Type: config.RegistryTypeMOAT, ManifestURI: "https://bad.example.com/manifest.json", SigningProfile: pinned},
 	}}
 	now := time.Now().UTC()
 	lf := &Lockfile{}
