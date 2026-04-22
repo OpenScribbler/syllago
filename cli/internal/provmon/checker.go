@@ -3,23 +3,14 @@ package provmon
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
-
-// ErrUnimplementedDetectionMethod is returned by CheckVersion when a manifest
-// declares a change-detection method that has no implementation in this
-// package. Today that covers "content-hash" (used by windsurf, kiro, cursor)
-// and "github-commits" (used by amp, copilot-cli). Returning an explicit
-// sentinel rather than (nil, nil) is what lets callers and tests tell "no
-// drift was detected" apart from "we never even tried to detect drift." See
-// syllago-5gthn for the follow-up feature bead that will replace this with
-// real detection.
-var ErrUnimplementedDetectionMethod = errors.New("change detection method not implemented")
 
 // httpClient is overridable for tests.
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -38,23 +29,55 @@ func (r URLResult) OK() bool {
 
 // CheckReport is the full report for one provider manifest.
 type CheckReport struct {
-	Slug         string
-	DisplayName  string
-	Status       string // active | archived | beta
-	FetchTier    string
-	URLResults   []URLResult
-	VersionDrift *VersionDrift // nil if change detection not applicable
-	TotalURLs    int
-	FailedURLs   int
-	LastVerified string
-	Baseline     string
+	Slug              string
+	DisplayName       string
+	Status            string // active | archived | beta
+	FetchTier         string
+	URLResults        []URLResult
+	VersionDrift      *VersionDrift // nil if change detection not applicable
+	TotalURLs         int
+	FailedURLs        int
+	LastVerified      string
+	Baseline          string
+	CheckVersionError string // empty on success; set when CheckVersion returned a setup-level error
 }
 
 // VersionDrift describes when the provider's latest version differs from what was last verified.
 type VersionDrift struct {
+	Method        string // detection method from the manifest ("github-releases" or "source-hash")
 	Baseline      string // what the manifest records (version tag, for github-releases)
 	LatestVersion string // what the API says
 	Drifted       bool
+	Sources       []SourceDrift // per-source results when Method == "source-hash"
+}
+
+// SourceDriftStatus classifies the result of checking a single source URL for
+// content drift. Exactly one status applies per source per check run.
+type SourceDriftStatus string
+
+const (
+	// StatusStable: fetched body's sha256 matches the manifest baseline. No drift.
+	StatusStable SourceDriftStatus = "stable"
+	// StatusDrifted: fetched body's sha256 differs from the manifest baseline. Drift detected.
+	StatusDrifted SourceDriftStatus = "drifted"
+	// StatusSkipped: baseline is empty in the manifest (capture-on-first-check),
+	// so we can't compare yet. The fetched hash is recorded for future runs.
+	StatusSkipped SourceDriftStatus = "skipped"
+	// StatusFetchFailed: HTTP/transport error prevented computing a hash for this source.
+	StatusFetchFailed SourceDriftStatus = "fetch_failed"
+	// StatusContentInvalid: body was fetched but couldn't be decoded (e.g., malformed JSON
+	// for github-commits endpoints). Reserved for method-specific semantic failures.
+	StatusContentInvalid SourceDriftStatus = "content_invalid"
+)
+
+// SourceDrift is the result of checking a single source URL for content drift.
+type SourceDrift struct {
+	ContentType  string // rules | hooks | mcp | skills | agents | commands
+	URI          string
+	Baseline     string            // sha256:... from the manifest (may be empty)
+	CurrentHash  string            // sha256:... computed from the fetched body (empty on fetch/parse failure)
+	Status       SourceDriftStatus // exactly one of the constants above
+	ErrorMessage string            // populated when Status is fetch_failed, content_invalid, or skipped (explains why)
 }
 
 // CheckURLs performs concurrent HEAD requests against all URLs in a manifest.
@@ -109,21 +132,29 @@ func checkOneURL(ctx context.Context, url string) URLResult {
 	return URLResult{URL: url, StatusCode: resp.StatusCode}
 }
 
-// CheckVersion queries the provider's change-detection endpoint to detect
-// drift. Only the "github-releases" method is implemented; the other method
-// values documented in manifest.go (content-hash, github-commits) return
-// ErrUnimplementedDetectionMethod so callers can distinguish "no drift"
-// from "unsupported method."
+// CheckVersion is the default entry used by RunCheck; resolves formatsDir from
+// the current working directory (repo root or cli/ parent).
 func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
+	return CheckVersionWithFormats(ctx, m, defaultFormatsDir())
+}
+
+// CheckVersionWithFormats dispatches drift detection by method. Tests pass an
+// explicit formatsDir so they don't depend on repo layout; the CLI uses
+// defaultFormatsDir for the real docs/provider-formats/ directory.
+func CheckVersionWithFormats(ctx context.Context, m *Manifest, formatsDir string) (*VersionDrift, error) {
 	switch m.ChangeDetection.Method {
 	case "github-releases":
-		// fall through to the implementation below
+		return checkGithubReleases(ctx, m)
 	case "source-hash":
-		return nil, fmt.Errorf("%w: %s", ErrUnimplementedDetectionMethod, m.ChangeDetection.Method)
+		return checkSourceHash(ctx, m, formatsDir)
 	default:
 		return nil, nil
 	}
+}
 
+// checkGithubReleases queries the github-releases API and compares the latest
+// release tag to the manifest baseline.
+func checkGithubReleases(ctx context.Context, m *Manifest) (*VersionDrift, error) {
 	endpoint := m.ChangeDetection.Endpoint
 	if endpoint == "" {
 		return nil, fmt.Errorf("no change detection endpoint for %s", m.Slug)
@@ -154,10 +185,26 @@ func CheckVersion(ctx context.Context, m *Manifest) (*VersionDrift, error) {
 	}
 
 	return &VersionDrift{
+		Method:        "github-releases",
 		Baseline:      m.ChangeDetection.Baseline,
 		LatestVersion: release.TagName,
 		Drifted:       m.ChangeDetection.Baseline != "" && release.TagName != m.ChangeDetection.Baseline,
 	}, nil
+}
+
+// defaultFormatsDir resolves docs/provider-formats relative to the current
+// working directory. Tries cwd/, then cwd/../ (handles running from cli/).
+func defaultFormatsDir() string {
+	cwd, _ := os.Getwd()
+	candidate := filepath.Join(cwd, "docs", "provider-formats")
+	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+		return candidate
+	}
+	candidate = filepath.Join(cwd, "..", "docs", "provider-formats")
+	if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+		return candidate
+	}
+	return filepath.Join("docs", "provider-formats")
 }
 
 // RunCheck performs a full check on a single manifest: URL health + version drift.
@@ -184,10 +231,16 @@ func RunCheck(ctx context.Context, m *Manifest, maxConcurrent int) *CheckReport 
 	}
 
 	drift, err := CheckVersion(ctx, m)
-	if err == nil {
-		report.VersionDrift = drift
+	// Always populate VersionDrift even when err is non-nil — source-hash
+	// drift objects hold per-source results that remain useful even if
+	// one source transport-failed.
+	report.VersionDrift = drift
+	if err != nil {
+		// Setup-level error (e.g., github-releases API 500, FormatDoc
+		// parse error). Surface it as a field on the report; non-fatal
+		// to URL health results.
+		report.CheckVersionError = err.Error()
 	}
-	// Version check failures are non-fatal — URL results are still useful.
 
 	return report
 }
