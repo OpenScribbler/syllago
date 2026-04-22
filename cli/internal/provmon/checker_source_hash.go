@@ -170,7 +170,7 @@ func fetchSourceBytes(ctx context.Context, fetchMethod, slug, rawURL string) ([]
 		if err != nil {
 			return nil, "", "", fmt.Errorf("chromedp temp cache: %w", err)
 		}
-		defer os.RemoveAll(tmpCache)
+		defer func() { _ = os.RemoveAll(tmpCache) }()
 		entry, err := capmon.FetchChromedp(ctx, tmpCache, slug, sanitizeSourceID(rawURL), rawURL)
 		if err != nil {
 			return nil, "", "", err
