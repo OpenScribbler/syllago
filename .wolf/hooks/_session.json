@@ -1,12 +1,45 @@
 {
   "session_id": "session-2026-04-22-1214",
   "started": "2026-04-22T19:14:04.685Z",
-  "files_read": {},
-  "files_written": [],
-  "edit_counts": {},
-  "anatomy_hits": 0,
+  "files_read": {
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/table_test.go": {
+      "count": 1,
+      "tokens": 2000,
+      "first_read": "2026-04-22T19:15:03.770Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/gate_install_test.go": {
+      "count": 2,
+      "tokens": 4156,
+      "first_read": "2026-04-22T19:15:03.821Z"
+    }
+  },
+  "files_written": [
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gate_install_test.go",
+      "action": "edit",
+      "tokens": 24,
+      "at": "2026-04-22T19:15:26.058Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gate_install_test.go",
+      "action": "edit",
+      "tokens": 8,
+      "at": "2026-04-22T19:15:29.167Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/table_test.go",
+      "action": "edit",
+      "tokens": 37,
+      "at": "2026-04-22T19:15:33.007Z"
+    }
+  ],
+  "edit_counts": {
+    "cli/internal/tui/gate_install_test.go": 2,
+    "cli/internal/tui/table_test.go": 1
+  },
+  "anatomy_hits": 1,
   "anatomy_misses": 0,
-  "repeated_reads_warned": 0,
+  "repeated_reads_warned": 1,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

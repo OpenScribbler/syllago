@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T18:55:09.046Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T19:15:32.996Z
 > Files: 1095 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
@@ -1990,7 +1990,7 @@
 - `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~3452 tok)
 - `gallery_trust_test.go` — TestRegistryTrustGlyph_States, TestRegistryTrustSummaryFrom_NilReturnsZero, TestRegistryTrustSummary (~3073 tok)
 - `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
-- `gate_install_test.go` — Struct: gateFixture (~4156 tok)
+- `gate_install_test.go` — Struct: gateFixture (~4131 tok)
 - `gate_install.go` — Struct: gateEvaluation (~1370 tok)
 - `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~2260 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
@@ -2011,7 +2011,7 @@
 - `responsive_test.go` — TestResponsive_FramedLinesNeverExceedTerminal, TestResponsive_LibraryColumnCount_ByWidth, TestRespon (~2026 tok)
 - `risk_banner_test.go` — TestRiskBanner_RenderHigh, TestRiskBanner_RenderMediumOnly, TestRiskBanner_RenderMixed, TestRiskBann (~2211 tok)
 - `styles.go` (~1460 tok)
-- `table_test.go` — TestProviderAbbrev_KnownSlugs, TestProviderAbbrev_UnknownSlug, TestAbbrevToSlug_RoundTrip, TestAbbre (~2000 tok)
+- `table_test.go` — TestProviderAbbrev_KnownSlugs, TestProviderAbbrev_UnknownSlug, TestAbbrevToSlug_RoundTrip, TestAbbre (~1957 tok)
 - `table.go` — Struct: tableModel (~6120 tok)
 - `testhelpers_test.go` (~1816 tok)
 - `topbar_test.go` — TestTopBar_InitialState, TestTopBar_SetGroup, TestTopBar_NextPrevTab, TestTopBar_TabWraps, TestTopBa (~2062 tok)
