@@ -7,8 +7,24 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
+
+// isolateListEnv blocks global-config and registry-cache leakage into list
+// tests. Without it, runList walks ~/.syllago/config.yaml and enumerates any
+// cloned registries on the dev machine — producing unexpected result rows.
+// All list tests must call this after withFakeRepoRoot / withGlobalLibrary.
+func isolateListEnv(t *testing.T) {
+	t.Helper()
+	origCfg := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfg })
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = t.TempDir()
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+}
 
 // setupListRepo creates a temp syllago repo with items across types and sources.
 func setupListRepo(t *testing.T) string {
@@ -39,6 +55,7 @@ func TestListShowsAllItems(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
 	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
 
 	stdout, _ := output.SetForTest(t)
 
@@ -80,6 +97,7 @@ func TestListFilterByType(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
 	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
 
 	stdout, _ := output.SetForTest(t)
 
@@ -114,6 +132,7 @@ func TestListFilterBySource(t *testing.T) {
 	root := setupListRepo(t)
 	withFakeRepoRoot(t, root)
 	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
 
 	_, stderr := output.SetForTest(t)
 
@@ -134,6 +153,7 @@ func TestListJSON(t *testing.T) {
 	withFakeRepoRoot(t, root)
 	// Isolate from real global library
 	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
 
 	stdout, _ := output.SetForTest(t)
 	output.JSON = true
@@ -174,6 +194,7 @@ func TestListEmpty(t *testing.T) {
 	withFakeRepoRoot(t, root)
 	// Isolate from real global library
 	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
 
 	_, stderr := output.SetForTest(t)
 
@@ -185,5 +206,44 @@ func TestListEmpty(t *testing.T) {
 	errOut := stderr.String()
 	if !strings.Contains(errOut, "No items found") {
 		t.Errorf("expected 'No items found' message, got stderr:\n%s", errOut)
+	}
+}
+
+// TestListJSON_NoTrustBadgeForPlainItems proves the list JSON output is
+// silent about trust when items have none. An empty Trust field must
+// omitjson so downstream consumers can use simple truthiness checks
+// (Trust == "Verified" / "Recalled") without string-matching on empty.
+func TestListJSON_NoTrustBadgeForPlainItems(t *testing.T) {
+	root := setupListRepo(t)
+	withFakeRepoRoot(t, root)
+	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	if err := listCmd.RunE(listCmd, []string{}); err != nil {
+		t.Fatalf("list --json: %v", err)
+	}
+
+	// Plain (non-MOAT) items must not advertise a trust label. The JSON
+	// tag omitempty drops Trust/TrustTier/Recalled entirely for these
+	// rows, so the raw bytes should not contain a "trust" key at all.
+	raw := stdout.String()
+	if strings.Contains(raw, `"trust":"Verified"`) {
+		t.Errorf("plain shared items should not carry Verified trust, got:\n%s", raw)
+	}
+	if strings.Contains(raw, `"recalled":true`) {
+		t.Errorf("plain shared items must not be flagged Recalled, got:\n%s", raw)
+	}
+
+	// Verify the JSON still parses into listResult cleanly — the new
+	// Trust fields must not break existing consumers.
+	var result listResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON output: %v\nraw: %s", err, raw)
+	}
+	if len(result.Groups) == 0 {
+		t.Fatal("expected at least one group in JSON output")
 	}
 }

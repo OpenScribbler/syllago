@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 3935984,
-    "total_reads": 2063,
+    "total_tokens_estimated": 3940410,
+    "total_reads": 2065,
     "total_writes": 1737,
-    "total_sessions": 244,
-    "anatomy_hits": 701,
+    "total_sessions": 247,
+    "anatomy_hits": 703,
     "anatomy_misses": 997,
     "repeated_reads_blocked": 671,
-    "estimated_savings_vs_bare_cli": 2553889
+    "estimated_savings_vs_bare_cli": 2554289
   },
   "sessions": [
     {
@@ -25361,6 +25361,50 @@
       "id": "session-2026-04-22-0959",
       "started": "2026-04-22T16:59:53.211Z",
       "ended": "2026-04-22T17:34:58.318Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",
+          "tokens_estimated": 2213,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2213,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-22-0959",
+      "started": "2026-04-22T16:59:53.211Z",
+      "ended": "2026-04-22T17:36:19.649Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",
+          "tokens_estimated": 2213,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 2213,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-22-0959",
+      "started": "2026-04-22T16:59:53.211Z",
+      "ended": "2026-04-22T18:06:06.210Z",
       "reads": [
         {
           "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go",

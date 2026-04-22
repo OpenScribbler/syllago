@@ -12,7 +12,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
-	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
@@ -232,8 +231,21 @@ func saveMetaForPath(path string, meta *metadata.Meta) error {
 	return metadata.Save(path, meta)
 }
 
-// rescanCatalog re-reads all content from disk and refreshes the active view.
-// Re-reads the config to pick up registries added/removed since startup.
+// catalogReadyMsg carries the result of an async catalog rescan. Produced by
+// rescanCatalog's returned command; consumed by handleCatalogReady.
+type catalogReadyMsg struct {
+	result *moat.ScanResult
+	err    error
+}
+
+// rescanCatalog kicks off an async re-scan of disk content + MOAT enrichment.
+// All I/O (config load, registry enumeration, lockfile read, scan, sigstore
+// verification) runs inside the returned tea.Cmd closure so the TUI event
+// loop stays responsive — see .claude/rules/tui-elm.md rule #2.
+//
+// State mutation happens later in handleCatalogReady, which App.Update()
+// dispatches when the catalogReadyMsg arrives. Callers just use the returned
+// Cmd; they do not observe App changes synchronously.
 func (a *App) rescanCatalog() tea.Cmd {
 	root := a.contentRoot
 	if root == "" {
@@ -243,41 +255,29 @@ func (a *App) rescanCatalog() tea.Cmd {
 	if projectRoot == "" {
 		projectRoot = root
 	}
-
-	// Reload config from all sources to pick up changes.
-	// Registries may be stored in the content root config, project config,
-	// or global config — merge all three to cover every case.
-	globalCfg, _ := config.LoadGlobal()
-	projectCfg, _ := config.Load(projectRoot)
-	contentCfg, _ := config.Load(root)
-	merged := config.Merge(globalCfg, config.Merge(contentCfg, projectCfg))
-	var regSources []catalog.RegistrySource
-	for _, r := range merged.Registries {
-		if registry.IsCloned(r.Name) {
-			dir, _ := registry.CloneDir(r.Name)
-			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
-		}
+	return func() tea.Msg {
+		result, err := moat.LoadAndScan(root, projectRoot, time.Now())
+		return catalogReadyMsg{result: result, err: err}
 	}
-	a.registrySources = regSources
+}
 
-	// MOAT enrichment inputs. GlobalDirPath resolves ~/.syllago (the cache
-	// root — the producer appends `moat/registries/<name>/` beneath it).
-	// Lockfile load returns a fresh empty lockfile when the file is absent,
-	// so first-run projects still enrich correctly.
-	cacheDir, _ := config.GlobalDirPath()
-	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
-
-	cat, err := moat.ScanAndEnrich(merged, root, projectRoot, regSources, lf, cacheDir, time.Now())
-	if err != nil {
-		return a.toast.Push("Refresh failed: "+err.Error(), toastError)
+// handleCatalogReady applies the async rescan result to App state and emits
+// a success/error toast. The galleryDrillIn reset mirrors the previous
+// synchronous behavior — a rescan always returns the user to the gallery
+// overview.
+func (a App) handleCatalogReady(msg catalogReadyMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		return a, a.toast.Push("Refresh failed: "+msg.err.Error(), toastError)
 	}
-	a.catalog = cat
-	a.moatLockfile = lf
-	a.moatGate = moat.BuildGateInputs(merged, cacheDir)
+	a.catalog = msg.result.Catalog
+	a.moatLockfile = msg.result.Lockfile
+	a.moatGate = msg.result.GateInputs
+	a.registrySources = msg.result.RegistrySources
+	a.cfg = msg.result.Config
 	a.galleryDrillIn = false
 	a.refreshContent()
 	a.updateNavState()
-	return a.toast.Push("Catalog refreshed", toastSuccess)
+	return a, a.toast.Push("Catalog refreshed", toastSuccess)
 }
 
 // refreshContent updates the active content model based on the current tab.

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
@@ -338,10 +340,11 @@ func checkRegistriesWith(projectRoot string) checkResult {
 }
 
 func checkNamingQuality(projectRoot string) checkResult {
-	cat, err := catalog.ScanWithGlobalAndRegistries(projectRoot, projectRoot, nil)
+	scan, err := moat.LoadAndScan(projectRoot, projectRoot, time.Now())
 	if err != nil {
 		return checkResult{Name: "naming", Status: checkWarn, Message: "Naming: could not scan content", Details: []string{err.Error()}}
 	}
+	cat := scan.Catalog
 
 	var unnamed int
 	var details []string

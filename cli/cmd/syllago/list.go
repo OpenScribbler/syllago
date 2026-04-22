@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
@@ -50,6 +52,9 @@ type listItem struct {
 	Name        string `json:"name"`
 	Source      string `json:"source"`
 	Description string `json:"description,omitempty"`
+	Trust       string `json:"trust,omitempty"`      // "Verified" / "Recalled" / ""
+	TrustTier   string `json:"trust_tier,omitempty"` // full tier for drill-down ("Dual-Attested" etc.)
+	Recalled    bool   `json:"recalled,omitempty"`
 }
 
 func runList(cmd *cobra.Command, args []string) error {
@@ -65,10 +70,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot = root
 	}
-	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, nil)
+	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
+	cat := scan.Catalog
 	cat.PrintWarnings()
 
 	// Build grouped output across all content types.
@@ -83,10 +89,14 @@ func runList(cmd *cobra.Command, args []string) error {
 			if !filterBySource(item, sourceFilter) {
 				continue
 			}
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
 			items = append(items, listItem{
 				Name:        item.Name,
 				Source:      sourceLabel(item),
 				Description: item.Description,
+				Trust:       badge.Label(),
+				TrustTier:   item.TrustTier.String(),
+				Recalled:    item.Recalled,
 			})
 		}
 
@@ -124,13 +134,28 @@ func runList(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintf(output.Writer, "%s (%d)\n", group.Type, group.Count)
 		for _, item := range group.Items {
-			// Pad name and source for alignment.
-			fmt.Fprintf(output.Writer, "  %-18s [%-8s] %s\n",
-				item.Name, item.Source, item.Description)
+			// Trust glyph prefix (2-char column, empty for no-badge items)
+			// keeps unaligned Verified/Recalled rows distinguishable at a glance.
+			glyph := trustGlyph(item.Trust)
+			fmt.Fprintf(output.Writer, "  %-2s %-18s [%-8s] %s\n",
+				glyph, item.Name, item.Source, item.Description)
 		}
 	}
 
 	return nil
+}
+
+// trustGlyph maps the user-facing trust label to a single-character glyph for
+// text list output. Empty string when the item has no badge so the row column
+// renders blank rather than a placeholder.
+func trustGlyph(label string) string {
+	switch label {
+	case "Verified":
+		return "\u2713"
+	case "Recalled":
+		return "R"
+	}
+	return ""
 }
 
 // sourceLabel returns a human-readable source tag for display.

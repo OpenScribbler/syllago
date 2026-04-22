@@ -5,10 +5,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
@@ -51,20 +53,28 @@ func init() {
 
 // inspectResult is the JSON-serializable output for syllago inspect.
 type inspectResult struct {
-	Name          string            `json:"name"`
-	Type          string            `json:"type"`
-	Source        string            `json:"source"`
-	Provider      string            `json:"provider,omitempty"`
-	Path          string            `json:"path"`
-	Description   string            `json:"description,omitempty"`
-	Files         []string          `json:"files,omitempty"`
-	Risks         []inspectRisk     `json:"risks,omitempty"`
-	FileContents  map[string]string `json:"file_contents,omitempty"`
-	Compatibility []compatResult    `json:"compatibility,omitempty"`
-	DetailedRisks []riskDetail      `json:"detailed_risks,omitempty"`
-	AsProvider    string            `json:"as_provider,omitempty"`
-	AsContent     string            `json:"as_content,omitempty"`
-	AsWarnings    []string          `json:"as_warnings,omitempty"`
+	Name             string            `json:"name"`
+	Type             string            `json:"type"`
+	Source           string            `json:"source"`
+	Provider         string            `json:"provider,omitempty"`
+	Path             string            `json:"path"`
+	Description      string            `json:"description,omitempty"`
+	Files            []string          `json:"files,omitempty"`
+	Risks            []inspectRisk     `json:"risks,omitempty"`
+	FileContents     map[string]string `json:"file_contents,omitempty"`
+	Compatibility    []compatResult    `json:"compatibility,omitempty"`
+	DetailedRisks    []riskDetail      `json:"detailed_risks,omitempty"`
+	AsProvider       string            `json:"as_provider,omitempty"`
+	AsContent        string            `json:"as_content,omitempty"`
+	AsWarnings       []string          `json:"as_warnings,omitempty"`
+	Trust            string            `json:"trust,omitempty"`             // collapsed label (Verified/Recalled/"")
+	TrustTier        string            `json:"trust_tier,omitempty"`        // full tier (Dual-Attested/Signed/Unsigned/"")
+	TrustDescription string            `json:"trust_description,omitempty"` // drill-down text
+	Recalled         bool              `json:"recalled,omitempty"`
+	RecallReason     string            `json:"recall_reason,omitempty"`
+	RecallSource     string            `json:"recall_source,omitempty"`
+	RecallIssuer     string            `json:"recall_issuer,omitempty"`
+	RecallDetailsURL string            `json:"recall_details_url,omitempty"`
 }
 
 type inspectRisk struct {
@@ -94,10 +104,11 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	if projectRoot == "" {
 		projectRoot = root
 	}
-	cat, err := catalog.ScanWithGlobalAndRegistries(root, projectRoot, nil)
+	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
 	}
+	cat := scan.Catalog
 
 	item, err := findItemByPath(cat, args[0])
 	if err != nil {
@@ -106,14 +117,23 @@ func runInspect(cmd *cobra.Command, args []string) error {
 
 	risks := catalog.RiskIndicators(*item)
 
+	badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
 	result := inspectResult{
-		Name:        item.Name,
-		Type:        item.Type.Label(),
-		Source:      sourceLabel(*item),
-		Provider:    item.Provider,
-		Path:        item.Path,
-		Description: item.Description,
-		Files:       item.Files,
+		Name:             item.Name,
+		Type:             item.Type.Label(),
+		Source:           sourceLabel(*item),
+		Provider:         item.Provider,
+		Path:             item.Path,
+		Description:      item.Description,
+		Files:            item.Files,
+		Trust:            badge.Label(),
+		TrustTier:        item.TrustTier.String(),
+		TrustDescription: catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason),
+		Recalled:         item.Recalled,
+		RecallReason:     item.RecallReason,
+		RecallSource:     item.RecallSource,
+		RecallIssuer:     item.RecallIssuer,
+		RecallDetailsURL: item.RecallDetailsURL,
 	}
 	for _, r := range risks {
 		result.Risks = append(result.Risks, inspectRisk{
@@ -202,6 +222,20 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(output.Writer, "Path:    %s\n", item.Path)
 	if item.Description != "" {
 		fmt.Fprintf(output.Writer, "Desc:    %s\n", item.Description)
+	}
+	if result.TrustDescription != "" {
+		fmt.Fprintf(output.Writer, "Trust:   %s\n", result.TrustDescription)
+		if item.Recalled {
+			if item.RecallIssuer != "" {
+				fmt.Fprintf(output.Writer, "         issuer: %s\n", item.RecallIssuer)
+			}
+			if item.RecallSource != "" {
+				fmt.Fprintf(output.Writer, "         source: %s\n", item.RecallSource)
+			}
+			if item.RecallDetailsURL != "" {
+				fmt.Fprintf(output.Writer, "         details: %s\n", item.RecallDetailsURL)
+			}
+		}
 	}
 
 	if len(item.Files) > 0 {

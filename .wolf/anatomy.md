@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T16:54:27.097Z
-> Files: 1089 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T18:55:09.046Z
+> Files: 1095 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1616,7 +1616,7 @@
 - `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~2010 tok)
 - `coverage_test.go` — TestJoinWords, TestPrintCheck, TestCheckConfigWith_NoConfig, TestCheckOrphans_NoInstalled, TestCheck (~12435 tok)
 - `doctor_cmd_test.go` — TestDoctorCheckLibrary, TestDoctorCheckLibraryMissing, TestDoctorCheckProviders, TestDoctorCheckSyml (~3548 tok)
-- `doctor_cmd.go` — Struct: checkResult (~2990 tok)
+- `doctor_cmd.go` — Struct: checkResult (~3009 tok)
 - `gencapabilities_test.go` — TestGencapabilities_RootStructure, TestGencapabilities_ProviderSlugFromFilename, TestGencapabilities (~10895 tok)
 - `gencapabilities.go` — Struct: capYAML (~4235 tok)
 - `gencontentformat_test.go` — TestGencontentformat_EmitsValidJSON, TestGencontentformat_AllEnumsPopulated, TestGencontentformat_Ef (~914 tok)
@@ -1628,6 +1628,8 @@
 - `helpers_test.go` — TestFindProjectRootFallbackWarning (~459 tok)
 - `helpers.go` (~1346 tok)
 - `init_test.go` — TestInstallBuiltins_NoBuiltinsReturnsNil, TestInstallBuiltins_InstallsTaggedBuiltin, TestInstallBuil (~8228 tok)
+- `inspect_test.go` — TestInspectShowsItemDetails, TestInspectNotFound, TestInspectJSON, TestInspectInvalidPath, TestInspe (~4962 tok)
+- `inspect.go` — Struct: inspectResult (~4197 tok)
 - `install_cmd.go` — Struct: installResult (~5545 tok)
 - `install_conflict_test.go` — TestInstallToAll_ConflictWarning_NoInput, TestInstallToAll_ConflictResolution_SharedOnly, TestInstal (~2587 tok)
 - `install_moat_fetch_test.go` — Struct: oversizeRoundTripper (~3814 tok)
@@ -1636,6 +1638,8 @@
 - `install_moat_test.go` — TestParseRegistryItemSyntax_Table, TestShortHash_Table, TestRunInstallFromRegistry_RegistryNotFound, (~6809 tok)
 - `install_moat.go` — Declares re (~4715 tok)
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
+- `list_test.go` — TestListShowsAllItems, TestListFilterByType, TestListFilterBySource, TestListJSON, TestListEmpty (~2018 tok)
+- `list.go` — Struct: listResult (~1254 tok)
 - `loadout_create.go` (~1656 tok)
 - `loadout_remove_test.go` — TestRunLoadoutRemove, TestRunLoadoutRemove_InteractiveConfirmsRemoval, TestRunLoadoutRemove_Interact (~2831 tok)
 - `main.go` (~4164 tok)
@@ -1864,6 +1868,8 @@
 - `item_verify_shard_index_test.go` — TestBuildTransparencyLogEntry_PreservesShardLocalLogIndex, TestBuildTransparencyLogEntry_VerifyInclu (~2451 tok)
 - `item_verify_test.go` — TestVerifyAttestationItem_HappyPath, TestVerifyAttestationItem_RejectsWrongIdentity, TestVerifyAttes (~2667 tok)
 - `item_verify.go` — VerifyAttestationItem (~4527 tok)
+- `load_scan_test.go` — TestLoadAndScan_EmptyProject, TestLoadAndScan_EnumeratesClonedRegistry (~1352 tok)
+- `load_scan.go` — Struct: ScanResult (~830 tok)
 - `lockfile_test.go` — TestNewLockfile_Invariants, TestLockfile_RoundTripEmpty, TestLockfile_LoadMissingFileReturnsFresh, T (~5990 tok)
 - `lockfile.go` — Struct: RegistryLockState (~4766 tok)
 - `manifest_test.go` — TestParseManifest_Minimal, TestParseManifest_FullExample, TestParseManifest_TrustTiers, TestParseMan (~7105 tok)
@@ -1968,9 +1974,9 @@
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14843 tok)
-- `app_update.go` — Declares checkbox (~4705 tok)
+- `app_update.go` — Declares checkbox (~4775 tok)
 - `app_view.go` (~958 tok)
-- `app.go` — Struct: App (~4528 tok)
+- `app.go` — Struct: App (~4517 tok)
 - `cards.go` — Struct: cardData (~3324 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
