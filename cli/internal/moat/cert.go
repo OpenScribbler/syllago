@@ -39,6 +39,26 @@ func extractCert(body *hashedrekordBody) (*x509.Certificate, error) {
 	return cert, nil
 }
 
+// ExtractIdentityFromRekorRaw parses a raw Rekor API JSON response and returns
+// the OIDC (issuer, subject) pair from the Fulcio certificate embedded in the
+// hashedrekord entry. Used by `moat sign` to auto-derive the signing profile
+// when the caller does not supply an explicit --identity file.
+func ExtractIdentityFromRekorRaw(rekorRaw []byte) (issuer, subject string, err error) {
+	entry, err := parseRekorEntry(rekorRaw)
+	if err != nil {
+		return "", "", fmt.Errorf("parsing rekor entry: %w", err)
+	}
+	body, err := decodeHashedRekordBody(entry.Body)
+	if err != nil {
+		return "", "", fmt.Errorf("decoding hashedrekord body: %w", err)
+	}
+	cert, err := extractCert(body)
+	if err != nil {
+		return "", "", fmt.Errorf("extracting cert: %w", err)
+	}
+	return extractIdentity(cert)
+}
+
 // extractIdentity pulls the OIDC issuer and subject from a Fulcio-issued
 // certificate, matching the SigningProfile fields. Subject is the first URI
 // SAN (workflow ref for GitHub Actions); issuer is the Fulcio issuer

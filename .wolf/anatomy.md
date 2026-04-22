@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T19:15:32.996Z
-> Files: 1095 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T21:26:27.800Z
+> Files: 1100 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1629,7 +1629,7 @@
 - `helpers.go` (~1346 tok)
 - `init_test.go` — TestInstallBuiltins_NoBuiltinsReturnsNil, TestInstallBuiltins_InstallsTaggedBuiltin, TestInstallBuil (~8228 tok)
 - `inspect_test.go` — TestInspectShowsItemDetails, TestInspectNotFound, TestInspectJSON, TestInspectInvalidPath, TestInspe (~4962 tok)
-- `inspect.go` — Struct: inspectResult (~4197 tok)
+- `inspect.go` — Struct: inspectResult (~4223 tok)
 - `install_cmd.go` — Struct: installResult (~5545 tok)
 - `install_conflict_test.go` — TestInstallToAll_ConflictWarning_NoInput, TestInstallToAll_ConflictResolution_SharedOnly, TestInstal (~2587 tok)
 - `install_moat_fetch_test.go` — Struct: oversizeRoundTripper (~3814 tok)
@@ -1639,12 +1639,13 @@
 - `install_moat.go` — Declares re (~4715 tok)
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
 - `list_test.go` — TestListShowsAllItems, TestListFilterByType, TestListFilterBySource, TestListJSON, TestListEmpty (~2018 tok)
-- `list.go` — Struct: listResult (~1254 tok)
+- `list.go` — Struct: listResult (~1253 tok)
 - `loadout_create.go` (~1656 tok)
 - `loadout_remove_test.go` — TestRunLoadoutRemove, TestRunLoadoutRemove_InteractiveConfirmsRemoval, TestRunLoadoutRemove_Interact (~2831 tok)
 - `main.go` (~4164 tok)
 - `moat_cmd_test.go` — TestRunMoatTrustStatus_Human_Fresh, TestRunMoatTrustStatus_Human_Warn, TestRunMoatTrustStatus_Human_ (~1481 tok)
 - `moat_cmd.go` — Struct: trustStatusJSON (~1491 tok)
+- `moat_sign_cmd.go` (~2182 tok)
 - `registry_cmd_test.go` — TestRegistryAddRejectsDisallowedURL, TestRegistryAddAllowsURLWhenNoPolicy, TestRegistryAddAllowsURLI (~5422 tok)
 - `registry_cmd.go` — Struct: registryListItem (~7074 tok)
 - `registry_create_native_test.go` — TestAllItemsFromScan_Empty, TestAllItemsFromScan_MultipleProviders, TestAllItemsFromScan_HookFields, (~4038 tok)
@@ -1851,9 +1852,12 @@
 
 - `algo_test.go` — TestParseContentHash, TestManifest_RejectsBadAlgoInContent, TestManifest_RejectsBadAlgoInRevocation (~1127 tok)
 - `algo.go` — ParseContentHash (~820 tok)
+- `bundle_builder.go` — BuildBundle, VerifyItemSigstore (~1790 tok)
 - `canonical_payload_test.go` — TestCanonicalPayloadFor, TestCanonicalPayloadFor_NormativeDigest, TestCurrentPayloadVersion_IsOne, T (~2116 tok)
 - `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
-- `cert.go` (~640 tok)
+- `cert.go` — ExtractIdentityFromRekorRaw (~850 tok)
+- `dev_signer_test.go` — TestSignManifestDev_HappyPath, TestSignManifestDev_DifferentManifestFails, TestSignManifestDev_Wrong (~700 tok)
+- `dev_signer.go` — Struct: bytesSliceReader (~2983 tok)
 - `enrich_test.go` — TestFindContentEntry_NilManifest, TestFindContentEntry_EmptyContent, TestFindContentEntry_Hit, TestF (~8036 tok)
 - `enrich_verify_cache_test.go` — TestVerifyCached_MemoizesWithinProcess, TestVerifyCached_MtimeInvalidation, TestVerifyCached_SizeInv (~4442 tok)
 - `enrich_verify_cache.go` — Struct: verifyCacheKey (~1781 tok)
@@ -1873,7 +1877,7 @@
 - `lockfile_test.go` — TestNewLockfile_Invariants, TestLockfile_RoundTripEmpty, TestLockfile_LoadMissingFileReturnsFresh, T (~5990 tok)
 - `lockfile.go` — Struct: RegistryLockState (~4766 tok)
 - `manifest_test.go` — TestParseManifest_Minimal, TestParseManifest_FullExample, TestParseManifest_TrustTiers, TestParseMan (~7105 tok)
-- `manifest_verify_test.go` — TestVerifyManifest_HappyPath_TOFU, TestVerifyManifest_HappyPath_NumericIDsMatched, TestVerifyManifes (~3217 tok)
+- `manifest_verify_test.go` — TestVerifyManifest_HappyPath_TOFU, TestVerifyManifest_HappyPath_NumericIDsMatched, TestVerifyManifes (~3216 tok)
 - `manifest_verify.go` — Struct: VerificationResult (~3590 tok)
 - `manifest.go` — Struct: Manifest (~3786 tok)
 - `noninteractive_test.go` — TestExitCodeFor_AllFourFailureClasses, TestExitCodeFor_NoneReturnsSuccess, TestExitCodeFor_UnknownRe (~1947 tok)
@@ -1891,7 +1895,7 @@
 - `signing_identities_loader_test.go` — TestBundledAllowlist_Parses, TestBundledAllowlist_HasMetaRegistry, TestLookupSigningIdentity_URLVari (~3363 tok)
 - `signing_identities_loader.go` — Struct: signingIdentityEntry (~2183 tok)
 - `signing_identities.json` (~291 tok)
-- `sigstore_spike_test.go` — Spike helpers retained for the Phase-0 Rekor-fixture integration test. (~1739 tok)
+- `sigstore_spike_test.go` — BuildBundle, rekorEntryToTLE, VerifyItemSigstore, and ptr were promoted from (~55 tok)
 - `sigstore_verify_test.go` — TestBuildBundle_FromRekorFixture, TestVerifyItemSigstore_HappyPath, TestVerifyItemSigstore_RejectsWr (~1867 tok)
 - `sigstore_verify.go` — BuildBundle, VerifyItemSigstore (~1604 tok)
 - `sync_test.go` — Struct: syncHarness (~5589 tok)
@@ -1969,7 +1973,7 @@
 ## cli/internal/tui/
 
 - `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~1892 tok)
-- `actions.go` — Struct: removeDoneMsg (~6217 tok)
+- `actions.go` — Struct: removeDoneMsg (~6454 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
@@ -1992,7 +1996,7 @@
 - `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
 - `gate_install_test.go` — Struct: gateFixture (~4131 tok)
 - `gate_install.go` — Struct: gateEvaluation (~1370 tok)
-- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~2260 tok)
+- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~3450 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
 - `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21272 tok)
@@ -2006,8 +2010,8 @@
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: metaPanelData (~2420 tok)
 - `private_prompt.go` (~635 tok)
-- `publisher_warn_test.go` — TestPublisherWarnBody, TestPublisherWarnTitle, TestPrivatePromptTitle, TestPrivatePromptBody (~1110 tok)
-- `publisher_warn.go` (~921 tok)
+- `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestPrivatePromptTitle, TestP (~2960 tok)
+- `publisher_warn.go` (~1088 tok)
 - `responsive_test.go` — TestResponsive_FramedLinesNeverExceedTerminal, TestResponsive_LibraryColumnCount_ByWidth, TestRespon (~2026 tok)
 - `risk_banner_test.go` — TestRiskBanner_RenderHigh, TestRiskBanner_RenderMediumOnly, TestRiskBanner_RenderMixed, TestRiskBann (~2211 tok)
 - `styles.go` (~1460 tok)
@@ -2031,7 +2035,7 @@
 
 ## docs/adr/
 
-- `0007-moat-g3-slice-1-scope.md` — ADR 0007: MOAT G-3 Slice-1 Scope and Trusted Root Strategy (~6061 tok)
+- `0007-moat-g3-slice-1-scope.md` — ADR 0007: MOAT G-3 Slice-1 Scope and Trusted Root Strategy (~7271 tok)
 - `0008-capmon-synthetic-fixtures-correct.md` — ADR 0008: Synthetic Fixtures Are Correct for capmon Extractor Tests (~1516 tok)
 - `INDEX.md` — ADR Index (~566 tok)
 
@@ -2115,6 +2119,7 @@
 - `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2484 tok)
 - `gemini-cli.sh` — gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration. (~2510 tok)
 - `helpers.sh` — helpers.sh — Shared test framework for syllago provider smoke tests. (~2182 tok)
+- `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — E2E smoke tests for the MOAT signing + verification (~2246 tok)
 
 ## tests/smoke/fixtures/agents/smoke-agent/
 

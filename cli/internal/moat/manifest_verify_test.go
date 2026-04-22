@@ -3,7 +3,7 @@ package moat
 // Integration tests for VerifyManifest against the real syllago-meta-registry
 // Phase 0 Publisher Action fixture. The raw Rekor JSON response captured in
 // testdata/rekor-syllago-guide.json is re-assembled into a v0.3 .sigstore
-// bundle via BuildBundle (test-only per ADR 0007) and fed to the production
+// bundle via BuildBundle (bundle_builder.go) and fed to the production
 // VerifyManifest primitive. Production callers receive .sigstore bundles
 // directly from publishers — the test just synthesizes the same shape.
 
