@@ -54,7 +54,6 @@ func TestIsPublisherRevoked(t *testing.T) {
 	}
 }
 
-
 // TestPublisherWarnBody verifies the modal body preserves every revocation
 // field when present and collapses cleanly when they aren't. Covers both
 // sources of data: the live RevocationRecord (preferred) and the
@@ -89,10 +88,10 @@ func TestPublisherWarnBody(t *testing.T) {
 		{
 			name: "gate record overrides fallback reason+details",
 			item: catalog.ContentItem{
-				Name:             "foo",
-				Revoked:          true,
-				RevocationReason: "stale-reason",
-				Revoker:          "ops@example.com",
+				Name:                 "foo",
+				Revoked:              true,
+				RevocationReason:     "stale-reason",
+				Revoker:              "ops@example.com",
 				RevocationDetailsURL: "https://stale.example.com/",
 			},
 			rev: &moat.RevocationRecord{
