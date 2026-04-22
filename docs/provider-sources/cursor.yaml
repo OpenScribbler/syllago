@@ -3,7 +3,7 @@
 # All data from hosted docs at cursor.com/docs. Minimal official documentation.
 
 schema_version: "1"
-last_verified: "2026-03-27"
+last_verified: "2026-04-21"
 
 slug: cursor
 display_name: Cursor
@@ -24,9 +24,12 @@ changelog:
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
   # Cursor supports: rules, skills, hooks, mcp, agents (Cursor 2.4 custom
-  #   agents at .cursor/agents/), commands (Cursor 1.6 custom commands at
-  #   .cursor/commands/)
-  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, agents ✓, commands ✓
+  #   agents at .cursor/agents/).
+  # Syllago: rules ✓, skills ✓, hooks ✓, mcp ✓, agents ✓
+  # Commands (Cursor 1.6 .cursor/commands/*.md) were removed from syllago's
+  # matrix when Cursor replaced the dedicated docs page with a "migrate
+  # commands to skills" help redirect — the format no longer has an
+  # authoritative source page to track.
   # Note: cursor.com docs rate-limit automated fetching (429). All sources use
   #   cursor.com/docs URLs — may need user-agent rotation or cached fetches.
   # ─────────────────────────────────────────────────────────────────────
@@ -70,20 +73,10 @@ content_types:
 
   agents:
     sources:
-      - url: https://cursor.com/docs/agents
+      - url: https://cursor.com/docs/agent/overview
         type: docs
         format: html
         extracts: [file_format, config_fields, file_locations]
     # Format: Markdown files with YAML frontmatter (name, description, model,
     # readonly, is_background) in .cursor/agents/ (project) or ~/.cursor/agents/
     # (user). Added in Cursor 2.4.
-
-  commands:
-    sources:
-      - url: https://cursor.com/docs/commands
-        type: docs
-        format: html
-        extracts: [file_format, file_locations]
-    # Format: plain Markdown files under .cursor/commands/ (project) or
-    # ~/.cursor/commands/ (user). Filename becomes slash-command name.
-    # Added in Cursor 1.6.

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-20T22:23:54Z",
+  "generatedAt": "2026-04-22T04:38:51Z",
   "syllagoVersion": "0.9.0",
   "providers": [
     {
@@ -450,14 +450,8 @@
           ]
         },
         "commands": {
-          "supported": true,
-          "fileFormat": "md",
-          "installMethod": "filesystem",
-          "installPath": "{home}/.cursor/commands",
-          "symlinkSupport": true,
-          "discoveryPaths": [
-            "{project}/.cursor/commands"
-          ]
+          "supported": false,
+          "symlinkSupport": false
         },
         "hooks": {
           "supported": true,

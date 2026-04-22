@@ -19,7 +19,6 @@ func TestDiscoveryPaths(t *testing.T) {
 		{ClaudeCode, catalog.Skills, 1},
 		{Cursor, catalog.Rules, 2},
 		{Cursor, catalog.Skills, 1},
-		{Cursor, catalog.Commands, 1},
 		{Cursor, catalog.Agents, 2},
 		{Cursor, catalog.MCP, 1},
 		{Cursor, catalog.Hooks, 1},
@@ -53,11 +52,17 @@ func TestSupportsType(t *testing.T) {
 			t.Errorf("ClaudeCode.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	// Cursor supports Rules, Skills, Agents, Commands, MCP, Hooks
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Agents, catalog.Commands, catalog.MCP, catalog.Hooks} {
+	// Cursor supports Rules, Skills, Agents, MCP, Hooks.
+	// Commands was dropped after Cursor moved that surface behind the
+	// "migrate commands to skills" help page and stopped publishing a
+	// dedicated commands format doc.
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Agents, catalog.MCP, catalog.Hooks} {
 		if !Cursor.SupportsType(ct) {
 			t.Errorf("Cursor.SupportsType(%s) = false, want true", ct)
 		}
+	}
+	if Cursor.SupportsType(catalog.Commands) {
+		t.Errorf("Cursor.SupportsType(Commands) = true, want false")
 	}
 }
 

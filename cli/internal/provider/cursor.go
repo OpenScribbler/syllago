@@ -18,8 +18,6 @@ var Cursor = Provider{
 			return base
 		case catalog.Skills:
 			return filepath.Join(base, "skills")
-		case catalog.Commands:
-			return filepath.Join(base, "commands")
 		case catalog.Agents:
 			return filepath.Join(base, "agents")
 		case catalog.Hooks:
@@ -42,8 +40,6 @@ var Cursor = Provider{
 			}
 		case catalog.Skills:
 			return []string{filepath.Join(projectRoot, ".cursor", "skills")}
-		case catalog.Commands:
-			return []string{filepath.Join(projectRoot, ".cursor", "commands")}
 		case catalog.Agents:
 			return []string{
 				filepath.Join(projectRoot, ".cursor", "agents"),
@@ -72,19 +68,18 @@ var Cursor = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.Commands, catalog.Hooks, catalog.MCP, catalog.Agents:
+		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Agents:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules:    true,
-		catalog.Skills:   true,
-		catalog.Commands: true,
-		catalog.Agents:   true,
-		catalog.Hooks:    false, // JSON merge
-		catalog.MCP:      false, // JSON merge
+		catalog.Rules:  true,
+		catalog.Skills: true,
+		catalog.Agents: true,
+		catalog.Hooks:  false, // JSON merge
+		catalog.MCP:    false, // JSON merge
 	},
 	ConfigLocations: map[catalog.ContentType]string{
 		catalog.Hooks: ".cursor/settings.json",
