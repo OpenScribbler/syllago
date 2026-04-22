@@ -3253,3 +3253,45 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:43 | Created cli/internal/moat/load_scan.go | — | ~830 |
+
+## Session: 2026-04-22 11:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:46 | Edited cli/internal/tui/app.go | 47→48 lines | ~473 |
+| 11:46 | Edited cli/internal/tui/app.go | 7→6 lines | ~91 |
+| 11:46 | Edited cli/internal/tui/app_update.go | expanded (+6 lines) | ~147 |
+| 11:47 | Edited cli/cmd/syllago/list.go | 8→10 lines | ~75 |
+| 11:48 | Edited cli/cmd/syllago/list.go | 5→8 lines | ~100 |
+| 11:48 | Edited cli/cmd/syllago/list.go | 9→10 lines | ~101 |
+| 11:48 | Edited cli/cmd/syllago/list.go | modified ByType() | ~118 |
+| 11:48 | Edited cli/cmd/syllago/list.go | 6→8 lines | ~106 |
+| 11:48 | Edited cli/cmd/syllago/list.go | modified trustGlyph() | ~108 |
+| 11:48 | Edited cli/cmd/syllago/inspect.go | 13→15 lines | ~107 |
+| 11:48 | Edited cli/cmd/syllago/inspect.go | expanded (+8 lines) | ~436 |
+| 11:48 | Edited cli/cmd/syllago/inspect.go | 8→9 lines | ~95 |
+| 11:49 | Edited cli/cmd/syllago/inspect.go | expanded (+9 lines) | ~190 |
+| 11:49 | Edited cli/cmd/syllago/inspect.go | expanded (+14 lines) | ~169 |
+| 11:49 | Edited cli/cmd/syllago/doctor_cmd.go | 10→12 lines | ~108 |
+| 11:49 | Edited cli/cmd/syllago/doctor_cmd.go | modified checkNamingQuality() | ~80 |
+| 11:51 | Edited cli/cmd/syllago/list_test.go | modified isolateListEnv() | ~275 |
+| 11:51 | Edited cli/cmd/syllago/list_test.go | 3→4 lines | ~24 |
+| 11:51 | Edited cli/cmd/syllago/list_test.go | modified TestListEmpty() | ~83 |
+| 11:52 | Edited cli/cmd/syllago/list_test.go | modified TestListFilterBySource() | ~50 |
+| 11:53 | Created cli/internal/moat/load_scan_test.go | — | ~1241 |
+| 11:54 | Edited cli/internal/moat/load_scan_test.go | modified withIsolatedGlobals() | ~231 |
+| 11:54 | Edited cli/internal/moat/load_scan_test.go | 9→11 lines | ~148 |
+| 11:54 | Edited cli/cmd/syllago/list_test.go | modified TestListJSON_NoTrustBadgeForPlainItems() | ~430 |
+| 11:55 | Edited cli/cmd/syllago/inspect_test.go | modified Contains() | ~170 |
+| 11:55 | Edited cli/cmd/syllago/inspect_test.go | modified Contains() | ~116 |
+
+## Session: 2026-04-22 11:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 12:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

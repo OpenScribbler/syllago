@@ -415,14 +415,20 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, cmd
 
 	case addRestartMsg:
-		// Close current wizard, rescan catalog, then reopen a fresh one
+		// Close current wizard, rescan catalog, then reopen a fresh one.
+		// The rescan Cmd must be batched with handleAdd's Cmd — discarding
+		// it would swallow the refresh (and its toast) entirely.
 		if a.addWizard != nil && a.addWizard.gitTempDir != "" {
 			_ = os.RemoveAll(a.addWizard.gitTempDir)
 		}
 		a.addWizard = nil
 		a.wizardMode = wizardNone
-		a.rescanCatalog()
-		return a.handleAdd()
+		rescanCmd := a.rescanCatalog()
+		model, handleCmd := a.handleAdd()
+		return model, tea.Batch(rescanCmd, handleCmd)
+
+	case catalogReadyMsg:
+		return a.handleCatalogReady(msg)
 
 	case addDiscoveryDoneMsg:
 		if a.addWizard != nil {

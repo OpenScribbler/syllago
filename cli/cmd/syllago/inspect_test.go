@@ -66,6 +66,11 @@ func TestInspectShowsItemDetails(t *testing.T) {
 	if !strings.Contains(out, "Bash access") {
 		t.Errorf("expected 'Bash access' risk indicator, got:\n%s", out)
 	}
+	// Plain (non-MOAT) items must not print a Trust: line — the conditional
+	// in inspect.go suppresses the header when TrustDescription is empty.
+	if strings.Contains(out, "Trust:") {
+		t.Errorf("plain shared item should not print Trust: line, got:\n%s", out)
+	}
 }
 
 func TestInspectNotFound(t *testing.T) {
@@ -111,6 +116,16 @@ func TestInspectJSON(t *testing.T) {
 	}
 	if len(result.Risks) == 0 {
 		t.Error("expected at least one risk indicator in JSON output")
+	}
+	// Plain (non-MOAT) items must not carry a trust label. omitempty on
+	// the Trust* fields drops them entirely from the JSON body, so the
+	// raw output must not contain any "trust" key.
+	raw := stdout.String()
+	if strings.Contains(raw, `"trust":`) {
+		t.Errorf("plain shared item leaked trust field into JSON: %s", raw)
+	}
+	if strings.Contains(raw, `"recalled":`) {
+		t.Errorf("plain shared item leaked recalled field into JSON: %s", raw)
 	}
 }
 

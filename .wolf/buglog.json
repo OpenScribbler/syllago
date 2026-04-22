@@ -5238,6 +5238,86 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-04-22T16:54:27.107Z"
+    },
+    {
+      "id": "bug-328",
+      "timestamp": "2026-04-22T18:46:16.149Z",
+      "error_message": "Function not marked async",
+      "file": "cli/internal/tui/app.go",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T18:46:16.149Z"
+    },
+    {
+      "id": "bug-329",
+      "timestamp": "2026-04-22T18:46:42.592Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/app_update.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 9→15 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T18:46:42.592Z"
+    },
+    {
+      "id": "bug-330",
+      "timestamp": "2026-04-22T18:48:22.776Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/list.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→8 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T18:48:22.776Z"
+    },
+    {
+      "id": "bug-331",
+      "timestamp": "2026-04-22T18:48:50.060Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/inspect.go",
+      "root_cause": "14 lines replaced/restructured",
+      "fix": "Rewrote 17→25 lines (14 removed) | Also: Name:        item.Name,; Type:        item.Type.Label(),",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-22T18:49:04.504Z"
+    },
+    {
+      "id": "bug-332",
+      "timestamp": "2026-04-22T18:54:02.873Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moat/load_scan_test.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 13→17 lines (4 removed) | Also: // Write a project config that references the regi; cfgYAML := \"registries:\\n  - name: fixtures\\n    u",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-22T18:54:11.195Z"
     }
   ]
 }

@@ -1,18 +1,12 @@
 {
-  "session_id": "session-2026-04-22-0959",
-  "started": "2026-04-22T16:59:53.211Z",
-  "files_read": {
-    "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go": {
-      "count": 1,
-      "tokens": 2213,
-      "first_read": "2026-04-22T17:32:46.271Z"
-    }
-  },
+  "session_id": "session-2026-04-22-1214",
+  "started": "2026-04-22T19:14:04.685Z",
+  "files_read": {},
   "files_written": [],
   "edit_counts": {},
-  "anatomy_hits": 1,
+  "anatomy_hits": 0,
   "anatomy_misses": 0,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
-  "stop_count": 2
+  "stop_count": 0
 }
