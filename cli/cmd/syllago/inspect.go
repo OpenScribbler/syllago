@@ -53,28 +53,28 @@ func init() {
 
 // inspectResult is the JSON-serializable output for syllago inspect.
 type inspectResult struct {
-	Name             string            `json:"name"`
-	Type             string            `json:"type"`
-	Source           string            `json:"source"`
-	Provider         string            `json:"provider,omitempty"`
-	Path             string            `json:"path"`
-	Description      string            `json:"description,omitempty"`
-	Files            []string          `json:"files,omitempty"`
-	Risks            []inspectRisk     `json:"risks,omitempty"`
-	FileContents     map[string]string `json:"file_contents,omitempty"`
-	Compatibility    []compatResult    `json:"compatibility,omitempty"`
-	DetailedRisks    []riskDetail      `json:"detailed_risks,omitempty"`
-	AsProvider       string            `json:"as_provider,omitempty"`
-	AsContent        string            `json:"as_content,omitempty"`
-	AsWarnings       []string          `json:"as_warnings,omitempty"`
-	Trust              string            `json:"trust,omitempty"`               // collapsed label (Verified/Revoked/"")
-	TrustTier          string            `json:"trust_tier,omitempty"`          // full tier (Dual-Attested/Signed/Unsigned/"")
-	TrustDescription   string            `json:"trust_description,omitempty"`   // drill-down text
-	Revoked            bool              `json:"revoked,omitempty"`
-	RevocationReason   string            `json:"revocation_reason,omitempty"`
-	RevocationSource   string            `json:"revocation_source,omitempty"`
-	Revoker            string            `json:"revoker,omitempty"`
-	RevocationDetailsURL string          `json:"revocation_details_url,omitempty"`
+	Name                 string            `json:"name"`
+	Type                 string            `json:"type"`
+	Source               string            `json:"source"`
+	Provider             string            `json:"provider,omitempty"`
+	Path                 string            `json:"path"`
+	Description          string            `json:"description,omitempty"`
+	Files                []string          `json:"files,omitempty"`
+	Risks                []inspectRisk     `json:"risks,omitempty"`
+	FileContents         map[string]string `json:"file_contents,omitempty"`
+	Compatibility        []compatResult    `json:"compatibility,omitempty"`
+	DetailedRisks        []riskDetail      `json:"detailed_risks,omitempty"`
+	AsProvider           string            `json:"as_provider,omitempty"`
+	AsContent            string            `json:"as_content,omitempty"`
+	AsWarnings           []string          `json:"as_warnings,omitempty"`
+	Trust                string            `json:"trust,omitempty"`             // collapsed label (Verified/Revoked/"")
+	TrustTier            string            `json:"trust_tier,omitempty"`        // full tier (Dual-Attested/Signed/Unsigned/"")
+	TrustDescription     string            `json:"trust_description,omitempty"` // drill-down text
+	Revoked              bool              `json:"revoked,omitempty"`
+	RevocationReason     string            `json:"revocation_reason,omitempty"`
+	RevocationSource     string            `json:"revocation_source,omitempty"`
+	Revoker              string            `json:"revoker,omitempty"`
+	RevocationDetailsURL string            `json:"revocation_details_url,omitempty"`
 }
 
 type inspectRisk struct {
