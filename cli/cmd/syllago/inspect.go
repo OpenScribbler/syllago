@@ -67,14 +67,14 @@ type inspectResult struct {
 	AsProvider       string            `json:"as_provider,omitempty"`
 	AsContent        string            `json:"as_content,omitempty"`
 	AsWarnings       []string          `json:"as_warnings,omitempty"`
-	Trust            string            `json:"trust,omitempty"`             // collapsed label (Verified/Recalled/"")
-	TrustTier        string            `json:"trust_tier,omitempty"`        // full tier (Dual-Attested/Signed/Unsigned/"")
-	TrustDescription string            `json:"trust_description,omitempty"` // drill-down text
-	Recalled         bool              `json:"recalled,omitempty"`
-	RecallReason     string            `json:"recall_reason,omitempty"`
-	RecallSource     string            `json:"recall_source,omitempty"`
-	RecallIssuer     string            `json:"recall_issuer,omitempty"`
-	RecallDetailsURL string            `json:"recall_details_url,omitempty"`
+	Trust              string            `json:"trust,omitempty"`               // collapsed label (Verified/Revoked/"")
+	TrustTier          string            `json:"trust_tier,omitempty"`          // full tier (Dual-Attested/Signed/Unsigned/"")
+	TrustDescription   string            `json:"trust_description,omitempty"`   // drill-down text
+	Revoked            bool              `json:"revoked,omitempty"`
+	RevocationReason   string            `json:"revocation_reason,omitempty"`
+	RevocationSource   string            `json:"revocation_source,omitempty"`
+	Revoker            string            `json:"revoker,omitempty"`
+	RevocationDetailsURL string          `json:"revocation_details_url,omitempty"`
 }
 
 type inspectRisk struct {
@@ -117,23 +117,23 @@ func runInspect(cmd *cobra.Command, args []string) error {
 
 	risks := catalog.RiskIndicators(*item)
 
-	badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+	badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
 	result := inspectResult{
-		Name:             item.Name,
-		Type:             item.Type.Label(),
-		Source:           sourceLabel(*item),
-		Provider:         item.Provider,
-		Path:             item.Path,
-		Description:      item.Description,
-		Files:            item.Files,
-		Trust:            badge.Label(),
-		TrustTier:        item.TrustTier.String(),
-		TrustDescription: catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason),
-		Recalled:         item.Recalled,
-		RecallReason:     item.RecallReason,
-		RecallSource:     item.RecallSource,
-		RecallIssuer:     item.RecallIssuer,
-		RecallDetailsURL: item.RecallDetailsURL,
+		Name:                 item.Name,
+		Type:                 item.Type.Label(),
+		Source:               sourceLabel(*item),
+		Provider:             item.Provider,
+		Path:                 item.Path,
+		Description:          item.Description,
+		Files:                item.Files,
+		Trust:                badge.Label(),
+		TrustTier:            item.TrustTier.String(),
+		TrustDescription:     catalog.TrustDescription(item.TrustTier, item.Revoked, item.RevocationReason),
+		Revoked:              item.Revoked,
+		RevocationReason:     item.RevocationReason,
+		RevocationSource:     item.RevocationSource,
+		Revoker:              item.Revoker,
+		RevocationDetailsURL: item.RevocationDetailsURL,
 	}
 	for _, r := range risks {
 		result.Risks = append(result.Risks, inspectRisk{
@@ -225,15 +225,15 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	}
 	if result.TrustDescription != "" {
 		fmt.Fprintf(output.Writer, "Trust:   %s\n", result.TrustDescription)
-		if item.Recalled {
-			if item.RecallIssuer != "" {
-				fmt.Fprintf(output.Writer, "         issuer: %s\n", item.RecallIssuer)
+		if item.Revoked {
+			if item.Revoker != "" {
+				fmt.Fprintf(output.Writer, "         issuer: %s\n", item.Revoker)
 			}
-			if item.RecallSource != "" {
-				fmt.Fprintf(output.Writer, "         source: %s\n", item.RecallSource)
+			if item.RevocationSource != "" {
+				fmt.Fprintf(output.Writer, "         source: %s\n", item.RevocationSource)
 			}
-			if item.RecallDetailsURL != "" {
-				fmt.Fprintf(output.Writer, "         details: %s\n", item.RecallDetailsURL)
+			if item.RevocationDetailsURL != "" {
+				fmt.Fprintf(output.Writer, "         details: %s\n", item.RevocationDetailsURL)
 			}
 		}
 	}

@@ -350,9 +350,9 @@ func installToProvider(
 			}
 		}
 
-		trustText := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+		trustText := catalog.TrustDescription(item.TrustTier, item.Revoked, item.RevocationReason)
 		if trustText != "" && !output.JSON && !output.Quiet {
-			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
 			glyph := badge.Glyph()
 			if glyph != "" {
 				glyph += " "

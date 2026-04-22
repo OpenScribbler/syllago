@@ -84,7 +84,7 @@ func (l libraryModel) currentMetaItem() *catalog.ContentItem {
 }
 
 // metaBarLines returns the dynamic number of metadata content lines for
-// the currently-selected item (varies with TrustTier/Recalled/PrivateRepo).
+// the currently-selected item (varies with TrustTier/Revoked/PrivateRepo).
 // Non-MOAT items return metaBarLinesBase (3) so existing layouts are stable.
 func (l libraryModel) metaBarLines() int {
 	return metaBarLinesFor(l.currentMetaItem())
@@ -218,6 +218,16 @@ func (l libraryModel) updateDetail(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 	case keyRight, "right":
 		l.setDetailFocus(panePreview)
 		return l, nil
+	case keyTrust:
+		// [t] opens the Trust Inspector for the item in detail view. Pane
+		// focus is irrelevant — the inspector is a modal over the whole
+		// library, and the user's mental model is "inspect this item," not
+		// "inspect this pane." Routed here instead of per-pane so the key
+		// works whether the tree or the preview is focused.
+		if l.detailItem != nil {
+			item := l.detailItem
+			return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
+		}
 	}
 
 	switch l.focus {
@@ -480,21 +490,22 @@ func (l libraryModel) View() string {
 	}
 }
 
-// metaBarLinesBase is the minimum number of content lines in the metadata
-// section. All items emit at least these three:
-// Line 1: name, type, files, origin, installed
-// Line 2: scope, registry, path
-// Line 3: type-specific detail + rename button (or just rename button)
+// metaBarLinesBase is the fixed number of content lines every metadata
+// panel emits. The layout is stable across content types and trust state:
 //
-// MOAT-sourced items may emit up to two additional lines:
-// Line 4: trust + visibility chips (when item has any trust surface)
-// Line 5: revocation banner (when item is Recalled)
+//	Line 1: name, type, files, origin, installed
+//	Line 2: scope, registry, path
+//	Line 3: type-specific handler detail (blank when not applicable)
+//	Line 4: trust + visibility + action buttons (on one row)
 //
-// The per-item count is computed by metaBarLinesFor(item); layout sites
-// use that function rather than this constant so heights are accurate
-// for items with trust state. The shared border separator (├────┤) is
+// Line 3 is reserved whether or not the current content type supplies a
+// handler row — skills/commands emit a blank line there so buttons stay
+// pinned to Line 4. MOAT trust state (tier, revoked, private) collapses
+// into Line 4 alongside the buttons via fixed-position chips; extended
+// revocation details live in the Trust Inspector modal (opened via [t] or a
+// click on the Trust value). The shared border separator (├────┤) is
 // drawn by the view, not counted here.
-const metaBarLinesBase = 3
+const metaBarLinesBase = 4
 
 // viewBrowse renders a unified panel: metadata section + separator + table.
 func (l libraryModel) viewBrowse() string {

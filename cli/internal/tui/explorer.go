@@ -41,6 +41,14 @@ type explorerDrillMsg struct {
 // explorerCloseMsg is sent when the user closes the detail view.
 type explorerCloseMsg struct{}
 
+// explorerTrustInspectMsg is sent when the user opens the Trust Inspector
+// from a Content-tab row (Skills/Commands/Rules). Parallel to
+// libraryTrustInspectMsg — separate type keeps consumer intent explicit
+// even though both route to a.trustInspector.OpenForItem.
+type explorerTrustInspectMsg struct {
+	item *catalog.ContentItem
+}
+
 // explorerModel is the main content area: items list (left) + preview (right).
 // Rendered inside a unified bordered frame with metadata panel at top.
 // Supports drill-in detail mode with file tree + preview for a single item.
@@ -110,7 +118,7 @@ func (e explorerModel) currentMetaItem() *catalog.ContentItem {
 }
 
 // metaBarLines returns the dynamic number of metadata content lines for
-// the currently-selected item (varies with TrustTier/Recalled/PrivateRepo).
+// the currently-selected item (varies with TrustTier/Revoked/PrivateRepo).
 // Non-MOAT items return metaBarLinesBase (3) so existing layouts are stable.
 func (e explorerModel) metaBarLines() int {
 	return metaBarLinesFor(e.currentMetaItem())
@@ -212,6 +220,15 @@ func (e explorerModel) updateBrowseKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd)
 		}
 		return e, nil
 
+	case keyTrust:
+		// [t] opens the Trust Inspector for the focused row on Content
+		// tabs. No-op for non-MOAT items — the inspector shows
+		// "Unknown / No trust claim" which is honest about absence
+		// rather than hiding the affordance.
+		if item := e.items.Selected(); item != nil {
+			return e, func() tea.Msg { return explorerTrustInspectMsg{item: item} }
+		}
+
 	case keySearch:
 		e.searching = true
 		e.searchQuery = ""
@@ -285,6 +302,14 @@ func (e explorerModel) updateDetailKeys(msg tea.KeyMsg) (explorerModel, tea.Cmd)
 	case keyRight, "right":
 		e.setDetailFocus(panePreview)
 		return e, nil
+	case keyTrust:
+		// Same rationale as library detail mode: the inspector is a modal
+		// over the whole explorer, so pane focus is irrelevant — route
+		// here before falling into tree/preview handlers.
+		if e.detailItem != nil {
+			item := e.detailItem
+			return e, func() tea.Msg { return explorerTrustInspectMsg{item: item} }
+		}
 	}
 
 	switch e.focus {
@@ -361,6 +386,11 @@ func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.C
 		}
 		if zone.Get("meta-uninstall").InBounds(msg) {
 			return e, func() tea.Msg { return libraryUninstallMsg{} }
+		}
+		if zone.Get("meta-trust").InBounds(msg) {
+			if item := e.items.Selected(); item != nil {
+				return e, func() tea.Msg { return explorerTrustInspectMsg{item: item} }
+			}
 		}
 
 		// Click on a specific item row — select it
@@ -440,6 +470,12 @@ func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.C
 		}
 		if zone.Get("meta-uninstall").InBounds(msg) {
 			return e, func() tea.Msg { return libraryUninstallMsg{} }
+		}
+		if zone.Get("meta-trust").InBounds(msg) {
+			if e.detailItem != nil {
+				item := e.detailItem
+				return e, func() tea.Msg { return explorerTrustInspectMsg{item: item} }
+			}
 		}
 
 		// Close button click

@@ -79,26 +79,43 @@ type ContentItem struct {
 	Source      string         // "project", "global", "library", or registry name
 
 	// MOAT trust state. TrustTier is the normative internal classification
-	// (Dual-Attested / Signed / Unsigned / Unknown); Recalled flips on when
+	// (Dual-Attested / Signed / Unsigned / Unknown); Revoked flips on when
 	// the publisher or registry has revoked this content hash (G-8). These
 	// fields stay zero for items not sourced from a MOAT manifest — a git
 	// registry item is indistinguishable from "trust question not asked."
 	// See AD-7 and UserFacingBadge for the collapse rules.
 	//
-	// The drill-down fields below (PrivateRepo, RecallSource, RecallDetailsURL,
-	// RecallIssuer) are populated by moat.EnrichCatalog. Publisher-controlled
-	// strings (RecallReason, RecallDetailsURL, RecallIssuer) are pre-sanitized
-	// at the enrich boundary via moat.SanitizeForDisplay — consumers treat
-	// the values as trusted for display. Field naming note: PrivateRepo
-	// matches moat.ContentEntry.PrivateRepo (the source field) rather than
-	// using an Is-prefix, which is reserved for methods in Go.
-	TrustTier        TrustTier
-	Recalled         bool
-	RecallReason     string // sanitized; populated when Recalled
-	PrivateRepo      bool   // mirrors moat.ContentEntry.PrivateRepo (G-10)
-	RecallSource     string // "registry" or "publisher" when Recalled; empty otherwise
-	RecallDetailsURL string // sanitized URL when Recalled; may be empty
-	RecallIssuer     string // sanitized revoker identity; empty when not Recalled
+	// The drill-down fields below (PrivateRepo, RevocationSource,
+	// RevocationDetailsURL, Revoker) are populated by moat.EnrichCatalog.
+	// Publisher-controlled strings (RevocationReason, RevocationDetailsURL,
+	// Revoker) are pre-sanitized at the enrich boundary via
+	// moat.SanitizeForDisplay — consumers treat the values as trusted for
+	// display. Field naming note: PrivateRepo matches moat.ContentEntry.PrivateRepo
+	// (the source field) rather than using an Is-prefix, which is reserved for
+	// methods in Go. Terminology note: "revoked" / "revocation" aligns with the
+	// MOAT protocol (Revocation records, RevocationSource) — earlier drafts
+	// used "recalled" as a user-facing synonym, but collapsing on the
+	// protocol's term keeps the code and UI consistent.
+	TrustTier            TrustTier
+	Revoked              bool
+	RevocationReason     string // sanitized; populated when Revoked
+	PrivateRepo          bool   // mirrors moat.ContentEntry.PrivateRepo (G-10)
+	RevocationSource     string // "registry" or "publisher" when Revoked; empty otherwise
+	RevocationDetailsURL string // sanitized URL when Revoked; may be empty
+	Revoker              string // sanitized revoker identity; empty when not Revoked
+
+	// Signing profile fields populated by moat.EnrichCatalog for items from
+	// MOAT-type registries. Publisher* come from the per-item signing_profile
+	// (absent for Signed-tier items where the registry attests but individual
+	// entries do not). Registry* are duplicated from the manifest-level
+	// registry_signing_profile + operator so the Trust Inspector can render
+	// the full attestation chain per item without reaching into the registry
+	// aggregate. All values are sanitized at the enrich boundary.
+	PublisherSubject string
+	PublisherIssuer  string
+	RegistrySubject  string
+	RegistryIssuer   string
+	RegistryOperator string
 }
 
 // IsExample returns true if this item is tagged as example content.
@@ -154,7 +171,7 @@ type RegistryTrust struct {
 	Staleness     string
 	TotalItems    int
 	VerifiedItems int
-	RecalledItems int
+	RevokedItems  int
 	PrivateItems  int
 }
 
