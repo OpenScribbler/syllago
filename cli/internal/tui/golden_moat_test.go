@@ -2,10 +2,12 @@ package tui
 
 import (
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // MOAT trust-surfacing goldens. These lock in the visual output of:
@@ -75,6 +77,42 @@ func TestGolden_MOAT_LibraryRecalledSelected_120x40(t *testing.T) {
 func publisherWarnApp(t *testing.T, w, h int) App {
 	t.Helper()
 	app := testAppWithMOATItems(t, w, h)
+
+	// The gate is now the source of truth for publisher-warn branching.
+	// Build a minimal GateInputs whose manifest lists the recalled-skill
+	// under a publisher-source revocation — this makes PreInstallCheck
+	// return MOATGatePublisherWarn and the handler opens the modal.
+	const fakeHash = "sha256:" +
+		"recalledskill0000000000000000000000000000000000000000000000000000"
+	const registryName = "moat-registry"
+	const registryURL = "https://moat-registry.example.com/manifest.json"
+	manifest := &moat.Manifest{
+		SchemaVersion: 1,
+		ManifestURI:   registryURL,
+		Name:          registryName,
+		UpdatedAt:     time.Date(2026, 4, 22, 0, 0, 0, 0, time.UTC),
+		Content: []moat.ContentEntry{{
+			Name:        "recalled-skill",
+			Type:        "skill",
+			ContentHash: fakeHash,
+			AttestedAt:  time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		}},
+		Revocations: []moat.Revocation{{
+			ContentHash: fakeHash,
+			Reason:      "key compromise",
+			DetailsURL:  "https://example.com/recall/123",
+			Source:      moat.RevocationSourcePublisher,
+		}},
+	}
+	revSet := moat.NewRevocationSet()
+	revSet.AddFromManifest(manifest, registryURL)
+	app.moatGate = &moat.GateInputs{
+		RevSet:       revSet,
+		Manifests:    map[string]*moat.Manifest{registryName: manifest},
+		ManifestURIs: map[string]string{registryName: registryURL},
+	}
+	app.moatLockfile = moat.NewLockfile()
+
 	// Dispatch the recalled-skill install; handleInstallResult stashes it
 	// and opens the danger-mode confirmModal.
 	item := app.catalog.Items[1] // recalled-skill

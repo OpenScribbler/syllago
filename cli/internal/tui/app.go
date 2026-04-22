@@ -65,6 +65,26 @@ type App struct {
 	pendingInstall    *installResultMsg
 	pendingInstallAll *installAllResultMsg
 
+	// MOAT install-gate state. moatSession persists for the TUI run so a
+	// publisher-warn acknowledgement survives rescans (ADR 0007 G-8 warn-
+	// once-per-session); rebuilding it on 'R' would re-prompt on every redraw.
+	// moatGate and moatLockfile are refreshed in rescanCatalog so they track
+	// the freshest manifest + lockfile. moatMinTier is the project's policy
+	// floor; defaults to TrustTierUnsigned (accept any tier) to match
+	// moatInstallMinTier in the CLI install path.
+	moatSession  *moat.Session
+	moatGate     *moat.GateInputs
+	moatLockfile *moat.Lockfile
+	moatMinTier  moat.TrustTier
+
+	// pendingGateKind disambiguates which MarkConfirmed variant to call when
+	// the user confirms the stashed install. PublisherWarn and PrivatePrompt
+	// both route through the same confirmModal but consume different Session
+	// suppression keys (publisher:hash vs private:registry+hash).
+	pendingGateKind        pendingGateKind
+	pendingGateRegistryURL string
+	pendingGateContentHash string
+
 	// Dimensions
 	width, height int
 
@@ -117,6 +137,9 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		toast:           newToastModel(),
 		registryAdd:     newRegistryAddModal(),
 		trustInspector:  newTrustInspectorModel(),
+
+		moatSession: moat.NewSession(),
+		moatMinTier: moat.TrustTierUnsigned,
 
 		telemetryNotice: showTelemetryNotice,
 	}
@@ -249,6 +272,8 @@ func (a *App) rescanCatalog() tea.Cmd {
 		return a.toast.Push("Refresh failed: "+err.Error(), toastError)
 	}
 	a.catalog = cat
+	a.moatLockfile = lf
+	a.moatGate = moat.BuildGateInputs(merged, cacheDir)
 	a.galleryDrillIn = false
 	a.refreshContent()
 	a.updateNavState()
