@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-21T23:07:12.559Z
-> Files: 1029 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T15:21:03.512Z
+> Files: 1086 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -37,7 +37,8 @@
 - `feedback_docs_scope_boundary.md` (~414 tok)
 - `feedback_no_vague_limitations.md` (~349 tok)
 - `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
-- `MEMORY.md` — Syllago Project Memory (~1919 tok)
+- `feedback_smoke_uses_real_cli.md` (~453 tok)
+- `MEMORY.md` — Syllago Project Memory (~1972 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` (~238 tok)
@@ -123,6 +124,40 @@
 ## ../syllago-meta-registry-phase0-wt/.github/workflows/
 
 - `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5029 tok)
+
+## ../syllago-ztejd/cli/internal/catalog/
+
+- `trust.go` — UserFacingBadge, TrustDescription, TrustDetailExplanation (~2259 tok)
+- `types.go` — Struct: RegistrySource (~2459 tok)
+
+## ../syllago-ztejd/cli/internal/moat/
+
+- `enrich.go` — FindContentEntry, EnrichCatalog (~1981 tok)
+- `producer.go` — EnrichFromMOATManifests, ScanAndEnrich (~3095 tok)
+
+## ../syllago-ztejd/cli/internal/tui/
+
+- `actions.go` — Struct: removeDoneMsg (~5314 tok)
+- `app_update.go` — Declares checkbox (~4736 tok)
+- `app.go` — Struct: App (~4244 tok)
+- `cards.go` — Struct: cardData (~3324 tok)
+- `contents.go` — Struct: contentGroup (~2275 tok)
+- `explorer.go` — Struct: itemSelectedMsg (~7550 tok)
+- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1879 tok)
+- `install_view.go` — Struct: conflictOpt (~5496 tok)
+- `library.go` — Struct: libraryDrillMsg (~5862 tok)
+- `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2300 tok)
+- `metapanel.go` — Struct: metaPanelData (~2498 tok)
+- `publisher_warn.go` (~586 tok)
+- `styles.go` (~1438 tok)
+- `table.go` — Struct: tableModel (~6421 tok)
+- `testhelpers_test.go` (~2016 tok)
+- `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~4931 tok)
+- `trust_inspector.go` — Struct: RegistryTrustSummary (~3818 tok)
+
+## ../syllago-ztejd/tests/smoke/
+
+- `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — Manual smoke fixture for MOAT TUI trust surfacing (~3400 tok)
 
 ## ./
 
@@ -1566,9 +1601,16 @@
 - `go.mod` — Go module definition (~1837 tok)
 - `Makefile` (~617 tok)
 
+## cli/cmd/provider-monitor/
+
+- `main_test.go` — TestExitCode_DefaultFailOn_DriftedOnly, TestExitCode_WideFailOn_FetchFailed (~639 tok)
+- `main.go` — provider-monitor checks provider source manifests for broken URLs and version drift. (~1764 tok)
+
 ## cli/cmd/syllago/
 
 - `add_cmd.go` — Struct: converterAdapter (~11506 tok)
+- `capmon_backfill_cmd_test.go` — Struct: backfillMockTransport (~938 tok)
+- `capmon_backfill_cmd.go` (~528 tok)
 - `capmon_derive_cmd.go` (~665 tok)
 - `capmon_onboard_cmd_test.go` — Struct: mockOnboardTransport (~1109 tok)
 - `capmon_validate_format_doc_cmd_test.go` — TestCapmonValidateFormatDocCmd_Registered, TestCapmonValidateFormatDocCmd_MissingProvider, TestCapmo (~2010 tok)
@@ -1618,6 +1660,8 @@
 
 - `detector_content_signal_test.go` — TestContentSignalDetector_PreFilter_ExtensionReject, TestContentSignalDetector_PreFilter_ExtensionAc (~3405 tok)
 - `detector_content_signal.go` — Struct: SignalEntry (~2871 tok)
+- `detector_cursor_test.go` — TestCursorDetector_ProviderSlug, TestCursorDetector_Patterns, TestCursorDetector_Classify (~784 tok)
+- `detector_cursor.go` — Struct: CursorDetector (~708 tok)
 - `walk_test.go` — TestWalk_EmptyDir, TestWalk_ExcludesNodeModules, TestWalk_ExtraExcludeDirs, TestWalk_ExcludesBinaryF (~970 tok)
 
 ## cli/internal/audit/
@@ -1627,6 +1671,8 @@
 
 ## cli/internal/capmon/
 
+- `backfill_test.go` — Struct: stubFetcher (~2962 tok)
+- `backfill.go` — Interface: SourceFetcher (~2320 tok)
 - `check_diff_test.go` — TestGenerateUnifiedDiff_NoTruncation, TestGenerateUnifiedDiff_SourceCodeTruncation, TestGenerateUnif (~1270 tok)
 - `check_diff.go` — Struct: lineEdit (~1112 tok)
 - `check_test.go` — Struct: checkTestEnv (~4318 tok)
@@ -1745,8 +1791,10 @@
 ## cli/internal/converter/
 
 - `agents.go` — Struct: factoryDroidAgentMeta (~8580 tok)
+- `commands_test.go` — TestClaudeCommandToGeminiTOML, TestGeminiTOMLToClaudeCommand, TestClaudeCommandBehavioralEmbedding, (~6382 tok)
+- `commands.go` — Struct: CommandMeta (~5750 tok)
 - `field_preservation_test.go` — Struct: fieldTest (~17483 tok)
-- `frontmatter_registry_test.go` — Struct: check (~2508 tok)
+- `frontmatter_registry_test.go` — Struct: check (~2498 tok)
 - `frontmatter_registry.go` — RegisterFrontmatter, FrontmatterFieldsFor (~826 tok)
 - `kitchen_sink_roundtrip_test.go` — Struct: skillRoundTripTarget (~2871 tok)
 - `rules_test.go` — TestCursorAlwaysApplyToWindsurf, TestCursorGlobsToWindsurf, TestCursorModelDecisionToWindsurf, TestC (~10739 tok)
@@ -1803,6 +1851,8 @@
 - `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
 - `cert.go` (~640 tok)
 - `enrich_test.go` — TestFindContentEntry_NilManifest, TestFindContentEntry_EmptyContent, TestFindContentEntry_Hit, TestF (~8036 tok)
+- `enrich_verify_cache_test.go` — TestVerifyCached_MemoizesWithinProcess, TestVerifyCached_MtimeInvalidation, TestVerifyCached_SizeInv (~4442 tok)
+- `enrich_verify_cache.go` — Struct: verifyCacheKey (~1781 tok)
 - `enrich.go` — FindContentEntry, EnrichCatalog (~1873 tok)
 - `fetch_test.go` — TestFetcher_Fetch_Success, TestFetcher_Fetch_NotModified, TestFetcher_Fetch_CustomUserAgent, TestFet (~1984 tok)
 - `fetch.go` — Struct: FetchResult (~1444 tok)
@@ -1821,8 +1871,8 @@
 - `manifest.go` — Struct: Manifest (~3786 tok)
 - `noninteractive_test.go` — TestExitCodeFor_AllFourFailureClasses, TestExitCodeFor_NoneReturnsSuccess, TestExitCodeFor_UnknownRe (~1947 tok)
 - `noninteractive.go` — — non-interactive failure classification (ADR 0007 G-18). (~1928 tok)
-- `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~3368 tok)
-- `producer.go` — EnrichFromMOATManifests, ScanAndEnrich (~3096 tok)
+- `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~3765 tok)
+- `producer.go` — EnrichFromMOATManifests (~3992 tok)
 - `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
 - `rekor.go` — Struct: rekorEntry (~860 tok)
 - `revocation_test.go` — TestRevocationStatus_String, TestRevocationSet_AddFromManifest_RegistrySourceBlocks, TestRevocationS (~3692 tok)
@@ -1865,8 +1915,10 @@
 - `coverage_test.go` — TestCoverageInternalGoConsistency, TestCoverageNoDrift, TestFindRepoRoot (~901 tok)
 - `coverage.go` — Struct: CoverageDrift (~2258 tok)
 - `crush.go` (~558 tok)
+- `cursor.go` (~641 tok)
 - `factory_droid.go` (~696 tok)
 - `pi.go` (~650 tok)
+- `provider_test.go` — TestDiscoveryPaths, TestEmitPath, TestSupportsType, TestDetectedOnly, TestAllProviders_ClosureCovera (~1882 tok)
 - `provider.go` — Struct: Provider (~1084 tok)
 - `roocode_test.go` — TestRooCodeSupportsTypes, TestRooCodeCommandsSupport, TestRooCodeDiscoveryPaths, TestRooCodeEmitPath (~912 tok)
 - `roocode.go` (~831 tok)
@@ -1875,8 +1927,12 @@
 
 ## cli/internal/provmon/
 
-- `checker_test.go` — TestCheckURLs, TestCheckVersion_GitHubReleases, TestCheckVersion_NoDrift, TestCheckVersion_Unimpleme (~1955 tok)
-- `checker.go` — Struct: URLResult (~1539 tok)
+- `checker_source_hash_test.go` — Struct: fixtureSource (~2888 tok)
+- `checker_source_hash.go` — Struct: taggedSource (~1984 tok)
+- `checker_test.go` — TestCheckURLs, TestCheckVersion_GitHubReleases, TestCheckVersion_NoDrift, TestCheckVersion_UnknownMe (~1534 tok)
+- `checker.go` — Struct: URLResult (~2218 tok)
+- `manifest_test.go` — TestLoadManifest, TestLoadManifest_MissingSlugs, TestAllURLs, TestLoadAllManifests, TestLoadAllManif (~1523 tok)
+- `manifest.go` — implements provider source manifest loading, URL health (~1495 tok)
 
 ## cli/internal/registry/
 
@@ -1905,11 +1961,12 @@
 
 ## cli/internal/tui/
 
+- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~1816 tok)
 - `actions.go` — Struct: removeDoneMsg (~5314 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
-- `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14666 tok)
+- `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14843 tok)
 - `app_update.go` — Declares checkbox (~4705 tok)
 - `app_view.go` (~958 tok)
 - `app.go` — Struct: App (~4219 tok)
@@ -1921,26 +1978,33 @@
 - `doc.go` — is the terminal UI for syllago. (~35 tok)
 - `explorer_test.go` — TestExplorer_MetaBarTotal_IsLinesPlusSeparator, TestExplorer_DetailTreeWidth_Responsive, TestExplore (~5539 tok)
 - `explorer.go` — Struct: itemSelectedMsg (~7177 tok)
+- `filetree_test.go` — TestFileTree_SelectPath_MovesCursor, TestFileTree_SelectPath_DirectorySkippedByPath, TestFileTree_Se (~792 tok)
 - `gallery_mouse_test.go` — TestGalleryMouse_CardClickSelects, TestGalleryMouse_CardDoubleClickDrills, TestGalleryMouse_CardClic (~2277 tok)
-- `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~2585 tok)
+- `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~3452 tok)
 - `gallery_trust_test.go` — TestRegistryTrustGlyph_States, TestRegistryTrustSummaryFrom_NilReturnsZero, TestRegistryTrustSummary (~3073 tok)
 - `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
 - `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1882 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
+- `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21272 tok)
 - `install_update.go` (~4511 tok)
 - `install_view.go` — Struct: conflictOpt (~5496 tok)
+- `items_test.go` — TestItems_CursorDown_Wraps, TestItems_CursorDown_AdjustsOffset, TestItems_CursorDown_EmptyListNoop, (~1104 tok)
 - `items.go` — Struct: itemsModel (~2269 tok)
 - `keys.go` (~190 tok)
+- `library_test.go` — TestLibrary_SetDetailFocus_TogglesFocusFields, TestLibrary_UpdateTree_KeysMoveCursor, TestLibrary_Up (~2146 tok)
 - `library.go` — Struct: libraryDrillMsg (~5703 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: metaPanelData (~2420 tok)
 - `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestHandleInstallResult_NonRe (~2481 tok)
 - `publisher_warn.go` (~583 tok)
 - `responsive_test.go` — TestResponsive_FramedLinesNeverExceedTerminal, TestResponsive_LibraryColumnCount_ByWidth, TestRespon (~2026 tok)
+- `risk_banner_test.go` — TestRiskBanner_RenderHigh, TestRiskBanner_RenderMediumOnly, TestRiskBanner_RenderMixed, TestRiskBann (~2211 tok)
 - `styles.go` (~1460 tok)
+- `table_test.go` — TestProviderAbbrev_KnownSlugs, TestProviderAbbrev_UnknownSlug, TestAbbrevToSlug_RoundTrip, TestAbbre (~2000 tok)
 - `table.go` — Struct: tableModel (~6120 tok)
 - `testhelpers_test.go` (~1816 tok)
+- `topbar_test.go` — TestTopBar_InitialState, TestTopBar_SetGroup, TestTopBar_NextPrevTab, TestTopBar_TabWraps, TestTopBa (~2062 tok)
 - `topbar.go` — Struct: tabGroup (~2912 tok)
 - `trust_debug_test.go` — TestDebugRegistryTrustZone (~386 tok)
 - `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~3388 tok)
@@ -1951,9 +2015,13 @@
 - `updater_test.go` — TestAssetName, TestCheckLatest, TestCheckLatestServerError, TestChecksumVerification, TestVersionNew (~7192 tok)
 - `updater.go` — checks for and installs updates from GitHub Releases. (~3165 tok)
 
+## docs/
+
+- `adding-a-provider.md` — Adding a Provider to Syllago (~2877 tok)
+
 ## docs/adr/
 
-- `0007-moat-g3-slice-1-scope.md` — ADR 0007: MOAT G-3 Slice-1 Scope and Trusted Root Strategy (~3788 tok)
+- `0007-moat-g3-slice-1-scope.md` — ADR 0007: MOAT G-3 Slice-1 Scope and Trusted Root Strategy (~6061 tok)
 - `0008-capmon-synthetic-fixtures-correct.md` — ADR 0008: Synthetic Fixtures Are Correct for capmon Extractor Tests (~1516 tok)
 - `INDEX.md` — ADR Index (~566 tok)
 
@@ -1967,7 +2035,7 @@
 - `2026-04-20-moat-tui-trust-surfacing-spec.md` — MOAT Phase 2c — TUI Trust Surfacing (Spec) (~11479 tok)
 - `2026-04-20-test-quality-audit.md` — Test Quality Audit — 2026-04-20 (~5354 tok)
 - `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
-- `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17385 tok)
+- `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17530 tok)
 
 ## docs/provider-capabilities/
 
@@ -1981,7 +2049,7 @@
 - `codex.yaml` (~12085 tok)
 - `copilot-cli.yaml` (~9223 tok)
 - `crush.yaml` (~3312 tok)
-- `cursor.yaml` (~7843 tok)
+- `cursor.yaml` (~7252 tok)
 - `factory-droid.yaml` — Declares entries (~5917 tok)
 - `gemini-cli.yaml` (~7280 tok)
 - `kiro.yaml` — Declares that (~7668 tok)
@@ -1993,17 +2061,23 @@
 
 ## docs/provider-sources/
 
-- `amp.yaml` — Amp — Provider Source Manifest (~1090 tok)
-- `cline.yaml` — Cline — Provider Source Manifest (~1052 tok)
-- `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1514 tok)
-- `crush.yaml` — Crush — Provider Source Manifest (~1176 tok)
-- `cursor.yaml` — Cursor — Provider Source Manifest (~944 tok)
-- `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1068 tok)
-- `gemini-cli.yaml` — Gemini CLI — Provider Source Manifest (~1633 tok)
-- `opencode.yaml` — OpenCode / Crush — Provider Source Manifest (~1289 tok)
-- `roo-code.yaml` — Roo Code — Provider Source Manifest (~1410 tok)
-- `windsurf.yaml` — Windsurf — Provider Source Manifest (~891 tok)
-- `zed.yaml` — Zed — Provider Source Manifest (~808 tok)
+- `_template.yaml` — {Provider Name} — Provider Source Manifest (~1466 tok)
+- `amp.yaml` — Amp — Provider Source Manifest (~1081 tok)
+- `claude-code.yaml` — Claude Code — Provider Source Manifest (~1146 tok)
+- `cline.yaml` — Cline — Provider Source Manifest (~1050 tok)
+- `codex.yaml` — Codex (OpenAI) — Provider Source Manifest (~2476 tok)
+- `copilot-cli.yaml` — Copilot CLI — Provider Source Manifest (~1467 tok)
+- `crush.yaml` — Crush — Provider Source Manifest (~1160 tok)
+- `cursor.yaml` — Cursor — Provider Source Manifest (~889 tok)
+- `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1066 tok)
+- `gemini-cli.yaml` — Gemini CLI — Provider Source Manifest (~1613 tok)
+- `kiro.yaml` — Kiro — Provider Source Manifest (~712 tok)
+- `manifest.schema.json` — Declares definitions (~2331 tok)
+- `opencode.yaml` — OpenCode / Crush — Provider Source Manifest (~1287 tok)
+- `pi.yaml` — Pi (Mario Zechner) — Provider Source Manifest (~1260 tok)
+- `roo-code.yaml` — Roo Code — Provider Source Manifest (~1408 tok)
+- `windsurf.yaml` — Windsurf — Provider Source Manifest (~876 tok)
+- `zed.yaml` — Zed — Provider Source Manifest (~806 tok)
 
 ## docs/research/
 
@@ -2022,12 +2096,15 @@
 - `v0.8.0.md` — v0.8.0 (~657 tok)
 - `v0.9.0.md` — v0.9.0 (~1231 tok)
 
+## syllago-5ydt3/tests/smoke/
+
+- `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — Manual smoke fixture for MOAT TUI trust surfacing (~3001 tok)
+
 ## tests/smoke/
 
 - `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2484 tok)
 - `gemini-cli.sh` — gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration. (~2510 tok)
 - `helpers.sh` — helpers.sh — Shared test framework for syllago provider smoke tests. (~2182 tok)
-- `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — Manual smoke fixture for MOAT TUI trust surfacing (~2388 tok)
 
 ## tests/smoke/fixtures/agents/smoke-agent/
 
