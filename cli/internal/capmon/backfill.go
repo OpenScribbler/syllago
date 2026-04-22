@@ -25,7 +25,7 @@ func FetchURI(ctx context.Context, uri, fetchMethod string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("chromedp temp cache: %w", err)
 		}
-		defer os.RemoveAll(tmpCache)
+		defer func() { _ = os.RemoveAll(tmpCache) }()
 		entry, err := FetchChromedp(ctx, tmpCache, "fetchuri", "0", uri)
 		if err != nil {
 			return nil, err
