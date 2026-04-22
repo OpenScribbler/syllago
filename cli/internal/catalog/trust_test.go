@@ -25,34 +25,34 @@ func TestTrustTier_String(t *testing.T) {
 }
 
 // TestUserFacingBadge applies the AD-7 Panel C9 collapse table. Every row
-// of the spec table is covered — Verified/Recalled/NoBadge cases plus the
-// "Recalled wins over everything" precedence rule.
+// of the spec table is covered — Verified/Revoked/NoBadge cases plus the
+// "Revoked wins over everything" precedence rule.
 func TestUserFacingBadge(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
-		name     string
-		tier     TrustTier
-		recalled bool
-		want     TrustBadge
+		name    string
+		tier    TrustTier
+		revoked bool
+		want    TrustBadge
 	}{
-		{"unknown no recall", TrustTierUnknown, false, TrustBadgeNone},
-		{"unsigned no recall", TrustTierUnsigned, false, TrustBadgeNone},
-		{"signed no recall", TrustTierSigned, false, TrustBadgeVerified},
-		{"dual-attested no recall", TrustTierDualAttested, false, TrustBadgeVerified},
+		{"unknown no revocation", TrustTierUnknown, false, TrustBadgeNone},
+		{"unsigned no revocation", TrustTierUnsigned, false, TrustBadgeNone},
+		{"signed no revocation", TrustTierSigned, false, TrustBadgeVerified},
+		{"dual-attested no revocation", TrustTierDualAttested, false, TrustBadgeVerified},
 
-		// Recalled overrides every tier — this is the invariant that makes
+		// Revoked overrides every tier — this is the invariant that makes
 		// the three-state display safe.
-		{"unknown recalled", TrustTierUnknown, true, TrustBadgeRecalled},
-		{"unsigned recalled", TrustTierUnsigned, true, TrustBadgeRecalled},
-		{"signed recalled", TrustTierSigned, true, TrustBadgeRecalled},
-		{"dual-attested recalled", TrustTierDualAttested, true, TrustBadgeRecalled},
+		{"unknown revoked", TrustTierUnknown, true, TrustBadgeRevoked},
+		{"unsigned revoked", TrustTierUnsigned, true, TrustBadgeRevoked},
+		{"signed revoked", TrustTierSigned, true, TrustBadgeRevoked},
+		{"dual-attested revoked", TrustTierDualAttested, true, TrustBadgeRevoked},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := UserFacingBadge(tc.tier, tc.recalled); got != tc.want {
+			if got := UserFacingBadge(tc.tier, tc.revoked); got != tc.want {
 				t.Errorf("UserFacingBadge(%v, %v) = %v; want %v",
-					tc.tier, tc.recalled, got, tc.want)
+					tc.tier, tc.revoked, got, tc.want)
 			}
 		})
 	}
@@ -70,7 +70,7 @@ func TestTrustBadge_LabelAndGlyph(t *testing.T) {
 	}{
 		{TrustBadgeNone, "", ""},
 		{TrustBadgeVerified, "Verified", "\u2713"},
-		{TrustBadgeRecalled, "Recalled", "R"},
+		{TrustBadgeRevoked, "Revoked", "R"},
 	} {
 		if got := tc.badge.Label(); got != tc.wantLabel {
 			t.Errorf("Badge(%d).Label() = %q; want %q", tc.badge, got, tc.wantLabel)
@@ -81,36 +81,36 @@ func TestTrustBadge_LabelAndGlyph(t *testing.T) {
 	}
 }
 
-// TestTrustDescription covers the drill-down phrasing. Recalled content
+// TestTrustDescription covers the drill-down phrasing. Revoked content
 // preserves the reason verbatim because registries publish that string
 // verbatim per MOAT spec; unknown reasons are allowed. Empty output for
 // Unknown lets callers skip the field entirely.
 func TestTrustDescription(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
-		name     string
-		tier     TrustTier
-		recalled bool
-		reason   string
-		want     string
+		name    string
+		tier    TrustTier
+		revoked bool
+		reason  string
+		want    string
 	}{
 		{"dual-attested", TrustTierDualAttested, false, "", "Verified (dual-attested by publisher and registry)"},
 		{"signed", TrustTierSigned, false, "", "Verified (registry-attested)"},
 		{"unsigned", TrustTierUnsigned, false, "", "Unsigned (registry declares no attestation)"},
 		{"unknown", TrustTierUnknown, false, "", ""},
-		{"recalled with reason", TrustTierSigned, true, "compromised", "Recalled — compromised"},
-		{"recalled without reason", TrustTierSigned, true, "", "Recalled"},
+		{"revoked with reason", TrustTierSigned, true, "compromised", "Revoked — compromised"},
+		{"revoked without reason", TrustTierSigned, true, "", "Revoked"},
 
-		// Even a Dual-Attested item becomes "Recalled" on drill-down; the
+		// Even a Dual-Attested item becomes "Revoked" on drill-down; the
 		// user must see the reason, not the old tier.
-		{"dual-attested then recalled", TrustTierDualAttested, true, "malicious", "Recalled — malicious"},
+		{"dual-attested then revoked", TrustTierDualAttested, true, "malicious", "Revoked — malicious"},
 	} {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := TrustDescription(tc.tier, tc.recalled, tc.reason); got != tc.want {
+			if got := TrustDescription(tc.tier, tc.revoked, tc.reason); got != tc.want {
 				t.Errorf("TrustDescription(%v, %v, %q) = %q; want %q",
-					tc.tier, tc.recalled, tc.reason, got, tc.want)
+					tc.tier, tc.revoked, tc.reason, got, tc.want)
 			}
 		})
 	}
@@ -131,13 +131,13 @@ func TestContentItem_TrustFields(t *testing.T) {
 	if ci.TrustTier != TrustTierUnknown {
 		t.Errorf("zero-value TrustTier = %v; want TrustTierUnknown", ci.TrustTier)
 	}
-	if ci.Recalled {
-		t.Error("zero-value Recalled must be false")
+	if ci.Revoked {
+		t.Error("zero-value Revoked must be false")
 	}
-	if UserFacingBadge(ci.TrustTier, ci.Recalled) != TrustBadgeNone {
+	if UserFacingBadge(ci.TrustTier, ci.Revoked) != TrustBadgeNone {
 		t.Error("zero-value ContentItem must produce TrustBadgeNone")
 	}
-	if TrustDescription(ci.TrustTier, ci.Recalled, ci.RecallReason) != "" {
+	if TrustDescription(ci.TrustTier, ci.Revoked, ci.RevocationReason) != "" {
 		t.Error("zero-value ContentItem must produce empty trust description")
 	}
 
@@ -148,13 +148,13 @@ func TestContentItem_TrustFields(t *testing.T) {
 	if ci.PrivateRepo {
 		t.Error("zero-value PrivateRepo must be false")
 	}
-	if ci.RecallSource != "" {
-		t.Errorf("zero-value RecallSource = %q; want empty", ci.RecallSource)
+	if ci.RevocationSource != "" {
+		t.Errorf("zero-value RevocationSource = %q; want empty", ci.RevocationSource)
 	}
-	if ci.RecallDetailsURL != "" {
-		t.Errorf("zero-value RecallDetailsURL = %q; want empty", ci.RecallDetailsURL)
+	if ci.RevocationDetailsURL != "" {
+		t.Errorf("zero-value RevocationDetailsURL = %q; want empty", ci.RevocationDetailsURL)
 	}
-	if ci.RecallIssuer != "" {
-		t.Errorf("zero-value RecallIssuer = %q; want empty", ci.RecallIssuer)
+	if ci.Revoker != "" {
+		t.Errorf("zero-value Revoker = %q; want empty", ci.Revoker)
 	}
 }

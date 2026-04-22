@@ -178,7 +178,7 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 // handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
 //
 // Publisher-warn install stash has priority: if the operator just confirmed
-// a recalled-item install, re-dispatch that install. On cancel, clear the
+// a revoked-item install, re-dispatch that install. On cancel, clear the
 // stash and push a toast. Only one of pendingInstall / pendingInstallAll is
 // ever set (see handleInstallResult / handleInstallAllResult).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
@@ -186,7 +186,7 @@ func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 		pending := *a.pendingInstall
 		a.pendingInstall = nil
 		if !msg.confirmed {
-			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
+			return a, a.toast.Push("Install cancelled (revoked item)", toastWarning)
 		}
 		return a, a.doInstallCmd(pending)
 	}
@@ -194,7 +194,7 @@ func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 		pending := *a.pendingInstallAll
 		a.pendingInstallAll = nil
 		if !msg.confirmed {
-			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
+			return a, a.toast.Push("Install cancelled (revoked item)", toastWarning)
 		}
 		return a, a.doInstallAllCmd(pending)
 	}

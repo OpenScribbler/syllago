@@ -11,9 +11,9 @@ import (
 // per ADR 0007 G-8 (the two-tier revocation contract: registry-source always
 // hard-blocks, publisher-source warns-and-confirms).
 //
-// The decision uses EnrichCatalog-populated fields (item.Recalled +
-// item.RecallSource == "publisher") because the TUI does not yet thread a
-// moat.Session / RevocationSet through the install wizard. The CLI install
+// The decision uses EnrichCatalog-populated fields (item.Revoked +
+// item.RevocationSource == "publisher") because the TUI does not yet thread
+// a moat.Session / RevocationSet through the install wizard. The CLI install
 // path calls installer.PreInstallCheck directly and is the authoritative
 // gate; the TUI modal is a UX confirmation in front of that gate.
 //
@@ -21,7 +21,7 @@ import (
 // the installer regardless of operator choice, so a modal would be
 // deceptive (the "confirm" button wouldn't actually install).
 func isPublisherRevoked(item catalog.ContentItem) bool {
-	return item.Recalled && strings.EqualFold(item.RecallSource, "publisher")
+	return item.Revoked && strings.EqualFold(item.RevocationSource, "publisher")
 }
 
 // publisherWarnBody builds the confirm-modal body text for a publisher-revoked
@@ -32,14 +32,14 @@ func publisherWarnBody(item catalog.ContentItem) string {
 	var lines []string
 	lines = append(lines, "The publisher has revoked this item.")
 
-	if item.RecallReason != "" {
-		lines = append(lines, "", "Reason: "+item.RecallReason)
+	if item.RevocationReason != "" {
+		lines = append(lines, "", "Reason: "+item.RevocationReason)
 	}
-	if item.RecallIssuer != "" {
-		lines = append(lines, "Issued by: "+item.RecallIssuer)
+	if item.Revoker != "" {
+		lines = append(lines, "Revoked by: "+item.Revoker)
 	}
-	if item.RecallDetailsURL != "" {
-		lines = append(lines, "Details: "+item.RecallDetailsURL)
+	if item.RevocationDetailsURL != "" {
+		lines = append(lines, "Details: "+item.RevocationDetailsURL)
 	}
 
 	lines = append(lines, "", "Installing anyway will proceed with the current content. The registry has not blocked this hash.")
@@ -54,5 +54,5 @@ func publisherWarnTitle(item catalog.ContentItem) string {
 	if name == "" {
 		name = item.Name
 	}
-	return "Install recalled item \"" + name + "\"?"
+	return "Install revoked item \"" + name + "\"?"
 }

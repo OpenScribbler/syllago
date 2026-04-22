@@ -7,20 +7,20 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ private-skill                             Type: Skill     Files: 1   Origin: syllago      Installed: --              │
 │ Scope: project   Registry: moat-registry                                                                             │
-│                                                                                                           [e] Edit   │
-│ Trust: Verified (registry-attested)  Visibility: Private                                                             │
+│                                                                                                                      │
+│ Trust: Signed         Visibility: Private                                                                 [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │ > ✓P private-skill          Skill     moat-regi... 1     --                                                          │
-│   R  recalled-skill         Skill     moat-regi... 1     --                                                          │
+│   R  revoked-skill          Skill     moat-regi... 1     --                                                          │
 │      vanilla-skill          Ski╭────────────────────────────────────────────────────╮                                │
-│   ✓  verified-skill         Ski│ Install recalled item "recalled-skill"?            │                                │
+│   ✓  verified-skill         Ski│ Install revoked item "revoked-skill"?              │                                │
 │                                │                                                    │                                │
 │                                │ The publisher has revoked this item.               │                                │
 │                                │                                                    │                                │
 │                                │ Reason: key compromise                             │                                │
-│                                │ Issued by: ops@example.com                         │                                │
-│                                │ Details: https://example.com/recall/123            │                                │
+│                                │ Revoked by: ops@example.com                        │                                │
+│                                │ Details: https://example.com/revocation/123        │                                │
 │                                │                                                    │                                │
 │                                │ Installing anyway will proceed with the current co │                                │
 │                                │                                                    │                                │
@@ -37,4 +37,4 @@
 │                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · enter preview · / search · s sort · i install · e edit    syllago v0.0.0-test
-d remove · x uninstall · R refresh · a add · ? help · q quit
+d remove · x uninstall · t trust · R refresh · a add · ? help · q quit

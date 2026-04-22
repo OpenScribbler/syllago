@@ -13,7 +13,7 @@ package moat
 // row by that name).
 //
 // EnrichCatalog populates the existing display-only fields on
-// catalog.ContentItem (TrustTier, Recalled, RecallReason) so the TUI
+// catalog.ContentItem (TrustTier, Revoked, RevocationReason) so the TUI
 // gallery and listings can render a trust badge on registry-sourced
 // items without re-parsing the manifest. It does NOT mutate any other
 // ContentItem field — name/type/path/provider are already set by the
@@ -80,9 +80,9 @@ func moatTierToCatalogTier(t TrustTier) catalog.TrustTier {
 //     independent of registry-level Visibility probe). Populated even when
 //     no revocation is present.
 //   - If any revocation in m.Revocations covers the entry's ContentHash:
-//     set item.Recalled, item.RecallReason, item.RecallSource,
-//     item.RecallDetailsURL, and item.RecallIssuer. Publisher-controlled
-//     strings (Reason, DetailsURL, Issuer) pass through SanitizeForDisplay
+//     set item.Revoked, item.RevocationReason, item.RevocationSource,
+//     item.RevocationDetailsURL, and item.Revoker. Publisher-controlled
+//     strings (Reason, DetailsURL, Revoker) pass through SanitizeForDisplay
 //     at this boundary so downstream consumers never see attacker-controlled
 //     terminal bytes. The enrich step is the single chokepoint — no later
 //     consumer needs to re-sanitize.
@@ -91,8 +91,8 @@ func moatTierToCatalogTier(t TrustTier) catalog.TrustTier {
 // (or with empty Registry) are left completely untouched.
 //
 // Revocation source (registry vs publisher) is NOT considered for the
-// user-facing Recalled badge per AD-7 Panel C9 (both collapse to the same
-// glyph). The source IS exposed via item.RecallSource so drill-down text
+// user-facing Revoked badge per AD-7 Panel C9 (both collapse to the same
+// glyph). The source IS exposed via item.RevocationSource so drill-down text
 // can show "(publisher)" vs "(registry)" without breaking the collapse
 // rule. Install-flow enforcement uses RevocationSet / installer.PreInstallCheck
 // directly and still branches on source for the two-tier contract.
@@ -124,17 +124,24 @@ func EnrichCatalog(cat *catalog.Catalog, registryName string, m *Manifest) {
 		}
 		item.TrustTier = moatTierToCatalogTier(entry.TrustTier())
 		item.PrivateRepo = entry.PrivateRepo
+		item.RegistrySubject = SanitizeForDisplay(m.RegistrySigningProfile.Subject)
+		item.RegistryIssuer = SanitizeForDisplay(m.RegistrySigningProfile.Issuer)
+		item.RegistryOperator = SanitizeForDisplay(m.Operator)
+		if entry.SigningProfile != nil {
+			item.PublisherSubject = SanitizeForDisplay(entry.SigningProfile.Subject)
+			item.PublisherIssuer = SanitizeForDisplay(entry.SigningProfile.Issuer)
+		}
 		if rev, ok := revByHash[entry.ContentHash]; ok {
-			item.Recalled = true
-			item.RecallReason = SanitizeForDisplay(rev.Reason)
-			item.RecallSource = rev.EffectiveSource()
-			item.RecallDetailsURL = SanitizeForDisplay(rev.DetailsURL)
-			item.RecallIssuer = resolveRecallIssuer(rev, m, entry)
+			item.Revoked = true
+			item.RevocationReason = SanitizeForDisplay(rev.Reason)
+			item.RevocationSource = rev.EffectiveSource()
+			item.RevocationDetailsURL = SanitizeForDisplay(rev.DetailsURL)
+			item.Revoker = resolveRevoker(rev, m, entry)
 		}
 	}
 }
 
-// resolveRecallIssuer derives the revoker identity from the manifest and
+// resolveRevoker derives the revoker identity from the manifest and
 // entry. The rule mirrors MOAT spec v0.6.0:
 //
 //   - registry source → Manifest.Operator, falling back to
@@ -149,7 +156,7 @@ func EnrichCatalog(cat *catalog.Catalog, registryName string, m *Manifest) {
 // can splice the value into TUI cells without re-scrubbing. An unknown
 // source (shouldn't happen after manifest validation, but be defensive)
 // returns empty — consumers branch on "".
-func resolveRecallIssuer(rev *Revocation, m *Manifest, entry *ContentEntry) string {
+func resolveRevoker(rev *Revocation, m *Manifest, entry *ContentEntry) string {
 	switch rev.EffectiveSource() {
 	case RevocationSourceRegistry:
 		if m.Operator != "" {
