@@ -3419,3 +3419,4 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 16:30 | feat(loadout): multi-provider loadouts + syllago-starter content (814bfa7) | cli/internal/loadout/*, cli/internal/catalog/precedence.go, content/ | shipped; ohdb+5dwo closed | ~14k |
