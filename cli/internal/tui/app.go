@@ -351,12 +351,12 @@ func (a App) currentHints() []string {
 	// Gallery tabs (Loadouts/Registries)
 	if a.isGalleryTab() && a.galleryDrillIn {
 		if a.library.mode == libraryDetail {
-			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q back")
+			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "t trust", "R refresh", "? help", "q back")
 		}
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "? help", "q back")
 	}
 	if a.isRegistriesTab() && !a.galleryDrillIn {
-		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "a add", "S sync", "d remove", "e edit", "R refresh", "? help", "q back")
+		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "a add", "S sync", "d remove", "e edit", "t trust", "R refresh", "? help", "q back")
 	}
 	if a.isGalleryTab() {
 		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "e edit", "d remove", "R refresh", "a add", "? help", "q back")
@@ -364,21 +364,21 @@ func (a App) currentHints() []string {
 
 	// Library in detail mode has different hints
 	if a.isLibraryTab() && a.library.mode == libraryDetail {
-		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "R refresh", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "t trust", "R refresh", "? help", "q quit")
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "i install", "e edit", "d remove", "x uninstall", "R refresh", "a add", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "i install", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "a add", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
 	if a.explorer.mode == explorerDetail {
-		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "e edit", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "e edit", "t trust", "R refresh", "? help", "q back")
 	}
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail", "/ search")
 	if group != "Config" {
-		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "R refresh", "a add")
+		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "a add")
 	}
 	return append(hints, "? help", "q quit")
 }

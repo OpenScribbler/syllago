@@ -568,11 +568,14 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	}
 
 	// MOAT trust + visibility glyphs occupy the dedicated Trust column.
-	// Glyphs are intentionally monochrome here — the row's selection style
-	// would override any foreground color, and the colored Trust field in
-	// the metapanel carries the reinforcing semantics. Non-MOAT rows
-	// render spaces so column alignment stays stable.
-	row := prefix + padRight(trustGlyphs(t.items[index]), c.trust)
+	// Colors are applied via trustGlyphsStyled (✓ successColor, R
+	// dangerColor, P inherits the glyph's color) so users can triage
+	// revoked items at a glance. Non-MOAT rows render two spaces so
+	// column alignment stays stable regardless of styling.
+	//
+	// padRight uses lipgloss.Width which ignores ANSI escapes, so inline
+	// coloring preserves column alignment with the rest of the row.
+	row := prefix + padRight(trustGlyphsStyled(t.items[index]), c.trust)
 	row += " " + padRight(truncate(r.name, c.name), c.name)
 	row += " " + padRight(truncate(r.contentType, c.ctype), c.ctype)
 	row += " " + padRight(truncate(r.scope, c.scope), c.scope)
@@ -624,11 +627,11 @@ func trustPrefix(item catalog.ContentItem) string {
 
 // trustGlyphs returns the 2-character "<trust><visibility>" cell content
 // for the library table's dedicated Trust column. Non-MOAT items (Unknown
-// tier, not recalled, not private) render as two spaces so alignment
+// tier, not revoked, not private) render as two spaces so alignment
 // across the column stays stable.
 func trustGlyphs(item catalog.ContentItem) string {
 	tg := " "
-	if g := catalog.UserFacingBadge(item.TrustTier, item.Recalled).Glyph(); g != "" {
+	if g := catalog.UserFacingBadge(item.TrustTier, item.Revoked).Glyph(); g != "" {
 		tg = g
 	}
 	pg := " "
@@ -636,6 +639,28 @@ func trustGlyphs(item catalog.ContentItem) string {
 		pg = "P"
 	}
 	return tg + pg
+}
+
+// trustGlyphsStyled returns the same 2-character cell as trustGlyphs but
+// with Flexoki color applied: ✓ in successColor (Verified), R in
+// dangerColor (Revoked). The visibility "P" marker inherits the trust
+// glyph's style when one is present so a "✓P" row reads as a single
+// green token; otherwise P stays in the default (uncolored) foreground.
+// Outer row styles (mutedStyle / selectedRowStyle / boldStyle) at
+// renderRow preserve embedded ANSI foregrounds for attributes they don't
+// set themselves, so coloring the glyphs here survives the parent Render.
+// lipgloss.Width ignores these escapes so padRight column alignment is
+// unaffected.
+func trustGlyphsStyled(item catalog.ContentItem) string {
+	badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
+	plain := trustGlyphs(item)
+	switch badge {
+	case catalog.TrustBadgeVerified:
+		return trustVerifiedStyle.Render(plain)
+	case catalog.TrustBadgeRevoked:
+		return trustRevokedStyle.Render(plain)
+	}
+	return plain
 }
 
 // sanitizeLine strips newlines, carriage returns, and tabs from a string

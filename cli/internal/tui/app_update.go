@@ -490,6 +490,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case explorerTrustInspectMsg:
+		if msg.item != nil {
+			a.trustInspector.OpenForItem(*msg.item)
+		}
+		return a, nil
+
 	case registryTrustInspectMsg:
 		if msg.card != nil && msg.card.trust != nil {
 			a.trustInspector.OpenForRegistry(registryTrustSummaryFrom(msg.card.trust))

@@ -23,6 +23,18 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
+// isPublisherRevoked reports whether an item carries a publisher-source
+// revocation. These items require operator acknowledgement before install
+// per ADR 0007 G-8 (the two-tier revocation contract: registry-source always
+// hard-blocks, publisher-source warns-and-confirms).
+//
+// Registry-source revocations are not surfaced here — those hard-block in
+// the installer regardless of operator choice, so a modal would be
+// deceptive (the "confirm" button wouldn't actually install).
+func isPublisherRevoked(item catalog.ContentItem) bool {
+	return item.Revoked && strings.EqualFold(item.RevocationSource, "publisher")
+}
+
 // publisherWarnTitle returns the confirm-modal title for a publisher-
 // revoked item. Uses DisplayName when present so the title matches what
 // the user saw in the library table.
@@ -31,7 +43,7 @@ func publisherWarnTitle(item catalog.ContentItem) string {
 	if name == "" {
 		name = item.Name
 	}
-	return "Install recalled item \"" + name + "\"?"
+	return "Install revoked item \"" + name + "\"?"
 }
 
 // publisherWarnBody builds the confirm-modal body for a publisher-revoked
@@ -51,7 +63,7 @@ func publisherWarnBody(item catalog.ContentItem, rev *moat.RevocationRecord) str
 		lines = append(lines, "", "Reason: "+reason)
 	}
 	if issuer != "" {
-		lines = append(lines, "Issued by: "+issuer)
+		lines = append(lines, "Revoked by: "+issuer)
 	}
 	if detailsURL != "" {
 		lines = append(lines, "Details: "+detailsURL)
@@ -67,7 +79,7 @@ func publisherWarnBody(item catalog.ContentItem, rev *moat.RevocationRecord) str
 // live-manifest view and may already reflect a revocation added between
 // the last rescan and this install attempt. Issuer is not carried on the
 // live record (RevocationRecord intentionally drops the revoker identity
-// since the Session keys off (registry, hash)), so RecallIssuer from the
+// since the Session keys off (registry, hash)), so Revoker from the
 // enriched item is the only available source.
 func warnFieldsFrom(item catalog.ContentItem, rev *moat.RevocationRecord) (reason, issuer, detailsURL string) {
 	if rev != nil {
@@ -75,11 +87,11 @@ func warnFieldsFrom(item catalog.ContentItem, rev *moat.RevocationRecord) (reaso
 		detailsURL = rev.DetailsURL
 	}
 	if reason == "" {
-		reason = item.RecallReason
+		reason = item.RevocationReason
 	}
 	if detailsURL == "" {
-		detailsURL = item.RecallDetailsURL
+		detailsURL = item.RevocationDetailsURL
 	}
-	issuer = item.RecallIssuer
+	issuer = item.Revoker
 	return reason, issuer, detailsURL
 }

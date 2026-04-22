@@ -52,9 +52,9 @@ type listItem struct {
 	Name        string `json:"name"`
 	Source      string `json:"source"`
 	Description string `json:"description,omitempty"`
-	Trust       string `json:"trust,omitempty"`      // "Verified" / "Recalled" / ""
+	Trust       string `json:"trust,omitempty"`      // "Verified" / "Revoked" / ""
 	TrustTier   string `json:"trust_tier,omitempty"` // full tier for drill-down ("Dual-Attested" etc.)
-	Recalled    bool   `json:"recalled,omitempty"`
+	Revoked     bool   `json:"revoked,omitempty"`
 }
 
 func runList(cmd *cobra.Command, args []string) error {
@@ -89,14 +89,14 @@ func runList(cmd *cobra.Command, args []string) error {
 			if !filterBySource(item, sourceFilter) {
 				continue
 			}
-			badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
 			items = append(items, listItem{
 				Name:        item.Name,
 				Source:      sourceLabel(item),
 				Description: item.Description,
 				Trust:       badge.Label(),
 				TrustTier:   item.TrustTier.String(),
-				Recalled:    item.Recalled,
+				Revoked:     item.Revoked,
 			})
 		}
 
@@ -152,7 +152,7 @@ func trustGlyph(label string) string {
 	switch label {
 	case "Verified":
 		return "\u2713"
-	case "Recalled":
+	case "Revoked":
 		return "R"
 	}
 	return ""

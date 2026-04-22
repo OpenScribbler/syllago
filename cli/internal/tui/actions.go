@@ -556,6 +556,23 @@ func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
+		// No live gate (no moatGate configured or item has no MOAT lineage).
+		// Fall back to ContentItem fields set by EnrichCatalog at scan time.
+		if isPublisherRevoked(msg.item) {
+			stashed := msg
+			a.pendingInstall = &stashed
+			a.pendingInstallAll = nil
+			a.pendingGateKind = gateKindPublisherWarn
+			a.confirm.OpenForItem(
+				publisherWarnTitle(msg.item),
+				publisherWarnBody(msg.item, nil),
+				"Install anyway",
+				true,
+				nil,
+				msg.item,
+			)
+			return a, nil
+		}
 		return a, a.doInstallCmd(msg)
 	}
 
@@ -660,6 +677,22 @@ func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd
 
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
+		// No live gate — fall back to ContentItem fields set at scan time.
+		if isPublisherRevoked(msg.item) {
+			stashed := msg
+			a.pendingInstallAll = &stashed
+			a.pendingInstall = nil
+			a.pendingGateKind = gateKindPublisherWarn
+			a.confirm.OpenForItem(
+				publisherWarnTitle(msg.item),
+				publisherWarnBody(msg.item, nil),
+				"Install anyway",
+				true,
+				nil,
+				msg.item,
+			)
+			return a, nil
+		}
 		return a, a.doInstallAllCmd(msg)
 	}
 

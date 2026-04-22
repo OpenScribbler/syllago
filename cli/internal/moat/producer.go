@@ -227,7 +227,7 @@ func EnrichFromMOATManifests(
 }
 
 // attachRegistryTrust records the registry-level aggregate on the catalog.
-// Counts iterate cat.Items post-EnrichCatalog so verified/recalled/private
+// Counts iterate cat.Items post-EnrichCatalog so verified/revoked/private
 // reflect the same state the per-row glyphs will show. A Stale or Expired
 // registry gets Tier=Unsigned on the assumption that "cache says Signed but
 // the claim is too old to trust" is a Unsigned situation for UI purposes —
@@ -272,8 +272,8 @@ func attachRegistryTrust(
 		case catalog.TrustTierSigned, catalog.TrustTierDualAttested:
 			rt.VerifiedItems++
 		}
-		if item.Recalled {
-			rt.RecalledItems++
+		if item.Revoked {
+			rt.RevokedItems++
 		}
 		if item.PrivateRepo {
 			rt.PrivateItems++
