@@ -299,3 +299,90 @@ Sourced from the panel consensus (Remy's slice-1 list, adopted as authoritative)
 - Refresh runbook: [`docs/runbooks/moat-trusted-root-refresh.md`](../runbooks/moat-trusted-root-refresh.md)
 - Staleness-check workflow: [`.github/workflows/moat-trusted-root-check.yml`](../../.github/workflows/moat-trusted-root-check.yml)
 - Upstream MOAT spec PR: [OpenScribbler/moat#5](https://github.com/OpenScribbler/moat/pull/5) — formalizes trusted-root acquisition, GitHub OIDC numeric-ID binding, and the trust-state error vocabulary that slice-1 implements.
+
+---
+
+## Addendum 1: Enrich-Time Verification Posture
+
+**Date:** 2026-04-21 · **Bead:** `syllago-dwjcy` · **Extends:** D2 (Slice 1 scope)
+
+### Context
+
+Slice 1 landed with the bright line: **sync-time verification is authoritative; enrich trusts the filesystem under `cacheDir`**. `EnrichFromMOATManifests` (`cli/internal/moat/producer.go`) reads cached `manifest.json` and `signature.bundle` bytes without re-verifying the signature, relying on the fact that `syllago registry sync` ran `VerifyManifest` before persisting both files.
+
+Bead `syllago-dwjcy` flagged this as a same-user local-write gap: an attacker with filesystem write to `~/.cache/syllago/moat/registries/<name>/` between syncs can corrupt the cached manifest, and the TUI will happily enrich against the corrupted bytes until the next `syllago registry sync` triggers re-verification. The Phase 2c expert panel classified this as SHOULD-FIX with two candidate postures (enrich-time re-verify; sync-time HMAC receipt) and deferred the implementation decision.
+
+### Decision
+
+Adopt **process-boundary re-verification with in-memory memoization** (panel option "C", introduced during the dwjcy brainstorm as a refinement of the original two options).
+
+Semantics:
+
+- `EnrichFromMOATManifests` re-runs `VerifyManifest` once per (manifest file, bundle file) pair per `syllago` process, memoizing the result in a package-local map keyed by `(manifestPath, manifestMtime, manifestSize, bundleMtime, bundleSize)`.
+- Subsequent enrichments in the same process hit the memoized pass/fail outcome and skip the crypto work.
+- A file change (mtime or size delta on either file) invalidates the key and forces re-verification. Fresh `syllago` invocations always re-verify — fresh process = fresh cache.
+- Verification failure at enrich time emits a warning carrying the returned `VerifyError.Code` and skips the registry; items retain `TrustTier=Unknown` (fail-closed, matching every other enrich-time failure mode in `producer.go`).
+- The bundled trusted root is loaded once at the top of `EnrichFromMOATManifests` via `BundledTrustedRoot(now)`. If `Status` is `Expired`, `Missing`, or `Corrupt`, enrichment emits the `StalenessMessage` and short-circuits before the per-registry loop — every registry would hit the same hard-fail and we avoid N identical warnings per rescan.
+- Registries whose `config.Registry.SigningProfile` is nil or zero are treated as unpinned at enrich time: emit a warning carrying `MOAT_IDENTITY_UNPINNED` and skip enrichment. The sync-time TOFU fallback (use the manifest's wire profile to self-verify) is unsafe at enrich time because no user is present to approve the incoming identity.
+
+### Rejected alternatives
+
+- **(A) Enrich-time re-verify on every call**, rejected on cost. MOAT 2c enrich is called on every TUI rescan (R-key, install completion, tab change). Paying full Fulcio chain + Rekor proof cost per registry per rescan is measurable at N registries; amortizing to once per process pays the cost on launch and never again.
+
+- **(B) Sync-time HMAC receipt file**, rejected on spec alignment. MOAT spec v0.6.0 §Lockfile Integrity explicitly reasons against MAC-protected local state:
+
+  > The lockfile is not protected by a MAC or checksum. An attacker with local write access can modify the lockfile directly. However, an attacker with local write access can also modify the installed content directly — the lockfile is not the weakest link.
+
+  An HMAC receipt introduces exactly the MAC-protected cache state the spec rejects, plus a new key-management problem (key location, rotation, bootstrap, leak scenarios) the spec does not standardize. An attacker with write access to `cacheDir` almost certainly has write access to `~/.config/syllago/` where the HMAC key would live, so the HMAC buys nothing against the threat it ostensibly defends against.
+
+- **(D) No enrich-time verification; document the gap**, rejected as too permissive. The spec positions against MAC protection of local state, but it does NOT position against re-verification of already-verified material. Option (C) is consistent with the spec's "verify at install time, not continuously" language because each syllago invocation is a distinct operational moment from the user's perspective; a stale in-memory cache carrying across process boundaries would violate the spec's intent in spirit if not in letter.
+
+### Spec alignment
+
+- **§Freshness Guarantee (line 405):** *"Staleness is checked at install time — not continuously."* Process boundary ≈ install boundary for CLI-style invocations. The TUI's R-key rescan within a single process does not cross the install boundary, so re-verification per R-key press is not required.
+
+- **§Replay Attack Scope (line 1093):** *"MOAT does not defend against manifest replay attacks within the valid staleness window."* The staleness window is enforced at sync time (lockfile `fetched_at` + manifest `expires`); enrich-time re-verification does not change this envelope.
+
+- **§Lockfile Integrity (line 1101):** As quoted above, re-hashing at read time is the spec's preferred detection mechanism for local tampering. Option (C) applies equivalent reasoning to the manifest cache: re-verify on read (at process start), skip if file has not changed since last verify in this process.
+
+### Cache scope
+
+The verification cache is process-local by design. It is intentionally not persisted:
+
+- Persisting the verification result would recreate the exact MAC-protected-state problem that option (B) was rejected for.
+- Process lifetime is the correct staleness boundary for a CLI: users don't expect a new `syllago` invocation to trust anything from a prior invocation that they can't see.
+- For long-running TUI sessions, the mtime+size key correctly invalidates when a sibling `syllago registry sync` lands new bytes, so the TUI picks up legitimate refreshes without restart and also catches accidental corruption on the next rescan.
+
+**Cache key choice:** `(manifestPath, manifestMtime, manifestSize, bundleMtime, bundleSize)` rather than a content hash. The key's purpose is to detect *legitimate* file changes (a new sync landed) and *accidental* corruption, not to provide cryptographic binding. Cryptographic binding is what `VerifyManifest` itself does — running it on changed bytes is the detection mechanism, and that runs because the key has changed. Using a content hash as the key would require reading and hashing the files on every enrich call, eroding the performance win that is option (C)'s reason for existence.
+
+### Implementation
+
+- New file `cli/internal/moat/enrich_verify_cache.go`:
+  - `verifyCached(manifestPath, bundlePath string, pinned *SigningProfile, trustedRoot []byte) (*VerificationResult, error)` — the memoized entry point.
+  - `ResetVerifyCache()` — test seam; production callers never invalidate explicitly.
+  - `enrichVerifyFn = verifyCached` — package-level indirection mirroring `syncVerifyFn` in `sync.go`, so tests can stub the crypto and exercise producer plumbing without real fixture bundles.
+
+- `cli/internal/moat/producer.go` `EnrichFromMOATManifests`:
+  - Load trusted root at function entry. On `Expired`/`Missing`/`Corrupt`: append `StalenessMessage(trInfo)` to `cat.Warnings` and return nil.
+  - Per-registry, after `ParseManifest` and before `CheckRegistry`:
+    - Resolve pinned profile from `reg.SigningProfile`. If nil/zero: warn with `MOAT_IDENTITY_UNPINNED` and `continue`.
+    - Call `enrichVerifyFn`. On `*VerifyError`: warn with the returned code and `continue`.
+    - On success: proceed to existing staleness check and `EnrichCatalog`.
+
+- Tests (`cli/internal/moat/enrich_verify_cache_test.go`):
+  - First-call-verifies / second-call-cached: assert the indirection function fires once for N consecutive enrichments of the same cache.
+  - Mtime-invalidation: `os.Chtimes` bump on the manifest forces re-verification.
+  - Size-invalidation: rewriting the manifest with different byte count re-verifies even if mtime is forged forward-then-back.
+  - Tamper detection: overwrite manifest.json with corrupted bytes post-sync; next enrich returns `MOAT_INVALID` and emits a warning; catalog item stays `TrustTier=Unknown`.
+  - Expired trusted root: inject a past-issued trusted root; enrich short-circuits with one staleness warning; no per-registry loop.
+  - Unpinned profile: registry with nil `SigningProfile` emits `MOAT_IDENTITY_UNPINNED` warning and skips enrichment.
+
+### Out of scope
+
+- Persistent verification cache (explicitly rejected per the spec alignment above).
+- Enrich-time revocation re-check — revocation list is part of the verified manifest bytes, so re-verifying covers it implicitly; no separate revocation posture is needed.
+- Rate-limiting warning output when many registries share the same trusted-root failure — single trusted-root warning is already deduplicated by short-circuit; per-registry failures are distinct signals that deserve distinct warnings.
+
+### Bead
+
+Implementation tracked at `syllago-dwjcy`. Closes on landing this addendum + the cache implementation + tamper test + all tests green.
