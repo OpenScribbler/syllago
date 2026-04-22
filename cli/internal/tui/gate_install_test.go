@@ -39,7 +39,6 @@ const (
 // represents a verified-only manifest with no revocations and no private
 // items — subtests flip fields to trigger specific decisions.
 type gateFixture struct {
-	name             string
 	contentHash      string // defaults to testContentHash
 	rekorLogIndex    *int64 // nil = unsigned; set a pointer for signed/dual-attested
 	privateRepo      bool
@@ -150,11 +149,6 @@ func gateInstallMsg(item catalog.ContentItem) installResultMsg {
 		location: "global",
 		method:   installer.MethodSymlink,
 	}
-}
-
-func signedInt64() *int64 {
-	v := int64(42)
-	return &v
 }
 
 // --- Decision coverage ---
