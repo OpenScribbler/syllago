@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-20T22:23:54Z",
+  "generatedAt": "2026-04-22T00:17:05Z",
   "syllagoVersion": "0.9.0",
   "commands": [
     {
@@ -194,6 +194,7 @@
         }
       ],
       "subcommands": [
+        "backfill",
         "check",
         "derive",
         "diff",
@@ -209,6 +210,95 @@
         "verify"
       ],
       "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon backfill",
+      "displayName": "Capmon Backfill",
+      "slug": "capmon-backfill",
+      "parent": "capmon",
+      "synopsis": "syllago capmon backfill [flags]",
+      "description": "Populate missing content_hash values in a provider format doc",
+      "longDescription": "Fetch each source URI in the provider's FormatDoc and write the SHA-256 hash back into the file, preserving comments and key order. By default only sources whose content_hash is empty are fetched; use --force to re-baseline every source. Sources with fetch_method: chromedp are fetched via a headless browser.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Re-fetch and overwrite existing content_hash values"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug to backfill (required)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon check",
+        "capmon derive",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon onboard",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
     },
@@ -324,6 +414,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon derive",
         "capmon diff",
         "capmon extract",
@@ -420,6 +511,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon diff",
         "capmon extract",
@@ -500,6 +592,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon extract",
@@ -572,6 +665,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -644,6 +738,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -707,6 +802,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -811,6 +907,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -899,6 +996,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -987,6 +1085,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1067,6 +1166,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1155,6 +1255,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1235,6 +1336,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1331,6 +1433,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
