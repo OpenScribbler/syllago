@@ -177,26 +177,39 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 
 // handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
 //
-// Publisher-warn install stash has priority: if the operator just confirmed
-// a recalled-item install, re-dispatch that install. On cancel, clear the
-// stash and push a toast. Only one of pendingInstall / pendingInstallAll is
-// ever set (see handleInstallResult / handleInstallAllResult).
+// MOAT install-gate stash has priority: if the operator just answered a
+// publisher-warn or private-prompt, dispatch the stashed install (recording
+// the MarkConfirmed so subsequent same-session installs of the same
+// (registry, hash) skip the modal) or cancel. Only one of pendingInstall /
+// pendingInstallAll is ever set (see handleInstallResult /
+// handleInstallAllResult).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
-	if a.pendingInstall != nil {
-		pending := *a.pendingInstall
+	if a.pendingInstall != nil || a.pendingInstallAll != nil {
+		kind := a.pendingGateKind
+		registryURL := a.pendingGateRegistryURL
+		contentHash := a.pendingGateContentHash
+
+		pendingSingle := a.pendingInstall
+		pendingAll := a.pendingInstallAll
 		a.pendingInstall = nil
-		if !msg.confirmed {
-			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
-		}
-		return a, a.doInstallCmd(pending)
-	}
-	if a.pendingInstallAll != nil {
-		pending := *a.pendingInstallAll
 		a.pendingInstallAll = nil
+		a.pendingGateKind = gateKindNone
+		a.pendingGateRegistryURL = ""
+		a.pendingGateContentHash = ""
+
 		if !msg.confirmed {
-			return a, a.toast.Push("Install cancelled (recalled item)", toastWarning)
+			return a, a.toast.Push(gateCancelledToastText(kind), toastWarning)
 		}
-		return a, a.doInstallAllCmd(pending)
+		switch kind {
+		case gateKindPublisherWarn:
+			installer.MarkPublisherConfirmed(a.moatSession, registryURL, contentHash)
+		case gateKindPrivatePrompt:
+			installer.MarkPrivateConfirmed(a.moatSession, registryURL, contentHash)
+		}
+		if pendingSingle != nil {
+			return a, a.doInstallCmd(*pendingSingle)
+		}
+		return a, a.doInstallAllCmd(*pendingAll)
 	}
 
 	if !msg.confirmed {
@@ -524,33 +537,80 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 
 // handleInstallResult receives the wizard's confirmation and kicks off the async install.
 //
-// Publisher-revoked items are intercepted here: the wizard closes, the
-// installResultMsg is stashed on App, and a confirmModal prompts for
-// acknowledgement. handleConfirmResult re-dispatches doInstallCmd if the
-// operator confirms, or clears the stash on cancel. See publisher_warn.go
-// and ADR 0007 G-8 for the two-tier revocation contract.
+// The MOAT install gate runs here (mirroring cmd/syllago/install_moat.go:
+// resolveGateDecision) so all 5 decisions are surfaced at wizard time:
+//   - Proceed: straight through to doInstallCmd.
+//   - HardBlock: error toast, no modal — registry-source revocations are
+//     permanent per ADR 0007 G-15 and cannot be operator-overridden.
+//   - PublisherWarn: stash install + open confirm modal (G-8).
+//   - PrivatePrompt: stash install + open confirm modal (G-10).
+//   - TierBelowPolicy: error toast, no modal — tier cannot be upgraded
+//     interactively; only the publisher can.
+//
+// Items with no MOAT lineage bypass the gate entirely (legacy install path).
 func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
 	a.wizardMode = wizardNone
 	a.updateNavState()
 
-	if isPublisherRevoked(msg.item) {
+	eval, ok := evaluateInstallGate(&a, msg.item)
+	if !ok {
+		return a, a.doInstallCmd(msg)
+	}
+
+	switch eval.decision.Decision {
+	case installer.MOATGateProceed:
+		return a, a.doInstallCmd(msg)
+
+	case installer.MOATGateHardBlock:
+		return a, a.toast.Push(hardBlockMessage(eval.entryName, eval.decision.Revocation), toastError)
+
+	case installer.MOATGatePublisherWarn:
 		stashed := msg
 		a.pendingInstall = &stashed
 		a.pendingInstallAll = nil
+		a.pendingGateKind = gateKindPublisherWarn
+		a.pendingGateRegistryURL = eval.registryURL
+		a.pendingGateContentHash = eval.contentHash
 		a.confirm.OpenForItem(
 			publisherWarnTitle(msg.item),
-			publisherWarnBody(msg.item),
+			publisherWarnBody(msg.item, eval.decision.Revocation),
 			"Install anyway",
-			true, // danger = red border
-			nil,  // no checkboxes
+			true,
+			nil,
 			msg.item,
 		)
 		return a, nil
+
+	case installer.MOATGatePrivatePrompt:
+		stashed := msg
+		a.pendingInstall = &stashed
+		a.pendingInstallAll = nil
+		a.pendingGateKind = gateKindPrivatePrompt
+		a.pendingGateRegistryURL = eval.registryURL
+		a.pendingGateContentHash = eval.contentHash
+		a.confirm.OpenForItem(
+			privatePromptTitle(msg.item),
+			privatePromptBody(msg.item),
+			"Install",
+			false, // private-prompt is not a danger action (unlike recalled)
+			nil,
+			msg.item,
+		)
+		return a, nil
+
+	case installer.MOATGateTierBelowPolicy:
+		return a, a.toast.Push(
+			tierBelowPolicyMessage(eval.entryName, eval.decision.ObservedTier, eval.decision.MinTier),
+			toastError,
+		)
 	}
 
-	return a, a.doInstallCmd(msg)
+	// Unreachable: MOATGateDecision is a closed enum. If a new variant is
+	// added without updating this switch the compiler cannot catch it, so
+	// we fall through to the safe (block) default and log via toast.
+	return a, a.toast.Push(fmt.Sprintf("Unhandled install gate: %s", eval.decision.Decision), toastError)
 }
 
 // doInstallCmd creates a tea.Cmd that performs the install operation in the background.
@@ -590,30 +650,68 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 // handleInstallAllResult receives the "install to all" wizard confirmation and
 // kicks off async installs to each provider in the filtered list.
 //
-// The publisher-warn gate (see handleInstallResult) applies here too — the
-// same item is installed to N providers, so a single confirm covers the
-// whole batch.
+// The MOAT install gate applies here identically to single-provider install
+// (see handleInstallResult) — the same item is installed to N providers,
+// so a single confirm covers the whole batch and the gate only fires once.
 func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd) {
 	a.installWizard = nil
 	a.wizardMode = wizardNone
 	a.updateNavState()
 
-	if isPublisherRevoked(msg.item) {
+	eval, ok := evaluateInstallGate(&a, msg.item)
+	if !ok {
+		return a, a.doInstallAllCmd(msg)
+	}
+
+	switch eval.decision.Decision {
+	case installer.MOATGateProceed:
+		return a, a.doInstallAllCmd(msg)
+
+	case installer.MOATGateHardBlock:
+		return a, a.toast.Push(hardBlockMessage(eval.entryName, eval.decision.Revocation), toastError)
+
+	case installer.MOATGatePublisherWarn:
 		stashed := msg
 		a.pendingInstallAll = &stashed
 		a.pendingInstall = nil
+		a.pendingGateKind = gateKindPublisherWarn
+		a.pendingGateRegistryURL = eval.registryURL
+		a.pendingGateContentHash = eval.contentHash
 		a.confirm.OpenForItem(
 			publisherWarnTitle(msg.item),
-			publisherWarnBody(msg.item),
+			publisherWarnBody(msg.item, eval.decision.Revocation),
 			"Install anyway",
 			true,
 			nil,
 			msg.item,
 		)
 		return a, nil
+
+	case installer.MOATGatePrivatePrompt:
+		stashed := msg
+		a.pendingInstallAll = &stashed
+		a.pendingInstall = nil
+		a.pendingGateKind = gateKindPrivatePrompt
+		a.pendingGateRegistryURL = eval.registryURL
+		a.pendingGateContentHash = eval.contentHash
+		a.confirm.OpenForItem(
+			privatePromptTitle(msg.item),
+			privatePromptBody(msg.item),
+			"Install",
+			false,
+			nil,
+			msg.item,
+		)
+		return a, nil
+
+	case installer.MOATGateTierBelowPolicy:
+		return a, a.toast.Push(
+			tierBelowPolicyMessage(eval.entryName, eval.decision.ObservedTier, eval.decision.MinTier),
+			toastError,
+		)
 	}
 
-	return a, a.doInstallAllCmd(msg)
+	return a, a.toast.Push(fmt.Sprintf("Unhandled install gate: %s", eval.decision.Decision), toastError)
 }
 
 // doInstallAllCmd installs an item to each provider in the list, collecting results.
