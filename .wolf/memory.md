@@ -3298,3 +3298,80 @@
 | 12:15 | Edited cli/internal/tui/gate_install_test.go | 3→2 lines | ~22 |
 | 12:15 | Edited cli/internal/tui/gate_install_test.go | 6→1 lines | ~8 |
 | 12:15 | Edited cli/internal/tui/table_test.go | modified len() | ~34 |
+| 12:16 | Session end: 3 writes across 2 files (gate_install_test.go, table_test.go) | 2 reads | ~6225 tok |
+| 12:17 | Session end: 3 writes across 2 files (gate_install_test.go, table_test.go) | 2 reads | ~6225 tok |
+
+## Session: 2026-04-22 12:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 12:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:34 | Edited cli/internal/tui/publisher_warn.go | modified isPublisherRevoked() | ~216 |
+| 12:34 | Edited cli/internal/tui/publisher_warn_test.go | modified TestIsPublisherRevoked() | ~347 |
+| 12:37 | Edited cli/internal/tui/publisher_warn_test.go | modified TestPrivatePromptTitle() | ~1711 |
+| 12:37 | Edited cli/internal/tui/actions.go | reduced (-7 lines) | ~102 |
+| 12:37 | Edited cli/internal/tui/actions.go | reduced (-14 lines) | ~60 |
+| 12:37 | Edited cli/internal/tui/golden_moat_test.go | 41→37 lines | ~382 |
+| 12:38 | Edited cli/internal/tui/publisher_warn.go | modified warnFieldsFrom() | ~129 |
+
+## Session: 2026-04-22 12:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:40 | Edited cli/cmd/syllago/inspect.go | 8→8 lines | ~187 |
+| 12:40 | Edited cli/cmd/syllago/inspect.go | 18→18 lines | ~208 |
+| 12:40 | Edited cli/cmd/syllago/inspect.go | 14→14 lines | ~130 |
+| 12:41 | Edited cli/cmd/syllago/list.go | 3→3 lines | ~61 |
+| 12:41 | Edited cli/cmd/syllago/list.go | 9→9 lines | ~83 |
+| 12:41 | Edited cli/cmd/syllago/list.go | 2→2 lines | ~8 |
+| 12:41 | Edited cli/internal/tui/publisher_warn.go | 3→3 lines | ~19 |
+| 12:41 | Edited cli/internal/tui/publisher_warn_test.go | 7→9 lines | ~70 |
+| 12:41 | Edited cli/internal/tui/publisher_warn_test.go | 20→20 lines | ~160 |
+| 12:43 | Edited cli/internal/tui/actions.go | modified isPublisherRevoked() | ~171 |
+| 12:43 | Edited cli/internal/tui/actions.go | modified isPublisherRevoked() | ~162 |
+| 12:46 | Session end: 11 writes across 5 files (inspect.go, list.go, publisher_warn.go, publisher_warn_test.go, actions.go) | 4 reads | ~14386 tok |
+| 13:11 | Session end: 11 writes across 5 files (inspect.go, list.go, publisher_warn.go, publisher_warn_test.go, actions.go) | 4 reads | ~14386 tok |
+
+## Session: 2026-04-22 13:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:29 | Created cli/internal/moat/bundle_builder.go | — | ~1790 |
+| 13:29 | Created cli/internal/moat/sigstore_spike_test.go | — | ~55 |
+| 13:29 | Edited cli/internal/moat/manifest_verify_test.go | 6→6 lines | ~120 |
+| 13:33 | Created cli/cmd/syllago/moat_sign_cmd.go | — | ~1762 |
+| 13:33 | Edited cli/cmd/syllago/moat_sign_cmd.go | resolveSigningProfile() → resolveSigningProfileForSign() | ~56 |
+| 13:33 | Edited cli/cmd/syllago/moat_sign_cmd.go | inline fix | ~23 |
+| 13:33 | Edited cli/cmd/syllago/moat_sign_cmd.go | inline fix | ~28 |
+| 13:33 | Edited cli/internal/moat/cert.go | modified ExtractIdentityFromRekorRaw() | ~230 |
+| 13:37 | Created cli/internal/moat/dev_signer.go | — | ~1395 |
+| 13:38 | Edited cli/internal/moat/dev_signer.go | 10→11 lines | ~113 |
+| 13:38 | Edited cli/internal/moat/dev_signer.go | inline fix | ~17 |
+| 13:40 | Created cli/cmd/syllago/moat_sign_cmd.go | — | ~2182 |
+| 13:40 | Created cli/internal/moat/dev_signer_test.go | — | ~700 |
+| 13:44 | Created cli/internal/moat/dev_signer.go | — | ~2596 |
+
+## Session: 2026-04-22 13:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:56 | Edited cli/internal/moat/dev_signer.go | 14→16 lines | ~149 |
+| 13:56 | Edited cli/internal/moat/dev_signer.go | expanded (+12 lines) | ~289 |
+| 14:03 | Edited cli/internal/moat/dev_signer.go | expanded (+16 lines) | ~203 |
+| 14:04 | Edited cli/internal/moat/dev_signer.go | 1→3 lines | ~55 |
+
+## Session: 2026-04-22 14:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:15 | Created tests/smoke/moat-trust-surfacing.sh | — | ~1935 |
+| 14:15 | Edited tests/smoke/moat-trust-surfacing.sh | 5→5 lines | ~63 |
+| 14:15 | Edited tests/smoke/moat-trust-surfacing.sh | 5→5 lines | ~66 |
+| 14:17 | Edited tests/smoke/moat-trust-surfacing.sh | 18→20 lines | ~179 |
+| 14:24 | Created tests/smoke/moat-trust-surfacing.sh | — | ~2279 |
+| 14:25 | Edited tests/smoke/moat-trust-surfacing.sh | modified test_moat_registry_add() | ~236 |
+| 14:26 | Edited docs/adr/0007-moat-g3-slice-1-scope.md | expanded (+71 lines) | ~1330 |

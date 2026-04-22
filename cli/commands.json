@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-22T00:17:05Z",
+  "generatedAt": "2026-04-22T21:26:33Z",
   "syllagoVersion": "0.9.0",
   "commands": [
     {
@@ -3612,10 +3612,112 @@
         }
       ],
       "subcommands": [
+        "sign",
         "trust"
       ],
       "seeAlso": [],
       "examples": null,
+      "source": "cli/cmd/syllago/moat_cmd.go"
+    },
+    {
+      "name": "moat sign",
+      "displayName": "Moat Sign",
+      "slug": "moat-sign",
+      "parent": "moat",
+      "synopsis": "syllago moat sign [flags]",
+      "description": "Produce a signature.bundle from a manifest (online or dev-offline mode)",
+      "longDescription": "Assemble a sigstore v0.3 bundle for a manifest.json.\n\nOnline mode (--rekor-raw required):\n  Assembles a bundle from a raw Rekor API response captured from a real\n  Publisher Action run. The Rekor entry must have signed sha256(manifest.json).\n  The bundle is verified against the trusted root before being written.\n\nDev/offline mode (--dev-trusted-root \u003cdir\u003e):\n  Uses an ephemeral offline CA to sign the manifest without any network calls.\n  Writes both signature.bundle (at --out) and trusted_root.json (in \u003cdir\u003e).\n  The resulting trusted root is development-only — never use it in production.\n\nThe --identity flag (online mode only) accepts a JSON file with\n{\"issuer\": \"...\", \"subject\": \"...\"} matching the expected signing identity.\nWhen omitted, the identity is auto-extracted from the Rekor entry cert.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dev-trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Directory for dev-mode: writes trusted_root.json here and signs with an offline CA (mutually exclusive with --rekor-raw)"
+        },
+        {
+          "name": "--identity",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to signing identity JSON {\"issuer\":\"...\",\"subject\":\"...\"} (online mode, auto-extracted when omitted)"
+        },
+        {
+          "name": "--manifest",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Path to manifest.json (required)"
+        },
+        {
+          "name": "--out",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Output path for signature.bundle (default: \u003cmanifest\u003e.sigstore)"
+        },
+        {
+          "name": "--rekor-raw",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to raw Rekor API response JSON (online mode)"
+        },
+        {
+          "name": "--trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to trusted-root.json for round-trip verify (online mode, default: bundled root)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "moat",
+        "moat trust"
+      ],
+      "examples": "  # Online: sign with a real Rekor raw response\n  syllago moat sign \\\n    --manifest ./registry/manifest.json \\\n    --rekor-raw ./ci-artifacts/rekor-response.json \\\n    --out ./registry/manifest.json.sigstore\n\n  # Dev/offline: generate a smoke fixture bundle + dev trusted root\n  syllago moat sign \\\n    --manifest ./test-registry/manifest.json \\\n    --dev-trusted-root ./test-registry \\\n    --out ./test-registry/manifest.json.sigstore",
       "source": "cli/cmd/syllago/moat_cmd.go"
     },
     {
@@ -3666,7 +3768,8 @@
         "status"
       ],
       "seeAlso": [
-        "moat"
+        "moat",
+        "moat sign"
       ],
       "examples": null,
       "source": "cli/cmd/syllago/moat_cmd.go"
