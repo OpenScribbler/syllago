@@ -28,12 +28,12 @@ func TestRegistryTrustGlyph_States(t *testing.T) {
 		want string
 	}{
 		{"nil pointer → empty", nil, ""},
-		{"no verified, no recall, fresh → empty",
+		{"no verified, no revocation, fresh → empty",
 			&catalog.RegistryTrust{Staleness: "Fresh"}, ""},
 		{"verified items, fresh → check",
 			&catalog.RegistryTrust{Staleness: "Fresh", VerifiedItems: 3}, "\u2713"},
-		{"recalled wins over verified",
-			&catalog.RegistryTrust{Staleness: "Fresh", VerifiedItems: 5, RecalledItems: 1}, "R"},
+		{"revoked wins over verified",
+			&catalog.RegistryTrust{Staleness: "Fresh", VerifiedItems: 5, RevokedItems: 1}, "R"},
 		{"stale → clock",
 			&catalog.RegistryTrust{Staleness: "Stale", VerifiedItems: 2}, "\u23f0"},
 		{"expired → clock",
@@ -73,7 +73,7 @@ func TestRegistryTrustSummaryFrom_CopiesFields(t *testing.T) {
 		Staleness:     "Fresh",
 		TotalItems:    7,
 		VerifiedItems: 4,
-		RecalledItems: 1,
+		RevokedItems:  1,
 		PrivateItems:  2,
 	}
 	got := registryTrustSummaryFrom(rt)
@@ -82,7 +82,7 @@ func TestRegistryTrustSummaryFrom_CopiesFields(t *testing.T) {
 		got.Subject != rt.Subject || got.Operator != rt.Operator ||
 		got.ManifestURI != rt.ManifestURI || got.Staleness != rt.Staleness ||
 		got.TotalItems != rt.TotalItems || got.VerifiedItems != rt.VerifiedItems ||
-		got.RecalledItems != rt.RecalledItems || got.PrivateItems != rt.PrivateItems {
+		got.RevokedItems != rt.RevokedItems || got.PrivateItems != rt.PrivateItems {
 		t.Errorf("field mismatch: got %+v, rt %+v", got, rt)
 	}
 	// FetchedAt is formatted — just assert non-empty and contains the date.
@@ -123,7 +123,7 @@ func TestContentsSidebar_RenderTrustSection_Content(t *testing.T) {
 		Staleness:     "Fresh",
 		TotalItems:    5,
 		VerifiedItems: 3,
-		RecalledItems: 0,
+		RevokedItems:  0,
 	}
 	lines := m.renderTrustSection()
 	if len(lines) != 7 {
@@ -142,7 +142,7 @@ func TestContentsSidebar_RenderTrustSection_Content(t *testing.T) {
 		t.Errorf("trust section should prefer Operator %q; got:\n%s", "Example Corp", joined)
 	}
 	// Items summary must include all three counts.
-	if !strings.Contains(joined, "5 total") || !strings.Contains(joined, "3 verified") || !strings.Contains(joined, "0 recalled") {
+	if !strings.Contains(joined, "5 total") || !strings.Contains(joined, "3 verified") || !strings.Contains(joined, "0 revoked") {
 		t.Errorf("items summary incomplete; got:\n%s", joined)
 	}
 }
@@ -267,8 +267,8 @@ func TestGolden_MOAT_RegistriesGallery_120x40(t *testing.T) {
 	requireGolden(t, "moat-registries-120x40", snapshotApp(t, app))
 }
 
-// MOAT registries gallery with a recalled item — exercises the R glyph path.
-func TestGolden_MOAT_RegistriesGallery_Recalled_120x40(t *testing.T) {
+// MOAT registries gallery with a revoked item — exercises the R glyph path.
+func TestGolden_MOAT_RegistriesGallery_Revoked_120x40(t *testing.T) {
 	cat := &catalog.Catalog{
 		Items: []catalog.ContentItem{
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "moat-registry",
@@ -276,14 +276,14 @@ func TestGolden_MOAT_RegistriesGallery_Recalled_120x40(t *testing.T) {
 				TrustTier: catalog.TrustTierSigned},
 			{Name: "bad-skill", Type: catalog.Skills, Source: "moat-registry",
 				Registry: "moat-registry", Files: []string{"SKILL.md"},
-				TrustTier: catalog.TrustTierSigned, Recalled: true,
-				RecallSource: "publisher", RecallReason: "key compromise"},
+				TrustTier: catalog.TrustTierSigned, Revoked: true,
+				RevocationSource: "publisher", RevocationReason: "key compromise"},
 		},
 		RegistryTrusts: map[string]*catalog.RegistryTrust{
 			"moat-registry": {
 				Name: "moat-registry", Tier: catalog.TrustTierSigned,
 				Operator: "Example Corp", Staleness: "Fresh",
-				TotalItems: 2, VerifiedItems: 1, RecalledItems: 1,
+				TotalItems: 2, VerifiedItems: 1, RevokedItems: 1,
 			},
 		},
 	}
@@ -296,7 +296,7 @@ func TestGolden_MOAT_RegistriesGallery_Recalled_120x40(t *testing.T) {
 		m, _ = m.Update(cmd())
 	}
 	a = m.(App)
-	requireGolden(t, "moat-registries-recalled-120x40", snapshotApp(t, a))
+	requireGolden(t, "moat-registries-revoked-120x40", snapshotApp(t, a))
 }
 
 func TestGalleryMouse_TrustZoneOpensInspector(t *testing.T) {

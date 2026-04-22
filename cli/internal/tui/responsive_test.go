@@ -171,7 +171,7 @@ func TestResponsive_LibraryNoTruncation_ShortScopes(t *testing.T) {
 
 // TestResponsive_MOATLibraryScope_CountMatchesFixture asserts the Scope
 // column truncates once per row with a long registry name. The MOAT
-// fixture contributes three such rows (verified/recalled/private); the
+// fixture contributes three such rows (verified/revoked/private); the
 // vanilla row has Source="library" which fits. The metapanel may also
 // surface the registry name, so we assert a lower bound rather than
 // exact count to stay robust to metapanel text changes.
@@ -179,7 +179,7 @@ func TestResponsive_MOATLibraryScope_CountMatchesFixture(t *testing.T) {
 	snap := snapshotApp(t, testAppWithMOATItems(t, 120, 40))
 	const truncated = "moat-regi..."
 	got := strings.Count(snap, truncated)
-	const wantAtLeast = 3 // verified + recalled + private rows
+	const wantAtLeast = 3 // verified + revoked + private rows
 	if got < wantAtLeast {
 		t.Errorf("expected at least %d %q occurrences (one per MOAT row); got %d\n%s",
 			wantAtLeast, truncated, got, snap)

@@ -9,8 +9,8 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// TestIsPublisherRevoked covers the gate predicate: publisher-source recall
-// triggers the modal; registry-source recall does not (registry blocks are
+// TestIsPublisherRevoked covers the gate predicate: publisher-source revocation
+// triggers the modal; registry-source revocation does not (registry blocks are
 // enforced in the installer, not via user acknowledgement).
 func TestIsPublisherRevoked(t *testing.T) {
 	tests := []struct {
@@ -19,28 +19,28 @@ func TestIsPublisherRevoked(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "not recalled returns false",
+			name: "not revoked returns false",
 			item: catalog.ContentItem{Name: "foo"},
 			want: false,
 		},
 		{
-			name: "publisher-source recall returns true",
-			item: catalog.ContentItem{Name: "foo", Recalled: true, RecallSource: "publisher"},
+			name: "publisher-source revocation returns true",
+			item: catalog.ContentItem{Name: "foo", Revoked: true, RevocationSource: "publisher"},
 			want: true,
 		},
 		{
-			name: "registry-source recall returns false (installer hard-blocks)",
-			item: catalog.ContentItem{Name: "foo", Recalled: true, RecallSource: "registry"},
+			name: "registry-source revocation returns false (installer hard-blocks)",
+			item: catalog.ContentItem{Name: "foo", Revoked: true, RevocationSource: "registry"},
 			want: false,
 		},
 		{
 			name: "case-insensitive: PUBLISHER",
-			item: catalog.ContentItem{Name: "foo", Recalled: true, RecallSource: "PUBLISHER"},
+			item: catalog.ContentItem{Name: "foo", Revoked: true, RevocationSource: "PUBLISHER"},
 			want: true,
 		},
 		{
-			name: "recalled without source falls through",
-			item: catalog.ContentItem{Name: "foo", Recalled: true},
+			name: "revoked without source falls through",
+			item: catalog.ContentItem{Name: "foo", Revoked: true},
 			want: false,
 		},
 	}
@@ -65,41 +65,41 @@ func TestPublisherWarnBody(t *testing.T) {
 		{
 			name: "all fields present",
 			item: catalog.ContentItem{
-				Name:             "foo",
-				Recalled:         true,
-				RecallSource:     "publisher",
-				RecallReason:     "key compromise",
-				RecallIssuer:     "ops@example.com",
-				RecallDetailsURL: "https://example.com/recall/123",
+				Name:                 "foo",
+				Revoked:              true,
+				RevocationSource:     "publisher",
+				RevocationReason:     "key compromise",
+				Revoker:              "ops@example.com",
+				RevocationDetailsURL: "https://example.com/revocation/123",
 			},
 			wants: []string{
 				"publisher has revoked",
 				"Reason: key compromise",
-				"Issued by: ops@example.com",
-				"Details: https://example.com/recall/123",
+				"Revoked by: ops@example.com",
+				"Details: https://example.com/revocation/123",
 				"The registry has not blocked this hash",
 			},
 		},
 		{
 			name: "only reason",
 			item: catalog.ContentItem{
-				Name:         "foo",
-				Recalled:     true,
-				RecallSource: "publisher",
-				RecallReason: "deprecated",
+				Name:             "foo",
+				Revoked:          true,
+				RevocationSource: "publisher",
+				RevocationReason: "deprecated",
 			},
 			wants:   []string{"Reason: deprecated"},
-			notWant: []string{"Issued by:", "Details:"},
+			notWant: []string{"Revoked by:", "Details:"},
 		},
 		{
 			name: "no optional fields",
 			item: catalog.ContentItem{
-				Name:         "foo",
-				Recalled:     true,
-				RecallSource: "publisher",
+				Name:             "foo",
+				Revoked:          true,
+				RevocationSource: "publisher",
 			},
 			wants:   []string{"publisher has revoked"},
-			notWant: []string{"Reason:", "Issued by:", "Details:"},
+			notWant: []string{"Reason:", "Revoked by:", "Details:"},
 		},
 	}
 	for _, tt := range tests {
@@ -129,9 +129,9 @@ func TestPublisherWarnTitle(t *testing.T) {
 	}
 }
 
-// TestHandleInstallResult_NonRecalledProceedsDirectly verifies the existing
-// non-recalled path is unchanged: no stash, no modal, immediate install cmd.
-func TestHandleInstallResult_NonRecalledProceedsDirectly(t *testing.T) {
+// TestHandleInstallResult_NonRevokedProceedsDirectly verifies the existing
+// non-revoked path is unchanged: no stash, no modal, immediate install cmd.
+func TestHandleInstallResult_NonRevokedProceedsDirectly(t *testing.T) {
 	app := testApp(t)
 	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
 
@@ -147,30 +147,30 @@ func TestHandleInstallResult_NonRecalledProceedsDirectly(t *testing.T) {
 	a := m.(App)
 
 	if a.pendingInstall != nil {
-		t.Error("expected pendingInstall=nil for non-recalled item")
+		t.Error("expected pendingInstall=nil for non-revoked item")
 	}
 	if a.confirm.active {
-		t.Error("expected confirm modal NOT to be open for non-recalled item")
+		t.Error("expected confirm modal NOT to be open for non-revoked item")
 	}
 	if cmd == nil {
 		t.Error("expected install cmd to be dispatched immediately")
 	}
 }
 
-// TestHandleInstallResult_RecalledOpensConfirm verifies a publisher-recalled
+// TestHandleInstallResult_RevokedOpensConfirm verifies a publisher-revoked
 // item stashes the install and opens the confirm modal instead of installing
 // directly.
-func TestHandleInstallResult_RecalledOpensConfirm(t *testing.T) {
+func TestHandleInstallResult_RevokedOpensConfirm(t *testing.T) {
 	app := testApp(t)
 	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
 
 	item := catalog.ContentItem{
-		Name:         "dangerous",
-		Type:         catalog.Skills,
-		Path:         "/tmp/fake",
-		Recalled:     true,
-		RecallSource: "publisher",
-		RecallReason: "publisher revoked",
+		Name:             "dangerous",
+		Type:             catalog.Skills,
+		Path:             "/tmp/fake",
+		Revoked:          true,
+		RevocationSource: "publisher",
+		RevocationReason: "publisher revoked",
 	}
 	msg := installResultMsg{
 		item: item, provider: prov, location: "global", method: installer.MethodSymlink,
@@ -206,7 +206,7 @@ func TestHandleConfirmResult_DispatchesStashedInstall(t *testing.T) {
 	// Set up a stashed install via the install path.
 	item := catalog.ContentItem{
 		Name: "dangerous", Type: catalog.Skills, Path: "/tmp/fake",
-		Recalled: true, RecallSource: "publisher",
+		Revoked: true, RevocationSource: "publisher",
 	}
 	m, _ := app.Update(installResultMsg{
 		item: item, provider: prov, location: "global", method: installer.MethodSymlink,
@@ -233,7 +233,7 @@ func TestHandleConfirmResult_CancelClearsStashAndToasts(t *testing.T) {
 
 	item := catalog.ContentItem{
 		Name: "dangerous", Type: catalog.Skills, Path: "/tmp/fake",
-		Recalled: true, RecallSource: "publisher",
+		Revoked: true, RevocationSource: "publisher",
 	}
 	m, _ := app.Update(installResultMsg{
 		item: item, provider: prov, location: "global", method: installer.MethodSymlink,
@@ -254,9 +254,9 @@ func TestHandleConfirmResult_CancelClearsStashAndToasts(t *testing.T) {
 	}
 }
 
-// TestHandleInstallAllResult_RecalledOpensConfirm covers the install-to-all
+// TestHandleInstallAllResult_RevokedOpensConfirm covers the install-to-all
 // path: the same modal gates a multi-provider batch.
-func TestHandleInstallAllResult_RecalledOpensConfirm(t *testing.T) {
+func TestHandleInstallAllResult_RevokedOpensConfirm(t *testing.T) {
 	app := testApp(t)
 	provs := []provider.Provider{
 		{Name: "Claude Code", Slug: "claude-code"},
@@ -264,7 +264,7 @@ func TestHandleInstallAllResult_RecalledOpensConfirm(t *testing.T) {
 	}
 	item := catalog.ContentItem{
 		Name: "dangerous", Type: catalog.Skills, Path: "/tmp/fake",
-		Recalled: true, RecallSource: "publisher",
+		Revoked: true, RevocationSource: "publisher",
 	}
 
 	m, cmd := app.Update(installAllResultMsg{item: item, providers: provs})
@@ -291,7 +291,7 @@ func TestHandleConfirmResult_StashedAllDispatches(t *testing.T) {
 	provs := []provider.Provider{{Name: "Claude Code", Slug: "claude-code"}}
 	item := catalog.ContentItem{
 		Name: "dangerous", Type: catalog.Skills, Path: "/tmp/fake",
-		Recalled: true, RecallSource: "publisher",
+		Revoked: true, RevocationSource: "publisher",
 	}
 
 	m, _ := app.Update(installAllResultMsg{item: item, providers: provs})

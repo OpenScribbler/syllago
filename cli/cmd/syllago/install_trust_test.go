@@ -28,17 +28,17 @@ func findTestProvider(t *testing.T, slug string) *provider.Provider {
 
 // buildTrustItems builds a single ContentItem backed by a real library path
 // so installer.InstallWithResolver can symlink the source on disk.
-func buildTrustItems(t *testing.T, globalDir string, tier catalog.TrustTier, recalled bool, reason string) []catalog.ContentItem {
+func buildTrustItems(t *testing.T, globalDir string, tier catalog.TrustTier, revoked bool, reason string) []catalog.ContentItem {
 	t.Helper()
 	return []catalog.ContentItem{{
-		Name:         "my-skill",
-		Type:         catalog.Skills,
-		Path:         filepath.Join(globalDir, "skills", "my-skill"),
-		Library:      true,
-		Source:       "library",
-		TrustTier:    tier,
-		Recalled:     recalled,
-		RecallReason: reason,
+		Name:             "my-skill",
+		Type:             catalog.Skills,
+		Path:             filepath.Join(globalDir, "skills", "my-skill"),
+		Library:          true,
+		Source:           "library",
+		TrustTier:        tier,
+		Revoked:          revoked,
+		RevocationReason: reason,
 	}}
 }
 
@@ -97,34 +97,34 @@ func TestInstallTrustLine_Signed(t *testing.T) {
 	}
 }
 
-func TestInstallTrustLine_Recalled(t *testing.T) {
+func TestInstallTrustLine_Revoked(t *testing.T) {
 	globalDir := setupGlobalLibrary(t)
 	withGlobalLibrary(t, globalDir)
 
 	installBase := t.TempDir()
-	addTestProvider(t, "trust-prov-recalled", "Trust Provider Recalled", installBase)
-	prov := findTestProvider(t, "trust-prov-recalled")
+	addTestProvider(t, "trust-prov-revoked", "Trust Provider Revoked", installBase)
+	prov := findTestProvider(t, "trust-prov-revoked")
 
 	stdout, _ := output.SetForTest(t)
 
-	// Recalled takes precedence over TrustTier per AD-7 collapse rule —
-	// DualAttested + Recalled must still render as Recalled, not Verified.
+	// Revoked takes precedence over TrustTier per AD-7 collapse rule —
+	// DualAttested + Revoked must still render as Revoked, not Verified.
 	items := buildTrustItems(t, globalDir, catalog.TrustTierDualAttested, true, "publisher revoked 2026-04-18")
 	result, _ := installToProvider(items, *prov, globalDir, installer.MethodSymlink,
 		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
 
 	out := stdout.String()
-	if !strings.Contains(out, "Recalled \u2014 publisher revoked 2026-04-18") {
-		t.Errorf("expected recall reason in drill-down, got: %s", out)
+	if !strings.Contains(out, "Revoked \u2014 publisher revoked 2026-04-18") {
+		t.Errorf("expected revocation reason in drill-down, got: %s", out)
 	}
 	if !strings.Contains(out, "R my-skill") {
-		t.Errorf("expected Recalled glyph (R) preceding item name in stdout, got: %s", out)
+		t.Errorf("expected Revoked glyph (R) preceding item name in stdout, got: %s", out)
 	}
 	if strings.Contains(out, "Verified") {
-		t.Errorf("Recalled must suppress Verified badge, but output contained Verified: %s", out)
+		t.Errorf("Revoked must suppress Verified badge, but output contained Verified: %s", out)
 	}
-	if !strings.HasPrefix(result.Installed[0].Trust, "Recalled") {
-		t.Errorf("expected Trust field to start with Recalled, got: %q", result.Installed[0].Trust)
+	if !strings.HasPrefix(result.Installed[0].Trust, "Revoked") {
+		t.Errorf("expected Trust field to start with Revoked, got: %q", result.Installed[0].Trust)
 	}
 }
 
@@ -147,7 +147,7 @@ func TestInstallTrustLine_UnknownSuppressed(t *testing.T) {
 		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
 
 	out := stdout.String()
-	if strings.Contains(out, "Verified") || strings.Contains(out, "Recalled") ||
+	if strings.Contains(out, "Verified") || strings.Contains(out, "Revoked") ||
 		strings.Contains(out, "\u2713") || strings.Contains(out, "\u2717") {
 		t.Errorf("Unknown tier must not render trust badge, but output had one: %s", out)
 	}
@@ -199,7 +199,7 @@ func TestInstallTrustLine_JSONModeSuppressesText(t *testing.T) {
 	}
 	// The zero-value case is already covered by TestInstallTrustLine_UnknownSuppressed;
 	// this just confirms dry-run doesn't accidentally emit the line either.
-	if strings.Contains(stdout.String(), "Verified") || strings.Contains(stdout.String(), "Recalled") {
+	if strings.Contains(stdout.String(), "Verified") || strings.Contains(stdout.String(), "Revoked") {
 		t.Errorf("dry-run + Unknown must not emit trust line, got: %s", stdout.String())
 	}
 }

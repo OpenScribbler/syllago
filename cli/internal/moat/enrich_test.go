@@ -128,8 +128,8 @@ func TestEnrichCatalog_NilManifest(t *testing.T) {
 	if cat.Items[0].TrustTier != catalog.TrustTierUnknown {
 		t.Errorf("TrustTier mutated despite nil manifest: got %v", cat.Items[0].TrustTier)
 	}
-	if cat.Items[0].Recalled {
-		t.Errorf("Recalled set despite nil manifest")
+	if cat.Items[0].Revoked {
+		t.Errorf("Revoked set despite nil manifest")
 	}
 }
 
@@ -164,8 +164,8 @@ func TestEnrichCatalog_TierMapping(t *testing.T) {
 		if got := cat.Items[i].TrustTier; got != c.want {
 			t.Errorf("items[%d] (%s) tier = %v, want %v", i, c.name, got, c.want)
 		}
-		if cat.Items[i].Recalled {
-			t.Errorf("items[%d] (%s) unexpectedly Recalled", i, c.name)
+		if cat.Items[i].Revoked {
+			t.Errorf("items[%d] (%s) unexpectedly Revoked", i, c.name)
 		}
 	}
 }
@@ -189,7 +189,7 @@ func TestEnrichCatalog_G13MismatchDowngradesToSigned(t *testing.T) {
 
 // --- EnrichCatalog: revocation population -----------------------------
 
-func TestEnrichCatalog_RevocationSetsRecalled(t *testing.T) {
+func TestEnrichCatalog_RevocationSetsRevoked(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
 		Content: []ContentEntry{signedEntry("bad", hashA())},
@@ -203,16 +203,16 @@ func TestEnrichCatalog_RevocationSetsRecalled(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if !cat.Items[0].Recalled {
-		t.Fatalf("Recalled not set for revoked item")
+	if !cat.Items[0].Revoked {
+		t.Fatalf("Revoked not set for revoked item")
 	}
-	if cat.Items[0].RecallReason != RevocationReasonMalicious {
-		t.Errorf("RecallReason = %q, want %q", cat.Items[0].RecallReason, RevocationReasonMalicious)
+	if cat.Items[0].RevocationReason != RevocationReasonMalicious {
+		t.Errorf("RevocationReason = %q, want %q", cat.Items[0].RevocationReason, RevocationReasonMalicious)
 	}
-	// Tier should still be populated alongside Recalled — the display
+	// Tier should still be populated alongside Revoked — the display
 	// collapses via UserFacingBadge, not by zeroing the tier.
 	if cat.Items[0].TrustTier != catalog.TrustTierSigned {
-		t.Errorf("TrustTier lost when Recalled set: got %v", cat.Items[0].TrustTier)
+		t.Errorf("TrustTier lost when Revoked set: got %v", cat.Items[0].TrustTier)
 	}
 }
 
@@ -230,11 +230,11 @@ func TestEnrichCatalog_NoRevocationLeavesFieldsZero(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if cat.Items[0].Recalled {
-		t.Errorf("Recalled set when hash does not match any revocation")
+	if cat.Items[0].Revoked {
+		t.Errorf("Revoked set when hash does not match any revocation")
 	}
-	if cat.Items[0].RecallReason != "" {
-		t.Errorf("RecallReason = %q, want empty", cat.Items[0].RecallReason)
+	if cat.Items[0].RevocationReason != "" {
+		t.Errorf("RevocationReason = %q, want empty", cat.Items[0].RevocationReason)
 	}
 }
 
@@ -295,9 +295,9 @@ func TestEnrichCatalog_DuplicateRevocationKeepsFirst(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if cat.Items[0].RecallReason != RevocationReasonMalicious {
-		t.Errorf("RecallReason = %q, want first-match %q",
-			cat.Items[0].RecallReason, RevocationReasonMalicious)
+	if cat.Items[0].RevocationReason != RevocationReasonMalicious {
+		t.Errorf("RevocationReason = %q, want first-match %q",
+			cat.Items[0].RevocationReason, RevocationReasonMalicious)
 	}
 }
 
@@ -340,17 +340,17 @@ func TestEnrichCatalog_MixedCatalog(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if cat.Items[0].TrustTier != catalog.TrustTierDualAttested || cat.Items[0].Recalled {
-		t.Errorf("alpha: tier=%v recalled=%v, want DualAttested/false",
-			cat.Items[0].TrustTier, cat.Items[0].Recalled)
+	if cat.Items[0].TrustTier != catalog.TrustTierDualAttested || cat.Items[0].Revoked {
+		t.Errorf("alpha: tier=%v revoked=%v, want DualAttested/false",
+			cat.Items[0].TrustTier, cat.Items[0].Revoked)
 	}
-	if cat.Items[1].TrustTier != catalog.TrustTierSigned || !cat.Items[1].Recalled {
-		t.Errorf("beta: tier=%v recalled=%v, want Signed/true",
-			cat.Items[1].TrustTier, cat.Items[1].Recalled)
+	if cat.Items[1].TrustTier != catalog.TrustTierSigned || !cat.Items[1].Revoked {
+		t.Errorf("beta: tier=%v revoked=%v, want Signed/true",
+			cat.Items[1].TrustTier, cat.Items[1].Revoked)
 	}
-	if cat.Items[1].RecallReason != RevocationReasonCompromised {
-		t.Errorf("beta RecallReason = %q, want %q",
-			cat.Items[1].RecallReason, RevocationReasonCompromised)
+	if cat.Items[1].RevocationReason != RevocationReasonCompromised {
+		t.Errorf("beta RevocationReason = %q, want %q",
+			cat.Items[1].RevocationReason, RevocationReasonCompromised)
 	}
 	if cat.Items[2].TrustTier != catalog.TrustTierUnsigned {
 		t.Errorf("gamma tier = %v, want Unsigned", cat.Items[2].TrustTier)
@@ -362,10 +362,10 @@ func TestEnrichCatalog_MixedCatalog(t *testing.T) {
 
 // --- Phase 2c: new drill-down fields ----------------------------------
 //
-// PrivateRepo, RecallSource, RecallDetailsURL, RecallIssuer were added in
+// PrivateRepo, RevocationSource, RevocationDetailsURL, Revoker were added in
 // MOAT Phase 2c (bead syllago-lqas0). Each test below pins down one field
 // end-to-end: how it is populated, how sanitization runs, and what the
-// zero-value semantics look like on a non-Recalled or non-MOAT item.
+// zero-value semantics look like on a non-Revoked or non-MOAT item.
 
 // TestEnrichCatalog_PrivateRepoPopulated confirms the G-10 per-item private
 // declaration propagates even when no revocation is present. The registry-
@@ -392,10 +392,10 @@ func TestEnrichCatalog_PrivateRepoPopulated(t *testing.T) {
 	}
 }
 
-// TestEnrichCatalog_RecallSourceDefaultsRegistry exercises the MOAT spec
+// TestEnrichCatalog_RevocationSourceDefaultsRegistry exercises the MOAT spec
 // default: a Revocation with empty source is treated as registry-source.
 // EffectiveSource() owns the default; enrich must preserve it.
-func TestEnrichCatalog_RecallSourceDefaultsRegistry(t *testing.T) {
+func TestEnrichCatalog_RevocationSourceDefaultsRegistry(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
 		Name:                   "example-registry",
@@ -412,18 +412,18 @@ func TestEnrichCatalog_RecallSourceDefaultsRegistry(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if got := cat.Items[0].RecallSource; got != RevocationSourceRegistry {
-		t.Errorf("RecallSource = %q, want %q", got, RevocationSourceRegistry)
+	if got := cat.Items[0].RevocationSource; got != RevocationSourceRegistry {
+		t.Errorf("RevocationSource = %q, want %q", got, RevocationSourceRegistry)
 	}
 	// Registry-source issuer uses Operator when present.
-	if got := cat.Items[0].RecallIssuer; got != "Example Inc" {
-		t.Errorf("RecallIssuer = %q, want %q", got, "Example Inc")
+	if got := cat.Items[0].Revoker; got != "Example Inc" {
+		t.Errorf("Revoker = %q, want %q", got, "Example Inc")
 	}
 }
 
-// TestEnrichCatalog_RecallSourcePublisher proves the publisher branch
+// TestEnrichCatalog_RevocationSourcePublisher proves the publisher branch
 // reports the right source + uses the per-entry signing profile subject.
-func TestEnrichCatalog_RecallSourcePublisher(t *testing.T) {
+func TestEnrichCatalog_RevocationSourcePublisher(t *testing.T) {
 	t.Parallel()
 	entry := dualAttestedEntry("x", hashA())
 	// dualAttestedEntry sets SigningProfile with subject "pub@example.com".
@@ -439,19 +439,19 @@ func TestEnrichCatalog_RecallSourcePublisher(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if got := cat.Items[0].RecallSource; got != RevocationSourcePublisher {
-		t.Errorf("RecallSource = %q, want %q", got, RevocationSourcePublisher)
+	if got := cat.Items[0].RevocationSource; got != RevocationSourcePublisher {
+		t.Errorf("RevocationSource = %q, want %q", got, RevocationSourcePublisher)
 	}
-	if got := cat.Items[0].RecallIssuer; got != "pub@example.com" {
-		t.Errorf("RecallIssuer = %q, want %q", got, "pub@example.com")
+	if got := cat.Items[0].Revoker; got != "pub@example.com" {
+		t.Errorf("Revoker = %q, want %q", got, "pub@example.com")
 	}
 }
 
-// TestEnrichCatalog_RecallIssuerRegistryFallback: if Manifest.Operator is
+// TestEnrichCatalog_RevokerRegistryFallback: if Manifest.Operator is
 // empty, the resolver falls back to RegistrySigningProfile.Subject. The
 // manifest validator guarantees Subject is non-empty, so this path is
 // always safe at runtime; we exercise it explicitly.
-func TestEnrichCatalog_RecallIssuerRegistryFallback(t *testing.T) {
+func TestEnrichCatalog_RevokerRegistryFallback(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
 		// No Operator.
@@ -467,17 +467,17 @@ func TestEnrichCatalog_RecallIssuerRegistryFallback(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if got := cat.Items[0].RecallIssuer; got != "ops@example.com" {
-		t.Errorf("RecallIssuer fallback = %q, want RegistrySigningProfile.Subject", got)
+	if got := cat.Items[0].Revoker; got != "ops@example.com" {
+		t.Errorf("Revoker fallback = %q, want RegistrySigningProfile.Subject", got)
 	}
 }
 
-// TestEnrichCatalog_RecallIssuerPublisherFallback: when a publisher-source
+// TestEnrichCatalog_RevokerPublisherFallback: when a publisher-source
 // revocation lands on an entry with no SigningProfile, the resolver must
 // still produce non-empty text so the drill-down banner has something to
 // render. The sentinel is a committed contract — tests in the TUI rely on
 // exactly this string.
-func TestEnrichCatalog_RecallIssuerPublisherFallback(t *testing.T) {
+func TestEnrichCatalog_RevokerPublisherFallback(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
 		Content: []ContentEntry{signedEntry("x", hashA())}, // no SigningProfile
@@ -492,8 +492,8 @@ func TestEnrichCatalog_RecallIssuerPublisherFallback(t *testing.T) {
 	EnrichCatalog(cat, "reg", m)
 
 	want := "(publisher — identity not provided)"
-	if got := cat.Items[0].RecallIssuer; got != want {
-		t.Errorf("RecallIssuer sentinel = %q, want %q", got, want)
+	if got := cat.Items[0].Revoker; got != want {
+		t.Errorf("Revoker sentinel = %q, want %q", got, want)
 	}
 }
 
@@ -526,22 +526,22 @@ func TestEnrichCatalog_SanitizesPublisherStrings(t *testing.T) {
 
 	EnrichCatalog(cat, "reg", m)
 
-	if got := cat.Items[0].RecallReason; got != "Malicious content" {
-		t.Errorf("RecallReason = %q; want sanitized %q", got, "Malicious content")
+	if got := cat.Items[0].RevocationReason; got != "Malicious content" {
+		t.Errorf("RevocationReason = %q; want sanitized %q", got, "Malicious content")
 	}
-	if got := cat.Items[0].RecallDetailsURL; got != "https://example.com/revs/../../etc/passwd" {
-		t.Errorf("RecallDetailsURL = %q; null byte not stripped", got)
+	if got := cat.Items[0].RevocationDetailsURL; got != "https://example.com/revs/../../etc/passwd" {
+		t.Errorf("RevocationDetailsURL = %q; null byte not stripped", got)
 	}
-	if got := cat.Items[0].RecallIssuer; got != "pub@evil.com" {
-		t.Errorf("RecallIssuer = %q; want sanitized %q", got, "pub@evil.com")
+	if got := cat.Items[0].Revoker; got != "pub@evil.com" {
+		t.Errorf("Revoker = %q; want sanitized %q", got, "pub@evil.com")
 	}
 }
 
-// TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields documents the
-// contract that drill-down fields stay zero on a verified-but-not-recalled
-// item. Consumers rely on this to branch purely on `Recalled` without
-// worrying about stale RecallSource / RecallIssuer data from a prior run.
-func TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields(t *testing.T) {
+// TestEnrichCatalog_NonRevokedItemHasZeroDrillDownFields documents the
+// contract that drill-down fields stay zero on a verified-but-not-revoked
+// item. Consumers rely on this to branch purely on `Revoked` without
+// worrying about stale RevocationSource / Revoker data from a prior run.
+func TestEnrichCatalog_NonRevokedItemHasZeroDrillDownFields(t *testing.T) {
 	t.Parallel()
 	m := &Manifest{
 		Name:                   "reg",
@@ -559,12 +559,12 @@ func TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields(t *testing.T) {
 	EnrichCatalog(cat, "reg", m)
 
 	item := cat.Items[0]
-	if item.Recalled {
-		t.Fatalf("Recalled set on non-matching item")
+	if item.Revoked {
+		t.Fatalf("Revoked set on non-matching item")
 	}
-	if item.RecallSource != "" || item.RecallDetailsURL != "" || item.RecallIssuer != "" {
-		t.Errorf("drill-down fields leaked onto non-recalled item: source=%q url=%q issuer=%q",
-			item.RecallSource, item.RecallDetailsURL, item.RecallIssuer)
+	if item.RevocationSource != "" || item.RevocationDetailsURL != "" || item.Revoker != "" {
+		t.Errorf("drill-down fields leaked onto non-revoked item: source=%q url=%q issuer=%q",
+			item.RevocationSource, item.RevocationDetailsURL, item.Revoker)
 	}
 }
 
@@ -579,7 +579,7 @@ func TestEnrichCatalog_NonRecalledItemHasZeroDrillDownFields(t *testing.T) {
 // shipped items with the wrong trust badge.
 //
 // This test is the glue layer. One JSON fixture covers the full display
-// matrix (Dual-Attested / Signed / Unsigned / G-13 mismatch / Recalled /
+// matrix (Dual-Attested / Signed / Unsigned / G-13 mismatch / Revoked /
 // missing-entry) and asserts the downstream display helpers
 // (catalog.UserFacingBadge, TrustDescription, Glyph, Label) produce the
 // expected strings for each permutation.
@@ -659,7 +659,7 @@ func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
 	// Simulate a catalog scan: names that match the manifest plus one
 	// "stranger" the registry clone carried but the manifest does not list.
 	// Enrich must leave the stranger entirely at zero values (no spurious
-	// tier, no accidental Recalled) so the badge never fires.
+	// tier, no accidental Revoked) so the badge never fires.
 	cat := &catalog.Catalog{Items: []catalog.ContentItem{
 		{Name: "alpha-skill", Registry: "test-registry", Type: catalog.Skills},
 		{Name: "beta-rules", Registry: "test-registry", Type: catalog.Rules},
@@ -671,13 +671,13 @@ func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
 	EnrichCatalog(cat, "test-registry", m)
 
 	cases := []struct {
-		name         string
-		wantTier     catalog.TrustTier
-		wantRecalled bool
-		wantBadge    catalog.TrustBadge
-		wantGlyph    string
-		wantLabel    string
-		wantDesc     string
+		name        string
+		wantTier    catalog.TrustTier
+		wantRevoked bool
+		wantBadge   catalog.TrustBadge
+		wantGlyph   string
+		wantLabel   string
+		wantDesc    string
 	}{
 		{
 			name:      "alpha-skill",
@@ -688,16 +688,16 @@ func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
 			wantDesc:  "Verified (dual-attested by publisher and registry)",
 		},
 		{
-			// Revocation from JSON → Recalled dominates the badge per AD-7
+			// Revocation from JSON → Revoked dominates the badge per AD-7
 			// collapse rule. Tier stays Signed so drill-down can still show
 			// the revoked tier if future UI requires it.
-			name:         "beta-rules",
-			wantTier:     catalog.TrustTierSigned,
-			wantRecalled: true,
-			wantBadge:    catalog.TrustBadgeRecalled,
-			wantGlyph:    "R",
-			wantLabel:    "Recalled",
-			wantDesc:     "Recalled — malicious",
+			name:        "beta-rules",
+			wantTier:    catalog.TrustTierSigned,
+			wantRevoked: true,
+			wantBadge:   catalog.TrustBadgeRevoked,
+			wantGlyph:   "R",
+			wantLabel:   "Revoked",
+			wantDesc:    "Revoked — malicious",
 		},
 		{
 			// No rekor_log_index → Unsigned → no badge ("absence is not a
@@ -752,10 +752,10 @@ func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
 			if item.TrustTier != c.wantTier {
 				t.Errorf("TrustTier = %v, want %v", item.TrustTier, c.wantTier)
 			}
-			if item.Recalled != c.wantRecalled {
-				t.Errorf("Recalled = %v, want %v", item.Recalled, c.wantRecalled)
+			if item.Revoked != c.wantRevoked {
+				t.Errorf("Revoked = %v, want %v", item.Revoked, c.wantRevoked)
 			}
-			gotBadge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
+			gotBadge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
 			if gotBadge != c.wantBadge {
 				t.Errorf("UserFacingBadge = %v, want %v", gotBadge, c.wantBadge)
 			}
@@ -765,7 +765,7 @@ func TestEnrichCatalog_E2E_ParseManifestThroughDisplay(t *testing.T) {
 			if got := gotBadge.Label(); got != c.wantLabel {
 				t.Errorf("Label = %q, want %q", got, c.wantLabel)
 			}
-			gotDesc := catalog.TrustDescription(item.TrustTier, item.Recalled, item.RecallReason)
+			gotDesc := catalog.TrustDescription(item.TrustTier, item.Revoked, item.RevocationReason)
 			if gotDesc != c.wantDesc {
 				t.Errorf("TrustDescription = %q, want %q", gotDesc, c.wantDesc)
 			}
@@ -833,7 +833,7 @@ func TestEnrichCatalog_E2E_HashMismatchDowngradesThroughJSON(t *testing.T) {
 	// Display-layer corollary: the collapsed badge must still read Verified
 	// (Signed collapses to Verified) but the drill-down description must say
 	// "registry-attested", NOT "dual-attested by publisher and registry".
-	gotDesc := catalog.TrustDescription(cat.Items[0].TrustTier, cat.Items[0].Recalled, cat.Items[0].RecallReason)
+	gotDesc := catalog.TrustDescription(cat.Items[0].TrustTier, cat.Items[0].Revoked, cat.Items[0].RevocationReason)
 	if gotDesc != "Verified (registry-attested)" {
 		t.Errorf("Drill-down description = %q; want %q (publisher claim must not appear on mismatched content)",
 			gotDesc, "Verified (registry-attested)")

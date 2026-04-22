@@ -102,7 +102,7 @@ var (
 	// MOAT trust-surfacing styles (spec §7). Pre-composed here so render
 	// sites never allocate lipgloss.NewStyle() inline (per project convention).
 	trustVerifiedStyle    = lipgloss.NewStyle().Foreground(successColor).Bold(true)
-	trustRecalledStyle    = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
+	trustRevokedStyle     = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
 	privateIndicatorStyle = lipgloss.NewStyle().Foreground(mutedColor)
 )
 

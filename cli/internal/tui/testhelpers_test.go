@@ -66,7 +66,7 @@ func testCatalogWithItems(t *testing.T) *catalog.Catalog {
 // so golden diffs are easy to read):
 //
 //	row 0: verified     — ✓ DualAttested, no other flags
-//	row 1: recalled     — Recalled (publisher), R glyph + banner
+//	row 1: revoked      — Revoked (publisher), R glyph + banner
 //	row 2: private      — PrivateRepo + Signed
 //	row 3: vanilla      — no MOAT surface (control)
 func testCatalogWithMOATItems(t *testing.T) *catalog.Catalog {
@@ -75,27 +75,38 @@ func testCatalogWithMOATItems(t *testing.T) *catalog.Catalog {
 		Items: []catalog.ContentItem{
 			{
 				Name: "verified-skill", Type: catalog.Skills, Source: "moat-registry",
-				Registry:  "moat-registry",
-				Files:     []string{"SKILL.md"},
-				TrustTier: catalog.TrustTierDualAttested,
-			},
-			{
-				Name: "recalled-skill", Type: catalog.Skills, Source: "moat-registry",
 				Registry:         "moat-registry",
 				Files:            []string{"SKILL.md"},
-				TrustTier:        catalog.TrustTierSigned,
-				Recalled:         true,
-				RecallSource:     "publisher",
-				RecallReason:     "key compromise",
-				RecallIssuer:     "ops@example.com",
-				RecallDetailsURL: "https://example.com/recall/123",
+				TrustTier:        catalog.TrustTierDualAttested,
+				PublisherSubject: "https://github.com/openscribbler/verified-skill",
+				PublisherIssuer:  "https://token.actions.githubusercontent.com",
+				RegistrySubject:  "https://github.com/openscribbler/moat-registry",
+				RegistryIssuer:   "https://token.actions.githubusercontent.com",
+				RegistryOperator: "OpenScribbler",
+			},
+			{
+				Name: "revoked-skill", Type: catalog.Skills, Source: "moat-registry",
+				Registry:             "moat-registry",
+				Files:                []string{"SKILL.md"},
+				TrustTier:            catalog.TrustTierSigned,
+				Revoked:              true,
+				RevocationSource:     "publisher",
+				RevocationReason:     "key compromise",
+				Revoker:              "ops@example.com",
+				RevocationDetailsURL: "https://example.com/revocation/123",
+				RegistrySubject:      "https://github.com/openscribbler/moat-registry",
+				RegistryIssuer:       "https://token.actions.githubusercontent.com",
+				RegistryOperator:     "OpenScribbler",
 			},
 			{
 				Name: "private-skill", Type: catalog.Skills, Source: "moat-registry",
-				Registry:    "moat-registry",
-				Files:       []string{"SKILL.md"},
-				TrustTier:   catalog.TrustTierSigned,
-				PrivateRepo: true,
+				Registry:         "moat-registry",
+				Files:            []string{"SKILL.md"},
+				TrustTier:        catalog.TrustTierSigned,
+				PrivateRepo:      true,
+				RegistrySubject:  "https://github.com/openscribbler/moat-registry",
+				RegistryIssuer:   "https://token.actions.githubusercontent.com",
+				RegistryOperator: "OpenScribbler",
 			},
 			{
 				Name: "vanilla-skill", Type: catalog.Skills, Source: "library",

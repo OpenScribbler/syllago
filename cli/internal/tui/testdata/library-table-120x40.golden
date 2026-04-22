@@ -7,7 +7,8 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ alpha-skill                               Type: Skill     Files: 1   Origin: syllago      Installed: --              │
 │ Scope: project   Registry: not in a registry                                                                         │
-│                                                                                           [d] Remove      [e] Edit   │
+│                                                                                                                      │
+│ Trust: Unknown        Visibility: Public                                                  [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │ >    alpha-skill            Skill     team-rules   1     --                                                          │
@@ -34,7 +35,6 @@
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
-│                                                                                                                      │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · enter preview · / search · s sort · i install · e edit    syllago v0.0.0-test
-d remove · x uninstall · R refresh · a add · ? help · q quit
+d remove · x uninstall · t trust · R refresh · a add · ? help · q quit

@@ -50,45 +50,56 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 }
 
 // metaBarLinesFor reports how many lines renderMetaPanel will emit for the
-// given item. Returns metaBarLinesBase (3) for non-MOAT items so the
-// hundreds of existing golden snapshots stay unchanged. MOAT items (any
-// TrustTier, PrivateRepo, or Recalled) gain exactly one Line 4 that
-// always carries both Trust and Visibility fields — recalled items now
-// collapse their reason/issuer/URL details into the Trust Inspector
-// rather than a multi-line banner, eliminating overflow jank at narrow
-// widths.
+// given item. The count is now a constant (metaBarLinesBase = 4) across
+// every item — MOAT state no longer adds a row; trust+visibility chips
+// share Line 4 with the action buttons so the handler slot on Line 3
+// stays at a predictable position whether the content type supplies a
+// handler row or not.
 //
-// Nil-item case returns metaBarLinesBase — the "no selection" placeholder
-// renders blank lines matching the baseline so height math is stable.
+// The parameter is kept even though it is ignored so existing call sites
+// (gallery, explorer, library views) don't need to change signature and
+// future variants (e.g. a nil-placeholder with shorter height) can plug
+// in without churn.
 func metaBarLinesFor(item *catalog.ContentItem) int {
-	if item == nil {
-		return metaBarLinesBase
-	}
-	if item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled {
-		return metaBarLinesBase + 1
-	}
+	_ = item
 	return metaBarLinesBase
 }
 
-// renderMetaPanel renders the variable-height metadata content for a content
-// item. Emits 3 lines for non-MOAT items, 4 lines for MOAT items with a
-// trust surface, and 5 lines when the item is Recalled (adds a revocation
-// banner). Height contract: lipgloss.Height(result) always equals
-// metaBarLinesFor(item) — callers rely on this for layout math.
-func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) string {
-	if item == nil {
-		blank := strings.Repeat(" ", width)
-		return blank + "\n" + blank + "\n" + blank
-	}
+// trustValueMaxW is the reserved width for the Trust chip value on Line 4.
+// It equals len("Dual attested") — the widest short tier label — so the
+// Visibility chip always starts at the same column regardless of which
+// tier or state the item is in. Trust values shorter than this are padded
+// on the right; longer values (shouldn't occur with ShortLabel, but the
+// "Revoked" family could grow if we ever add a suffix here) are
+// truncated to keep the column grid stable.
+const trustValueMaxW = 13
 
-	// pad clamps a line to width. Shared by all line builders below so the
-	// returned string's Height matches metaBarLinesFor(item) exactly.
+// renderMetaPanel renders the metadata panel as a fixed 4-line block. Every
+// item emits the same number of lines so callers' height math is stable:
+//
+//	Line 1: name, type, files, origin, installed
+//	Line 2: scope, registry, path
+//	Line 3: type-specific handler (hooks show Event/Tool/Handler; skills &
+//	        commands emit a blank line in this slot)
+//	Line 4: trust + visibility (fixed columns) + action buttons (right-
+//	        aligned). Non-MOAT items omit the Trust/Visibility chips but
+//	        the buttons still sit on Line 4 at the same position.
+//
+// Extended revocation details (reason, revoker, details URL) live in the
+// Trust Inspector modal — not the metapanel — so the column width stays
+// stable at any reason length.
+func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) string {
 	pad := func(s string) string {
 		s = lipgloss.NewStyle().MaxWidth(width).Render(s)
 		if g := width - lipgloss.Width(s); g > 0 {
 			s += strings.Repeat(" ", g)
 		}
 		return s
+	}
+
+	if item == nil {
+		blank := pad("")
+		return blank + "\n" + blank + "\n" + blank + "\n" + blank
 	}
 
 	chip := func(key, val string, w int) string {
@@ -150,8 +161,11 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		line2 = tryAdd(line2, boldStyle.Render("Path: ")+mutedStyle.Render(truncateMiddle(path, pathW)))
 	}
 
-	// --- Line 3: type-specific detail + rename button ---
-	line3 := ""
+	// --- Line 3: type-specific handler detail (blank when absent) ---
+	// Skills, rules, commands, etc. have no handler row. Their Line 3 is
+	// a single leading space so the height stays 4 lines and buttons on
+	// Line 4 below never migrate upward.
+	line3 := " "
 	if data.typeDetail != "" {
 		segments := strings.Split(sanitizeLine(data.typeDetail), " · ")
 		styled := " "
@@ -165,11 +179,18 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 				styled += mutedStyle.Render(seg)
 			}
 		}
+		// Clamp handler detail to the row width so buttons below aren't
+		// pushed around by an unusually long handler signature.
+		if lipgloss.Width(styled) > width {
+			styled = lipgloss.NewStyle().MaxWidth(width).Render(styled)
+		}
 		line3 = styled
 	}
 
-	// Per-item action buttons ordered: [i] Install, [x] Uninstall, [d] Remove, [e] Edit
-	// Only show buttons that are actionable for this item.
+	// --- Line 4: trust + visibility (fixed columns) + buttons (right) ---
+	// Buttons sit at the right edge so their position is stable across
+	// content types. Trust+Visibility (if any) occupy fixed left columns
+	// so the Visibility chip never floats with tier-label length.
 	var btns []string
 	if data.canInstall {
 		btns = append(btns, zone.Mark("meta-install", activeButtonStyle.Render("[i] Install")))
@@ -184,77 +205,54 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	btnRow := strings.Join(btns, " ")
 	btnRowW := lipgloss.Width(btnRow)
 
-	// Truncate type detail to ensure buttons always fit — buttons must never be clipped.
-	maxDetailW := max(0, width-btnRowW-2) // -2 for minimum gap
-	line3W := lipgloss.Width(line3)
-	if line3W > maxDetailW {
-		line3 = lipgloss.NewStyle().MaxWidth(maxDetailW).Render(line3)
-		line3W = lipgloss.Width(line3)
-	}
-	btnGap := max(1, width-line3W-btnRowW)
-	line3 += strings.Repeat(" ", btnGap) + btnRow
-
-	out := pad(line1) + "\n" + pad(line2) + "\n" + pad(line3)
-
-	// --- Line 4: trust + visibility chips (MOAT items only) ---
-	// Rendered when the item has any trust surface: a known TrustTier, a
-	// Recalled flag, or PrivateRepo. Zero-value items (git registries,
-	// local content) skip this line per AD-7 "absence is not a negative
-	// signal" — their layout stays at 3 lines.
-	//
-	// Both Trust and Visibility fields always render when shown, so the
-	// row layout is stable whether an item is verified, unsigned, or
-	// recalled. Recalled items collapse reason/issuer/URL details into
-	// the Trust Inspector (opened via the clickable Trust field or [t])
-	// rather than emitting a second multi-line banner.
-	showChips := item.TrustTier != catalog.TrustTierUnknown || item.PrivateRepo || item.Recalled
-	if showChips {
-		// Trust value style: recalled→danger, verified→success, else muted.
-		var trustValStyle lipgloss.Style
-		badge := catalog.UserFacingBadge(item.TrustTier, item.Recalled)
-		switch badge {
-		case catalog.TrustBadgeRecalled:
-			trustValStyle = trustRecalledStyle
-		case catalog.TrustBadgeVerified:
-			trustValStyle = trustVerifiedStyle
-		default:
-			trustValStyle = mutedStyle
-		}
-
-		var trustValue string
-		if item.Recalled {
-			// Collapse recalled details to a single short summary. Reason
-			// may be empty when a feed omits it; we still surface the
-			// "Recalled" state so users see the warning.
-			trustValue = "Recalled"
-			if item.RecallReason != "" {
-				trustValue += " \u2014 " + sanitizeLine(item.RecallReason)
-			}
-		} else {
-			trustValue = sanitizeLine(catalog.TrustDescription(item.TrustTier, false, ""))
-		}
-
-		trustField := boldStyle.Render("Trust: ") + trustValStyle.Render(trustValue)
-		line4 := " " + zone.Mark("meta-trust", trustField)
-
-		// Visibility always renders when the chip row is shown so layout
-		// stays stable across public/private items in a mixed list.
-		visibility := "Public"
-		visibilityStyle := mutedStyle
-		if item.PrivateRepo {
-			visibility = "Private"
-			visibilityStyle = privateIndicatorStyle
-		}
-		line4 += gap + boldStyle.Render("Visibility: ") + visibilityStyle.Render(visibility)
-
-		if item.Recalled {
-			// Give users an explicit affordance to see the full recall
-			// breakdown (source, issuer, details URL) in the inspector.
-			line4 += gap + mutedStyle.Render("[t] Inspect trust")
-		}
-
-		out += "\n" + pad(line4)
+	// Left portion: Trust + Visibility chips. Always render — for non-MOAT
+	// items we show "Unknown"/"Public" so the row is stable across item
+	// switches and users learn where to look regardless of tier state. Full
+	// detail still lives in the Trust Inspector, opened via [t].
+	var trustValStyle lipgloss.Style
+	badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
+	switch badge {
+	case catalog.TrustBadgeRevoked:
+		trustValStyle = trustRevokedStyle
+	case catalog.TrustBadgeVerified:
+		trustValStyle = trustVerifiedStyle
+	default:
+		trustValStyle = mutedStyle
 	}
 
-	return out
+	trustValue := item.TrustTier.ShortLabel()
+	if trustValue == "" {
+		trustValue = "Unknown"
+	}
+	if item.Revoked {
+		trustValue = "Revoked"
+	}
+	// Pin column by padding to the reserved width. truncate() guards
+	// against accidental overrun if a future label exceeds the max.
+	trustValue = truncate(trustValue, trustValueMaxW)
+	trustValuePadded := padRight(trustValue, trustValueMaxW)
+	trustField := boldStyle.Render("Trust: ") + trustValStyle.Render(trustValuePadded)
+	leftPortion := " " + zone.Mark("meta-trust", trustField)
+
+	visibility := "Public"
+	visibilityStyle := mutedStyle
+	if item.PrivateRepo {
+		visibility = "Private"
+		visibilityStyle = privateIndicatorStyle
+	}
+	leftPortion += gap + boldStyle.Render("Visibility: ") + visibilityStyle.Render(visibility)
+
+	// Gap between left portion and buttons; always at least one space.
+	leftW := lipgloss.Width(leftPortion)
+	btnGap := max(1, width-leftW-btnRowW)
+	// If the chips don't fit with the buttons at this width, truncate the
+	// chip cluster from the right so buttons are never clipped.
+	if leftW+btnRowW+1 > width {
+		maxLeftW := max(0, width-btnRowW-1)
+		leftPortion = lipgloss.NewStyle().MaxWidth(maxLeftW).Render(leftPortion)
+		btnGap = max(1, width-lipgloss.Width(leftPortion)-btnRowW)
+	}
+	line4 := leftPortion + strings.Repeat(" ", btnGap) + btnRow
+
+	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3) + "\n" + pad(line4)
 }

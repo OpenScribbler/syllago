@@ -212,8 +212,8 @@ func (m contentsSidebarModel) renderTrustSection() []string {
 	}
 	statusLine := boldStyle.Render("Status: ") + staleStyle.Render(staleLabel)
 
-	itemsSummary := fmt.Sprintf("%d total · %d verified · %d recalled",
-		rt.TotalItems, rt.VerifiedItems, rt.RecalledItems)
+	itemsSummary := fmt.Sprintf("%d total · %d verified · %d revoked",
+		rt.TotalItems, rt.VerifiedItems, rt.RevokedItems)
 	itemsLine := boldStyle.Render("Items: ") + mutedStyle.Render(itemsSummary)
 
 	hint := mutedStyle.Render("[t] Inspect trust")

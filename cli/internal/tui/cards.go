@@ -365,7 +365,7 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 // Follows the AD-7 Panel C9 collapse rule for the library row badge, adapted
 // to registry aggregates:
 //
-//   - "R" if any item is recalled (hardest signal takes precedence).
+//   - "R" if any item is revoked (hardest signal takes precedence).
 //   - "✓" if the registry is Fresh AND at least one item verified.
 //   - "⏰" if the registry is Stale, Expired, or Missing (user needs to sync).
 //   - ""  for non-MOAT registries or a Fresh MOAT registry with zero
@@ -378,7 +378,7 @@ func registryTrustGlyph(rt *catalog.RegistryTrust) string {
 	if rt == nil {
 		return ""
 	}
-	if rt.RecalledItems > 0 {
+	if rt.RevokedItems > 0 {
 		return "R"
 	}
 	if rt.Staleness != "" && rt.Staleness != "Fresh" {

@@ -15,17 +15,27 @@ import (
 
 func verifiedItem() catalog.ContentItem {
 	return catalog.ContentItem{
-		Name:      "verified-skill",
-		Type:      catalog.Skills,
-		TrustTier: catalog.TrustTierDualAttested,
+		Name:             "verified-skill",
+		Type:             catalog.Skills,
+		Registry:         "moat-registry",
+		TrustTier:        catalog.TrustTierDualAttested,
+		PublisherSubject: "https://github.com/openscribbler/verified-skill",
+		PublisherIssuer:  "https://token.actions.githubusercontent.com",
+		RegistrySubject:  "https://github.com/openscribbler/moat-registry",
+		RegistryIssuer:   "https://token.actions.githubusercontent.com",
+		RegistryOperator: "OpenScribbler",
 	}
 }
 
 func signedItem() catalog.ContentItem {
 	return catalog.ContentItem{
-		Name:      "signed-skill",
-		Type:      catalog.Skills,
-		TrustTier: catalog.TrustTierSigned,
+		Name:             "signed-skill",
+		Type:             catalog.Skills,
+		Registry:         "moat-registry",
+		TrustTier:        catalog.TrustTierSigned,
+		RegistrySubject:  "https://github.com/openscribbler/moat-registry",
+		RegistryIssuer:   "https://token.actions.githubusercontent.com",
+		RegistryOperator: "OpenScribbler",
 	}
 }
 
@@ -33,29 +43,38 @@ func unsignedItem() catalog.ContentItem {
 	return catalog.ContentItem{
 		Name:      "unsigned-skill",
 		Type:      catalog.Skills,
+		Registry:  "moat-registry",
 		TrustTier: catalog.TrustTierUnsigned,
 	}
 }
 
-func recalledItem() catalog.ContentItem {
+func revokedItem() catalog.ContentItem {
 	return catalog.ContentItem{
-		Name:             "recalled-skill",
-		Type:             catalog.Skills,
-		TrustTier:        catalog.TrustTierSigned,
-		Recalled:         true,
-		RecallSource:     "publisher",
-		RecallReason:     "key compromise",
-		RecallIssuer:     "ops@example.com",
-		RecallDetailsURL: "https://example.com/recall/123",
+		Name:                 "revoked-skill",
+		Type:                 catalog.Skills,
+		Registry:             "moat-registry",
+		TrustTier:            catalog.TrustTierSigned,
+		Revoked:              true,
+		RevocationSource:     "publisher",
+		RevocationReason:     "key compromise",
+		Revoker:              "ops@example.com",
+		RevocationDetailsURL: "https://example.com/revocation/123",
+		RegistrySubject:      "https://github.com/openscribbler/moat-registry",
+		RegistryIssuer:       "https://token.actions.githubusercontent.com",
+		RegistryOperator:     "OpenScribbler",
 	}
 }
 
 func privateItem() catalog.ContentItem {
 	return catalog.ContentItem{
-		Name:        "private-skill",
-		Type:        catalog.Skills,
-		TrustTier:   catalog.TrustTierSigned,
-		PrivateRepo: true,
+		Name:             "private-skill",
+		Type:             catalog.Skills,
+		Registry:         "moat-registry",
+		TrustTier:        catalog.TrustTierSigned,
+		PrivateRepo:      true,
+		RegistrySubject:  "https://github.com/openscribbler/moat-registry",
+		RegistryIssuer:   "https://token.actions.githubusercontent.com",
+		RegistryOperator: "OpenScribbler",
 	}
 }
 
@@ -71,7 +90,7 @@ func registrySummary() RegistryTrustSummary {
 		Staleness:     "Fresh",
 		TotalItems:    10,
 		VerifiedItems: 7,
-		RecalledItems: 1,
+		RevokedItems:  1,
 		PrivateItems:  2,
 	}
 }
@@ -214,14 +233,14 @@ func TestTrustInspector_ItemFields_VisibilityLabel(t *testing.T) {
 	}
 }
 
-func TestTrustInspector_ItemFields_RecalledAddsDangerStatus(t *testing.T) {
-	fields := buildItemTrustFields(recalledItem())
+func TestTrustInspector_ItemFields_RevokedAddsDangerStatus(t *testing.T) {
+	fields := buildItemTrustFields(revokedItem())
 	status := findField(fields, "Status")
 	if status == nil {
-		t.Fatal("expected Status row for recalled item")
+		t.Fatal("expected Status row for revoked item")
 	}
-	if status.value != "Recalled" {
-		t.Errorf("expected Status=Recalled, got %q", status.value)
+	if status.value != "Revoked" {
+		t.Errorf("expected Status=Revoked, got %q", status.value)
 	}
 	if !status.danger {
 		t.Error("expected Status row to be flagged danger")
@@ -233,21 +252,111 @@ func TestTrustInspector_ItemFields_RecalledAddsDangerStatus(t *testing.T) {
 	if findField(fields, "Source") == nil {
 		t.Error("expected Source row")
 	}
-	if findField(fields, "Issuer") == nil {
-		t.Error("expected Issuer row")
+	// Revocation-scoped revoker identity was renamed from "Issuer" to
+	// "Revoked by" to disambiguate from the signing cert issuer that now
+	// appears in the always-present attestation chain rows (Reg. issuer,
+	// Pub. issuer).
+	if findField(fields, "Revoked by") == nil {
+		t.Error("expected Revoked by row")
 	}
-	if findField(fields, "Details") == nil {
-		t.Error("expected Details row")
+	// Revocation details URL row was renamed from "Details" to "More info" —
+	// "Detail" is now reserved for the tier-explanation prose row shown
+	// on every item.
+	if findField(fields, "More info") == nil {
+		t.Error("expected More info row")
+	}
+	// Every revoked item includes the static docs link so users have a
+	// path to understand what revocation means outside of this one artifact.
+	if learn := findField(fields, "Learn more"); learn == nil {
+		t.Error("expected Learn more row with docs link")
+	} else if learn.value != "https://syllago.dev/moat/revocations" {
+		t.Errorf("expected Learn more docs URL, got %q", learn.value)
 	}
 }
 
-func TestTrustInspector_ItemFields_NonRecalledHasNoRecallRows(t *testing.T) {
+// TestTrustInspector_ItemFields_AttestationChainRows verifies every item
+// surfaces the full signing chain: Registry name, Reg. issuer (OIDC),
+// Reg. subject (workload identity), and Publisher rows. The attestation
+// chain rows are always present — users should see the same shape on a
+// Verified artifact as on a Revoked one so they can compare directly.
+func TestTrustInspector_ItemFields_AttestationChainRows(t *testing.T) {
 	fields := buildItemTrustFields(verifiedItem())
-	if findField(fields, "Status") != nil {
-		t.Error("non-recalled should not have Status row")
+
+	if reg := findField(fields, "Registry"); reg == nil || reg.value != "moat-registry" {
+		t.Errorf("expected Registry=moat-registry, got %+v", reg)
+	}
+	if ri := findField(fields, "Reg. issuer"); ri == nil || ri.value == "" {
+		t.Errorf("expected Reg. issuer populated, got %+v", ri)
+	}
+	if rs := findField(fields, "Reg. subject"); rs == nil || rs.value == "" {
+		t.Errorf("expected Reg. subject populated, got %+v", rs)
+	}
+	if ro := findField(fields, "Reg. operator"); ro == nil || ro.value != "OpenScribbler" {
+		t.Errorf("expected Reg. operator=OpenScribbler, got %+v", ro)
+	}
+	if pub := findField(fields, "Publisher"); pub == nil || pub.value == "" {
+		t.Errorf("expected Publisher populated for dual-attested, got %+v", pub)
+	}
+	if pi := findField(fields, "Pub. issuer"); pi == nil || pi.value == "" {
+		t.Errorf("expected Pub. issuer populated for dual-attested, got %+v", pi)
+	}
+}
+
+// TestTrustInspector_ItemFields_SignedItemPublisherFallback verifies that
+// a Signed-tier item (registry attests, item carries no signing_profile)
+// renders "Not attested individually" as the Publisher value — not an
+// empty string or dash. This is the explicit, truthful fallback the user
+// asked for: distinguish "deliberately absent" from "data lost."
+func TestTrustInspector_ItemFields_SignedItemPublisherFallback(t *testing.T) {
+	fields := buildItemTrustFields(signedItem())
+	pub := findField(fields, "Publisher")
+	if pub == nil {
+		t.Fatal("expected Publisher row")
+	}
+	if pub.value != "Not attested individually" {
+		t.Errorf("expected Signed-tier Publisher fallback, got %q", pub.value)
+	}
+}
+
+// TestTrustInspector_ItemFields_UnknownTierStillRendersChain verifies the
+// attestation chain rows are present even for Unknown-tier items so the
+// modal has a stable shape — users always see the same rows regardless of
+// which item they opened. Values fall back to empty and the renderer
+// displays "—" in the View layer.
+func TestTrustInspector_ItemFields_UnknownTierStillRendersChain(t *testing.T) {
+	unknown := catalog.ContentItem{Name: "vanilla", Type: catalog.Skills}
+	fields := buildItemTrustFields(unknown)
+	for _, label := range []string{"Tier", "Status", "Detail", "Visibility", "Registry", "Reg. issuer", "Reg. subject", "Publisher", "Pub. issuer"} {
+		if findField(fields, label) == nil {
+			t.Errorf("expected %s row even for Unknown-tier item", label)
+		}
+	}
+}
+
+func TestTrustInspector_ItemFields_NonRevokedHasStatusRow(t *testing.T) {
+	// The Status row is now always present — users should be able to see
+	// the collapsed user-facing state (Verified / Not attested / …) on
+	// every artifact, not only when it's been revoked. Revocation-only rows
+	// (Reason, Revoked by, More info) stay gated on item.Revoked.
+	fields := buildItemTrustFields(verifiedItem())
+	status := findField(fields, "Status")
+	if status == nil {
+		t.Fatal("expected Status row even for non-revoked item")
+	}
+	if status.value != "Verified" {
+		t.Errorf("expected Status=Verified for dual-attested item, got %q", status.value)
+	}
+	if status.danger {
+		t.Error("non-revoked Status row should not be flagged danger")
 	}
 	if findField(fields, "Reason") != nil {
-		t.Error("non-recalled should not have Reason row")
+		t.Error("non-revoked should not have Reason row")
+	}
+	if findField(fields, "Revoked by") != nil {
+		t.Error("non-revoked should not have Revoked by row")
+	}
+	if findField(fields, "Learn more") != nil {
+		t.Error("non-revoked should not have Learn more row")
 	}
 }
 
@@ -276,7 +385,7 @@ func TestTrustInspector_RegistryFields_AllCoreRows(t *testing.T) {
 
 func TestTrustInspector_RegistryFields_ItemCountsFormatted(t *testing.T) {
 	got := formatRegistryItemCounts(registrySummary())
-	want := "10 total · 7 verified · 1 recalled · 2 private"
+	want := "10 total · 7 verified · 1 revoked · 2 private"
 	if got != want {
 		t.Errorf("item counts: want %q, got %q", want, got)
 	}
@@ -402,26 +511,31 @@ func TestTrustInspector_ViewShowsTierAndDetail(t *testing.T) {
 	if !strings.Contains(out, "Dual-Attested") {
 		t.Error("view should show full tier label")
 	}
-	if !strings.Contains(out, "dual-attested") {
-		t.Error("view should include TrustDescription text")
+	// The Detail row renders the long-form prose from
+	// catalog.TrustDetailExplanation. For Dual-Attested the explanation
+	// opens with "Dual-attested means..." — checking for the phrase
+	// "two independent parties" pins the assertion to actual explanation
+	// content without coupling to exact punctuation or wrapping.
+	if !strings.Contains(out, "two independent parties") {
+		t.Errorf("view should include TrustDetailExplanation prose, got:\n%s", out)
 	}
 }
 
-func TestTrustInspector_ViewShowsRecallBanner(t *testing.T) {
+func TestTrustInspector_ViewShowsRevocationBanner(t *testing.T) {
 	m := sizedInspector()
-	m.OpenForItem(recalledItem())
+	m.OpenForItem(revokedItem())
 	out := ansi.Strip(m.View())
-	if !strings.Contains(out, "Recalled") {
-		t.Error("recalled view should show Recalled status")
+	if !strings.Contains(out, "Revoked") {
+		t.Error("revoked view should show Revoked status")
 	}
 	if !strings.Contains(out, "key compromise") {
-		t.Error("recalled view should include the reason")
+		t.Error("revoked view should include the reason")
 	}
 	if !strings.Contains(out, "ops@example.com") {
-		t.Error("recalled view should include the issuer")
+		t.Error("revoked view should include the issuer")
 	}
-	if !strings.Contains(out, "example.com/recall/123") {
-		t.Error("recalled view should include details URL")
+	if !strings.Contains(out, "example.com/revocation/123") {
+		t.Error("revoked view should include details URL")
 	}
 }
 
