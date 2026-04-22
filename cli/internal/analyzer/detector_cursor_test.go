@@ -18,8 +18,8 @@ func TestCursorDetector_Patterns(t *testing.T) {
 	t.Parallel()
 	d := &CursorDetector{}
 	pats := d.Patterns()
-	if len(pats) != 8 {
-		t.Fatalf("Patterns() returned %d, want 8", len(pats))
+	if len(pats) != 7 {
+		t.Fatalf("Patterns() returned %d, want 7", len(pats))
 	}
 }
 
@@ -63,12 +63,6 @@ func TestCursorDetector_Classify(t *testing.T) {
 			relPath:  ".cursor/skills/my-skill/SKILL.md",
 			content:  "---\nname: My Skill\ndescription: Does things\n---\nBody.\n",
 			wantType: catalog.Skills,
-		},
-		{
-			name:     "cursor commands",
-			relPath:  ".cursor/commands/deploy.md",
-			content:  "# Deploy Command\nDeploy to production.\n",
-			wantType: catalog.Commands,
 		},
 		{
 			name:    "cursor hooks.json returns nil (wiring)",

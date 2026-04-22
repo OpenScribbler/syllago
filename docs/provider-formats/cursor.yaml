@@ -5,7 +5,7 @@ category: standalone-app
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-04-21T23:53:53Z"
+last_fetched_at: "2026-04-22T04:38:00Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 
@@ -16,8 +16,8 @@ content_types:
       - uri: "https://cursor.com/docs/rules"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:2a300dfe1806fbd9193f0f830b3a704bb0e7b8805db18a363efdfb294ab9bebf"
-        fetched_at: "2026-04-21T23:53:53Z"
+        content_hash: "sha256:24393cd401410ce1356f0f1f8feb56f4574a9533cc1a3580da861fc57d32fde4"
+        fetched_at: "2026-04-22T04:38:00Z"
     canonical_mappings:
       activation_mode:
         supported: true
@@ -100,8 +100,8 @@ content_types:
       - uri: "https://cursor.com/docs/skills"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:60edca44a77791525bc325fc2482e36ed136ecbd1a45f89c46ebb0b0bef166d4"
-        fetched_at: "2026-04-21T23:53:53Z"
+        content_hash: "sha256:7a520e71a4f041d69fd6c34f8f1b0715a02242e11b6fb52dc4cc6b1b0388433c"
+        fetched_at: "2026-04-22T04:38:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -182,8 +182,8 @@ content_types:
       - uri: "https://cursor.com/docs/hooks"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:f2d6301293ee669c118181834e4fd4faf1a49cc6e289b28f121af3a0f1c74a07"
-        fetched_at: "2026-04-21T23:53:53Z"
+        content_hash: "sha256:7a0b838f6cebf9cfd57e93d619b1df86ff668512b0207dcdbee85ec2e918f766"
+        fetched_at: "2026-04-22T04:38:00Z"
     canonical_mappings:
       handler_types:
         supported: false
@@ -278,8 +278,8 @@ content_types:
       - uri: "https://cursor.com/docs/mcp"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:9ecff3e21b583a05a059d3f3083612cc3189573aa685dacdd2ae66f93489f886"
-        fetched_at: "2026-04-21T23:53:53Z"
+        content_hash: "sha256:366cfcd44bd4e05f0be2debb0826f519f982388db3239b51098ed78df3354e4e"
+        fetched_at: "2026-04-22T04:38:00Z"
     canonical_mappings:
       transport_types:
         supported: true
@@ -343,51 +343,14 @@ content_types:
     loading_model: "MCP servers are configured in .cursor/mcp.json at the project root (project scope) or in ~/.cursor/mcp.json (user-global scope). Each entry under the top-level mcpServers map names a server and supplies a transport (stdio with command and args, sse with url, or streamable-http with url) plus an optional env map for stdio servers. On session start, Cursor connects to each configured server, fetches its tool set, and surfaces those tools to the agent."
     notes: "Install path is JSON-merge: syllago merges server entries into .cursor/mcp.json rather than replacing the file. Transport names in the config are stdio, sse, and streamable-http; HTTP servers use the streamable-http transport. Global-scope MCP config lives under ~/.cursor/ alongside the user-global rules and skills locations."
 
-  commands:
-    status: supported
-    sources:
-      - uri: "https://cursor.com/docs/commands"
-        type: documentation
-        fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
-    canonical_mappings:
-      argument_substitution:
-        supported: false
-        mechanism: "Cursor's custom command documentation does not describe a dedicated argument-placeholder syntax; command bodies are plain Markdown."
-        confidence: inferred
-      builtin_commands:
-        supported: true
-        mechanism: "Cursor ships built-in slash commands in the IDE; user-authored commands live alongside them and do not override the built-in set."
-        confidence: inferred
-    provider_extensions:
-      - id: filename_is_command_name
-        name: Filename as command name
-        summary: "Each .md file under .cursor/commands/ becomes a slash command named after the file (introduced in Cursor 1.6+); there is no explicit name frontmatter field."
-        source_ref: "https://cursor.com/docs/commands"
-        graduation_candidate: true
-        conversion: translated
-      - id: plain_markdown_body
-        name: Plain Markdown body
-        summary: "Custom commands are plain Markdown files; the body becomes the prompt text sent when the command is invoked, with no required frontmatter."
-        source_ref: "https://cursor.com/docs/commands"
-        graduation_candidate: true
-        conversion: translated
-      - id: project_and_global_scope
-        name: Project and global command scopes
-        summary: "Commands live in .cursor/commands/ at the project root for project scope and in ~/.cursor/commands/ for user-global scope."
-        source_ref: "https://cursor.com/docs/commands"
-        graduation_candidate: false
-        conversion: translated
-    loading_model: "Custom commands are plain .md files under .cursor/commands/ for project scope or ~/.cursor/commands/ for user-global scope. Each file's name (without the .md extension) becomes the slash-command name available in the IDE; the file body becomes the prompt text sent to the agent when the command is invoked. No frontmatter is required. Custom commands supplement, rather than replace, Cursor's built-in slash commands."
-    notes: "Custom commands were introduced in Cursor 1.6 and use the filename-as-command-name convention. Cursor's documentation does not describe a formal argument-substitution grammar for custom commands; any argument handling beyond appending user input is inferred as unsupported."
-
   agents:
     status: supported
     sources:
-      - uri: "https://cursor.com/docs/agents"
+      - uri: "https://cursor.com/docs/agent/overview"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:bfb72fd9879d8da99ffd8a6e4a8ed07ea8830bfe7109ff6766f8b59c6c10bb02"
+        fetched_at: "2026-04-22T04:38:00Z"
     canonical_mappings:
       definition_format:
         supported: true
@@ -422,33 +385,33 @@ content_types:
       - id: agent_file_format
         name: Markdown + YAML frontmatter agent files
         summary: "Custom agents are .md files with YAML frontmatter (name, description, model, readonly, is_background) and a Markdown system-prompt body."
-        source_ref: "https://cursor.com/docs/agents"
+        source_ref: "https://cursor.com/docs/agent/overview"
         graduation_candidate: true
         conversion: translated
       - id: readonly_flag
         name: readonly frontmatter flag
         summary: "readonly: true restricts the agent to read-only tools so it cannot edit files or run mutating commands."
-        source_ref: "https://cursor.com/docs/agents"
+        source_ref: "https://cursor.com/docs/agent/overview"
         graduation_candidate: true
         conversion: embedded
         provider_field: readonly
       - id: is_background_flag
         name: is_background frontmatter flag
         summary: "is_background: true marks the agent as eligible to run in Cursor's background agents queue for concurrent execution."
-        source_ref: "https://cursor.com/docs/agents"
+        source_ref: "https://cursor.com/docs/agent/overview"
         graduation_candidate: false
         conversion: embedded
         provider_field: is_background
       - id: builtin_subagents
         name: Built-in Explore, Bash, and Browser subagents
         summary: "Cursor ships three built-in subagents (Explore, Bash, Browser) that are harness-provided and not overridable via files; only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable."
-        source_ref: "https://cursor.com/docs/agents"
+        source_ref: "https://cursor.com/docs/agent/overview"
         graduation_candidate: false
         conversion: not-portable
       - id: agent_scopes
         name: Project and user-global agent scopes
         summary: "Custom agents live in .cursor/agents/ at the project root or ~/.cursor/agents/ for user-global scope, following the same layout as Cursor's other content types."
-        source_ref: "https://cursor.com/docs/agents"
+        source_ref: "https://cursor.com/docs/agent/overview"
         graduation_candidate: false
         conversion: translated
     loading_model: "Custom agents load at session start from .cursor/agents/ within the project and from ~/.cursor/agents/ for user-global scope. Each agent is a Markdown file whose name (minus the extension) is the agent identifier; its frontmatter declares name, description, an optional model override, a readonly flag, and an is_background flag, while the Markdown body becomes the agent's system prompt. Custom agents are invoked through the Cursor agent picker in the IDE. Cursor's three built-in subagents (Explore, Bash, Browser) are shipped with the harness and coexist with user-authored agents; they are not file-overridable."

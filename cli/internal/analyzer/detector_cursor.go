@@ -20,7 +20,6 @@ func (d *CursorDetector) Patterns() []DetectionPattern {
 		{Glob: ".cursor/rules/*.md", ContentType: catalog.Rules, Confidence: 0.85},
 		{Glob: ".cursor/agents/*.md", ContentType: catalog.Agents, Confidence: 0.90},
 		{Glob: ".cursor/skills/*/SKILL.md", ContentType: catalog.Skills, Confidence: 0.90},
-		{Glob: ".cursor/commands/*.md", ContentType: catalog.Commands, Confidence: 0.90},
 		{Glob: ".cursor/hooks.json", ContentType: catalog.Hooks, InternalLabel: "hook-wiring", Confidence: 0.90},
 		{Glob: ".cursor/hooks/*", ContentType: catalog.Hooks, InternalLabel: "hook-script", Confidence: 0.70},
 	}

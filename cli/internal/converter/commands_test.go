@@ -743,34 +743,6 @@ func TestRenderClineCommandArgWarning(t *testing.T) {
 	assertContains(t, result.Warnings[0], "Cline does not support argument placeholders")
 }
 
-// --- Cursor commands ---
-
-func TestRenderCursorCommand(t *testing.T) {
-	input := []byte("---\nname: review\ndescription: Review code\nallowed-tools:\n  - Read\ncontext: fork\nagent: Explore\nmodel: opus\neffort: high\n---\n\nReview $ARGUMENTS code changes.\n")
-
-	conv := &CommandsConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.Cursor)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
-
-	out := string(result.Content)
-	assertContains(t, out, "Tool restriction")
-	assertContains(t, out, "isolated context")
-	assertContains(t, out, "explore-focused approach")
-	assertContains(t, out, "model: opus")
-	assertContains(t, out, "Effort level: high")
-	// $ARGUMENTS → $1 for Cursor
-	assertContains(t, out, "$1")
-	assertNotContains(t, out, "$ARGUMENTS")
-	assertEqual(t, "command.md", result.Filename)
-}
-
 // --- containsGeminiDirectives ---
 
 func TestContainsGeminiDirectives(t *testing.T) {

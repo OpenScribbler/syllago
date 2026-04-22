@@ -38,8 +38,7 @@ func TestFrontmatterRegistry_Completeness(t *testing.T) {
 		"codex/skills": true,
 		// Agents: codex agents use TOML (not frontmatter in markdown)
 		"codex/agents": true,
-		// Commands: cursor/cline/windsurf/roo-code commands are plain markdown
-		"cursor/commands":   true,
+		// Commands: cline/windsurf/roo-code commands are plain markdown
 		"cline/commands":    true,
 		"windsurf/commands": true,
 		"roo-code/commands": true,
