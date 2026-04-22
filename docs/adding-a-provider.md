@@ -293,3 +293,15 @@ rm .develop/seeder-specs/scratch-test-skills.yaml
 ```
 
 Expected: first run errors with "seeder spec for scratch-test has not been reviewed"; approved run succeeds.
+
+## After editing a provider source manifest
+
+After adding a provider or a new source URL to `docs/provider-sources/<slug>.yaml`, populate the `content_hash` baselines in the matching `docs/provider-formats/<slug>.yaml` so drift detection has something to compare against:
+
+```
+cd cli && go run ./cmd/syllago capmon run --stage fetch-extract --provider=<slug>
+```
+
+This fetches each source listed under `content_types.*.sources` and writes the sha256 of every fetched body back to the FormatDoc as the content_hash baseline. Commit both the source manifest and the updated FormatDoc in the same change. Without this step, `provider-monitor` will report `skipped: baseline empty` for any new sources on its next run.
+
+For sources with `fetch_method: chromedp`, set `CHROMEDP_URL=ws://localhost:9222/devtools/browser/<id>` to reuse a remote headless-shell sidecar — faster and more reliable than launching a local Chrome for each fetch.

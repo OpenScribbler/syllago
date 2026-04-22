@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/provmon"
@@ -27,6 +28,7 @@ func main() {
 		jsonOutput  bool
 		concurrency int
 		timeout     time.Duration
+		failOnRaw   string
 	)
 
 	// Default manifest dir: relative to the repo root.
@@ -37,6 +39,8 @@ func main() {
 	flag.BoolVar(&jsonOutput, "json", false, "output results as JSON")
 	flag.IntVar(&concurrency, "concurrency", 10, "max concurrent HTTP requests")
 	flag.DurationVar(&timeout, "timeout", 60*time.Second, "overall timeout")
+	flag.StringVar(&failOnRaw, "fail-on", "drifted",
+		"comma-separated statuses that cause non-zero exit: drifted,fetch_failed,content_invalid,skipped")
 	flag.Parse()
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -79,15 +83,44 @@ func main() {
 		printReports(reports)
 	}
 
-	// Exit non-zero if any URLs failed or versions drifted.
-	for _, r := range reports {
-		if r.FailedURLs > 0 {
-			os.Exit(1)
-		}
-		if r.VersionDrift != nil && r.VersionDrift.Drifted {
-			os.Exit(1)
+	failOn := strings.Split(failOnRaw, ",")
+	for i := range failOn {
+		failOn[i] = strings.TrimSpace(failOn[i])
+	}
+	os.Exit(computeExitCode(reports, failOn))
+}
+
+// computeExitCode returns 1 if any report has:
+//   - a failed URL (always — URL health is a blocking signal regardless of --fail-on), OR
+//   - VersionDrift.Drifted && "drifted" in failOn, OR
+//   - any SourceDrift.Status present in failOn (for source-hash providers).
+//
+// Returns 0 otherwise. Callers pass the parsed --fail-on list.
+func computeExitCode(reports []*provmon.CheckReport, failOn []string) int {
+	failSet := make(map[string]bool, len(failOn))
+	for _, f := range failOn {
+		if f != "" {
+			failSet[f] = true
 		}
 	}
+
+	for _, r := range reports {
+		if r.FailedURLs > 0 {
+			return 1
+		}
+		if r.VersionDrift == nil {
+			continue
+		}
+		if r.VersionDrift.Drifted && failSet["drifted"] {
+			return 1
+		}
+		for _, s := range r.VersionDrift.Sources {
+			if failSet[string(s.Status)] {
+				return 1
+			}
+		}
+	}
+	return 0
 }
 
 func printReports(reports []*provmon.CheckReport) {
@@ -110,10 +143,33 @@ func printReports(reports []*provmon.CheckReport) {
 			}
 		}
 
-		// Show version drift.
-		if r.VersionDrift != nil && r.VersionDrift.Drifted {
-			fmt.Printf("  DRIFT   baseline=%s  latest=%s\n",
-				r.VersionDrift.Baseline, r.VersionDrift.LatestVersion)
+		// Show version drift — formatted per detection method.
+		if r.VersionDrift != nil {
+			switch r.VersionDrift.Method {
+			case "github-releases":
+				if r.VersionDrift.Drifted {
+					fmt.Printf("  DRIFT   baseline=%s  latest=%s\n",
+						r.VersionDrift.Baseline, r.VersionDrift.LatestVersion)
+				}
+			case "source-hash":
+				for _, s := range r.VersionDrift.Sources {
+					switch s.Status {
+					case provmon.StatusStable:
+						// Keep stable sources silent to keep the report terse.
+					case provmon.StatusDrifted:
+						fmt.Printf("  DRIFT   %-8s %s\n    baseline=%s\n    current =%s\n",
+							s.ContentType, s.URI, s.Baseline, s.CurrentHash)
+					default:
+						fmt.Printf("  %-7s %-8s %s  (%s)\n",
+							strings.ToUpper(string(s.Status)), s.ContentType, s.URI, s.ErrorMessage)
+					}
+				}
+			}
+		}
+
+		// Surface setup-level CheckVersion errors (e.g., GH API rate limit, FormatDoc parse).
+		if r.CheckVersionError != "" {
+			fmt.Printf("  CHECK   version check error: %s\n", r.CheckVersionError)
 		}
 
 		// Show stale verification.
@@ -123,16 +179,30 @@ func printReports(reports []*provmon.CheckReport) {
 	}
 
 	// Summary line.
-	var totalURLs, failedURLs, drifted int
+	var totalURLs, failedURLs int
+	var drifted, fetchFailed, contentInvalid, skipped int
 	for _, r := range reports {
 		totalURLs += r.TotalURLs
 		failedURLs += r.FailedURLs
-		if r.VersionDrift != nil && r.VersionDrift.Drifted {
+		if r.VersionDrift == nil {
+			continue
+		}
+		if r.VersionDrift.Drifted {
 			drifted++
 		}
+		for _, s := range r.VersionDrift.Sources {
+			switch s.Status {
+			case provmon.StatusFetchFailed:
+				fetchFailed++
+			case provmon.StatusContentInvalid:
+				contentInvalid++
+			case provmon.StatusSkipped:
+				skipped++
+			}
+		}
 	}
-	fmt.Printf("\n%d providers, %d URLs checked, %d broken, %d version drifts\n",
-		len(reports), totalURLs, failedURLs, drifted)
+	fmt.Printf("\n%d providers, %d URLs checked, %d broken, %d drifted, %d fetch_failed, %d content_invalid, %d skipped\n",
+		len(reports), totalURLs, failedURLs, drifted, fetchFailed, contentInvalid, skipped)
 }
 
 func daysSinceVerified(dateStr string) int {

@@ -2,7 +2,6 @@ package provmon
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -139,43 +138,6 @@ func TestCheckVersion_NoDrift(t *testing.T) {
 
 	if drift.Drifted {
 		t.Error("expected no drift")
-	}
-}
-
-// TestCheckVersion_UnimplementedMethods ensures that declared-but-unimplemented
-// detection methods surface a sentinel error rather than silently returning
-// (nil, nil). The previous version of this test pinned the silent no-op and
-// would have passed even if detection were removed entirely — see
-// syllago-p0phh. A real implementation of either method lives in follow-up
-// bead syllago-5gthn; when that lands, update this test to exercise the
-// new happy path rather than assert the sentinel.
-func TestCheckVersion_UnimplementedMethods(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct{ name, method string }{
-		{"source-hash stub until Task 19 lands", "source-hash"},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			m := &Manifest{
-				Slug: "test",
-				ChangeDetection: ChangeDetection{
-					Method:   tc.method,
-					Endpoint: "https://example.com",
-				},
-			}
-
-			drift, err := CheckVersion(context.Background(), m)
-			if drift != nil {
-				t.Errorf("regression: CheckVersion returned non-nil drift for unimplemented method %q — that would mean we are silently fabricating drift data; got %+v", tc.method, drift)
-			}
-			if !errors.Is(err, ErrUnimplementedDetectionMethod) {
-				t.Errorf("regression: CheckVersion must return ErrUnimplementedDetectionMethod for %q so callers can distinguish 'no drift' from 'we never tried' — got %v", tc.method, err)
-			}
-		})
 	}
 }
 

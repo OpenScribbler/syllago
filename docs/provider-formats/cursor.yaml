@@ -5,7 +5,7 @@ category: standalone-app
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-04-21T23:53:53Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: human-edited
 
@@ -16,7 +16,8 @@ content_types:
       - uri: "https://cursor.com/docs/rules"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:2a300dfe1806fbd9193f0f830b3a704bb0e7b8805db18a363efdfb294ab9bebf"
+        fetched_at: "2026-04-21T23:53:53Z"
     canonical_mappings:
       activation_mode:
         supported: true
@@ -99,7 +100,8 @@ content_types:
       - uri: "https://cursor.com/docs/skills"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:60edca44a77791525bc325fc2482e36ed136ecbd1a45f89c46ebb0b0bef166d4"
+        fetched_at: "2026-04-21T23:53:53Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -180,7 +182,8 @@ content_types:
       - uri: "https://cursor.com/docs/hooks"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:f2d6301293ee669c118181834e4fd4faf1a49cc6e289b28f121af3a0f1c74a07"
+        fetched_at: "2026-04-21T23:53:53Z"
     canonical_mappings:
       handler_types:
         supported: false
@@ -275,7 +278,8 @@ content_types:
       - uri: "https://cursor.com/docs/mcp"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-11T00:00:00Z"
+        content_hash: "sha256:9ecff3e21b583a05a059d3f3083612cc3189573aa685dacdd2ae66f93489f886"
+        fetched_at: "2026-04-21T23:53:53Z"
     canonical_mappings:
       transport_types:
         supported: true

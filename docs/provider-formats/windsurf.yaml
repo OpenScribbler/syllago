@@ -1,7 +1,7 @@
 provider: windsurf
 docs_url: "https://docs.windsurf.com"
 category: standalone-app
-last_fetched_at: "2026-04-11T21:50:59Z"
+last_fetched_at: "2026-04-21T23:53:36Z"
 last_changed_at: "2026-04-17T00:00:00Z"
 generation_method: subagent
 
@@ -383,7 +383,8 @@ content_types:
       - uri: "https://docs.windsurf.com/windsurf/cascade/workflows.md"
         type: documentation
         fetch_method: http
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:8b59d036036ceaef30196ffcae0499ee9e143246f34504e6e539f0e4e37e3b89"
+        fetched_at: "2026-04-21T23:53:36Z"
     canonical_mappings:
       argument_substitution:
         supported: false
