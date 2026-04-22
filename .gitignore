@@ -71,3 +71,7 @@ tmp/
 
 # Release state (ephemeral, created by /release skill)
 .release-pending.yml
+
+# bv (beads viewer) local config and caches
+.bv/
+.beads/.bv.lock

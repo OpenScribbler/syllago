@@ -3201,3 +3201,55 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-04-22 09:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:33 | Created cli/internal/moat/gate_inputs.go | — | ~1366 |
+
+## Session: 2026-04-22 09:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:37 | Edited cli/internal/tui/app.go | expanded (+20 lines) | ~377 |
+| 09:37 | Edited cli/internal/tui/app.go | 25→28 lines | ~247 |
+| 09:37 | Edited cli/internal/tui/app.go | 16→18 lines | ~204 |
+| 09:38 | Created cli/internal/tui/gate_install.go | — | ~1228 |
+| 09:38 | Created cli/internal/tui/private_prompt.go | — | ~635 |
+| 09:39 | Created cli/internal/tui/publisher_warn.go | — | ~870 |
+| 09:39 | Edited cli/internal/tui/publisher_warn.go | modified warnFieldsFrom() | ~246 |
+| 09:40 | Edited cli/internal/tui/actions.go | added error handling | ~720 |
+| 09:40 | Edited cli/internal/tui/actions.go | expanded (+38 lines) | ~532 |
+| 09:40 | Edited cli/internal/tui/actions.go | expanded (+13 lines) | ~349 |
+| 09:40 | Edited cli/internal/tui/gate_install.go | modified hardBlockMessage() | ~284 |
+| 09:42 | Created cli/internal/tui/publisher_warn_test.go | — | ~1110 |
+| 09:43 | Created cli/internal/tui/gate_install_test.go | — | ~3947 |
+
+## Session: 2026-04-22 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:46 | Edited cli/internal/tui/gate_install_test.go | modified currentToastText() | ~107 |
+| 09:46 | Edited cli/internal/tui/gate_install_test.go | 3→3 lines | ~36 |
+| 09:46 | Edited cli/internal/tui/gate_install_test.go | modified Contains() | ~54 |
+| 09:46 | Edited cli/internal/tui/gate_install_test.go | 3→3 lines | ~39 |
+| 09:46 | Edited cli/internal/tui/gate_install_test.go | 9→9 lines | ~80 |
+| 09:51 | Edited cli/internal/tui/gate_install_test.go | modified currentToastText() | ~230 |
+| 09:51 | Edited cli/internal/tui/gate_install_test.go | 19→18 lines | ~159 |
+| 09:51 | Edited cli/internal/tui/gate_install_test.go | modified TestInstallGate_TierBelowPolicyToastsAndAborts() | ~191 |
+| 09:52 | Edited cli/internal/tui/gate_install_test.go | 28→27 lines | ~210 |
+| 09:52 | Edited cli/internal/tui/gate_install_test.go | 19→15 lines | ~120 |
+| 09:52 | Edited cli/internal/tui/gate_install_test.go | 20→19 lines | ~148 |
+| 09:52 | Edited cli/internal/tui/gate_install_test.go | 10→9 lines | ~72 |
+| 09:52 | Edited cli/internal/tui/gate_install_test.go | 12→11 lines | ~66 |
+| 09:53 | Edited cli/internal/tui/golden_moat_test.go | 9→11 lines | ~53 |
+| 09:53 | Edited cli/internal/tui/golden_moat_test.go | modified publisherWarnApp() | ~520 |
+| 09:54 | Edited cli/internal/tui/actions_test.go | modified TestActions_HandleRemoveDone_Error() | ~116 |
+| 09:54 | Edited cli/internal/tui/actions_test.go | modified TestActions_HandleUninstallDone_Error() | ~105 |
+| 09:56 | Session end: 17 writes across 3 files (gate_install_test.go, golden_moat_test.go, actions_test.go) | 11 reads | ~33477 tok |
+
+## Session: 2026-04-22 09:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

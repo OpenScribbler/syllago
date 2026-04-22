@@ -5190,6 +5190,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-21T23:01:45.674Z"
+    },
+    {
+      "id": "bug-325",
+      "timestamp": "2026-04-22T16:40:11.862Z",
+      "error_message": "Missing error handling in install",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-22T16:40:11.862Z"
+    },
+    {
+      "id": "bug-326",
+      "timestamp": "2026-04-22T16:40:24.649Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 28→66 lines (5 removed) | Also: // Publisher-warn install stash has priority: if t; // a recalled-item install, re-dispatch that insta",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-22T16:40:40.727Z"
+    },
+    {
+      "id": "bug-327",
+      "timestamp": "2026-04-22T16:54:21.380Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions_test.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 11→14 lines (3 removed) | Also: _, cmd := app.handleUninstallDone(uninstallDoneMsg; if cmd == nil {",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-22T16:54:27.107Z"
     }
   ]
 }
