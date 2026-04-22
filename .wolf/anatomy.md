@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T15:21:03.512Z
-> Files: 1086 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-22T16:54:27.097Z
+> Files: 1089 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1858,6 +1858,7 @@
 - `fetch.go` — Struct: FetchResult (~1444 tok)
 - `freshness_test.go` — TestCheckStaleness_FreshWithin72h, TestCheckStaleness_StaleAtOrBeyond72h, TestCheckStaleness_ZeroLas (~2015 tok)
 - `freshness.go` — — manifest freshness / staleness enforcement. (~1694 tok)
+- `gate_inputs.go` — Struct: GateInputs (~1366 tok)
 - `hash_test.go` — TestFinalExtension, TestIsText, TestContentHash_TV01_PerFileASCII_InDir, TestContentHash_TV02_PerFil (~7033 tok)
 - `hash.go` — Struct: entry (~2580 tok)
 - `item_verify_shard_index_test.go` — TestBuildTransparencyLogEntry_PreservesShardLocalLogIndex, TestBuildTransparencyLogEntry_VerifyInclu (~2451 tok)
@@ -1961,15 +1962,15 @@
 
 ## cli/internal/tui/
 
-- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~1816 tok)
-- `actions.go` — Struct: removeDoneMsg (~5314 tok)
+- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~1892 tok)
+- `actions.go` — Struct: removeDoneMsg (~6217 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
 - `add_wizard_update.go` (~7613 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~8405 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14843 tok)
 - `app_update.go` — Declares checkbox (~4705 tok)
 - `app_view.go` (~958 tok)
-- `app.go` — Struct: App (~4219 tok)
+- `app.go` — Struct: App (~4528 tok)
 - `cards.go` — Struct: cardData (~3324 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
@@ -1983,7 +1984,9 @@
 - `gallery_test.go` — TestCardGrid_ArrowNavigation, TestCardGrid_UpDownNavigation, TestCardGrid_EmptyGrid, TestCardGrid_Re (~3452 tok)
 - `gallery_trust_test.go` — TestRegistryTrustGlyph_States, TestRegistryTrustSummaryFrom_NilReturnsZero, TestRegistryTrustSummary (~3073 tok)
 - `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
-- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~1882 tok)
+- `gate_install_test.go` — Struct: gateFixture (~4156 tok)
+- `gate_install.go` — Struct: gateEvaluation (~1370 tok)
+- `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~2260 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1108 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
 - `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21272 tok)
@@ -1996,8 +1999,9 @@
 - `library.go` — Struct: libraryDrillMsg (~5703 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: metaPanelData (~2420 tok)
-- `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestHandleInstallResult_NonRe (~2481 tok)
-- `publisher_warn.go` (~583 tok)
+- `private_prompt.go` (~635 tok)
+- `publisher_warn_test.go` — TestPublisherWarnBody, TestPublisherWarnTitle, TestPrivatePromptTitle, TestPrivatePromptBody (~1110 tok)
+- `publisher_warn.go` (~921 tok)
 - `responsive_test.go` — TestResponsive_FramedLinesNeverExceedTerminal, TestResponsive_LibraryColumnCount_ByWidth, TestRespon (~2026 tok)
 - `risk_banner_test.go` — TestRiskBanner_RenderHigh, TestRiskBanner_RenderMediumOnly, TestRiskBanner_RenderMixed, TestRiskBann (~2211 tok)
 - `styles.go` (~1460 tok)
