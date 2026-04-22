@@ -137,10 +137,6 @@ func TestTable_PageUpRestoresCursor(t *testing.T) {
 	tbl.PageDown()
 	tbl.PageUp()
 	// After one down-down-up we should be strictly less than two pages down.
-	if tbl.cursor == 0 {
-		// That's fine if the viewHeight is huge, but with 20 rows it should be mid-list.
-		// Don't fail here — just ensure a valid state.
-	}
 	if tbl.cursor < 0 || tbl.cursor >= len(tbl.items) {
 		t.Errorf("PageUp left invalid cursor: %d", tbl.cursor)
 	}
