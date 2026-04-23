@@ -17,25 +17,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var syncAndExportCmd = &cobra.Command{
-	Use:   "sync-and-export",
-	Short: "Sync registries then export content to a provider",
-	Long: `Convenience command that syncs all registries then installs.
+var syncInstallCmd = &cobra.Command{
+	Use:   "sync-install",
+	Short: "Sync registries then install content to a provider",
+	Long: `Convenience command that syncs all registries then installs content.
 
 Equivalent to running:
   syllago registry sync && syllago install --to <provider>
 
 This is useful in CI/CD or automation where you want a single command
 to ensure registries are up-to-date before installing.`,
-	Example: `  # Sync registries and export to Cursor
-  syllago sync-and-export --to cursor
+	Example: `  # Sync registries and install to Cursor
+  syllago sync-install --to cursor
 
-  # Export to all providers
-  syllago sync-and-export --to all --type skills
+  # Install to all providers
+  syllago sync-install --to all --type skills
 
-  # Export only registry content to Kiro
-  syllago sync-and-export --to kiro --source registry`,
-	RunE: runSyncAndExport,
+  # Install only registry content to Kiro
+  syllago sync-install --to kiro --source registry`,
+	RunE: runSyncInstall,
 }
 
 // syncAllRegistries is a test seam for registry.SyncAll so tests can stub
@@ -43,17 +43,17 @@ to ensure registries are up-to-date before installing.`,
 var syncAllRegistries = registry.SyncAll
 
 func init() {
-	syncAndExportCmd.Flags().String("to", "", "Provider slug to export to, or \"all\" for every provider (required)")
-	syncAndExportCmd.MarkFlagRequired("to")
-	syncAndExportCmd.Flags().String("type", "", "Filter to a specific content type (e.g., skills, rules)")
-	syncAndExportCmd.Flags().String("name", "", "Filter by item name (substring match)")
-	syncAndExportCmd.Flags().String("source", "local", "Which items to export: local (default), shared, registry, builtin, all")
-	syncAndExportCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
-	syncAndExportCmd.Flags().BoolP("dry-run", "n", false, "Show what would be exported without making changes")
-	rootCmd.AddCommand(syncAndExportCmd)
+	syncInstallCmd.Flags().String("to", "", "Provider slug to install to, or \"all\" for every provider (required)")
+	syncInstallCmd.MarkFlagRequired("to")
+	syncInstallCmd.Flags().String("type", "", "Filter to a specific content type (e.g., skills, rules)")
+	syncInstallCmd.Flags().String("name", "", "Filter by item name (substring match)")
+	syncInstallCmd.Flags().String("source", "local", "Which items to install: local (default), shared, registry, builtin, all")
+	syncInstallCmd.Flags().String("llm-hooks", "skip", "How to handle LLM-evaluated hooks: skip (drop with warning) or generate (create wrapper scripts)")
+	syncInstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
+	rootCmd.AddCommand(syncInstallCmd)
 }
 
-func runSyncAndExport(cmd *cobra.Command, args []string) error {
+func runSyncInstall(cmd *cobra.Command, args []string) error {
 	// Find project root and load config to get registry list.
 	root, err := findProjectRoot()
 	if err != nil {
@@ -97,16 +97,16 @@ func runSyncAndExport(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("provider", toSlug)
 	telemetry.Enrich("content_type", typeFilter)
 	telemetry.Enrich("dry_run", dryRun)
-	return runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, "", dryRun)
+	return runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, "", dryRun)
 }
 
-// exportResult is the JSON-serializable output for export operations.
-type exportResult struct {
-	Exported []exportedItem      `json:"exported"`
-	Skipped  []exportSkippedItem `json:"skipped,omitempty"`
+// syncInstallResult is the JSON-serializable output for sync-install operations.
+type syncInstallResult struct {
+	Installed []syncInstalledItem `json:"installed"`
+	Skipped   []syncSkippedItem   `json:"skipped,omitempty"`
 }
 
-type exportedItem struct {
+type syncInstalledItem struct {
 	Name        string   `json:"name"`
 	Type        string   `json:"type"`
 	Destination string   `json:"destination"`
@@ -114,18 +114,18 @@ type exportedItem struct {
 	Warnings    []string `json:"warnings,omitempty"`
 }
 
-type exportSkippedItem struct {
+type syncSkippedItem struct {
 	Name   string `json:"name"`
 	Type   string `json:"type"`
 	Reason string `json:"reason"`
 }
 
-// runExportOp contains the core export logic shared by sync-and-export.
+// runInstallOp contains the core export logic shared by sync-and-export.
 //
 //nolint:gocyclo // CLI command runner with many flags
-func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
+func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
 	if toSlug == "all" {
-		return runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
+		return runInstallAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
 	}
 
 	prov := findProviderBySlug(toSlug)
@@ -194,7 +194,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 
 	if dryRun {
 		if !output.Quiet {
-			fmt.Fprintf(output.Writer, "[dry-run] would export %d item(s) to %s\n", len(items), toSlug)
+			fmt.Fprintf(output.Writer, "[dry-run] would install %d item(s) to %s\n", len(items), toSlug)
 			for _, item := range items {
 				fmt.Fprintf(output.Writer, "  %s (%s)\n", item.Name, item.Type.Label())
 			}
@@ -207,7 +207,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		return output.NewStructuredErrorDetail(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable", err.Error())
 	}
 
-	result := exportResult{}
+	result := syncInstallResult{}
 
 	for _, item := range items {
 		// Warn about built-in or example content before processing.
@@ -223,7 +223,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 
 		// Check if provider supports this type via SupportsType.
 		if prov.SupportsType != nil && !prov.SupportsType(item.Type) {
-			skip := exportSkippedItem{
+			skip := syncSkippedItem{
 				Name:   item.Name,
 				Type:   string(item.Type),
 				Reason: fmt.Sprintf("%s does not support %s", prov.Name, item.Type.Label()),
@@ -261,7 +261,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 										rendered.Warnings = append(rendered.Warnings, fmt.Sprintf("failed to write %s: %s", name, extraErr))
 									}
 								}
-								result.Exported = append(result.Exported, exportedItem{
+								result.Installed = append(result.Installed, syncInstalledItem{
 									Name:        item.Name,
 									Type:        string(item.Type),
 									Destination: dest,
@@ -269,7 +269,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 									Warnings:    append(rendered.Warnings, fmt.Sprintf("JSON merge type: saved to %s (merge manually into provider config)", dest)),
 								})
 								if !output.JSON {
-									fmt.Fprintf(output.Writer, "Exported %s to %s (converted, merge manually)\n", item.Name, dest)
+									fmt.Fprintf(output.Writer, "Installed %s to %s (converted, merge manually)\n", item.Name, dest)
 									for _, w := range rendered.Warnings {
 										fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
 									}
@@ -281,7 +281,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 				}
 			}
 
-			skip := exportSkippedItem{
+			skip := syncSkippedItem{
 				Name:   item.Name,
 				Type:   string(item.Type),
 				Reason: fmt.Sprintf("%s for %s requires JSON merge (not supported by export)", item.Type.Label(), prov.Name),
@@ -307,7 +307,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 				}
 			}
 			if installDir == provider.ProjectScopeSentinel {
-				skip := exportSkippedItem{
+				skip := syncSkippedItem{
 					Name:   item.Name,
 					Type:   string(item.Type),
 					Reason: fmt.Sprintf("%s %s requires a project directory (no discovery path configured)", prov.Name, item.Type.Label()),
@@ -322,7 +322,7 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 		}
 
 		if installDir == "" {
-			skip := exportSkippedItem{
+			skip := syncSkippedItem{
 				Name:   item.Name,
 				Type:   string(item.Type),
 				Reason: fmt.Sprintf("%s does not support %s", prov.Name, item.Type.Label()),
@@ -344,16 +344,16 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 			exported, handled := exportWithConverter(item, *prov, toSlug, conv, installDir)
 			if handled {
 				if exported != nil {
-					result.Exported = append(result.Exported, *exported)
+					result.Installed = append(result.Installed, *exported)
 					if !output.JSON {
-						fmt.Fprintf(output.Writer, "Exported %s to %s (converted)\n", item.Name, exported.Destination)
+						fmt.Fprintf(output.Writer, "Installed %s to %s (converted)\n", item.Name, exported.Destination)
 						for _, w := range exported.Warnings {
 							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
 						}
 					}
 				} else {
 					// Skipped by converter (e.g. non-alwaysApply for single-file provider)
-					skip := exportSkippedItem{
+					skip := syncSkippedItem{
 						Name:   item.Name,
 						Type:   string(item.Type),
 						Reason: fmt.Sprintf("not compatible with %s format", prov.Name),
@@ -374,28 +374,28 @@ func runExportOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMod
 			return output.NewStructuredErrorDetail(output.ErrExportFailed, fmt.Sprintf("copying %s failed", item.Name), "Check filesystem permissions", err.Error())
 		}
 
-		result.Exported = append(result.Exported, exportedItem{
+		result.Installed = append(result.Installed, syncInstalledItem{
 			Name:        item.Name,
 			Type:        string(item.Type),
 			Destination: dest,
 		})
 
 		if !output.JSON {
-			fmt.Fprintf(output.Writer, "Exported %s to %s\n", item.Name, dest)
+			fmt.Fprintf(output.Writer, "Installed %s to %s\n", item.Name, dest)
 		}
 	}
 
 	if output.JSON {
 		output.Print(result)
-	} else if len(result.Exported) == 0 && len(result.Skipped) > 0 {
-		fmt.Fprintln(output.ErrWriter, "No items were exported (all skipped).")
+	} else if len(result.Installed) == 0 && len(result.Skipped) > 0 {
+		fmt.Fprintln(output.ErrWriter, "No items were installed (all skipped).")
 	}
 
 	return nil
 }
 
-// runExportAll exports to every known provider in sequence.
-func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
+// runInstallAll installs to every known provider in sequence.
+func runInstallAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir string, dryRun bool) error {
 	type providerSummary struct {
 		Slug string
 		Err  error
@@ -408,13 +408,13 @@ func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, base
 			fmt.Fprintf(output.Writer, "\n--- %s (%s) ---\n", prov.Name, prov.Slug)
 		}
 
-		err := runExportOp(root, prov.Slug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
+		err := runInstallOp(root, prov.Slug, typeFilter, nameFilter, sourceFilter, llmHooksMode, baseDir, dryRun)
 		summaries = append(summaries, providerSummary{Slug: prov.Slug, Err: err})
 	}
 
 	// Print summary.
 	if !output.JSON {
-		fmt.Fprintf(output.Writer, "\n=== Export All Summary ===\n")
+		fmt.Fprintf(output.Writer, "\n=== Install All Summary ===\n")
 		hasErrors := false
 		for _, s := range summaries {
 			status := "ok"
@@ -446,10 +446,10 @@ func runExportAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, base
 }
 
 // exportWithConverter handles export with cross-provider conversion.
-// Returns (exportedItem, true) if the converter handled the item.
+// Returns (syncInstalledItem, true) if the converter handled the item.
 // Returns (nil, true) if the converter skipped it (not compatible).
 // Returns (nil, false) if the converter doesn't apply (fall through to default copy).
-func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir string) (*exportedItem, bool) {
+func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir string) (*syncInstalledItem, bool) {
 	srcProvider := effectiveProvider(item)
 
 	// Same provider + has .source/ → copy original verbatim (lossless)
@@ -465,7 +465,7 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 		if err := installer.CopyContent(srcPath, dest); err != nil {
 			return nil, false
 		}
-		return &exportedItem{
+		return &syncInstalledItem{
 			Name:        item.Name,
 			Type:        string(item.Type),
 			Destination: dest,
@@ -516,7 +516,7 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 			}
 		}
 
-		return &exportedItem{
+		return &syncInstalledItem{
 			Name:        item.Name,
 			Type:        string(item.Type),
 			Destination: dest,

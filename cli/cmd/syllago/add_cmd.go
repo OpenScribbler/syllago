@@ -31,11 +31,7 @@ Without a positional argument, shows what content is available (discovery mode).
 Provide a type or type/name to add content.
 
 Syllago handles format conversion automatically. Once added, content can be
-installed to any supported provider with "syllago install --to <provider>".
-
-After adding, use "syllago install" to activate content in a provider.
-
-Hooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.`,
+installed to any supported provider with "syllago install --to <provider>".`,
 	Example: `  # Discover available content (read-only)
   syllago add --from claude-code
 
@@ -58,12 +54,8 @@ func init() {
 	addCmd.MarkFlagRequired("from")
 	addCmd.Flags().Bool("all", false, "Add all discovered content (cannot combine with positional target)")
 	addCmd.Flags().Bool("dry-run", false, "Show what would be written without actually writing")
-	// Hooks-specific flags — hidden from default help but still functional.
-	addCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks only)")
-	addCmd.Flags().String("scope", "all", "Settings scope to read from: global, project, or all (hooks/mcp only)")
-	if err := addCmd.Flags().MarkHidden("exclude"); err == nil {
-		_ = addCmd.Flags().MarkHidden("scope")
-	}
+	addCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks and MCP only)")
+	addCmd.Flags().String("scope", "all", "Settings scope to read from: global, project, or all (hooks and MCP only)")
 	addCmd.Flags().BoolP("force", "f", false, "Overwrite existing item without prompting")
 	addCmd.Flags().String("base-dir", "", "Override base directory for content discovery")
 	addCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
@@ -420,7 +412,7 @@ type discoveryJSON struct {
 func runAddDiscovery(root, fromSlug string, resolver *config.PathResolver, globalDir string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago providers' to see available providers")
 	}
 
 	// Discover file-based content.
@@ -557,7 +549,7 @@ func discoverMcpForDisplay(root, fromSlug string, resolver *config.PathResolver,
 func runAddMcp(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago providers' to see available providers")
 	}
 
 	baseDir := ""
@@ -856,7 +848,7 @@ func printDiscoveryText(provSlug, provName string, items []add.DiscoveryItem) er
 func runAddHooks(root, fromSlug string, previewOnly bool, exclude []string, force bool, scope string, resolver *config.PathResolver, srcRegistry, srcVisibility, displayName string) error {
 	prov := findProviderBySlug(fromSlug)
 	if prov == nil {
-		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago info providers' to see available providers")
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Run 'syllago providers' to see available providers")
 	}
 
 	// Use resolver's effective base dir for settings discovery.

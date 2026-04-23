@@ -8,7 +8,7 @@ import (
 
 var exportCmd = &cobra.Command{
 	Use:    "export <name>",
-	Short:  "[Coming Soon] Export content with optional dual-format (canonical + native) output",
+	Short:  "Export content with optional dual-format (canonical + native) output",
 	Hidden: true,
 	Long: `Exports a library item to canonical format, optionally generating
 provider-native configs alongside it for manual consumption.

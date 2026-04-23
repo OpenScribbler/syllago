@@ -17,26 +17,26 @@ func TestSyncAndExportCommandRegisters(t *testing.T) {
 	// Verify the command is registered on rootCmd.
 	found := false
 	for _, cmd := range rootCmd.Commands() {
-		if cmd.Use == "sync-and-export" {
+		if cmd.Use == "sync-install" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("sync-and-export command not registered on rootCmd")
+		t.Error("sync-install command not registered on rootCmd")
 	}
 }
 
 func TestSyncAndExportFlagsDefined(t *testing.T) {
-	flags := syncAndExportCmd.Flags()
+	flags := syncInstallCmd.Flags()
 	for _, name := range []string{"to", "type", "name", "source", "llm-hooks"} {
 		if flags.Lookup(name) == nil {
-			t.Errorf("missing --%s flag on sync-and-export", name)
+			t.Errorf("missing --%s flag on sync-install", name)
 		}
 	}
 }
 
-// --- runExportOp direct tests ---
+// --- runInstallOp direct tests ---
 
 // setupExportEnv creates a project root with a test provider registered.
 // It writes an empty .syllago/config.json so config.Load succeeds.
@@ -81,7 +81,7 @@ func TestRunExportOp_UnknownProvider(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	_, _ = output.SetForTest(t)
 
-	err := runExportOp(root, "nonexistent-provider", "", "", "local", "", "", false)
+	err := runInstallOp(root, "nonexistent-provider", "", "", "local", "", "", false)
 	if err == nil {
 		t.Fatal("expected error for unknown provider")
 	}
@@ -95,7 +95,7 @@ func TestRunExportOp_NoItemsMatchingFilter(t *testing.T) {
 	_, stderr := output.SetForTest(t)
 
 	// Name filter won't match any item in setupExportRepo.
-	err := runExportOp(root, "test-prov", "", "does-not-exist", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "", "does-not-exist", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error for no-match case, got: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestRunExportOp_DryRun(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "skills", "", "shared", "", "", true)
+	err := runInstallOp(root, "test-prov", "skills", "", "shared", "", "", true)
 	if err != nil {
 		t.Fatalf("dry-run failed: %v", err)
 	}
@@ -116,8 +116,8 @@ func TestRunExportOp_DryRun(t *testing.T) {
 	if !strings.Contains(out, "[dry-run]") {
 		t.Errorf("expected '[dry-run]' prefix, got: %s", out)
 	}
-	if !strings.Contains(out, "would export") {
-		t.Errorf("expected 'would export' message, got: %s", out)
+	if !strings.Contains(out, "would install") {
+		t.Errorf("expected 'would install' message, got: %s", out)
 	}
 }
 
@@ -125,13 +125,13 @@ func TestRunExportOp_HappyPath(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "skills", "", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("export failed: %v", err)
 	}
 	out := stdout.String()
-	if !strings.Contains(out, "Exported") {
-		t.Errorf("expected 'Exported' message, got: %s", out)
+	if !strings.Contains(out, "Installed") {
+		t.Errorf("expected 'Installed' message, got: %s", out)
 	}
 }
 
@@ -140,12 +140,12 @@ func TestRunExportOp_ProviderDoesNotSupportType(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Rules})
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "", "", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error for all-skipped case, got: %v", err)
 	}
 	errOut := stderr.String()
-	if !strings.Contains(errOut, "does not support") && !strings.Contains(errOut, "No items were exported") {
+	if !strings.Contains(errOut, "does not support") && !strings.Contains(errOut, "No items were installed") {
 		t.Errorf("expected skip messages in stderr, got: %s", errOut)
 	}
 }
@@ -155,12 +155,12 @@ func TestRunExportOp_JSONOutput(t *testing.T) {
 	stdout, _ := output.SetForTest(t)
 	output.JSON = true
 
-	err := runExportOp(root, "test-prov", "skills", "", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("export failed: %v", err)
 	}
 	// JSON output should be structured.
-	if !strings.Contains(stdout.String(), `"exported"`) {
+	if !strings.Contains(stdout.String(), `"installed"`) {
 		t.Errorf("expected JSON 'exported' key, got: %s", stdout.String())
 	}
 }
@@ -170,7 +170,7 @@ func TestRunExportOp_TypeFilterNoMatch(t *testing.T) {
 	_, stderr := output.SetForTest(t)
 
 	// Filter by a type not present in the repo.
-	err := runExportOp(root, "test-prov", "agents", "", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "agents", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestRunExportAll_IteratesProviders(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportAll(root, "skills", "", "shared", "", "", false)
+	err := runInstallAll(root, "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected success, got: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestRunExportAll_IteratesProviders(t *testing.T) {
 	if !strings.Contains(out, "prov-a") || !strings.Contains(out, "prov-b") {
 		t.Errorf("expected both provider slugs in output, got: %s", out)
 	}
-	if !strings.Contains(out, "Export All Summary") {
+	if !strings.Contains(out, "Install All Summary") {
 		t.Errorf("expected summary section, got: %s", out)
 	}
 }
@@ -224,7 +224,7 @@ func TestRunExportAll_DryRun(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportAll(root, "skills", "", "shared", "", "", true)
+	err := runInstallAll(root, "skills", "", "shared", "", "", true)
 	if err != nil {
 		t.Fatalf("dry-run all failed: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestRunExportAll_FilterReminder(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportAll(root, "skills", "greeting", "shared", "", "", false)
+	err := runInstallAll(root, "skills", "greeting", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("export-all with filters failed: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestRunExportOp_InstallDirEmptySkips(t *testing.T) {
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "empty-dir", "skills", "", "shared", "", "", false)
+	err := runInstallOp(root, "empty-dir", "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -309,7 +309,7 @@ func TestRunExportOp_JSONMergeSkipsWithoutConverter(t *testing.T) {
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "json-merge", "hooks", "", "shared", "", "", false)
+	err := runInstallOp(root, "json-merge", "hooks", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestRunExportOp_ProjectScopeWithoutDiscovery(t *testing.T) {
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "project-scope", "skills", "", "shared", "", "", false)
+	err := runInstallOp(root, "project-scope", "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestRunExportOp_CrossProviderConversion(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportOp(root, "cursor", "skills", "cross-skill", "shared", "", "", false)
+	err := runInstallOp(root, "cursor", "skills", "cross-skill", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("cross-provider export failed: %v", err)
 	}
@@ -428,7 +428,7 @@ func TestRunExportOp_ExampleWarning(t *testing.T) {
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "skills", "example-skill", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "skills", "example-skill", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -473,7 +473,7 @@ source_visibility: private
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "skills", "private-skill", "shared", "", "", false)
+	err := runInstallOp(root, "test-prov", "skills", "private-skill", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -510,13 +510,13 @@ func TestRunExportOp_ProjectScopeWithDiscovery(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	err := runExportOp(root, "project-scope", "skills", "", "shared", "", "", false)
+	err := runInstallOp(root, "project-scope", "skills", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	// Success path reaches the direct-copy fallback.
-	if !strings.Contains(stdout.String(), "Exported") {
-		t.Errorf("expected 'Exported' in output, got: %s", stdout.String())
+	if !strings.Contains(stdout.String(), "Installed") {
+		t.Errorf("expected 'Installed' in output, got: %s", stdout.String())
 	}
 }
 
@@ -549,7 +549,7 @@ func TestRunExportOp_JSONMergeCrossProvider(t *testing.T) {
 
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "gemini-cli", "hooks", "", "shared", "", "", false)
+	err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -565,7 +565,7 @@ func TestRunExportOp_FilterBySourceExcludes(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	_, stderr := output.SetForTest(t)
 
-	err := runExportOp(root, "test-prov", "", "", "library", "", "", false)
+	err := runInstallOp(root, "test-prov", "", "", "library", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -579,14 +579,14 @@ func TestRunExportOp_DelegatesAllToExportAll(t *testing.T) {
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
 	stdout, _ := output.SetForTest(t)
 
-	// toSlug="all" dispatches to runExportAll.
-	err := runExportOp(root, "all", "skills", "", "shared", "", "", true)
+	// toSlug="all" dispatches to runInstallAll.
+	err := runInstallOp(root, "all", "skills", "", "shared", "", "", true)
 	if err != nil {
 		t.Fatalf("export to 'all' failed: %v", err)
 	}
-	// runExportAll prints the summary section.
-	if !strings.Contains(stdout.String(), "Export All Summary") {
-		t.Errorf("expected 'Export All Summary' from runExportAll, got: %s", stdout.String())
+	// runInstallAll prints the summary section.
+	if !strings.Contains(stdout.String(), "Install All Summary") {
+		t.Errorf("expected 'Install All Summary' from runInstallAll, got: %s", stdout.String())
 	}
 }
 
@@ -635,14 +635,14 @@ func TestSyncAndExport_WithRegistries_Success(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	syncAndExportCmd.Flags().Set("to", "test-prov")
-	defer syncAndExportCmd.Flags().Set("to", "")
-	syncAndExportCmd.Flags().Set("type", "skills")
-	defer syncAndExportCmd.Flags().Set("type", "")
-	syncAndExportCmd.Flags().Set("source", "shared")
-	defer syncAndExportCmd.Flags().Set("source", "local")
+	syncInstallCmd.Flags().Set("to", "test-prov")
+	defer syncInstallCmd.Flags().Set("to", "")
+	syncInstallCmd.Flags().Set("type", "skills")
+	defer syncInstallCmd.Flags().Set("type", "")
+	syncInstallCmd.Flags().Set("source", "shared")
+	defer syncInstallCmd.Flags().Set("source", "local")
 
-	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	err := syncInstallCmd.RunE(syncInstallCmd, []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -681,10 +681,10 @@ func TestSyncAndExport_SyncFailure_ReturnsError(t *testing.T) {
 	})
 
 	output.SetForTest(t)
-	syncAndExportCmd.Flags().Set("to", "test-prov")
-	defer syncAndExportCmd.Flags().Set("to", "")
+	syncInstallCmd.Flags().Set("to", "test-prov")
+	defer syncInstallCmd.Flags().Set("to", "")
 
-	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	err := syncInstallCmd.RunE(syncInstallCmd, []string{})
 	if err == nil {
 		t.Fatal("expected error from sync failure, got nil")
 	}
@@ -725,14 +725,14 @@ func TestSyncAndExport_JSONOutputSuppressesSyncBanner(t *testing.T) {
 	stdout, _ := output.SetForTest(t)
 	output.JSON = true
 
-	syncAndExportCmd.Flags().Set("to", "test-prov")
-	defer syncAndExportCmd.Flags().Set("to", "")
-	syncAndExportCmd.Flags().Set("type", "skills")
-	defer syncAndExportCmd.Flags().Set("type", "")
-	syncAndExportCmd.Flags().Set("source", "shared")
-	defer syncAndExportCmd.Flags().Set("source", "local")
+	syncInstallCmd.Flags().Set("to", "test-prov")
+	defer syncInstallCmd.Flags().Set("to", "")
+	syncInstallCmd.Flags().Set("type", "skills")
+	defer syncInstallCmd.Flags().Set("type", "")
+	syncInstallCmd.Flags().Set("source", "shared")
+	defer syncInstallCmd.Flags().Set("source", "local")
 
-	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	err := syncInstallCmd.RunE(syncInstallCmd, []string{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -773,16 +773,16 @@ func TestSyncAndExportNoRegistries(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	syncAndExportCmd.Flags().Set("to", "test-prov")
-	defer syncAndExportCmd.Flags().Set("to", "")
-	syncAndExportCmd.Flags().Set("type", "skills")
-	defer syncAndExportCmd.Flags().Set("type", "")
-	syncAndExportCmd.Flags().Set("source", "shared")
-	defer syncAndExportCmd.Flags().Set("source", "local")
+	syncInstallCmd.Flags().Set("to", "test-prov")
+	defer syncInstallCmd.Flags().Set("to", "")
+	syncInstallCmd.Flags().Set("type", "skills")
+	defer syncInstallCmd.Flags().Set("type", "")
+	syncInstallCmd.Flags().Set("source", "shared")
+	defer syncInstallCmd.Flags().Set("source", "local")
 
-	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	err := syncInstallCmd.RunE(syncInstallCmd, []string{})
 	if err != nil {
-		t.Fatalf("sync-and-export failed: %v", err)
+		t.Fatalf("sync-install failed: %v", err)
 	}
 
 	out := stdout.String()
