@@ -398,9 +398,9 @@ func (m *addWizardModel) viewTriage() string {
 	legend := buildTriageLegend()
 
 	// Compute pane dimensions.
-	// shell(3) + title(1) + subtitle(1) + legend(1) + border(2) = 8
+	// shell(3) + title(1) + subtitle(1) + legend(1) + border_top(1) + border_bottom(1) + button_row(1) = 9
 	innerW := m.width - borderSize
-	paneH := max(3, m.height-8)
+	paneH := max(3, m.height-9)
 
 	itemsW := max(10, innerW*30/100)
 	previewW := innerW - itemsW - 1
