@@ -3877,3 +3877,4 @@
 | 14:23 | Fixed 5 triage preview bugs: sourceDir derivation, hookData propagation, catalogItem preservation, discoverFromProvider ci.Path, TierHigh default | add_wizard.go, add_wizard_update.go | commit d4607d6 | ~4000 |
 
 | 15:30 | Fixed 3 preview/drill-in bugs: removed SafeResolve from loadTriagePreview (symlink-incompatible), resolved symlinked root in scanDrillInFiles (WalkDir uses Lstat), moved MCP extractJSONSection before catalogItem check in enterReviewDrillIn | cli/internal/tui/add_wizard.go | bugs 411-413 | ~3k |
+| 15:45 | Discovered binary PATH issue: which syllago resolves to /home/hhewett/.local/src/syllago/cli/syllago (main repo, stale) not ~/.local/bin/syllago. Replaced both. User must restart TUI to pick up new binary. | cli/syllago | workaround | ~500 || 15:59 | Added type-boundary section headers to review step item list | add_wizard_view.go | build+tests pass | ~300 |

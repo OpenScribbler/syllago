@@ -710,6 +710,16 @@ func (m *addWizardModel) viewReview() string {
 
 	for i := startIdx; i < endIdx; i++ {
 		item := selected[i]
+
+		// Emit a section header at each type boundary (same pattern as triage step).
+		if i == 0 || selected[i-1].itemType != item.itemType {
+			label := typePlural(item.itemType)
+			dashW := max(0, m.width-5-len(label))
+			hdr := mutedStyle.Render("  ─ ") + sectionTitleStyle.Render(label) +
+				mutedStyle.Render(" "+strings.Repeat("─", dashW))
+			lines = append(lines, hdr)
+		}
+
 		cursor := "  "
 		if m.reviewZone == addReviewZoneItems && i == m.reviewItemCursor {
 			cursor = "> "
