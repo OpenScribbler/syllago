@@ -55,7 +55,7 @@ func (m systemModel) loadCmd() tea.Cmd {
 		result := doctor.Run(root)
 		return systemLoadedMsg{
 			checks:       result.Checks,
-			allProviders: provider.AllProviders,
+			allProviders: provider.DetectProviders(),
 		}
 	}
 }
