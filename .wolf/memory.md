@@ -3875,3 +3875,110 @@
 | 14:21 | Edited cli/internal/tui/add_wizard_triage_preview_test.go | 3→3 lines | ~22 |
 
 | 14:23 | Fixed 5 triage preview bugs: sourceDir derivation, hookData propagation, catalogItem preservation, discoverFromProvider ci.Path, TierHigh default | add_wizard.go, add_wizard_update.go | commit d4607d6 | ~4000 |
+| 14:25 | Session end: 8 writes across 3 files (add_wizard.go, add_wizard_update.go, add_wizard_triage_preview_test.go) | 9 reads | ~59846 tok |
+| 14:28 | Session end: 8 writes across 3 files (add_wizard.go, add_wizard_update.go, add_wizard_triage_preview_test.go) | 9 reads | ~59846 tok |
+| 14:28 | Created cli/cmd/syllago/refresh_cmd.go | — | ~374 |
+| 14:28 | Edited cli/cmd/syllago/deprecated_cmds.go | reduced (-12 lines) | ~53 |
+| 14:29 | Edited cli/cmd/syllago/deprecated_cmds.go | modified init() | ~16 |
+| 14:29 | Edited cli/cmd/syllago/deprecated_cmds_test.go | modified TestDeprecatedStubMessages() | ~224 |
+| 14:29 | Edited cli/cmd/syllago/deprecated_cmds_test.go | modified TestDeprecatedStubsAreHidden() | ~75 |
+| 14:29 | Edited cli/cmd/syllago/commands_test.go | modified TestRunRefresh_NotImplemented() | ~96 |
+| 14:31 | Edited cli/cmd/syllago/loadout_apply.go | mode() → loadout() | ~136 |
+| 14:31 | Edited cli/cmd/syllago/loadout_apply.go | 4→3 lines | ~69 |
+| 14:31 | Edited cli/cmd/syllago/loadout_apply.go | 15→12 lines | ~89 |
+| 14:31 | Edited cli/cmd/syllago/commands_test.go | modified resetLoadoutApplyFlags() | ~69 |
+| 14:31 | Edited cli/cmd/syllago/commands_test.go | modified TestRunLoadoutApply_PreviewHappyPath() | ~234 |
+| 14:32 | Edited cli/cmd/syllago/commands_test.go | 6→6 lines | ~70 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~4 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~4 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~4 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~4 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~4 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~5 |
+| 14:33 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~5 |
+| 14:33 | Session end: 27 writes across 9 files (add_wizard.go, add_wizard_update.go, add_wizard_triage_preview_test.go, refresh_cmd.go, deprecated_cmds.go) | 14 reads | ~79670 tok |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | 5→5 lines | ~60 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~5 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | 20→20 lines | ~186 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | 8→8 lines | ~203 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "Exported %s to %s (conver" → "Installed %s to %s (conve" | ~26 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "Exported %s to %s (conver" → "Installed %s to %s (conve" | ~26 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "Exported %s to %s\n" → "Installed %s to %s\n" | ~18 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "[dry-run] would export %d" → "[dry-run] would install %" | ~25 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "No items were exported (a" → "No items were installed (" | ~20 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | inline fix | ~17 |
+| 14:34 | Edited cli/cmd/syllago/sync_and_export.go | "\n=== Export All Summary " → "\n=== Install All Summary" | ~17 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~7 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | "exported" → "installed" | ~4 |
+| 14:35 | Edited cli/cmd/syllago/sync_and_export_test.go | inline fix | ~6 |
+| 14:35 | Edited cli/cmd/syllago/resolver_integration_test.go | inline fix | ~4 |
+| 14:35 | Edited cli/cmd/syllago/resolver_integration_test.go | inline fix | ~4 |
+| 14:36 | Edited cli/cmd/syllago/info.go | 11→11 lines | ~113 |
+| 14:36 | Edited cli/cmd/syllago/info.go | 9→9 lines | ~63 |
+| 14:36 | Edited cli/cmd/syllago/info.go | "  syllago info formats" → "  syllago formats" | ~8 |
+| 14:36 | Edited cli/cmd/syllago/info.go | modified init() | ~21 |
+| 14:36 | Edited cli/cmd/syllago/add_cmd.go | "syllago info providers" → "syllago providers" | ~14 |
+| 14:37 | Created cli/cmd/syllago/edit_cmd.go | — | ~1178 |
+
+## Session: 2026-04-23 14:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:41 | Created cli/cmd/syllago/edit_cmd_test.go | — | ~2148 |
+| 14:41 | Edited cli/cmd/syllago/commands_test.go | modified TestRunEdit_NotFound() | ~134 |
+| 14:42 | Edited cli/cmd/syllago/sync_and_export_test.go | modified TestRunExportOp_ProviderDoesNotSupportType() | ~52 |
+| 14:42 | Edited cli/cmd/syllago/sync_and_export_test.go | 4→4 lines | ~48 |
+| 14:43 | Session end: 4 writes across 3 files (edit_cmd_test.go, commands_test.go, sync_and_export_test.go) | 5 reads | ~33810 tok |
+| 14:49 | Edited cli/cmd/syllago/add_cmd.go | 11→7 lines | ~100 |
+| 14:49 | Edited cli/cmd/syllago/add_cmd.go | 6→2 lines | ~58 |
+| 14:50 | Edited cli/cmd/syllago/help_text_test.go | modified TestAddCmd_LongNoHooksSpecificMention() | ~177 |
+| 14:50 | Edited cli/cmd/syllago/loadout_apply.go | 7→8 lines | ~122 |
+| 14:50 | Edited cli/cmd/syllago/help_text_test.go | modified TestLoadoutApplyCmd_LongMentionsToFlag() | ~120 |
+| 14:50 | Edited cli/cmd/syllago/install_cmd.go | 4→6 lines | ~78 |
+| 14:51 | Edited cli/cmd/syllago/help_text_test.go | modified TestInstallCmd_LongMentionsHooksMCPMerge() | ~192 |
+| 14:51 | Edited cli/cmd/syllago/main.go | inline fix | ~22 |
+| 14:51 | Edited cli/cmd/syllago/help_text_test.go | modified TestRootCmd_LongUsesProviderOrRegistry() | ~232 |
+| 14:52 | Edited cli/cmd/syllago/sign_cmd.go | "[Coming Soon] Sign hook c" → "Sign hook content for pro" | ~16 |
+| 14:52 | Edited cli/cmd/syllago/sign_cmd.go | "[Coming Soon] Verify hook" → "Verify hook content signa" | ~12 |
+| 14:52 | Edited cli/cmd/syllago/export_cmd.go | "[Coming Soon] Export cont" → "Export content with optio" | ~22 |
+| 14:52 | Created docs/plans/2026-04-23-rules-splitter-decisions.md | — | ~5347 |
+
+## Session: 2026-04-23 14:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 14:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:55 | Help text audit: 13 fixes across rename→refresh, sync-and-export→sync-install, rename→edit, promote providers/formats to root, fix Long text accuracy, remove Coming Soon | main.go, add_cmd.go, sync_and_export.go, loadout_apply.go, install_cmd.go, sign_cmd.go, export_cmd.go, info.go, edit_cmd.go, refresh_cmd.go | pushed 606ef3f | ~18k |
+| 14:59 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_update.go | 6→10 lines | ~53 |
+| 15:00 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_update.go | expanded (+21 lines) | ~242 |
+| 15:00 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard.go | 5→9 lines | ~105 |
+| 15:00 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_update.go | 12→13 lines | ~162 |
+| 15:01 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard.go | expanded (+10 lines) | ~231 |
+| 15:02 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard.go | expanded (+15 lines) | ~478 |
+| 15:06 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | inline fix | ~31 |
+| 15:06 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | inline fix | ~28 |
+| 15:06 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | modified TestAddWizard_Discovery_RightFocusesPreview() | ~221 |
+| 15:06 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 4→4 lines | ~50 |
+| 15:07 | Created cli/internal/tui/edit_saved_test.go | — | ~1192 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 4→4 lines | ~50 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 6→6 lines | ~80 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 6→6 lines | ~76 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 4→4 lines | ~48 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 4→4 lines | ~47 |
+| 15:07 | Edited .claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go | 5→5 lines | ~51 |
+| 15:08 | Edited cli/internal/tui/app_update.go | 4→6 lines | ~117 |
+| 15:08 | Session end: 18 writes across 5 files (add_wizard_update.go, add_wizard.go, add_wizard_test.go, edit_saved_test.go, app_update.go) | 11 reads | ~72660 tok |
+| 15:09 | Fixed Bug A: KeyRight in triage now focuses preview (not advance to Review), added KeyLeft/PgUp/PgDown | add_wizard_update.go | committed | ~800 |
+| 15:09 | Fixed Bug C: Added risks field to addConfirmItem, propagated through handleDiscoveryDone + mergeConfirmIntoDiscovery | add_wizard.go | committed | ~600 |
+| 15:09 | Fixed Bug B: discoverFromProvider now also scans homeDir for global provider content (agents etc.) | add_wizard.go | committed | ~400 |
+| 15:09 | Updated 11 tests: renamed TestAddWizard_Discovery_RightAdvancesToReview → RightFocusesPreview, changed KeyRight→KeyEnter for Discovery→Review advancement | add_wizard_test.go | all tests pass | ~500 |
+| 15:09 | Merged worktree-fix-discovery-triage-bugs to main, rebuilt binary at ~/.local/src/syllago/cli/syllago | main | done | ~200 |
