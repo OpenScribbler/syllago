@@ -1912,7 +1912,7 @@ func discoverFromRegistry(
 					tier:        analyzer.TierForItem(detected),
 					displayName: name,
 					itemType:    detected.Type,
-					path:        detected.Path,
+					path:        filepath.Base(detected.Path),
 					sourceDir:   filepath.Join(regDir, filepath.Dir(detected.Path)),
 				}
 				confirmItems = append(confirmItems, ci)
@@ -2011,7 +2011,7 @@ func discoverFromLocalPath(
 			tier:        analyzer.TierForItem(detected),
 			displayName: name,
 			itemType:    detected.Type,
-			path:        detected.Path,
+			path:        filepath.Base(detected.Path),
 			sourceDir:   filepath.Join(dir, filepath.Dir(detected.Path)),
 		}
 		confirmItems = append(confirmItems, ci)
