@@ -83,7 +83,9 @@ var installCmd = &cobra.Command{
 	Long: `Install content from your library into a provider's location.
 
 By default uses a symlink so edits in your library are reflected immediately.
-Use --method copy to place a standalone copy instead.`,
+Use --method copy to place a standalone copy instead.
+
+Hooks and MCP configs are merged into the provider's settings file rather than linked.`,
 	Example: `  # Install a skill to Claude Code
   syllago install my-skill --to claude-code
 

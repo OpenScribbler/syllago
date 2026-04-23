@@ -8,7 +8,7 @@ import (
 
 var signCmd = &cobra.Command{
 	Use:    "sign <name>",
-	Short:  "[Coming Soon] Sign hook content for provenance verification",
+	Short:  "Sign hook content for provenance verification",
 	Hidden: true,
 	Long: `Cryptographically signs a hook's manifest and scripts using
 Sigstore (keyless OIDC, default) or GPG (traditional keys).
@@ -30,7 +30,7 @@ and hasn't been tampered with since signing.`,
 
 var verifyCmd = &cobra.Command{
 	Use:    "verify <name>",
-	Short:  "[Coming Soon] Verify hook content signatures",
+	Short:  "Verify hook content signatures",
 	Hidden: true,
 	Long: `Checks cryptographic signatures on hook content against the
 configured trust policy. Reports the signer identity and whether

@@ -11,10 +11,10 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
-// setupGlobalSkillForRename creates a global library with a single skill item.
+// setupGlobalSkillForEdit creates a global library with a single skill item.
 // Skills are universal type (no provider subdirectory needed).
 // Returns the global dir and the skill's directory path.
-func setupGlobalSkillForRename(t *testing.T, name string) (globalDir, skillDir string) {
+func setupGlobalSkillForEdit(t *testing.T, name string) (globalDir, skillDir string) {
 	t.Helper()
 	globalDir = t.TempDir()
 	skillDir = filepath.Join(globalDir, "skills", name)
@@ -23,48 +23,90 @@ func setupGlobalSkillForRename(t *testing.T, name string) (globalDir, skillDir s
 	return globalDir, skillDir
 }
 
-func TestRunRename_Success(t *testing.T) {
+func TestRunEdit_NameOnly(t *testing.T) {
 	// Not parallel — mutates globals (GlobalContentDirOverride, output.*)
-	globalDir, skillDir := setupGlobalSkillForRename(t, "my-skill-rename")
+	globalDir, skillDir := setupGlobalSkillForEdit(t, "my-skill-edit")
 	withGlobalLibrary(t, globalDir)
 	stdout, _ := output.SetForTest(t)
 
-	renameCmd.Flags().Set("name", "Better Skill Name")
-	defer renameCmd.Flags().Set("name", "")
+	editCmd.Flags().Set("name", "Better Skill Name")
+	defer editCmd.Flags().Set("name", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"my-skill-rename"})
+	err := editCmd.RunE(editCmd, []string{"my-skill-edit"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	// Verify output mentions the rename
 	out := stdout.String()
 	if !strings.Contains(out, "Better Skill Name") {
 		t.Errorf("expected new name in output, got: %s", out)
 	}
 
-	// Verify metadata was actually saved to disk
 	meta, err := metadata.Load(skillDir)
 	if err != nil {
 		t.Fatalf("loading metadata: %v", err)
 	}
 	if meta == nil {
-		t.Fatal("expected metadata to exist after rename")
+		t.Fatal("expected metadata to exist after edit")
 	}
 	if meta.Name != "Better Skill Name" {
 		t.Errorf("expected metadata name %q, got %q", "Better Skill Name", meta.Name)
 	}
 }
 
-func TestRunRename_NonExistentItem(t *testing.T) {
+func TestRunEdit_DescriptionOnly(t *testing.T) {
+	globalDir, skillDir := setupGlobalSkillForEdit(t, "desc-skill")
+	withGlobalLibrary(t, globalDir)
+	stdout, _ := output.SetForTest(t)
+
+	editCmd.Flags().Set("description", "A great skill for testing")
+	defer editCmd.Flags().Set("description", "")
+
+	err := editCmd.RunE(editCmd, []string{"desc-skill"})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	out := stdout.String()
+	if !strings.Contains(out, "description set") {
+		t.Errorf("expected 'description set' in output, got: %s", out)
+	}
+
+	meta, err := metadata.Load(skillDir)
+	if err != nil {
+		t.Fatalf("loading metadata: %v", err)
+	}
+	if meta == nil {
+		t.Fatal("expected metadata to exist after edit")
+	}
+	if meta.Description != "A great skill for testing" {
+		t.Errorf("expected description %q, got %q", "A great skill for testing", meta.Description)
+	}
+}
+
+func TestRunEdit_NoFlagsErrors(t *testing.T) {
+	globalDir, _ := setupGlobalSkillForEdit(t, "no-flags-skill")
+	withGlobalLibrary(t, globalDir)
+	_, _ = output.SetForTest(t)
+
+	err := editCmd.RunE(editCmd, []string{"no-flags-skill"})
+	if err == nil {
+		t.Fatal("expected error when neither --name nor --description provided")
+	}
+	if !strings.Contains(err.Error(), "INPUT_001") {
+		t.Errorf("expected INPUT_001 error code, got: %v", err)
+	}
+}
+
+func TestRunEdit_NonExistentItem(t *testing.T) {
 	globalDir := t.TempDir()
 	withGlobalLibrary(t, globalDir)
 	_, _ = output.SetForTest(t)
 
-	renameCmd.Flags().Set("name", "Whatever")
-	defer renameCmd.Flags().Set("name", "")
+	editCmd.Flags().Set("name", "Whatever")
+	defer editCmd.Flags().Set("name", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"does-not-exist"})
+	err := editCmd.RunE(editCmd, []string{"does-not-exist"})
 	if err == nil {
 		t.Fatal("expected error for non-existent item")
 	}
@@ -76,36 +118,36 @@ func TestRunRename_NonExistentItem(t *testing.T) {
 	}
 }
 
-func TestRunRename_NoArgs(t *testing.T) {
+func TestRunEdit_NoArgs(t *testing.T) {
 	_, _ = output.SetForTest(t)
 
 	// cobra.ExactArgs(1) rejects empty args before RunE runs.
-	err := renameCmd.Args(renameCmd, []string{})
+	err := editCmd.Args(editCmd, []string{})
 	if err == nil {
 		t.Fatal("expected error for no args")
 	}
 }
 
-func TestRunRename_JSONOutput(t *testing.T) {
-	globalDir, _ := setupGlobalSkillForRename(t, "json-skill")
+func TestRunEdit_JSONOutput(t *testing.T) {
+	globalDir, _ := setupGlobalSkillForEdit(t, "json-skill-edit")
 	withGlobalLibrary(t, globalDir)
 	stdout, _ := output.SetForTest(t)
 	output.JSON = true
 
-	renameCmd.Flags().Set("name", "JSON Skill Name")
-	defer renameCmd.Flags().Set("name", "")
+	editCmd.Flags().Set("name", "JSON Skill Name")
+	defer editCmd.Flags().Set("name", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"json-skill"})
+	err := editCmd.RunE(editCmd, []string{"json-skill-edit"})
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	var result renameResult
+	var result editResult
 	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v\nraw: %s", err, stdout.String())
 	}
-	if result.Item != "json-skill" {
-		t.Errorf("expected item %q, got %q", "json-skill", result.Item)
+	if result.Item != "json-skill-edit" {
+		t.Errorf("expected item %q, got %q", "json-skill-edit", result.Item)
 	}
 	if result.NewName != "JSON Skill Name" {
 		t.Errorf("expected new_name %q, got %q", "JSON Skill Name", result.NewName)
@@ -115,7 +157,33 @@ func TestRunRename_JSONOutput(t *testing.T) {
 	}
 }
 
-func TestRunRename_AmbiguousItem(t *testing.T) {
+func TestRunEdit_JSONOutputDescription(t *testing.T) {
+	globalDir, _ := setupGlobalSkillForEdit(t, "json-desc-skill")
+	withGlobalLibrary(t, globalDir)
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	editCmd.Flags().Set("description", "A JSON description")
+	defer editCmd.Flags().Set("description", "")
+
+	err := editCmd.RunE(editCmd, []string{"json-desc-skill"})
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	var result editResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON output: %v\nraw: %s", err, stdout.String())
+	}
+	if result.Description != "A JSON description" {
+		t.Errorf("expected description %q, got %q", "A JSON description", result.Description)
+	}
+	if result.NewName != "" {
+		t.Errorf("expected no new_name when only description set, got %q", result.NewName)
+	}
+}
+
+func TestRunEdit_AmbiguousItem(t *testing.T) {
 	// Create an item that exists in two universal types (skills and agents)
 	globalDir := t.TempDir()
 	skillDir := filepath.Join(globalDir, "skills", "shared-name")
@@ -128,10 +196,10 @@ func TestRunRename_AmbiguousItem(t *testing.T) {
 	withGlobalLibrary(t, globalDir)
 	_, _ = output.SetForTest(t)
 
-	renameCmd.Flags().Set("name", "Disambiguated")
-	defer renameCmd.Flags().Set("name", "")
+	editCmd.Flags().Set("name", "Disambiguated")
+	defer editCmd.Flags().Set("name", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"shared-name"})
+	err := editCmd.RunE(editCmd, []string{"shared-name"})
 	if err == nil {
 		t.Fatal("expected error for ambiguous item")
 	}
@@ -143,7 +211,7 @@ func TestRunRename_AmbiguousItem(t *testing.T) {
 	}
 }
 
-func TestRunRename_TypeFilter(t *testing.T) {
+func TestRunEdit_TypeFilter(t *testing.T) {
 	// Create an item in two types, then use --type to disambiguate
 	globalDir := t.TempDir()
 	skillDir := filepath.Join(globalDir, "skills", "multi-name")
@@ -156,12 +224,12 @@ func TestRunRename_TypeFilter(t *testing.T) {
 	withGlobalLibrary(t, globalDir)
 	stdout, _ := output.SetForTest(t)
 
-	renameCmd.Flags().Set("name", "Skills Only")
-	renameCmd.Flags().Set("type", "skills")
-	defer renameCmd.Flags().Set("name", "")
-	defer renameCmd.Flags().Set("type", "")
+	editCmd.Flags().Set("name", "Skills Only")
+	editCmd.Flags().Set("type", "skills")
+	defer editCmd.Flags().Set("name", "")
+	defer editCmd.Flags().Set("type", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"multi-name"})
+	err := editCmd.RunE(editCmd, []string{"multi-name"})
 	if err != nil {
 		t.Fatalf("expected no error with --type filter, got: %v", err)
 	}

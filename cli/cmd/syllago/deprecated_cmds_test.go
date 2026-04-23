@@ -18,20 +18,6 @@ func TestDeprecatedStubMessages(t *testing.T) {
 		wantMsg string
 	}{
 		{
-			name: "export stub prints install/convert redirect",
-			cmd: func() error {
-				return deprecatedExportCmd.RunE(deprecatedExportCmd, nil)
-			},
-			wantMsg: "syllago install",
-		},
-		{
-			name: "export stub mentions convert",
-			cmd: func() error {
-				return deprecatedExportCmd.RunE(deprecatedExportCmd, nil)
-			},
-			wantMsg: "syllago convert",
-		},
-		{
 			name: "promote stub prints share redirect",
 			cmd: func() error {
 				return deprecatedPromoteCmd.RunE(deprecatedPromoteCmd, nil)
@@ -74,7 +60,6 @@ func TestDeprecatedStubsAreHidden(t *testing.T) {
 		name string
 		cmd  *cobra.Command
 	}{
-		{"export", deprecatedExportCmd},
 		{"promote", deprecatedPromoteCmd},
 	}
 

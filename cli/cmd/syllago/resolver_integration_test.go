@@ -158,20 +158,20 @@ func TestSyncAndExport_ConfigPathOverrideRoutesToCustomPath(t *testing.T) {
 
 	_, _ = output.SetForTest(t)
 
-	syncAndExportCmd.Flags().Set("to", slug)
-	syncAndExportCmd.Flags().Set("type", "skills")
-	syncAndExportCmd.Flags().Set("name", "greeting")
-	syncAndExportCmd.Flags().Set("source", "shared")
+	syncInstallCmd.Flags().Set("to", slug)
+	syncInstallCmd.Flags().Set("type", "skills")
+	syncInstallCmd.Flags().Set("name", "greeting")
+	syncInstallCmd.Flags().Set("source", "shared")
 	t.Cleanup(func() {
-		syncAndExportCmd.Flags().Set("to", "")
-		syncAndExportCmd.Flags().Set("type", "")
-		syncAndExportCmd.Flags().Set("name", "")
-		syncAndExportCmd.Flags().Set("source", "local")
+		syncInstallCmd.Flags().Set("to", "")
+		syncInstallCmd.Flags().Set("type", "")
+		syncInstallCmd.Flags().Set("name", "")
+		syncInstallCmd.Flags().Set("source", "local")
 	})
 
-	err := syncAndExportCmd.RunE(syncAndExportCmd, []string{})
+	err := syncInstallCmd.RunE(syncInstallCmd, []string{})
 	if err != nil {
-		t.Fatalf("sync-and-export with config path override failed: %v", err)
+		t.Fatalf("sync-install with config path override failed: %v", err)
 	}
 
 	// Verify the skill was installed under the custom dir, not the default

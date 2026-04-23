@@ -22,12 +22,15 @@ import (
 
 var loadoutApplyCmd = &cobra.Command{
 	Use:   "apply [name]",
-	Short: "Apply a loadout",
-	Long: `Apply a loadout to configure the current project for Claude Code.
+	Short: "Preview or apply a loadout (default: preview; use --try or --keep to apply)",
+	Long: `Apply a loadout to configure the current project for one or more providers.
 
-Default mode (no flags): preview what would happen without making changes.
---try: apply temporarily; reverts automatically when the session ends.
---keep: apply permanently; run "syllago loadout remove" to undo.`,
+Running with no flags is always safe: it previews planned changes without
+modifying anything. Use --try or --keep to actually apply the loadout.
+
+--try:  apply temporarily; reverts automatically when the session ends.
+--keep: apply permanently; run "syllago loadout remove" to undo.
+--to:   target a specific provider (overrides the provider declared in the manifest).`,
 	Example: `  # Preview what a loadout would do
   syllago loadout apply my-loadout
 
@@ -46,7 +49,6 @@ Default mode (no flags): preview what would happen without making changes.
 func init() {
 	loadoutApplyCmd.Flags().Bool("try", false, "Apply temporarily; auto-revert on session end")
 	loadoutApplyCmd.Flags().Bool("keep", false, "Apply permanently")
-	loadoutApplyCmd.Flags().Bool("preview", false, "Dry run: show planned actions without applying")
 	loadoutApplyCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	loadoutApplyCmd.Flags().String("to", "", "Target provider (overrides manifest provider; defaults to claude-code if unset)")
 	loadoutApplyCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
@@ -133,7 +135,6 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	// Determine mode
 	tryMode, _ := cmd.Flags().GetBool("try")
 	keepMode, _ := cmd.Flags().GetBool("keep")
-	previewMode, _ := cmd.Flags().GetBool("preview")
 
 	mode := "preview"
 	if tryMode && keepMode {
@@ -143,8 +144,6 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		mode = "keep"
 	} else if tryMode {
 		mode = "try"
-	} else if previewMode {
-		mode = "preview"
 	}
 
 	// For try/keep modes, check for existing active snapshot

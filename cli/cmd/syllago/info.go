@@ -15,8 +15,8 @@ import (
 
 var infoCmd = &cobra.Command{
 	Use:   "info",
-	Short: "Show syllago capabilities",
-	Long:  "Machine-readable capability manifest. Useful for agents discovering syllago's features.",
+	Short: "Show machine-readable capability manifest",
+	Long:  "Outputs a structured summary of syllago's version, detected providers, registries, and supported content types. Useful for agents and CI scripts discovering syllago's features.",
 	Example: `  # Show capabilities summary
   syllago info
 
@@ -153,14 +153,14 @@ var infoProvidersCmd = &cobra.Command{
 	Use:   "providers [slug]",
 	Short: "List providers or show data quality for a specific slug",
 	Example: `  # List providers and their supported types
-  syllago info providers
+  syllago providers
 
   # JSON output
-  syllago info providers --json
+  syllago providers --json
 
   # Data quality summary for one provider
-  syllago info providers claude-code
-  syllago info providers claude-code --json`,
+  syllago providers claude-code
+  syllago providers claude-code --json`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {
@@ -240,7 +240,7 @@ func runInfoProvidersSlug(cmd *cobra.Command, args []string) error {
 var infoFormatsCmd = &cobra.Command{
 	Use:     "formats",
 	Short:   "List supported file formats",
-	Example: `  syllago info formats`,
+	Example: `  syllago formats`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type formatInfo struct {
 			Format    string   `json:"format"`
@@ -266,8 +266,7 @@ var infoFormatsCmd = &cobra.Command{
 }
 
 func init() {
-	infoCmd.AddCommand(infoProvidersCmd, infoFormatsCmd)
-	rootCmd.AddCommand(infoCmd)
+	rootCmd.AddCommand(infoCmd, infoProvidersCmd, infoFormatsCmd)
 }
 
 func providerSlugs() []string {

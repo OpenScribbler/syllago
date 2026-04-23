@@ -769,9 +769,9 @@ func TestEmitConvertOutput_Warnings(t *testing.T) {
 	}
 }
 
-// --- runRename (0% coverage) ---
+// --- runEdit (0% coverage) ---
 
-func TestRunRename_NotFound(t *testing.T) {
+func TestRunEdit_NotFound(t *testing.T) {
 	stdout, _ := output.SetForTest(t)
 	_ = stdout
 
@@ -779,10 +779,10 @@ func TestRunRename_NotFound(t *testing.T) {
 	catalog.GlobalContentDirOverride = t.TempDir()
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
 
-	renameCmd.Flags().Set("name", "New Name")
-	defer renameCmd.Flags().Set("name", "")
+	editCmd.Flags().Set("name", "New Name")
+	defer editCmd.Flags().Set("name", "")
 
-	err := renameCmd.RunE(renameCmd, []string{"nonexistent-item"})
+	err := editCmd.RunE(editCmd, []string{"nonexistent-item"})
 	if err == nil {
 		t.Fatal("expected error for item not found")
 	}
@@ -1122,7 +1122,6 @@ func setupLoadoutApplyRepo(t *testing.T, loadoutName, providerSlug string, refs 
 func resetLoadoutApplyFlags() {
 	loadoutApplyCmd.Flags().Set("try", "false")
 	loadoutApplyCmd.Flags().Set("keep", "false")
-	loadoutApplyCmd.Flags().Set("preview", "false")
 	loadoutApplyCmd.Flags().Set("base-dir", "")
 	loadoutApplyCmd.Flags().Set("to", "")
 	loadoutApplyCmd.Flags().Set("method", "symlink")
@@ -1231,7 +1230,7 @@ func TestRunLoadoutApply_PreviewHappyPath(t *testing.T) {
 	config.GlobalDirOverride = t.TempDir()
 	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
 
-	loadoutApplyCmd.Flags().Set("preview", "true")
+	// No flags needed: preview is the default mode when neither --try nor --keep is set.
 	defer resetLoadoutApplyFlags()
 
 	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"demo"}); err != nil {
@@ -1301,7 +1300,7 @@ func TestRunLoadoutApply_PreviewJSONOutput(t *testing.T) {
 	config.GlobalDirOverride = t.TempDir()
 	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
 
-	loadoutApplyCmd.Flags().Set("preview", "true")
+	// No flags needed: preview is the default mode when neither --try nor --keep is set.
 	defer resetLoadoutApplyFlags()
 
 	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"jdemo"}); err != nil {
@@ -1465,11 +1464,11 @@ func TestRunLoadoutCreate_EmptyNameErrors(t *testing.T) {
 	}
 }
 
-// --- runUpdateContent (0% coverage, stub) ---
+// --- runRefresh (0% coverage, stub) ---
 
-func TestRunUpdateContent_NotImplemented(t *testing.T) {
+func TestRunRefresh_NotImplemented(t *testing.T) {
 	output.SetForTest(t)
-	err := updateContentCmd.RunE(updateContentCmd, nil)
+	err := refreshCmd.RunE(refreshCmd, nil)
 	if err == nil {
 		t.Fatal("expected 'not yet implemented' error")
 	}
