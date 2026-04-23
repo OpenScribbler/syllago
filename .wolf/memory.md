@@ -3800,3 +3800,78 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 12:47 | Edited cli/internal/tui/add_wizard_view.go | 4→4 lines | ~52 |
+| 12:48 | Session end: 1 writes across 1 files (add_wizard_view.go) | 7 reads | ~26930 tok |
+| 12:49 | Session end: 1 writes across 1 files (add_wizard_view.go) | 25 reads | ~72296 tok |
+| 12:51 | Session end: 1 writes across 1 files (add_wizard_view.go) | 37 reads | ~88286 tok |
+
+## Session: 2026-04-23 12:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:56 | Edited cli/internal/tui/add_wizard.go | 9→9 lines | ~88 |
+| 12:57 | Edited cli/internal/tui/add_wizard.go | 9→9 lines | ~82 |
+| 12:57 | Session end: 2 writes across 1 files (add_wizard.go) | 1 reads | ~20608 tok |
+| 12:58 | Session end: 2 writes across 1 files (add_wizard.go) | 1 reads | ~20608 tok |
+| 13:05 | Edited cli/internal/tui/add_wizard.go | 8→7 lines | ~27 |
+| 13:05 | Edited cli/internal/tui/add_wizard.go | removed 8 lines | ~6 |
+| 13:05 | Edited cli/internal/tui/add_wizard.go | reduced (-6 lines) | ~82 |
+| 13:05 | Edited cli/internal/tui/add_wizard.go | modified clearTriageState() | ~106 |
+| 13:06 | Edited cli/internal/tui/add_wizard.go | reduced (-37 lines) | ~334 |
+| 13:06 | Edited cli/internal/tui/add_wizard.go | 17→14 lines | ~111 |
+| 13:06 | Edited cli/internal/tui/add_wizard.go | removed 15 lines | ~6 |
+| 13:06 | Edited cli/internal/tui/add_wizard.go | 3→2 lines | ~37 |
+| 13:07 | Edited cli/internal/tui/add_wizard_update.go | 15→13 lines | ~87 |
+| 13:07 | Edited cli/internal/tui/add_wizard_update.go | reduced (-12 lines) | ~101 |
+| 13:07 | Session end: 12 writes across 2 files (add_wizard.go, add_wizard_update.go) | 7 reads | ~54321 tok |
+| 13:07 | Edited cli/internal/tui/add_wizard_update.go | 5→3 lines | ~22 |
+| 13:07 | Edited cli/internal/tui/add_wizard_update.go | modified len() | ~490 |
+| 13:08 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~48 |
+| 13:08 | Edited cli/internal/tui/add_wizard_update.go | expanded (+15 lines) | ~507 |
+| 13:08 | Edited cli/internal/tui/add_wizard_update.go | reduced (-6 lines) | ~41 |
+| 13:09 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~377 |
+| 13:09 | Edited cli/internal/tui/add_wizard_view.go | 4→2 lines | ~15 |
+| 13:09 | Edited cli/internal/tui/add_wizard_view.go | reduced (-26 lines) | ~164 |
+| 13:09 | Edited cli/internal/tui/add_wizard_view.go | skip() → included() | ~65 |
+| 13:17 | Edited cli/internal/tui/golden_triage_test.go | 15→10 lines | ~73 |
+| 13:17 | Edited cli/internal/tui/golden_triage_test.go | "Triage: detected content" → "Discovery: found content" | ~20 |
+| 13:17 | Edited cli/internal/tui/golden_triage_test.go | 3→3 lines | ~53 |
+| 13:18 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestAddWizard_ValidateStep_TriageForward() | ~422 |
+| 13:18 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestAddWizard_ValidateStep_TriageEsc() | ~239 |
+| 13:18 | Edited cli/internal/tui/wizard_invariant_test.go | 5→2 lines | ~21 |
+| 13:18 | Edited cli/internal/tui/wizard_invariant_test.go | 9→7 lines | ~63 |
+| 13:18 | Edited cli/internal/tui/wizard_invariant_test.go | 11→9 lines | ~81 |
+| 13:19 | Edited cli/internal/tui/wizard_invariant_test.go | 18→13 lines | ~83 |
+| 13:19 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestAddWizard_StepForShellIndex() | ~320 |
+| 13:19 | Edited cli/internal/tui/golden_triage_test.go | 2→1 lines | ~23 |
+| 13:19 | Edited cli/internal/tui/golden_triage_test.go | inline fix | ~21 |
+| 13:19 | Edited cli/internal/tui/add_wizard.go | 2→1 lines | ~15 |
+| 13:19 | Edited cli/internal/tui/add_wizard_view.go | inline fix | ~24 |
+| 13:20 | Edited cli/internal/tui/add_wizard_update.go | — | ~0 |
+| 13:21 | Edited cli/internal/tui/add_wizard.go | 8→10 lines | ~116 |
+| 13:22 | Edited cli/internal/tui/add_wizard_update.go | 10→12 lines | ~115 |
+| 13:22 | Edited cli/internal/tui/add_wizard.go | expanded (+7 lines) | ~209 |
+| 13:23 | Edited cli/internal/tui/add_wizard_update.go | 12→16 lines | ~130 |
+| 13:24 | Edited cli/internal/tui/add_wizard_test.go | expanded (+8 lines) | ~150 |
+| 13:24 | Edited cli/internal/tui/add_wizard_test.go | 3→8 lines | ~90 |
+| 13:26 | Edited cli/internal/tui/add_wizard.go | — | ~0 |
+| 13:27 | Session end: 43 writes across 6 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, golden_triage_test.go, wizard_invariant_test.go) | 10 reads | ~75725 tok |
+| 13:38 | Session end: 43 writes across 6 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, golden_triage_test.go, wizard_invariant_test.go) | 10 reads | ~75725 tok |
+| 13:54 | Session end: 43 writes across 6 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, golden_triage_test.go, wizard_invariant_test.go) | 10 reads | ~75725 tok |
+| 14:04 | Session end: 43 writes across 6 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, golden_triage_test.go, wizard_invariant_test.go) | 10 reads | ~75725 tok |
+
+## Session: 2026-04-23 14:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:13 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~209 |
+| 14:13 | Edited cli/internal/tui/add_wizard.go | modified loadTriagePreview() | ~335 |
+| 14:13 | Edited cli/internal/tui/add_wizard.go | expanded (+11 lines) | ~293 |
+| 14:13 | Edited cli/internal/tui/add_wizard_update.go | expanded (+16 lines) | ~356 |
+| 14:13 | Edited cli/internal/tui/add_wizard_update.go | 7→7 lines | ~86 |
+| 14:14 | Session end: 5 writes across 2 files (add_wizard.go, add_wizard_update.go) | 5 reads | ~39296 tok |
+| 14:16 | Edited cli/internal/tui/add_wizard.go | 12→17 lines | ~156 |
+| 14:21 | Created cli/internal/tui/add_wizard_triage_preview_test.go | — | ~1892 |
+| 14:21 | Edited cli/internal/tui/add_wizard_triage_preview_test.go | 3→3 lines | ~22 |
+
+| 14:23 | Fixed 5 triage preview bugs: sourceDir derivation, hookData propagation, catalogItem preservation, discoverFromProvider ci.Path, TierHigh default | add_wizard.go, add_wizard_update.go | commit d4607d6 | ~4000 |
