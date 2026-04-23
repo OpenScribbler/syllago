@@ -32,7 +32,6 @@ const (
 	addStepSource addStep = iota
 	addStepType
 	addStepDiscovery
-	addStepTriage // conditional, between Discovery and Review
 	addStepReview
 	addStepExecute
 )
@@ -75,8 +74,10 @@ type addConfirmItem struct {
 	tier        analyzer.ConfidenceTier
 	displayName string
 	itemType    catalog.ContentType
-	path        string // primary file path (relative to source root)
-	sourceDir   string // absolute directory containing the item
+	path        string         // primary file path (relative to source root)
+	sourceDir   string         // absolute directory containing the item
+	status      add.ItemStatus // original item status (preserves StatusOutdated for conflict detection)
+	underlying  *add.DiscoveryItem
 }
 
 // --- Messages ---
@@ -228,8 +229,7 @@ type addWizardModel struct {
 	// Git source
 	gitTempDir string
 
-	// Triage step
-	hasTriageStep   bool
+	// Discovery step — triage-style list of all detected items (auto pre-selected, needs-review unchecked)
 	confirmItems    []addConfirmItem
 	confirmSelected map[int]bool
 	confirmCursor   int
@@ -278,7 +278,6 @@ func openAddWizard(
 		buttonCursor:  2, // default to [Back] (0=Add, 1=Rename, 2=Back, 3=Cancel)
 		renameModal:   newEditModal(),
 	}
-	// buildShellLabels reads preFilterType and hasTriageStep, so call after struct init
 	m.shell = newWizardShell("Add", m.buildShellLabels())
 
 	return m
@@ -313,13 +312,6 @@ func (m *addWizardModel) validateStep() {
 		}
 		if !m.discovering && len(m.selectedTypes()) == 0 {
 			panic("wizard invariant: addStepDiscovery entered without selected types")
-		}
-	case addStepTriage:
-		if !m.hasTriageStep {
-			panic("wizard invariant: addStepTriage entered without hasTriageStep")
-		}
-		if len(m.confirmItems) == 0 {
-			panic("wizard invariant: addStepTriage entered with empty confirmItems")
 		}
 	case addStepReview:
 		if len(m.discoveredItems) == 0 {
@@ -368,12 +360,9 @@ func (m *addWizardModel) stepHints() []string {
 		if m.discoveryErr != "" {
 			return append([]string{"r retry", "esc back"}, base...)
 		}
-		hints := []string{"↑/↓ navigate", "space toggle", "a all", "n none"}
-		if m.installedCount > 0 {
-			hints = append(hints, "h show/hide installed")
+		if len(m.confirmItems) == 0 {
+			return append([]string{"esc back"}, base...)
 		}
-		return append(append(hints, "enter next", "esc back"), base...)
-	case addStepTriage:
 		return append([]string{
 			"↑/↓ navigate", "space toggle", "a all", "n none",
 			"tab switch panes", "enter next", "esc back",
@@ -425,22 +414,15 @@ func (m *addWizardModel) selectedItems() []addDiscoveryItem {
 
 // buildShellLabels returns the correct step label slice for the current permutation.
 func (m *addWizardModel) buildShellLabels() []string {
-	if m.preFilterType != "" && m.hasTriageStep {
-		return []string{"Source", "Discovery", "Triage", "Review", "Execute"}
-	}
 	if m.preFilterType != "" {
 		return []string{"Source", "Discovery", "Review", "Execute"}
-	}
-	if m.hasTriageStep {
-		return []string{"Source", "Type", "Discovery", "Triage", "Review", "Execute"}
 	}
 	return []string{"Source", "Type", "Discovery", "Review", "Execute"}
 }
 
-// clearTriageState resets all triage step state. Call from goBackFromDiscovery()
-// and advanceFromSource() to prevent stale triage data surviving source changes.
+// clearTriageState resets all discovery/triage state. Call from goBackFromDiscovery()
+// and advanceFromSource() to prevent stale data surviving source changes.
 func (m *addWizardModel) clearTriageState() {
-	m.hasTriageStep = false
 	m.confirmItems = nil
 	m.confirmSelected = nil
 	m.confirmCursor = 0
@@ -448,15 +430,11 @@ func (m *addWizardModel) clearTriageState() {
 	m.confirmPreview = previewModel{}
 	m.confirmFocus = triageZoneItems
 	m.maxStep = addStepDiscovery
-	m.shell.SetSteps(m.buildShellLabels())
-	m.updateMaxStep()
 }
 
-// shellIndexForStep maps an addStep to the wizard shell breadcrumb index,
-// accounting for all 4 permutations of Type and Triage step inclusion.
+// shellIndexForStep maps an addStep to the wizard shell breadcrumb index.
 func (m *addWizardModel) shellIndexForStep(s addStep) int {
 	hasType := m.preFilterType == ""
-	has := m.hasTriageStep
 
 	switch s {
 	case addStepSource:
@@ -471,27 +449,13 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 			return 2
 		}
 		return 1
-	case addStepTriage:
-		if !has {
-			panic("shellIndexForStep: addStepTriage in -Triage permutation")
-		}
+	case addStepReview:
 		if hasType {
 			return 3
 		}
 		return 2
-	case addStepReview:
-		if hasType && has {
-			return 4
-		}
-		if hasType || has {
-			return 3
-		}
-		return 2
 	case addStepExecute:
-		if hasType && has {
-			return 5
-		}
-		if hasType || has {
+		if hasType {
 			return 4
 		}
 		return 3
@@ -502,14 +466,19 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 // stepForShellIndex is the inverse of shellIndexForStep.
 // Used by breadcrumb click handler to map shell index → step enum.
 func (m *addWizardModel) stepForShellIndex(idx int) addStep {
-	hasType := m.preFilterType == ""
-	hasTriage := m.hasTriageStep
-
-	switch {
-	case hasType && hasTriage:
-		// Source(0) Type(1) Discovery(2) Triage(3) Review(4) Execute(5)
-		return addStep(idx) // direct mapping
-	case hasType && !hasTriage:
+	if m.preFilterType != "" {
+		// Source(0) Discovery(1) Review(2) Execute(3)
+		switch idx {
+		case 0:
+			return addStepSource
+		case 1:
+			return addStepDiscovery
+		case 2:
+			return addStepReview
+		case 3:
+			return addStepExecute
+		}
+	} else {
 		// Source(0) Type(1) Discovery(2) Review(3) Execute(4)
 		switch idx {
 		case 0:
@@ -521,32 +490,6 @@ func (m *addWizardModel) stepForShellIndex(idx int) addStep {
 		case 3:
 			return addStepReview
 		case 4:
-			return addStepExecute
-		}
-	case !hasType && hasTriage:
-		// Source(0) Discovery(1) Triage(2) Review(3) Execute(4)
-		switch idx {
-		case 0:
-			return addStepSource
-		case 1:
-			return addStepDiscovery
-		case 2:
-			return addStepTriage
-		case 3:
-			return addStepReview
-		case 4:
-			return addStepExecute
-		}
-	default:
-		// -Type -Triage: Source(0) Discovery(1) Review(2) Execute(3)
-		switch idx {
-		case 0:
-			return addStepSource
-		case 1:
-			return addStepDiscovery
-		case 2:
-			return addStepReview
-		case 3:
 			return addStepExecute
 		}
 	}
@@ -642,20 +585,6 @@ func (m *addWizardModel) goBackFromDiscovery() {
 		m.step = addStepType
 		m.shell.SetActive(1)
 	}
-}
-
-// enterTriage transitions to the Triage step. Items are sorted by content type
-// so the grouped display in renderTriageItems matches the model's index order.
-func (m *addWizardModel) enterTriage() {
-	m.step = addStepTriage
-	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-	m.confirmCursor = 0
-	m.confirmOffset = 0
-	m.confirmFocus = triageZoneItems
-	m.confirmPreview = newPreviewModel()
-	m.updateMaxStep()
-	m.confirmItems, m.confirmSelected = sortConfirmItemsByType(m.confirmItems, m.confirmSelected)
-	m.loadTriagePreview()
 }
 
 // adjustTriageOffset ensures the triage cursor stays in the visible window.
@@ -777,24 +706,31 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 		if !m.confirmSelected[i] {
 			continue
 		}
+		status := item.status
+		if status == 0 {
+			status = add.StatusNew
+		}
 		di := addDiscoveryItem{
 			name:            item.displayName,
 			displayName:     item.displayName,
 			itemType:        item.itemType,
 			path:            filepath.Join(item.sourceDir, item.path),
 			sourceDir:       item.sourceDir,
-			status:          add.StatusNew,
+			status:          status,
 			detectionSource: "content-signal",
 			tier:            item.tier,
 		}
-		underlying := &add.DiscoveryItem{
-			Name:      item.displayName,
-			Type:      item.itemType,
-			Path:      filepath.Join(item.sourceDir, item.path),
-			SourceDir: item.sourceDir,
-			Status:    add.StatusNew,
+		if item.underlying != nil {
+			di.underlying = item.underlying
+		} else {
+			di.underlying = &add.DiscoveryItem{
+				Name:      item.displayName,
+				Type:      item.itemType,
+				Path:      filepath.Join(item.sourceDir, item.path),
+				SourceDir: item.sourceDir,
+				Status:    status,
+			}
 		}
-		di.underlying = underlying
 		if item.detected != nil {
 			di.confidence = item.detected.Confidence
 		}

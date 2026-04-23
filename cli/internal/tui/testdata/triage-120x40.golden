@@ -1,8 +1,8 @@
 ╭───Add ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│  [1 Source]  [2 Type]  [3 Discovery]  [4 Triage]  [5 Review]  [6 Execute]                                            │
+│  [1 Source]  [2 Type]  [3 Discovery]  [4 Review]  [5 Execute]                                                        │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-  Triage: detected content                                                                          Back      Next
-  Include items to add them, or skip (skipped items reappear next time you add from this source).
+  Discovery: found content                                                                          Back      Next
+  Auto-detected items are pre-included (✓). Review and toggle any item, then click Next.
   Match confidence — ●High = reliable   ●Med = possible   ●Low = uncertain
 ╭ Items ───────────────────────────┬ Preview ────────────────────────────────────────────────────────────────────────╮
 │  ─ Skills ────────────────────────│  Select an item to preview                                                       │

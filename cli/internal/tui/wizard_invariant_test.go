@@ -484,7 +484,7 @@ func makeTriageItems() []addConfirmItem {
 	}
 }
 
-// TestAddWizard_ValidateStep_TriageForward walks through all 6 steps (+Type +Triage)
+// TestAddWizard_ValidateStep_TriageForward walks through all 5 steps (+Type)
 // without triggering any validateStep panics.
 func TestAddWizard_ValidateStep_TriageForward(t *testing.T) {
 	t.Parallel()
@@ -512,43 +512,33 @@ func TestAddWizard_ValidateStep_TriageForward(t *testing.T) {
 	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 	m.validateStep()
 
-	// Activate triage so shellIndexForStep and validateStep reflect the 6-step path
+	// Discovery done: load confirm items (unified triage-in-discovery)
 	m.discovering = false
-	m.hasTriageStep = true
 	m.confirmItems = makeTriageItems()
-	m.confirmSelected = map[int]bool{0: true} // pre-check high-confidence item
-	m.shell.SetSteps(m.buildShellLabels())
-
-	// Step 3: Triage — hasTriageStep=true, confirmItems non-empty
-	m.step = addStepTriage
-	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-	m.validateStep()
+	m.confirmSelected = map[int]bool{0: true}
 
 	// Merge selected confirm items into discovery before Review
-	m.discoveredItems = []addDiscoveryItem{
-		{name: "existing-rule", itemType: catalog.Rules, status: add.StatusNew,
-			underlying: &add.DiscoveryItem{Name: "existing-rule", Type: catalog.Rules}},
-	}
-	m.actionableCount = 1
+	m.discoveredItems = nil
+	m.actionableCount = 0
 	m.installedCount = 0
-	m.preMergeActionableCount = 1
+	m.preMergeActionableCount = 0
 	m.preMergeInstalledCount = 0
 	m.mergeConfirmIntoDiscovery()
 
-	// Step 4: Review — discoveredItems + selectedItems non-empty
+	// Step 3: Review — discoveredItems + selectedItems non-empty
 	m.step = addStepReview
 	m.shell.SetActive(m.shellIndexForStep(addStepReview))
 	m.validateStep()
 
-	// Step 5: Execute — selected items + acknowledged
+	// Step 4: Execute — selected items + acknowledged
 	m.reviewAcknowledged = true
 	m.step = addStepExecute
 	m.shell.SetActive(m.shellIndexForStep(addStepExecute))
 	m.validateStep()
 }
 
-// TestAddWizard_ValidateStep_TriageEsc verifies that Esc from triage goes back to
-// Discovery without panicking.
+// TestAddWizard_ValidateStep_TriageEsc verifies that Esc from the Discovery step
+// (with confirm items loaded) goes back to Type without panicking.
 func TestAddWizard_ValidateStep_TriageEsc(t *testing.T) {
 	t.Parallel()
 
@@ -557,23 +547,21 @@ func TestAddWizard_ValidateStep_TriageEsc(t *testing.T) {
 		nil, nil, "/tmp", "/tmp", "",
 	)
 
-	// Put wizard in triage step with required state
+	// Set up Discovery step with confirm items loaded (triage-in-discovery state)
 	m.source = addSourceLocal
 	m.typeChecks = m.buildTypeCheckList()
-	m.hasTriageStep = true
 	m.confirmItems = makeTriageItems()
 	m.confirmSelected = map[int]bool{}
-	m.shell.SetSteps(m.buildShellLabels())
 
-	m.step = addStepTriage
-	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-	m.validateStep() // should not panic at triage
-
-	// Simulate Esc: go back to Discovery
 	m.step = addStepDiscovery
 	m.discovering = false
 	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 	m.validateStep() // should not panic at discovery
+
+	// Simulate Esc: go back to Type
+	m.step = addStepType
+	m.shell.SetActive(m.shellIndexForStep(addStepType))
+	m.validateStep() // should not panic at type
 }
 
 // TestAddWizard_ValidateStep_SkipTriageWhenEmpty verifies that if discovery returns
@@ -592,10 +580,7 @@ func TestAddWizard_ValidateStep_SkipTriageWhenEmpty(t *testing.T) {
 	}
 	m.discoveryList = m.buildDiscoveryList()
 
-	// No triage step — hasTriageStep stays false, confirmItems stays nil
-	if m.hasTriageStep {
-		t.Fatal("expected hasTriageStep=false after open")
-	}
+	// No confirm items — confirmItems stays nil
 	if len(m.confirmItems) != 0 {
 		t.Fatalf("expected empty confirmItems, got %d", len(m.confirmItems))
 	}
@@ -653,11 +638,9 @@ func TestAddWizard_MergeIdempotency(t *testing.T) {
 
 	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
 	m.source = addSourceLocal
-	m.hasTriageStep = true
 	m.confirmItems = makeTriageItems()
 	// Select both confirm items
 	m.confirmSelected = map[int]bool{0: true, 1: true}
-	m.shell.SetSteps(m.buildShellLabels())
 
 	// Seed with two actionable items
 	m.discoveredItems = []addDiscoveryItem{
@@ -703,7 +686,6 @@ func TestAddWizard_MergePreservesLayoutWithInstalled(t *testing.T) {
 
 	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
 	m.source = addSourceLocal
-	m.hasTriageStep = true
 
 	// One confirm item selected
 	m.confirmItems = []addConfirmItem{
@@ -711,7 +693,6 @@ func TestAddWizard_MergePreservesLayoutWithInstalled(t *testing.T) {
 			path: "rules/new.md", sourceDir: "/tmp/src"},
 	}
 	m.confirmSelected = map[int]bool{0: true}
-	m.shell.SetSteps(m.buildShellLabels())
 
 	// Seed: 1 actionable + 1 installed. This is the layout that triggered the
 	// original panic — installedCount>0 with showInstalled=false.
@@ -768,23 +749,18 @@ func TestAddWizard_ClearTriageState(t *testing.T) {
 	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
 	m.source = addSourceLocal
 
-	// Activate triage
-	m.hasTriageStep = true
+	// Load confirm state
 	m.confirmItems = makeTriageItems()
 	m.confirmSelected = map[int]bool{0: true}
 	m.confirmCursor = 1
 	m.confirmOffset = 1
 	m.confirmFocus = triageZonePreview
-	m.shell.SetSteps(m.buildShellLabels())
-	m.maxStep = addStepTriage
+	m.maxStep = addStepDiscovery
 
 	// Clear
 	m.clearTriageState()
 
 	// Verify all triage fields are reset
-	if m.hasTriageStep {
-		t.Error("expected hasTriageStep=false after clear")
-	}
 	if m.confirmItems != nil {
 		t.Errorf("expected confirmItems=nil after clear, got %v", m.confirmItems)
 	}
@@ -814,7 +790,7 @@ func TestAddWizard_ClearTriageState(t *testing.T) {
 
 // --- stepForShellIndex table-driven tests (Task 9.2) ---
 
-// TestAddWizard_StepForShellIndex covers all 4 permutations (±Type × ±Triage)
+// TestAddWizard_StepForShellIndex covers both permutations (±Type)
 // across all valid shell indices.
 func TestAddWizard_StepForShellIndex(t *testing.T) {
 	t.Parallel()
@@ -822,37 +798,21 @@ func TestAddWizard_StepForShellIndex(t *testing.T) {
 	tests := []struct {
 		name          string
 		preFilterType catalog.ContentType // non-empty = -Type (Type step skipped)
-		hasTriageStep bool
 		idx           int
 		want          addStep
 	}{
-		// +Type +Triage: Source(0) Type(1) Discovery(2) Triage(3) Review(4) Execute(5)
-		{"+Type+Triage idx=0", "", true, 0, addStepSource},
-		{"+Type+Triage idx=1", "", true, 1, addStepType},
-		{"+Type+Triage idx=2", "", true, 2, addStepDiscovery},
-		{"+Type+Triage idx=3", "", true, 3, addStepTriage},
-		{"+Type+Triage idx=4", "", true, 4, addStepReview},
-		{"+Type+Triage idx=5", "", true, 5, addStepExecute},
+		// +Type: Source(0) Type(1) Discovery(2) Review(3) Execute(4)
+		{"+Type idx=0", "", 0, addStepSource},
+		{"+Type idx=1", "", 1, addStepType},
+		{"+Type idx=2", "", 2, addStepDiscovery},
+		{"+Type idx=3", "", 3, addStepReview},
+		{"+Type idx=4", "", 4, addStepExecute},
 
-		// +Type -Triage: Source(0) Type(1) Discovery(2) Review(3) Execute(4)
-		{"+Type-Triage idx=0", "", false, 0, addStepSource},
-		{"+Type-Triage idx=1", "", false, 1, addStepType},
-		{"+Type-Triage idx=2", "", false, 2, addStepDiscovery},
-		{"+Type-Triage idx=3", "", false, 3, addStepReview},
-		{"+Type-Triage idx=4", "", false, 4, addStepExecute},
-
-		// -Type +Triage: Source(0) Discovery(1) Triage(2) Review(3) Execute(4)
-		{"-Type+Triage idx=0", catalog.Rules, true, 0, addStepSource},
-		{"-Type+Triage idx=1", catalog.Rules, true, 1, addStepDiscovery},
-		{"-Type+Triage idx=2", catalog.Rules, true, 2, addStepTriage},
-		{"-Type+Triage idx=3", catalog.Rules, true, 3, addStepReview},
-		{"-Type+Triage idx=4", catalog.Rules, true, 4, addStepExecute},
-
-		// -Type -Triage: Source(0) Discovery(1) Review(2) Execute(3)
-		{"-Type-Triage idx=0", catalog.Rules, false, 0, addStepSource},
-		{"-Type-Triage idx=1", catalog.Rules, false, 1, addStepDiscovery},
-		{"-Type-Triage idx=2", catalog.Rules, false, 2, addStepReview},
-		{"-Type-Triage idx=3", catalog.Rules, false, 3, addStepExecute},
+		// -Type: Source(0) Discovery(1) Review(2) Execute(3)
+		{"-Type idx=0", catalog.Rules, 0, addStepSource},
+		{"-Type idx=1", catalog.Rules, 1, addStepDiscovery},
+		{"-Type idx=2", catalog.Rules, 2, addStepReview},
+		{"-Type idx=3", catalog.Rules, 3, addStepExecute},
 	}
 
 	for _, tc := range tests {
@@ -860,7 +820,6 @@ func TestAddWizard_StepForShellIndex(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", tc.preFilterType)
-			m.hasTriageStep = tc.hasTriageStep
 			got := m.stepForShellIndex(tc.idx)
 			if got != tc.want {
 				t.Errorf("stepForShellIndex(%d) = %d, want %d", tc.idx, got, tc.want)

@@ -406,14 +406,22 @@ func TestAddWizard_Discovery_ResultsPopulate(t *testing.T) {
 	if m.discovering {
 		t.Fatal("expected discovering=false after results")
 	}
-	if len(m.discoveredItems) != 3 {
-		t.Fatalf("expected 3 discovered items, got %d", len(m.discoveredItems))
+	// Actionable items land in confirmItems (pre-selected); installed items go to discoveredItems baseline
+	if len(m.confirmItems) != 2 {
+		t.Fatalf("expected 2 confirm items (actionable), got %d", len(m.confirmItems))
 	}
-
-	// Check pre-selection: New+Outdated checked, InLibrary unchecked
-	sel := m.discoveryList.SelectedIndices()
-	if len(sel) != 2 {
-		t.Fatalf("expected 2 pre-selected, got %d: %v", len(sel), sel)
+	if m.installedCount != 1 {
+		t.Fatalf("expected installedCount=1, got %d", m.installedCount)
+	}
+	// Both actionable items should be pre-selected
+	selectedCount := 0
+	for _, v := range m.confirmSelected {
+		if v {
+			selectedCount++
+		}
+	}
+	if selectedCount != 2 {
+		t.Fatalf("expected 2 pre-selected confirm items, got %d", selectedCount)
 	}
 }
 
@@ -829,8 +837,13 @@ func TestAddWizard_View_DiscoveryResults(t *testing.T) {
 	m = injectDiscoveryResults(t, m, testDiscoveryItems())
 
 	view := m.View()
-	assertContains(t, view, "Found 2 new items")
-	assertContains(t, view, "2 selected")
+	// Discovery step now uses triage-style split-pane view
+	assertContains(t, view, "Discovery: found content")
+	assertContains(t, view, "alpha-rule")
+	assertContains(t, view, "beta-skill")
+	// Both items are auto-detected and pre-selected
+	assertContains(t, view, "✓ alpha-rule")
+	assertContains(t, view, "✓ beta-skill")
 }
 
 func TestAddWizard_View_ReviewStep(t *testing.T) {
