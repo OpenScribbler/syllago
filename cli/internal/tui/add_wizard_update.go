@@ -889,14 +889,30 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 		if name == "" {
 			name = di.name
 		}
+		// Derive sourceDir from the path when the discovery item didn't carry one
+		// (file items from nativeItemsToDiscovery leave SourceDir empty).
+		sourceDir := di.sourceDir
+		if sourceDir == "" && di.path != "" {
+			sourceDir = filepath.Dir(di.path)
+		}
+		// Pattern-matched items (catalog scan, native provider, hooks) don't
+		// carry a tier because they were found via known layout, not the
+		// content-signal analyzer.  Default to TierHigh — reliable detection.
+		tier := di.tier
+		if tier == "" && di.detectionSource != "content-signal" {
+			tier = analyzer.TierHigh
+		}
 		autoConfirm[i] = addConfirmItem{
-			displayName: name,
-			itemType:    di.itemType,
-			path:        filepath.Base(di.path),
-			sourceDir:   di.sourceDir,
-			tier:        di.tier,
-			status:      di.status,     // preserve StatusOutdated for conflict detection
-			underlying:  di.underlying, // preserve for merge fidelity
+			displayName:   name,
+			itemType:      di.itemType,
+			path:          filepath.Base(di.path),
+			sourceDir:     sourceDir,
+			tier:          tier,
+			status:        di.status,     // preserve StatusOutdated for conflict detection
+			underlying:    di.underlying, // preserve for merge fidelity
+			hookData:      di.hookData,   // needed for triage preview + drill-in
+			hookSourceDir: di.hookSourceDir,
+			catalogItem:   di.catalogItem, // original item with correct Files list
 		}
 	}
 

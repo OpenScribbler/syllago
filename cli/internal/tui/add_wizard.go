@@ -78,6 +78,12 @@ type addConfirmItem struct {
 	sourceDir   string         // absolute directory containing the item
 	status      add.ItemStatus // original item status (preserves StatusOutdated for conflict detection)
 	underlying  *add.DiscoveryItem
+	catalogItem *catalog.ContentItem // original catalog item when available
+
+	// Hook-specific: mirrors addDiscoveryItem fields so triage preview and
+	// mergeConfirmIntoDiscovery can reconstruct a full hook discovery item.
+	hookData      *converter.HookData
+	hookSourceDir string
 }
 
 // --- Messages ---
@@ -664,6 +670,23 @@ func (m *addWizardModel) loadTriagePreview() {
 		return
 	}
 	item := m.confirmItems[m.confirmCursor]
+
+	// Hooks use virtual hook.json rendered from hookData, not a real file path.
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		di := addDiscoveryItem{
+			itemType:      catalog.Hooks,
+			hookData:      item.hookData,
+			hookSourceDir: item.hookSourceDir,
+		}
+		content, err := readHookPreviewContent(di, "hook.json")
+		m.confirmPreview = newPreviewModel()
+		if err == nil {
+			m.confirmPreview.lines = strings.Split(content, "\n")
+			m.confirmPreview.fileName = "hook.json"
+		}
+		return
+	}
+
 	if item.sourceDir == "" || item.path == "" {
 		m.confirmPreview = newPreviewModel()
 		return
@@ -735,7 +758,18 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.confidence = item.detected.Confidence
 		}
 
-		if di.sourceDir != "" {
+		// Preserve hook data so Review drill-in can render virtual hook.json.
+		if item.hookData != nil {
+			di.hookData = item.hookData
+			di.hookSourceDir = item.hookSourceDir
+		}
+
+		// Prefer the original catalogItem (has correct Files list) over a
+		// reconstructed one; fall back to reconstruction when not available.
+		if item.catalogItem != nil {
+			di.catalogItem = item.catalogItem
+			di.risks = catalog.RiskIndicators(*item.catalogItem)
+		} else if di.sourceDir != "" {
 			ci := catalog.ContentItem{
 				Name:  item.displayName,
 				Type:  item.itemType,
@@ -1471,16 +1505,21 @@ func discoverFromProvider(
 			underlying: &d,
 		}
 
-		// Build a ContentItem for risk scanning and drill-in preview
+		// Build a ContentItem for risk scanning and drill-in preview.
+		// ci.Path must be a directory so ReadFileContent(ci.Path, filename)
+		// resolves correctly. For directory-based items use SourceDir; for
+		// single-file items use the file's parent directory.
 		ci := catalog.ContentItem{
 			Name: d.Name,
 			Type: d.Type,
-			Path: d.Path,
 		}
 		if d.SourceDir != "" {
 			ci.Path = d.SourceDir
+			ci.Files = scanDrillInFiles(d.SourceDir)
+		} else {
+			ci.Path = filepath.Dir(d.Path)
+			ci.Files = []string{filepath.Base(d.Path)}
 		}
-		ci.Files = scanDrillInFiles(ci.Path)
 		item.risks = catalog.RiskIndicators(ci)
 		item.catalogItem = &ci
 
