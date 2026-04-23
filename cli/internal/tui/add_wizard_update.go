@@ -771,7 +771,11 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 		m.goBackFromDiscovery()
 		return m, nil
 
-	case tea.KeyRight, tea.KeyEnter:
+	case tea.KeyRight:
+		m.confirmFocus = triageZonePreview
+		return m, nil
+
+	case tea.KeyEnter:
 		m.mergeConfirmIntoDiscovery()
 		if len(m.selectedItems()) > 0 {
 			m.enterReview()
@@ -814,6 +818,27 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 			if m.confirmPreview.offset < maxOff {
 				m.confirmPreview.offset++
 			}
+		}
+		return m, nil
+
+	case tea.KeyLeft:
+		if m.confirmFocus != triageZoneItems {
+			m.confirmFocus = triageZoneItems
+		}
+		return m, nil
+
+	case tea.KeyPgUp:
+		if m.confirmFocus == triageZonePreview {
+			pageSize := 10
+			m.confirmPreview.offset = max(0, m.confirmPreview.offset-pageSize)
+		}
+		return m, nil
+
+	case tea.KeyPgDown:
+		if m.confirmFocus == triageZonePreview {
+			pageSize := 10
+			maxOff := max(0, len(m.confirmPreview.lines)-1)
+			m.confirmPreview.offset = min(maxOff, m.confirmPreview.offset+pageSize)
 		}
 		return m, nil
 
@@ -910,6 +935,7 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			tier:          tier,
 			status:        di.status,     // preserve StatusOutdated for conflict detection
 			underlying:    di.underlying, // preserve for merge fidelity
+			risks:         di.risks,      // pre-computed risks (hooks carry command/URL risks)
 			hookData:      di.hookData,   // needed for triage preview + drill-in
 			hookSourceDir: di.hookSourceDir,
 			catalogItem:   di.catalogItem, // original item with correct Files list
