@@ -72,8 +72,6 @@ const (
 
 // --- Type aliases and shims so package main tests compile unchanged ---
 
-type checkStatus = doctor.CheckStatus
-
 const (
 	checkOK   = doctor.CheckOK
 	checkWarn = doctor.CheckWarn
