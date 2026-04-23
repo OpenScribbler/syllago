@@ -80,6 +80,10 @@ type addConfirmItem struct {
 	underlying  *add.DiscoveryItem
 	catalogItem *catalog.ContentItem // original catalog item when available
 
+	// Risk indicators pre-computed during discovery. For hooks these come from
+	// the hook command/URL analysis in hooksFromSettingsFile, not file content.
+	risks []catalog.RiskIndicator
+
 	// Hook-specific: mirrors addDiscoveryItem fields so triage preview and
 	// mergeConfirmIntoDiscovery can reconstruct a full hook discovery item.
 	hookData      *converter.HookData
@@ -764,11 +768,19 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.hookSourceDir = item.hookSourceDir
 		}
 
+		// Prefer pre-computed risks from discovery (hooks carry command/URL risks
+		// that aren't derivable from file content alone). Fall back to deriving
+		// from the catalogItem or reconstructed ContentItem when none are cached.
+		if len(item.risks) > 0 {
+			di.risks = item.risks
+		}
 		// Prefer the original catalogItem (has correct Files list) over a
 		// reconstructed one; fall back to reconstruction when not available.
 		if item.catalogItem != nil {
 			di.catalogItem = item.catalogItem
-			di.risks = catalog.RiskIndicators(*item.catalogItem)
+			if len(di.risks) == 0 {
+				di.risks = catalog.RiskIndicators(*item.catalogItem)
+			}
 		} else if di.sourceDir != "" {
 			ci := catalog.ContentItem{
 				Name:  item.displayName,
@@ -777,7 +789,9 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 				Files: []string{item.path},
 			}
 			di.catalogItem = &ci
-			di.risks = catalog.RiskIndicators(ci)
+			if len(di.risks) == 0 {
+				di.risks = catalog.RiskIndicators(ci)
+			}
 		}
 		merged = append(merged, di)
 	}
@@ -1483,10 +1497,25 @@ func discoverFromProvider(
 		typeSet[t] = true
 	}
 
-	// File-based discovery (rules, skills, agents, commands)
+	// File-based discovery (rules, skills, agents, commands).
+	// Run discovery from both the project root and the user's home directory so
+	// that global provider installs (e.g. ~/.claude/agents/) are visible even
+	// when the TUI is launched from a project directory that has no local copy.
 	discovered, err := add.DiscoverFromProvider(prov, projectRoot, resolver, contentRoot)
 	if err != nil {
 		return nil, nil, err
+	}
+	if homeDir, hdErr := os.UserHomeDir(); hdErr == nil && homeDir != projectRoot {
+		globalDiscovered, _ := add.DiscoverFromProvider(prov, homeDir, nil, contentRoot)
+		existingKeys := make(map[string]bool, len(discovered))
+		for _, d := range discovered {
+			existingKeys[string(d.Type)+"/"+d.Name] = true
+		}
+		for _, d := range globalDiscovered {
+			if !existingKeys[string(d.Type)+"/"+d.Name] {
+				discovered = append(discovered, d)
+			}
+		}
 	}
 
 	var items []addDiscoveryItem
