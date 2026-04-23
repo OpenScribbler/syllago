@@ -125,15 +125,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Type == tea.KeyCtrlC {
 				return a, tea.Quit
 			}
-			// Help overlay always available during wizard
-			if msg.String() == keyHelp {
-				a.help.Toggle()
-				return a, nil
-			}
-			// Suppress group/tab navigation during wizard — user must Esc out first
-			switch msg.String() {
-			case keyGroup1, keyGroup2, keyGroup3:
-				return a, nil
+			// When a wizard has a text field focused (e.g., rename modal,
+			// source-step path input), forward every key including digits —
+			// the app's group-key hijack (1/2/3) must not eat typed characters.
+			capturing := a.wizardMode == wizardAdd && a.addWizard != nil && a.addWizard.CapturingTextInput()
+			if !capturing {
+				// Help overlay always available during wizard
+				if msg.String() == keyHelp {
+					a.help.Toggle()
+					return a, nil
+				}
+				// Suppress group/tab navigation during wizard — user must Esc out first
+				switch msg.String() {
+				case keyGroup1, keyGroup2, keyGroup3:
+					return a, nil
+				}
 			}
 			return a.routeToWizard(msg)
 		}
@@ -396,6 +402,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, cmd
 
 	case editSavedMsg:
+		// Wizard-scoped rename keeps state in the wizard; library edit writes to disk.
+		if msg.context == "wizard_rename" && a.addWizard != nil {
+			a.addWizard.handleRenameSaved(msg)
+			return a, nil
+		}
 		return a.handleEditSaved(msg)
 
 	case editCancelledMsg:

@@ -42,8 +42,20 @@ func TestExtractScriptRef(t *testing.T) {
 		{"bun run tilde", "bun run ~/scripts/test.ts", "~/scripts/test.ts"},
 		{"bun run relative", "bun run ./test.ts", "./test.ts"},
 		{"bun run with args", "bun run /scripts/test.ts --flag", "/scripts/test.ts"},
-		{"bun run envvar", "bun run $PAI_DIR/hooks/foo.ts", ""},
+		{"bun run envvar", "bun run $PAI_DIR/hooks/foo.ts", "$PAI_DIR/hooks/foo.ts"},
 		{"bun direct", "bun /home/user/scripts/test.ts", "/home/user/scripts/test.ts"},
+
+		// Env-var prefixed paths — extracted verbatim; callers expand.
+		{"bash dollar var", "bash $PAI_DIR/hooks/lint.sh", "$PAI_DIR/hooks/lint.sh"},
+		{"bash braced var", "bash ${PAI_DIR}/hooks/lint.sh", "${PAI_DIR}/hooks/lint.sh"},
+		{"direct dollar var", "$PAI_DIR/hooks/lint.sh --flag", "$PAI_DIR/hooks/lint.sh"},
+		{"dollar with args", "bash $HOOK_DIR/check.sh --strict", "$HOOK_DIR/check.sh"},
+
+		// Quoted path (common for env-var expansion that may contain spaces).
+		{"double-quoted dollar var", `node "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"`, "$CLAUDE_PROJECT_DIR/.wolf/hooks/pre-write.js"},
+		{"double-quoted braced var", `bash "${PAI_DIR}/hooks/lint.sh"`, "${PAI_DIR}/hooks/lint.sh"},
+		{"double-quoted absolute", `bash "/opt/hooks/check.sh"`, "/opt/hooks/check.sh"},
+		{"single-quoted dollar var", `node '$PAI_DIR/hooks/lint.js'`, "$PAI_DIR/hooks/lint.js"},
 
 		// Interpreter -c (inline) — no script
 		{"bash -c", `bash -c "echo hello"`, ""},

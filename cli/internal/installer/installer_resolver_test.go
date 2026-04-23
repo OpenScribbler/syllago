@@ -210,7 +210,7 @@ func TestCheckStatusWithResolver_MergeTypeBypassesResolver(t *testing.T) {
 	// Create a valid hook file so checkHookStatus can parse it
 	hookDir := filepath.Join(repoRoot, "content", "hooks", "test-prov", "my-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PostToolUse","matcher":".*","hooks":[{"type":"command","command":"echo test"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":".*","handler":{"type":"command","command":"echo test"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -418,7 +418,7 @@ func TestInstallWithResolver_MergeTypeBypassesResolver(t *testing.T) {
 	// Create a valid hook file
 	hookDir := filepath.Join(repoRoot, "content", "hooks", "test-prov", "my-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PostToolUse","matcher":".*","hooks":[{"type":"command","command":"echo test"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":".*","handler":{"type":"command","command":"echo test"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{

@@ -35,9 +35,14 @@ func setupTestEnv(t *testing.T) (homeDir string, projectRoot string, manifest *M
 	hookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "my-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{
-  "event": "PostToolUse",
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo test"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": ".*",
+      "handler": {"type": "command", "command": "echo test"}
+    }
+  ]
 }`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 

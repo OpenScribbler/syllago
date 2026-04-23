@@ -1,0 +1,12 @@
+format_version: 1
+id: daa5c06e-bb2b-41ad-b3e1-292187b88032
+name: before-compact-develop-precompact
+type: hooks
+bundled_scripts:
+    - original_path: /home/hhewett/.config/pai/hooks/develop-precompact.ts
+      filename: develop-precompact.ts
+source_provider: claude-code
+source_format: json
+source_type: provider
+added_at: 2026-04-23T17:26:30.158469539Z
+source_scope: global

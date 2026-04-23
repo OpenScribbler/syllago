@@ -56,6 +56,13 @@ type DiscoveryItem struct {
 	Confidence      float64
 	DetectionSource string
 	DetectionMethod string
+
+	// DisplayName, when non-empty, overrides Name in the written .syllago.yaml
+	// metadata (but never the on-disk directory layout, which is keyed by Name
+	// for identity). Used by the TUI review-step rename and the CLI --name flag.
+	DisplayName string
+	// Description, when non-empty, is written to .syllago.yaml metadata.
+	Description string
 }
 
 // AddStatus tracks the outcome of a single write operation.
@@ -304,9 +311,14 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 	}
 	now := timeNow()
 	sourceFormatExt := strings.TrimPrefix(filepath.Ext(item.Path), ".")
+	metaName := item.Name
+	if item.DisplayName != "" {
+		metaName = item.DisplayName
+	}
 	meta := &metadata.Meta{
 		ID:             metadata.NewID(),
-		Name:           item.Name,
+		Name:           metaName,
+		Description:    item.Description,
 		Type:           string(item.Type),
 		SourceProvider: opts.Provider,
 		SourceFormat:   sourceFormatExt,

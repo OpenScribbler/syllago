@@ -17,6 +17,20 @@ import (
 func (m *addWizardModel) Update(msg tea.Msg) (*addWizardModel, tea.Cmd) {
 	m.validateStep()
 
+	// Rename modal (review step) captures all key + mouse input when active.
+	if m.renameModal.active {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			var cmd tea.Cmd
+			m.renameModal, cmd = m.renameModal.Update(msg)
+			return m, cmd
+		case tea.MouseMsg:
+			var cmd tea.Cmd
+			m.renameModal, cmd = m.renameModal.Update(msg)
+			return m, cmd
+		}
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		return m.updateKey(msg)
@@ -26,6 +40,9 @@ func (m *addWizardModel) Update(msg tea.Msg) (*addWizardModel, tea.Cmd) {
 		return m.handleDiscoveryDone(msg)
 	case addExecItemDoneMsg:
 		return m.handleExecItemDone(msg)
+	case editCancelledMsg:
+		// Modal already closed itself; no state to reset.
+		return m, nil
 	}
 	return m, nil
 }
@@ -321,11 +338,30 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 			m.exitReviewDrillIn()
 			return m, nil
 		}
-		// Click-to-focus: left portion = tree, right portion = preview
+		if zone.Get("add-rename").InBounds(msg) {
+			m.openRenameModal(m.reviewItemCursor)
+			return m, nil
+		}
+		if zone.Get("add-nav-next").InBounds(msg) {
+			// Advance to the next selected item, mirroring the keyboard
+			// Enter-on-Next behavior. If this is the last item, exit drill-in.
+			selected := m.selectedItems()
+			if m.reviewItemCursor+1 < len(selected) {
+				m.reviewItemCursor++
+				m.enterReviewDrillIn()
+			} else {
+				m.exitReviewDrillIn()
+			}
+			return m, nil
+		}
+		// Click-to-focus: left portion = tree, right portion = preview.
+		// Any pane click also drops the title-row button cursor so the
+		// highlight follows the user's focus.
 		innerW := m.width - borderSize
 		treeW := max(18, innerW*30/100)
 		if msg.X <= treeW+1 {
 			// Click in tree area — focus tree
+			m.drillButtonCursor = -1
 			if !m.reviewDrillTree.focused {
 				m.reviewDrillTree.focused = true
 				m.reviewDrillPreview.focused = false
@@ -343,6 +379,7 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 			}
 		} else {
 			// Click in preview area — focus preview
+			m.drillButtonCursor = -1
 			if m.reviewDrillTree.focused {
 				m.reviewDrillTree.focused = false
 				m.reviewDrillPreview.focused = true
@@ -372,6 +409,10 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 			m.enterExecute()
 			return m, m.addItemCmd(0)
 		}
+		return m, nil
+	}
+	if zone.Get("add-rename").InBounds(msg) {
+		m.openRenameModal(m.reviewItemCursor)
 		return m, nil
 	}
 
@@ -772,6 +813,8 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 	}
 	m.actionableCount = len(actionable)
 	m.installedCount = len(installed)
+	m.preMergeActionableCount = len(actionable)
+	m.preMergeInstalledCount = len(installed)
 	m.discoveredItems = append(actionable, installed...)
 	m.showInstalled = false
 
@@ -847,6 +890,73 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 
 // updateKeyReviewDrillIn handles keys while viewing item detail in review.
 func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	// [e] opens the rename modal from inside drill-in so the user can pick a
+	// meaningful display name while looking at the hook/MCP/rule's contents.
+	if msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'e' {
+		m.openRenameModal(m.reviewItemCursor)
+		return m, nil
+	}
+
+	// When the title-row buttons hold focus, intercept navigation and Enter
+	// before it reaches the tree/preview handlers below. Tab still cycles
+	// onward so users can walk through the full strip.
+	if m.drillButtonCursor >= 0 {
+		switch msg.Type {
+		case tea.KeyEsc:
+			m.exitReviewDrillIn()
+			return m, nil
+		case tea.KeyTab:
+			// Cycle Back → Rename → Next → panes → Back.
+			m.drillButtonCursor++
+			if m.drillButtonCursor > 2 {
+				m.drillButtonCursor = -1
+				m.reviewDrillTree.focused = true
+				m.reviewDrillPreview.focused = false
+			}
+			return m, nil
+		case tea.KeyShiftTab:
+			m.drillButtonCursor--
+			if m.drillButtonCursor < 0 {
+				// Wrap to preview pane so Shift+Tab mirrors Tab.
+				m.drillButtonCursor = -1
+				m.reviewDrillTree.focused = false
+				m.reviewDrillPreview.focused = true
+			}
+			return m, nil
+		case tea.KeyLeft:
+			if m.drillButtonCursor > 0 {
+				m.drillButtonCursor--
+			}
+			return m, nil
+		case tea.KeyRight:
+			if m.drillButtonCursor < 2 {
+				m.drillButtonCursor++
+			}
+			return m, nil
+		case tea.KeyEnter:
+			switch m.drillButtonCursor {
+			case 0: // Back — exit drill-in back to review list
+				m.exitReviewDrillIn()
+				return m, nil
+			case 1: // Rename
+				m.openRenameModal(m.reviewItemCursor)
+				return m, nil
+			case 2: // Next — advance to the next item or exit if last
+				selected := m.selectedItems()
+				if m.reviewItemCursor+1 < len(selected) {
+					m.reviewItemCursor++
+					m.enterReviewDrillIn()
+				} else {
+					m.exitReviewDrillIn()
+				}
+				return m, nil
+			}
+			return m, nil
+		}
+		// Non-navigation keys fall through and are ignored while buttons focused.
+		return m, nil
+	}
+
 	switch msg.Type {
 	case tea.KeyEsc:
 		m.exitReviewDrillIn()
@@ -883,8 +993,25 @@ func (m *addWizardModel) updateKeyReviewDrillIn(msg tea.KeyMsg) (*addWizardModel
 		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
 		m.reviewDrillPreview.focused = !m.reviewDrillTree.focused
 	case tea.KeyTab:
-		m.reviewDrillTree.focused = !m.reviewDrillTree.focused
-		m.reviewDrillPreview.focused = !m.reviewDrillTree.focused
+		// Cycle tree → preview → Back button.
+		if m.reviewDrillTree.focused {
+			m.reviewDrillTree.focused = false
+			m.reviewDrillPreview.focused = true
+		} else {
+			m.reviewDrillTree.focused = false
+			m.reviewDrillPreview.focused = false
+			m.drillButtonCursor = 0 // enter button row at Back
+		}
+	case tea.KeyShiftTab:
+		// Reverse cycle: preview → tree → (wraps to Next button).
+		if m.reviewDrillPreview.focused {
+			m.reviewDrillPreview.focused = false
+			m.reviewDrillTree.focused = true
+		} else {
+			m.reviewDrillTree.focused = false
+			m.reviewDrillPreview.focused = false
+			m.drillButtonCursor = 2 // enter button row at Next
+		}
 	}
 	return m, nil
 }
@@ -903,6 +1030,13 @@ func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, 
 		if m.reviewItemCursor < itemCount-1 {
 			m.reviewItemCursor++
 		}
+	case msg.Type == tea.KeyRight || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
+		// Right crosses into the button row so users don't need to discover
+		// the Tab shortcut. Land on the leftmost button (Add) — from there
+		// Right/Left walk through Rename, Back, Cancel.
+		m.reviewZone = addReviewZoneButtons
+		m.buttonCursor = 0
+		return m, nil
 	case msg.Type == tea.KeyPgUp:
 		pageSize := max(1, m.reviewVisibleHeight())
 		m.reviewItemCursor = max(0, m.reviewItemCursor-pageSize)
@@ -916,6 +1050,9 @@ func (m *addWizardModel) updateKeyReviewItems(msg tea.KeyMsg) (*addWizardModel, 
 	case msg.Type == tea.KeyEnter:
 		m.enterReviewDrillIn()
 		return m, nil
+	case msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'e':
+		m.openRenameModal(m.reviewItemCursor)
+		return m, nil
 	}
 	m.adjustReviewOffset()
 	m.highlightRisksForItem(m.reviewItemCursor)
@@ -927,9 +1064,16 @@ func (m *addWizardModel) updateKeyReviewButtons(msg tea.KeyMsg) (*addWizardModel
 	case msg.Type == tea.KeyLeft || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h'):
 		if m.buttonCursor > 0 {
 			m.buttonCursor--
+			return m, nil
 		}
+		// Already at leftmost button — cross back into the items zone so
+		// Left/Right navigation is symmetric with the Right-from-items jump.
+		if len(m.selectedItems()) > 0 {
+			m.reviewZone = addReviewZoneItems
+		}
+		return m, nil
 	case msg.Type == tea.KeyRight || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'l'):
-		if m.buttonCursor < 2 {
+		if m.buttonCursor < 3 {
 			m.buttonCursor++
 		}
 	case msg.Type == tea.KeyEnter:
@@ -940,12 +1084,15 @@ func (m *addWizardModel) updateKeyReviewButtons(msg tea.KeyMsg) (*addWizardModel
 				m.enterExecute()
 				return m, m.addItemCmd(0)
 			}
-		case 1: // Back
+		case 1: // Rename
+			m.openRenameModal(m.reviewItemCursor)
+			return m, nil
+		case 2: // Back
 			m.step = addStepDiscovery
 			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 			m.reviewAcknowledged = false
 			return m, nil
-		case 2: // Cancel
+		case 3: // Cancel
 			return m, func() tea.Msg { return addCloseMsg{} }
 		}
 	}

@@ -3770,3 +3770,33 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 12:21
+
+| 12:21 | Flat layout scanner fix: added scanFlatLayout() fallback in scanner.go | cli/internal/catalog/scanner.go, scanner_test.go | Repos with SKILL.md/AGENT.md in root dirs (no type subdirs) now detected. 6 test cases added. ADR-0006 compliant. | ~3k tokens |
+| 12:21 | Triage visual improvements: section headers, confidence legend, tier alignment | cli/internal/tui/add_wizard.go, add_wizard_view.go, golden_triage_test.go, testdata/*.golden | sortConfirmItemsByType() + triageItemVisualRow() + buildTriageLegend() + tierColW arithmetic. All TUI tests pass. | ~4k tokens |
+| 12:21 | Session close: committed and pushed 1b44637 + 3b08dbb (gofmt fix) | | ADR-0006 commit gate triggered — re-ran after confirming compliance. gofmt spacing in inline comment vars caused pre-push lint failure. | ~1k tokens |
+| 12:27 | Edited cli/internal/tui/add_wizard.go | 6→11 lines | ~148 |
+| 12:27 | Edited cli/internal/tui/add_wizard.go | modified enterReviewDrillIn() | ~108 |
+| 12:27 | Edited cli/internal/tui/add_wizard.go | modified exitReviewDrillIn() | ~70 |
+| 12:28 | Edited cli/internal/tui/add_wizard_update.go | modified len() | ~949 |
+| 12:28 | Edited cli/internal/tui/add_wizard_view.go | expanded (+12 lines) | ~369 |
+| 12:28 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~445 |
+| 12:29 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestDrillIn_TabCyclesPanesToButtonsAndBack() | ~2067 |
+| 12:30 | Session end: 7 writes across 4 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, add_wizard_rename_test.go) | 5 reads | ~55437 tok |
+| 12:35 | Session end: 7 writes across 4 files (add_wizard.go, add_wizard_update.go, add_wizard_view.go, add_wizard_rename_test.go) | 8 reads | ~55629 tok |
+
+## Session: 2026-04-23 12:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 12:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 12:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

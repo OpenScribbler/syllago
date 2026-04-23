@@ -34,9 +34,13 @@ func hookSettingsPath(prov provider.Provider) (string, error) {
 	return filepath.Join(home, prov.ConfigDir, "settings.json"), nil
 }
 
-// parseHookFile reads a hook JSON file and extracts the event + the matcher group.
-// The event field is stripped from the returned matcher group data.
-// If path is a directory, resolves hook.json inside it.
+// parseHookFile reads a canonical hook.json (hooks/0.1 Manifest) and returns
+// the event plus a provider-settings matcher group JSON built from the
+// single hook's handler. If path is a directory, resolves hook.json inside it.
+//
+// The returned matcher group has shape {matcher, hooks:[entry]} — the same
+// shape provider settings.json expects. Syllago-written hook.json always
+// contains exactly one hook per Manifest (see converter.SplitSettingsHooks).
 func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -51,19 +55,34 @@ func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
 		return "", nil, err
 	}
 
-	// Extract event field
-	event = gjson.GetBytes(data, "event").String()
-	if event == "" {
-		return "", nil, fmt.Errorf("hook file missing 'event' field")
-	}
-
-	// Remove event field to get the matcher group
-	matcherGroup, err = sjson.DeleteBytes(data, "event")
+	manifest, err := converter.ParseManifest(data)
 	if err != nil {
-		return "", nil, fmt.Errorf("stripping event field: %w", err)
+		return "", nil, err
+	}
+	if len(manifest.Hooks) != 1 {
+		return "", nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
 	}
 
-	return event, matcherGroup, nil
+	hds, err := converter.HookDataFromManifest(manifest)
+	if err != nil {
+		return "", nil, fmt.Errorf("converting manifest: %w", err)
+	}
+	hd := hds[0]
+
+	// Build the provider-shape matcher group: {matcher, hooks:[entry]}.
+	group := struct {
+		Matcher string                `json:"matcher,omitempty"`
+		Hooks   []converter.HookEntry `json:"hooks"`
+	}{
+		Matcher: hd.Matcher,
+		Hooks:   hd.Hooks,
+	}
+	matcherGroup, err = json.Marshal(group)
+	if err != nil {
+		return "", nil, fmt.Errorf("building matcher group: %w", err)
+	}
+
+	return hd.Event, matcherGroup, nil
 }
 
 func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
@@ -76,6 +95,15 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// M3: Validate event name to prevent sjson key injection via dots
 	if !converter.IsValidHookEvent(event) {
 		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	}
+
+	// Translate canonical event names (e.g. "before_tool_execute") to the
+	// provider-native key (e.g. "PreToolUse") so the hook lands under the
+	// JSON path the provider actually reads. If the event is already
+	// native for this provider, TranslateHookEvent returns ok=false and
+	// we keep the event as-is.
+	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
+		event = nativeEvent
 	}
 
 	// M4: Whitelist-filter the matcher group through a typed struct to strip
@@ -190,6 +218,11 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
 
+	// Translate canonical event names to provider-native (matches install).
+	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
+		event = nativeEvent
+	}
+
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
 		return "", err
@@ -281,6 +314,11 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	event, _, err := parseHookFile(item.Path)
 	if err != nil {
 		return StatusNotAvailable
+	}
+
+	// Translate canonical event names to provider-native (matches install).
+	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
+		event = nativeEvent
 	}
 
 	// Check installed.json for this hook

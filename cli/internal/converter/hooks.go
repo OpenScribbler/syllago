@@ -70,12 +70,20 @@ type HookData struct {
 	SourceProvider string      `json:"sourceProvider,omitempty"`
 }
 
-// DetectHookFormat returns "flat" if content has a top-level "event" field,
-// or "nested" if it has a top-level "hooks" object.
+// DetectHookFormat classifies a hook JSON payload by its top-level shape:
+//   - "manifest": canonical hooks/0.1 shape ({"spec":"hooks/0.1","hooks":[...]})
+//   - "flat":     legacy flat ({"event":"...","matcher":"...","hooks":[...]})
+//   - "nested":   provider settings shape ({"hooks":{"EventName":[...]}})
 func DetectHookFormat(content []byte) string {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(content, &raw); err != nil {
 		return "nested" // default
+	}
+	if spec, ok := raw["spec"]; ok {
+		var specStr string
+		if err := json.Unmarshal(spec, &specStr); err == nil && strings.HasPrefix(specStr, "hooks/") {
+			return "manifest"
+		}
 	}
 	if _, ok := raw["event"]; ok {
 		return "flat"
@@ -134,18 +142,32 @@ func LoadHookData(item catalog.ContentItem) (HookData, error) {
 	if err != nil {
 		return HookData{}, err
 	}
-	if DetectHookFormat(data) == "flat" {
+	switch DetectHookFormat(data) {
+	case "manifest":
+		manifest, err := ParseManifest(data)
+		if err != nil {
+			return HookData{}, err
+		}
+		hds, err := HookDataFromManifest(manifest)
+		if err != nil {
+			return HookData{}, err
+		}
+		if len(hds) == 0 {
+			return HookData{}, fmt.Errorf("no hooks in manifest")
+		}
+		return hds[0], nil
+	case "flat":
 		return ParseFlat(data)
+	default:
+		items, err := ParseNested(data)
+		if err != nil {
+			return HookData{}, err
+		}
+		if len(items) == 0 {
+			return HookData{}, fmt.Errorf("no hook groups found in nested format")
+		}
+		return items[0], nil
 	}
-	// Nested: return first group
-	items, err := ParseNested(data)
-	if err != nil {
-		return HookData{}, err
-	}
-	if len(items) == 0 {
-		return HookData{}, fmt.Errorf("no hook groups found in nested format")
-	}
-	return items[0], nil
 }
 
 // RenderFlat converts a HookData into the target provider's format for a single hook.

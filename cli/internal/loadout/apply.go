@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -237,16 +238,34 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 		return fmt.Errorf("reading hook file: %w", err)
 	}
 
-	// Extract event field
-	event := gjson.GetBytes(data, "event").String()
-	if event == "" {
-		return fmt.Errorf("hook file missing 'event' field")
-	}
-
-	// Remove event field to get the matcher group
-	matcherGroup, err := sjson.DeleteBytes(data, "event")
+	// Parse the canonical hooks/0.1 Manifest and pull out the single hook it
+	// contains. Loadouts only emit syllago-written hook.json, which always has
+	// exactly one handler per file.
+	manifest, err := converter.ParseManifest(data)
 	if err != nil {
-		return fmt.Errorf("stripping event field: %w", err)
+		return fmt.Errorf("parsing hook manifest: %w", err)
+	}
+	if len(manifest.Hooks) != 1 {
+		return fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
+	}
+	hds, err := converter.HookDataFromManifest(manifest)
+	if err != nil {
+		return fmt.Errorf("converting manifest: %w", err)
+	}
+	hd := hds[0]
+	event := hd.Event
+
+	// Build the provider-shape matcher group for merging into settings.json.
+	group := struct {
+		Matcher string                `json:"matcher,omitempty"`
+		Hooks   []converter.HookEntry `json:"hooks"`
+	}{
+		Matcher: hd.Matcher,
+		Hooks:   hd.Hooks,
+	}
+	matcherGroup, err := json.Marshal(group)
+	if err != nil {
+		return fmt.Errorf("building matcher group: %w", err)
 	}
 
 	// Resolve relative command paths to absolute

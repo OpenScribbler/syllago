@@ -287,9 +287,12 @@ func TestHookSummary(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 		hook := map[string]interface{}{
-			"event":   "PreToolUse",
-			"matcher": "Edit|Write",
-			"hooks":   []map[string]string{{"type": "command", "command": "echo hi"}},
+			"spec": "hooks/0.1",
+			"hooks": []map[string]interface{}{{
+				"event":   "PreToolUse",
+				"matcher": "Edit|Write",
+				"handler": map[string]string{"type": "command", "command": "echo hi"},
+			}},
 		}
 		data, _ := json.Marshal(hook)
 		os.WriteFile(filepath.Join(dir, "hook.json"), data, 0644)
@@ -303,8 +306,11 @@ func TestHookSummary(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 		hook := map[string]interface{}{
-			"event": "PostToolUse",
-			"hooks": []map[string]string{{"command": "echo hi"}},
+			"spec": "hooks/0.1",
+			"hooks": []map[string]interface{}{{
+				"event":   "PostToolUse",
+				"handler": map[string]string{"command": "echo hi"},
+			}},
 		}
 		data, _ := json.Marshal(hook)
 		os.WriteFile(filepath.Join(dir, "hook.json"), data, 0644)

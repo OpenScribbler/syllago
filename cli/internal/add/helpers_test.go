@@ -480,6 +480,87 @@ func TestWriteItem_RegistryTaint(t *testing.T) {
 	}
 }
 
+// TestWriteItem_HonorsDisplayNameAndDescription verifies that DiscoveryItem's
+// DisplayName (when set) overrides the on-disk identifier only in .syllago.yaml
+// metadata — the directory layout, destination filename, and item identity
+// still follow item.Name. Description is copied verbatim into metadata.
+// This is the contract the TUI review-step rename modal and CLI --name flag
+// both rely on.
+func TestWriteItem_HonorsDisplayNameAndDescription(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+
+	srcPath := filepath.Join(projectRoot, "my-rule.md")
+	os.WriteFile(srcPath, []byte("# Rule body"), 0644)
+
+	item := DiscoveryItem{
+		Name:        "identity-slug",
+		DisplayName: "A Friendly Label",
+		Description: "What this rule does",
+		Type:        catalog.Rules,
+		Path:        srcPath,
+		Status:      StatusNew,
+	}
+	opts := AddOptions{Provider: "claude-code"}
+
+	result := writeItem(item, opts, globalDir, nil, "test-v1")
+	if result.Status != AddStatusAdded {
+		t.Fatalf("Status = %v, want AddStatusAdded", result.Status)
+	}
+
+	// Directory is keyed on Name (identity), NOT DisplayName.
+	identityDir := filepath.Join(globalDir, "rules", "claude-code", "identity-slug")
+	if _, err := os.Stat(identityDir); err != nil {
+		t.Fatalf("identity-keyed directory should exist: %v", err)
+	}
+	strayDir := filepath.Join(globalDir, "rules", "claude-code", "A Friendly Label")
+	if _, err := os.Stat(strayDir); err == nil {
+		t.Errorf("unexpected directory created from DisplayName: %s", strayDir)
+	}
+
+	meta, err := metadata.Load(identityDir)
+	if err != nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if meta.Name != "A Friendly Label" {
+		t.Errorf("meta.Name = %q, want %q", meta.Name, "A Friendly Label")
+	}
+	if meta.Description != "What this rule does" {
+		t.Errorf("meta.Description = %q, want %q", meta.Description, "What this rule does")
+	}
+}
+
+// TestWriteItem_EmptyDisplayNameFallsBackToName verifies that leaving
+// DisplayName unset makes meta.Name equal item.Name (preserving the existing
+// single-name behavior so older callers don't need to set both).
+func TestWriteItem_EmptyDisplayNameFallsBackToName(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+
+	srcPath := filepath.Join(projectRoot, "my-rule.md")
+	os.WriteFile(srcPath, []byte("# Rule"), 0644)
+
+	item := DiscoveryItem{
+		Name:   "plain-name",
+		Type:   catalog.Rules,
+		Path:   srcPath,
+		Status: StatusNew,
+	}
+	opts := AddOptions{Provider: "claude-code"}
+
+	writeItem(item, opts, globalDir, nil, "test-v1")
+
+	meta, err := metadata.Load(filepath.Join(globalDir, "rules", "claude-code", "plain-name"))
+	if err != nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if meta.Name != "plain-name" {
+		t.Errorf("meta.Name = %q, want %q (should fall back to item.Name)", meta.Name, "plain-name")
+	}
+}
+
 // --- Helpers ---
 
 type mockCanonicalizer struct {

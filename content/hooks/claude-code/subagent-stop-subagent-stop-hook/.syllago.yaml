@@ -1,0 +1,10 @@
+format_version: 1
+id: ba400e5f-d929-450e-a483-108a5067cb21
+name: subagent-stop-subagent-stop-hook44
+description: asdf4444544556778990
+type: hooks
+source_provider: claude-code
+source_format: json
+source_type: provider
+added_at: 2026-04-23T17:57:03.090804629Z
+source_scope: global

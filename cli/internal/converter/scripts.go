@@ -70,11 +70,22 @@ func ExtractScriptRef(command string) string {
 
 	token := fields[idx]
 
+	// Strip a single pair of matching surrounding quotes. Hook commands
+	// commonly quote the script path to protect expanded env vars with
+	// spaces, e.g. node "$CLAUDE_PROJECT_DIR/hooks/foo.js".
+	if len(token) >= 2 {
+		if (token[0] == '"' && token[len(token)-1] == '"') ||
+			(token[0] == '\'' && token[len(token)-1] == '\'') {
+			token = token[1 : len(token)-1]
+		}
+	}
+
 	// Check for path-like patterns
 	if strings.HasPrefix(token, "~/") ||
 		strings.HasPrefix(token, "/") ||
 		strings.HasPrefix(token, "./") ||
-		strings.HasPrefix(token, "../") {
+		strings.HasPrefix(token, "../") ||
+		strings.HasPrefix(token, "$") {
 		return token
 	}
 

@@ -90,19 +90,31 @@ func (m *addWizardModel) renderTitleRow(title string, showBack bool, nextLabel s
 // renderDrillInTitleRow renders the title row for the drill-in view, with
 // Back / Rename / Next buttons right-aligned. Mirrors renderTitleRow but
 // inserts a Rename button so mouse users can discover the same action that
-// the [e] shortcut provides.
+// the [e] shortcut provides. When drillButtonCursor >= 0, the selected button
+// is highlighted in the accent color so keyboard users can see where focus is.
 func (m *addWizardModel) renderDrillInTitleRow(title string) string {
 	pad := "  "
 	titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(title)
 	titleW := lipgloss.Width(titleRendered)
 
-	btnStyle := lipgloss.NewStyle().Padding(0, 2).
+	inactive := lipgloss.NewStyle().Padding(0, 2).
 		Foreground(primaryText).
 		Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+	active := lipgloss.NewStyle().Padding(0, 2).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(accentColor).
+		Bold(true)
 
-	backBtn := zone.Mark("add-nav-back", btnStyle.Render("Back"))
-	renameBtn := zone.Mark("add-rename", btnStyle.Render("Rename"))
-	nextBtn := zone.Mark("add-nav-next", btnStyle.Render("Next"))
+	style := func(idx int) lipgloss.Style {
+		if m.drillButtonCursor == idx {
+			return active
+		}
+		return inactive
+	}
+
+	backBtn := zone.Mark("add-nav-back", style(0).Render("Back"))
+	renameBtn := zone.Mark("add-rename", style(1).Render("Rename"))
+	nextBtn := zone.Mark("add-nav-next", style(2).Render("Next"))
 	btns := strings.Join([]string{backBtn, renameBtn, nextBtn}, "  ")
 	btnsW := lipgloss.Width(btns)
 

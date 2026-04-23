@@ -205,6 +205,11 @@ type addWizardModel struct {
 	reviewDrillPreview previewModel
 	drillInRiskyFiles  map[string]catalog.RiskLevel // file path -> highest risk level
 	drillInItemRisks   []catalog.RiskIndicator      // risks for the drilled-in item
+	// drillButtonCursor tracks keyboard focus for the Back/Rename/Next
+	// button row in drill-in. -1 means focus is on the tree/preview panes;
+	// 0/1/2 select Back/Rename/Next respectively. Tab cycles panes → Back →
+	// Rename → Next → panes.
+	drillButtonCursor int
 
 	// Review rename modal — edits display name + description of the selected
 	// review item in memory. The on-disk identity (directory name) never changes.
@@ -867,6 +872,9 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	if m.reviewItemCursor >= len(selected) {
 		return
 	}
+	// Drill-in always opens with the panes focused; the title-row button cursor
+	// is disabled (-1) until the user Tabs into it.
+	m.drillButtonCursor = -1
 	item := selected[m.reviewItemCursor]
 
 	// Use the catalogItem directly when available (has correct Path + Files
@@ -1009,6 +1017,7 @@ func (m *addWizardModel) setupDrillInRisks(item addDiscoveryItem) {
 func (m *addWizardModel) exitReviewDrillIn() {
 	m.reviewDrillIn = false
 	m.reviewZone = addReviewZoneItems // return focus to the item list, not buttons
+	m.drillButtonCursor = -1
 }
 
 // loadDrillInFile loads the file selected in the drill-in tree into the preview.

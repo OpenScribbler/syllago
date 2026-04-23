@@ -67,16 +67,27 @@ var dangerPatterns = []dangerPattern{
 func ScanHookSecurity(content []byte) []SecurityWarning {
 	var warnings []SecurityWarning
 
-	// Try both formats — collect all hook data into a unified list
+	// Try all three formats — collect all hook data into a unified list
 	var hookGroups []HookData
 
-	if DetectHookFormat(content) == "flat" {
+	switch DetectHookFormat(content) {
+	case "manifest":
+		manifest, err := ParseManifest(content)
+		if err != nil {
+			return nil
+		}
+		hds, err := HookDataFromManifest(manifest)
+		if err != nil {
+			return nil
+		}
+		hookGroups = hds
+	case "flat":
 		hd, err := ParseFlat(content)
 		if err != nil {
 			return nil
 		}
 		hookGroups = append(hookGroups, hd)
-	} else {
+	default:
 		items, err := ParseNested(content)
 		if err != nil {
 			return nil

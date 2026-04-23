@@ -20,7 +20,7 @@ func TestInstallHook_E2E_InlineCommand(t *testing.T) {
 	// Create hook file
 	hookDir := filepath.Join(projectRoot, "hooks", "inline-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PostToolUse","matcher":"Edit","hooks":[{"type":"command","command":"echo lint"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":"Edit","handler":{"type":"command","command":"echo lint"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -79,7 +79,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 	hookDir := filepath.Join(projectRoot, "hooks", "script-hook")
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "lint.sh"), []byte("#!/bin/bash\necho lint"), 0755)
-	hookJSON := `{"event":"PostToolUse","matcher":"Edit|Write","hooks":[{"type":"command","command":"./lint.sh --strict"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":"Edit|Write","handler":{"type":"command","command":"./lint.sh --strict"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -159,7 +159,7 @@ func TestInstallHook_E2E_Uninstall(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "roundtrip-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo check"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo check"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -209,5 +209,71 @@ func TestInstallHook_E2E_Uninstall(t *testing.T) {
 	inst, _ := LoadInstalled(projectRoot)
 	if inst.FindHook("roundtrip-hook", "PreToolUse") >= 0 {
 		t.Error("hook should be removed from installed.json")
+	}
+}
+
+// TestInstallHook_TranslatesCanonicalEvent is a regression test for the bug
+// where a hook stored with a canonical event name (e.g. "before_tool_execute")
+// was injected under hooks.before_tool_execute in Claude Code's settings.json,
+// which CC does not read. After the fix, canonical names are translated to
+// the provider-native key (PreToolUse) so the hook actually fires.
+func TestInstallHook_TranslatesCanonicalEvent(t *testing.T) {
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "canonical-hook")
+	os.MkdirAll(hookDir, 0755)
+	// Canonical (provider-neutral) event name as produced by converter.SplitSettingsHooks.
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":"Edit","handler":{"type":"command","command":"echo lint"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "canonical-hook",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	home, _ := os.UserHomeDir()
+	configDir := filepath.Join(home, ".syllago-test-translate-"+filepath.Base(projectRoot))
+	os.MkdirAll(configDir, 0755)
+	t.Cleanup(func() { os.RemoveAll(configDir) })
+	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)
+
+	// claude-code is the slug TranslateHookEvent looks up; test stub mirrors
+	// the real provider's ConfigDir conventions.
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: filepath.Base(configDir),
+	}
+
+	result, err := installHook(item, prov, projectRoot)
+	if err != nil {
+		t.Fatalf("installHook: %v", err)
+	}
+
+	// Result message must reference the translated native key.
+	if !strings.Contains(result, "hooks.PreToolUse") {
+		t.Errorf("result should mention translated native event, got %q", result)
+	}
+
+	// Settings.json must have hooks.PreToolUse (native), NOT hooks.before_tool_execute (canonical).
+	data, _ := os.ReadFile(filepath.Join(configDir, "settings.json"))
+	if !gjson.GetBytes(data, "hooks.PreToolUse").Exists() {
+		t.Errorf("settings.json should have hooks.PreToolUse after translation; got %s", string(data))
+	}
+	if gjson.GetBytes(data, "hooks.before_tool_execute").Exists() {
+		t.Errorf("settings.json should NOT have canonical hooks.before_tool_execute; got %s", string(data))
+	}
+
+	// Uninstall must find the hook via translated key.
+	if _, err := uninstallHook(item, prov, projectRoot); err != nil {
+		t.Fatalf("uninstallHook should find translated entry: %v", err)
+	}
+
+	data, _ = os.ReadFile(filepath.Join(configDir, "settings.json"))
+	arr := gjson.GetBytes(data, "hooks.PreToolUse")
+	if arr.Exists() && len(arr.Array()) > 0 {
+		t.Error("hook should be removed after uninstall")
 	}
 }
