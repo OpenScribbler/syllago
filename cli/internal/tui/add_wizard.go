@@ -1224,42 +1224,6 @@ func (m *addWizardModel) discoveryColumns() discoveryColLayout {
 	return discoveryColLayout{nameW, ctype, status, risk}
 }
 
-// discoveryHeader renders the column header for the discovery table.
-func (m *addWizardModel) discoveryHeader() string {
-	cols := m.discoveryColumns()
-	prefix := "      " // matches checkbox row prefix width ("> [x] ")
-	row := prefix +
-		boldStyle.Render(padRight("Name", cols.name)) + " " +
-		boldStyle.Render(padRight("Risk", cols.risk)) + " " +
-		boldStyle.Render(padRight("Type", cols.ctype)) + " " +
-		boldStyle.Render(padRight("Status", cols.status))
-	return truncateLine(row, m.width)
-}
-
-// toggleInstalled toggles the showInstalled flag and rebuilds the discovery list,
-// preserving selection state for the actionable items.
-func (m *addWizardModel) toggleInstalled() {
-	// Save current selections (indices into visible items)
-	oldVisible := m.visibleDiscoveryItems()
-	oldSelected := make(map[int]bool)
-	for _, idx := range m.discoveryList.SelectedIndices() {
-		if idx < len(oldVisible) {
-			// Map to discoveredItems index
-			oldSelected[idx] = true
-		}
-	}
-
-	m.showInstalled = !m.showInstalled
-	m.discoveryList = m.buildDiscoveryList()
-
-	// Restore selections — actionable items keep the same indices (they're first)
-	for idx := range oldSelected {
-		if idx < len(m.discoveryList.selected) {
-			m.discoveryList.selected[idx] = true
-		}
-	}
-}
-
 // rebuildDiscoveryListPreserveSelection rebuilds the discovery list (e.g., after resize)
 // while preserving the current selection and cursor state.
 func (m *addWizardModel) rebuildDiscoveryListPreserveSelection() {
