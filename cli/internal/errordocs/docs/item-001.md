@@ -13,7 +13,7 @@ The specified item could not be found in your local library or any configured re
 
 1. Check the spelling of the item name
 2. Run `syllago list` to browse available items in your library
-3. Run `syllago list --registry <name>` to browse items in a specific registry
+3. Run `syllago registry items <name>` to browse items in a specific registry
 4. If the item is in a registry, run `syllago registry sync` to pull the latest content
 
 ## Example Output

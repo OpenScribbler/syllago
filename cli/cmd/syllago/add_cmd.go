@@ -143,7 +143,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 			if dp.Slug == prov.Slug && !dp.Detected {
 				fmt.Fprintf(output.ErrWriter, "Warning: %s not detected at default locations.\n", prov.Name)
 				fmt.Fprintf(output.ErrWriter, "If installed at a custom path, configure it:\n")
-				fmt.Fprintf(output.ErrWriter, "  syllago config paths --provider %s --path /your/path\n", prov.Slug)
+				fmt.Fprintf(output.ErrWriter, "  syllago config paths set %s --base-dir /your/path\n", prov.Slug)
 				break
 			}
 		}

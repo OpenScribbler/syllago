@@ -191,7 +191,7 @@ func TestInstallWarnsWhenProviderNotDetected(t *testing.T) {
 	if !strings.Contains(errOut, "Warning: Undetected Provider not detected") {
 		t.Errorf("expected provider-not-detected warning on stderr, got: %s", errOut)
 	}
-	if !strings.Contains(errOut, "syllago config paths --provider undetected-prov") {
+	if !strings.Contains(errOut, "syllago config paths set undetected-prov") {
 		t.Errorf("expected config paths hint in warning, got: %s", errOut)
 	}
 }

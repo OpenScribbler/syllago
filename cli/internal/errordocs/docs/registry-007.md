@@ -13,7 +13,7 @@ Syllago failed to update a registry's local clone during sync. The git pull oper
 
 1. Check your network connection.
 2. Try syncing again: `syllago registry sync`
-3. If the problem persists, remove and re-add the registry to get a fresh clone: `syllago registry remove <name>` then `syllago registry add <name> <url>`
+3. If the problem persists, remove and re-add the registry to get a fresh clone: `syllago registry remove <name>` then `syllago registry add <url>`
 
 ## Example Output
 

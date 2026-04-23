@@ -13,7 +13,7 @@ The item you are trying to uninstall is not currently installed in your system.
 Check what is currently installed by running:
 
 ```
-syllago list --installed
+syllago list --source library
 ```
 
 Verify the exact name of the item you want to remove and try again.
@@ -22,5 +22,5 @@ Verify the exact name of the item you want to remove and try again.
 
 ```
 Error INSTALL_005: item "my-rule" is not installed
-  Suggestion: run 'syllago list --installed' to see installed items
+  Suggestion: run 'syllago list --source library' to see installed items
 ```

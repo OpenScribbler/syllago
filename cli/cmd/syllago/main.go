@@ -47,8 +47,7 @@ automation and scripting.
 Workflow:
   1. syllago add       Bring content into your library from a path or git URL
   2. syllago install    Install library content to a provider's location
-  3. syllago share      Contribute library content to a team repo (PR workflow)
-  4. syllago publish    Submit library content to a public registry
+  3. syllago share      Contribute library content to a shared git repo (PR workflow)
 
 Content lives in your global library (~/.syllago/content/) after adding.
 Syllago handles format conversion automatically — a Claude Code skill becomes

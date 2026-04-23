@@ -12,7 +12,7 @@ The specified registry name was not found in your syllago configuration. No regi
 
 1. List your configured registries: `syllago registry list`
 2. Check for typos in the registry name you specified.
-3. If the registry isn't listed, add it: `syllago registry add <name> <url>`
+3. If the registry isn't listed, add it: `syllago registry add <url>`
 
 ## Example Output
 

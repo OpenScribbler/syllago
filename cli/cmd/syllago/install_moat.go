@@ -244,7 +244,7 @@ func runInstallFromRegistry(
 		return output.NewStructuredError(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("registry %q is at the pinned revision but the manifest body is not cached locally", reg.Name),
-			"Run `syllago registry sync "+reg.Name+" --refresh` (planned in syllago-raivj), or clear the stored ETag by removing `manifest_etag` from .syllago/config.json and retry.",
+			"Clear the cached ETag by removing the `manifest_etag` field for registry \""+reg.Name+"\" from .syllago/config.json, then run `syllago registry sync "+reg.Name+"` to force a full re-fetch.",
 		)
 	}
 

@@ -25,11 +25,11 @@ var deprecatedExportCmd = &cobra.Command{
 var deprecatedPromoteCmd = &cobra.Command{
 	Use:    "promote",
 	Hidden: true,
-	Short:  "(removed) use 'share' or 'publish'",
+	Short:  "(removed) use 'share'",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		output.PrintError(1,
 			"Unknown command 'promote'.",
-			"To share with your team:        syllago share <name>\n  To publish to a registry: syllago publish <name> --registry <name>")
+			"Use 'syllago share <name>' to contribute content to a shared git repo.")
 		return output.SilentError(fmt.Errorf("promote removed"))
 	},
 }
