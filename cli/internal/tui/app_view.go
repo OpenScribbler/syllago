@@ -64,7 +64,7 @@ func (a App) renderContent() string {
 	group := a.topBar.ActiveGroupLabel()
 
 	if group == "Config" {
-		return a.renderPlaceholder("Settings view coming soon")
+		return a.renderConfigContent()
 	}
 
 	if a.isLibraryTab() {
@@ -79,6 +79,19 @@ func (a App) renderContent() string {
 	}
 
 	return a.explorer.View()
+}
+
+// renderConfigContent renders the active Config group sub-tab.
+func (a App) renderConfigContent() string {
+	switch a.topBar.ActiveTabLabel() {
+	case "Settings":
+		return a.configSettings.View()
+	case "Sandbox":
+		return a.configSandbox.View()
+	case "System":
+		return a.configSystem.View()
+	}
+	return a.renderPlaceholder("Config")
 }
 
 // renderPlaceholder renders a centered message for tabs without explorer content.

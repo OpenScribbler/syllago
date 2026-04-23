@@ -51,6 +51,11 @@ type App struct {
 	registryAdd    registryAddModal    // registry add overlay
 	trustInspector trustInspectorModel // reusable trust inspector (library + registries)
 
+	// Config group sub-models
+	configSettings settingsModel
+	configSystem   systemModel
+	configSandbox  sandboxConfigModel
+
 	// Wizard mode — when active, captures all key/mouse input
 	wizardMode    wizardKind
 	installWizard *installWizardModel // nil when not active
@@ -142,6 +147,15 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 
 		telemetryNotice: showTelemetryNotice,
 	}
+
+	// Extract registry names for settings display
+	regNames := make([]string, 0, len(registrySources))
+	for _, rs := range registrySources {
+		regNames = append(regNames, rs.Name)
+	}
+	a.configSettings = newSettingsModel(cfg, regNames, version, 80, 24)
+	a.configSystem = newSystemModel(projectRoot, 80, 24)
+	a.configSandbox = newSandboxConfigModel(cfg, 80, 24)
 	a.updateNavState()
 	return a
 }

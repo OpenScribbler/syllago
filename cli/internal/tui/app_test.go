@@ -587,7 +587,7 @@ func TestApp_ExplorerHLSwitchesFocus(t *testing.T) {
 	}
 }
 
-func TestApp_ConfigTabPlaceholder(t *testing.T) {
+func TestApp_ConfigTabSettings(t *testing.T) {
 	app := testApp(t)
 
 	m, cmd := app.Update(keyRune('3'))
@@ -596,7 +596,7 @@ func TestApp_ConfigTabPlaceholder(t *testing.T) {
 	}
 	a := m.(App)
 	view := a.View()
-	assertContains(t, view, "Settings view coming soon")
+	assertContains(t, view, "Configured Registries")
 }
 
 func TestApp_RegistriesGallery(t *testing.T) {
