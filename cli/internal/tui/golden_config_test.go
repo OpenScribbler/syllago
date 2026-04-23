@@ -2,6 +2,8 @@ package tui
 
 import (
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // navigateToConfig moves the app to the Config group (group index 2).
@@ -14,13 +16,14 @@ func navigateToConfig(t *testing.T, app App) App {
 	return m.(App)
 }
 
-// navigateToConfigTab moves the app to Config group then Tabs forward n times.
-// Tab 0 = Settings, Tab 1 = Sandbox, Tab 2 = System (in Config group).
+// navigateToConfigTab moves the app to Config group then presses Right n times.
+// Right cycles the Config topbar sub-tabs: 0=Settings, 1=Sandbox, 2=System.
+// (Tab in Config group routes to sub-model internal panels, not topbar tabs.)
 func navigateToConfigTab(t *testing.T, app App, tabIndex int) App {
 	t.Helper()
 	app = navigateToConfig(t, app)
 	for i := 0; i < tabIndex; i++ {
-		m, cmd := app.Update(keyTab)
+		m, cmd := app.Update(keyPress(tea.KeyRight))
 		if cmd != nil {
 			m, _ = m.Update(cmd())
 		}

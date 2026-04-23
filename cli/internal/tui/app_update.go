@@ -292,12 +292,30 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.updateNavState()
 			return a, cmd
 
-		// Tab cycles sub-tabs within active group
+		// Tab cycles sub-tabs within active group.
+		// In Config group, Tab is owned by the sub-model (panel cycling within
+		// Settings/Sandbox/System). Use Left/Right to switch Config topbar sub-tabs.
 		case msg.Type == tea.KeyTab:
+			if a.topBar.ActiveGroupLabel() == "Config" {
+				return a.routeKey(msg)
+			}
 			cmd := a.topBar.NextTab()
 			a.refreshContent()
 			return a, cmd
 		case msg.Type == tea.KeyShiftTab:
+			if a.topBar.ActiveGroupLabel() == "Config" {
+				return a.routeKey(msg)
+			}
+			cmd := a.topBar.PrevTab()
+			a.refreshContent()
+			return a, cmd
+
+		// Left/Right arrow: cycle Config topbar sub-tabs (Settings/Sandbox/System).
+		case msg.Type == tea.KeyRight && a.topBar.ActiveGroupLabel() == "Config":
+			cmd := a.topBar.NextTab()
+			a.refreshContent()
+			return a, cmd
+		case msg.Type == tea.KeyLeft && a.topBar.ActiveGroupLabel() == "Config":
 			cmd := a.topBar.PrevTab()
 			a.refreshContent()
 			return a, cmd
@@ -725,7 +743,20 @@ func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 
 	var contentCmd tea.Cmd
 	if a.topBar.ActiveGroupLabel() == "Config" {
-		// Config sub-models don't yet have mouse handlers; topCmd is enough.
+		switch a.topBar.ActiveTabLabel() {
+		case "Settings":
+			updated, cmd := a.configSettings.Update(msg)
+			a.configSettings = updated.(settingsModel)
+			contentCmd = cmd
+		case "Sandbox":
+			updated, cmd := a.configSandbox.Update(msg)
+			a.configSandbox = updated.(sandboxConfigModel)
+			contentCmd = cmd
+		case "System":
+			updated, cmd := a.configSystem.Update(msg)
+			a.configSystem = updated.(systemModel)
+			contentCmd = cmd
+		}
 	} else if a.isLibraryTab() {
 		a.library, contentCmd = a.library.Update(msg)
 	} else if a.isGalleryTab() && a.galleryDrillIn {

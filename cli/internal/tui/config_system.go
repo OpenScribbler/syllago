@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/doctor"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -82,10 +83,39 @@ func (m systemModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.selectedProv++
 			}
 		}
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case systemLoadedMsg:
 		m.loading = false
 		m.checks = msg.checks
 		m.allProviders = msg.allProviders
+	}
+	return m, nil
+}
+
+func (m systemModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+	// Mode tab clicks
+	if zone.Get("cfg-system-tab-doctor").InBounds(msg) {
+		m.mode = systemModeDoctor
+		m.selectedProv = 0
+		return m, nil
+	}
+	if zone.Get("cfg-system-tab-providers").InBounds(msg) {
+		m.mode = systemModeProviders
+		m.selectedProv = 0
+		return m, nil
+	}
+	// Provider list item clicks
+	if m.mode == systemModeProviders {
+		for i := range m.allProviders {
+			if zone.Get(fmt.Sprintf("cfg-system-prov-%d", i)).InBounds(msg) {
+				m.selectedProv = i
+				return m, nil
+			}
+		}
 	}
 	return m, nil
 }
@@ -109,15 +139,13 @@ func (m systemModel) View() string {
 }
 
 func (m systemModel) renderTabs(innerW int) string {
-	doctorLabel := "Doctor"
-	provLabel := "Providers"
 	var doctorTab, provTab string
 	if m.mode == systemModeDoctor {
-		doctorTab = activeTabStyle.Render(doctorLabel)
-		provTab = inactiveTabStyle.Render(provLabel)
+		doctorTab = zone.Mark("cfg-system-tab-doctor", activeTabStyle.Render("Doctor"))
+		provTab = zone.Mark("cfg-system-tab-providers", inactiveTabStyle.Render("Providers"))
 	} else {
-		doctorTab = inactiveTabStyle.Render(doctorLabel)
-		provTab = activeTabStyle.Render(provLabel)
+		doctorTab = zone.Mark("cfg-system-tab-doctor", inactiveTabStyle.Render("Doctor"))
+		provTab = zone.Mark("cfg-system-tab-providers", activeTabStyle.Render("Providers"))
 	}
 	row := " " + doctorTab + " " + provTab
 	pad := max(0, innerW-lipgloss.Width(row))
@@ -187,6 +215,7 @@ func (m systemModel) renderProviders(width, height int) string {
 		if i == m.selectedProv {
 			row = selectedRowStyle.Render(truncate(row, width))
 		}
+		row = zone.Mark(fmt.Sprintf("cfg-system-prov-%d", i), row)
 		lines = append(lines, row)
 	}
 

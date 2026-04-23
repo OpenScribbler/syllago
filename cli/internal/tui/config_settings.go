@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -98,6 +99,8 @@ func (m settingsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.checkUpdateCmd()
 			}
 		}
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case settingsTelemetryStatusMsg:
 		m.telemetryEnabled = msg.enabled
 		m.telemetryAnonID = msg.anonID
@@ -105,6 +108,35 @@ func (m settingsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.checkingUpdate = false
 		m.latestVersion = msg.latestVersion
 		m.updateAvail = msg.isNewer
+	}
+	return m, nil
+}
+
+func (m settingsModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+	// Panel tab clicks
+	for i := range settingsPanelCount {
+		if zone.Get(fmt.Sprintf("cfg-settings-tab-%d", i)).InBounds(msg) {
+			m.panel = settingsPanel(i)
+			return m, nil
+		}
+	}
+	// Telemetry toggle click
+	if zone.Get("cfg-settings-telemetry-toggle").InBounds(msg) && m.panel == settingsPanelTelemetry {
+		newVal := !m.telemetryEnabled
+		m.telemetryEnabled = newVal
+		return m, m.saveTelemetryCmd(newVal)
+	}
+	// Reset anon ID click
+	if zone.Get("cfg-settings-telemetry-reset").InBounds(msg) && m.panel == settingsPanelTelemetry {
+		return m, m.resetAnonIDCmd()
+	}
+	// Update check click
+	if zone.Get("cfg-settings-update-check").InBounds(msg) && m.panel == settingsPanelAbout {
+		m.checkingUpdate = true
+		return m, m.checkUpdateCmd()
 	}
 	return m, nil
 }
@@ -156,11 +188,14 @@ func (m settingsModel) renderTabs(innerW int) string {
 	labels := []string{"Config", "Telemetry", "About"}
 	var parts []string
 	for i, label := range labels {
+		var rendered string
 		if settingsPanel(i) == m.panel {
-			parts = append(parts, activeTabStyle.Render(label))
+			rendered = activeTabStyle.Render(label)
 		} else {
-			parts = append(parts, inactiveTabStyle.Render(label))
+			rendered = inactiveTabStyle.Render(label)
 		}
+		rendered = zone.Mark(fmt.Sprintf("cfg-settings-tab-%d", i), rendered)
+		parts = append(parts, rendered)
 	}
 	row := " " + strings.Join(parts, " ")
 	pad := max(0, innerW-lipgloss.Width(row))
@@ -198,16 +233,23 @@ func (m settingsModel) renderConfigPanel(width, height int) string {
 func (m settingsModel) renderTelemetryPanel(width, height int) string {
 	var lines []string
 
-	var enabledStr string
+	var enabledLabel string
 	if m.telemetryEnabled {
-		enabledStr = lipgloss.NewStyle().Foreground(successColor).Render("enabled")
+		enabledLabel = lipgloss.NewStyle().Foreground(successColor).Render("enabled")
 	} else {
-		enabledStr = lipgloss.NewStyle().Foreground(dangerColor).Render("disabled")
+		enabledLabel = lipgloss.NewStyle().Foreground(dangerColor).Render("disabled")
 	}
-	lines = append(lines, fmt.Sprintf("  Telemetry: %s", enabledStr))
+	toggleRow := fmt.Sprintf("  Telemetry:    %s", enabledLabel)
+	toggleRow = zone.Mark("cfg-settings-telemetry-toggle", toggleRow)
+	lines = append(lines, toggleRow)
 	lines = append(lines, fmt.Sprintf("  Anonymous ID: %s", mutedStyle.Render(truncate(m.telemetryAnonID, width-18))))
 	lines = append(lines, "")
-	lines = append(lines, mutedStyle.Render("  [t] Toggle telemetry   [r] Reset anonymous ID"))
+
+	toggleBtn := activeButtonStyle.Render("[t] Toggle")
+	toggleBtn = zone.Mark("cfg-settings-telemetry-toggle", toggleBtn)
+	resetBtn := mutedStyle.Render("[r] Reset ID")
+	resetBtn = zone.Mark("cfg-settings-telemetry-reset", resetBtn)
+	lines = append(lines, "  "+toggleBtn+"   "+resetBtn)
 
 	for len(lines) < height {
 		lines = append(lines, "")
@@ -234,7 +276,9 @@ func (m settingsModel) renderAboutPanel(width, height int) string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, mutedStyle.Render("  [u] Check for updates"))
+	updateBtn := activeButtonStyle.Render("[u] Check for updates")
+	updateBtn = zone.Mark("cfg-settings-update-check", updateBtn)
+	lines = append(lines, "  "+updateBtn)
 
 	_ = width
 	for len(lines) < height {

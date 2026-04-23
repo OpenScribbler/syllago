@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/sandbox"
@@ -91,10 +92,44 @@ func (m sandboxConfigModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		}
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case sandboxCheckLoadedMsg:
 		m.checkResult = msg.result
 	case sandboxSavedMsg:
 		m.cfg = msg.cfg
+	}
+	return m, nil
+}
+
+func (m sandboxConfigModel) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
+		return m, nil
+	}
+	// Sub-tab clicks
+	for i := range sandboxTabCount {
+		if zone.Get(fmt.Sprintf("cfg-sandbox-tab-%d", i)).InBounds(msg) {
+			m.tab = sandboxTab(i)
+			m.cursor = 0
+			return m, nil
+		}
+	}
+	// List item clicks
+	n := m.currentListLen()
+	for i := range n {
+		if zone.Get(fmt.Sprintf("cfg-sandbox-item-%d", i)).InBounds(msg) {
+			m.cursor = i
+			return m, nil
+		}
+	}
+	// Add / remove button clicks
+	if zone.Get("cfg-sandbox-btn-add").InBounds(msg) {
+		m.showAddModal = true
+		m.inputValue = ""
+		return m, nil
+	}
+	if zone.Get("cfg-sandbox-btn-remove").InBounds(msg) {
+		return m, m.deleteSelected()
 	}
 	return m, nil
 }
@@ -183,7 +218,6 @@ func (m sandboxConfigModel) addEntryCmd(value string) tea.Cmd {
 	case sandboxTabDomains:
 		newSandbox.AllowedDomains = appendUniqueSandbox(newSandbox.AllowedDomains, value)
 	case sandboxTabPorts:
-		// For ports tab, we accept numeric strings but skip invalid input
 		var port int
 		if _, err := fmt.Sscan(value, &port); err == nil {
 			newSandbox.AllowedPorts = appendUniquePortSandbox(newSandbox.AllowedPorts, port)
@@ -256,11 +290,14 @@ func (m sandboxConfigModel) renderTabs(width int) string {
 	labels := []string{"Domains", "Ports", "Env"}
 	var parts []string
 	for i, label := range labels {
+		var rendered string
 		if sandboxTab(i) == m.tab {
-			parts = append(parts, activeTabStyle.Render(label))
+			rendered = activeTabStyle.Render(label)
 		} else {
-			parts = append(parts, inactiveTabStyle.Render(label))
+			rendered = inactiveTabStyle.Render(label)
 		}
+		rendered = zone.Mark(fmt.Sprintf("cfg-sandbox-tab-%d", i), rendered)
+		parts = append(parts, rendered)
 	}
 	row := " " + strings.Join(parts, " ")
 	pad := max(0, width-lipgloss.Width(row))
@@ -269,7 +306,6 @@ func (m sandboxConfigModel) renderTabs(width int) string {
 
 func (m sandboxConfigModel) renderList(width, height int) string {
 	var items []string
-	var hint string
 
 	switch m.tab {
 	case sandboxTabDomains:
@@ -281,10 +317,10 @@ func (m sandboxConfigModel) renderList(width, height int) string {
 				if i == m.cursor {
 					row = selectedRowStyle.Render(truncate(row, width))
 				}
+				row = zone.Mark(fmt.Sprintf("cfg-sandbox-item-%d", i), row)
 				items = append(items, row)
 			}
 		}
-		hint = mutedStyle.Render("  [a] Add domain   [d] Remove")
 	case sandboxTabPorts:
 		if len(m.cfg.Sandbox.AllowedPorts) == 0 {
 			items = append(items, mutedStyle.Render("  No ports configured (defaults apply)"))
@@ -294,10 +330,10 @@ func (m sandboxConfigModel) renderList(width, height int) string {
 				if i == m.cursor {
 					row = selectedRowStyle.Render(truncate(row, width))
 				}
+				row = zone.Mark(fmt.Sprintf("cfg-sandbox-item-%d", i), row)
 				items = append(items, row)
 			}
 		}
-		hint = mutedStyle.Render("  [a] Add port   [d] Remove")
 	case sandboxTabEnv:
 		if len(m.cfg.Sandbox.AllowedEnv) == 0 {
 			items = append(items, mutedStyle.Render("  No env vars configured (defaults apply)"))
@@ -307,15 +343,28 @@ func (m sandboxConfigModel) renderList(width, height int) string {
 				if i == m.cursor {
 					row = selectedRowStyle.Render(truncate(row, width))
 				}
+				row = zone.Mark(fmt.Sprintf("cfg-sandbox-item-%d", i), row)
 				items = append(items, row)
 			}
 		}
-		hint = mutedStyle.Render("  [a] Add env var   [d] Remove")
 	}
 
-	// Pad to fill height, leaving 1 row for hints
-	hintH := 1
-	listH := max(0, height-hintH)
+	// Hint row with clickable buttons
+	var addLabel, removeLabel string
+	switch m.tab {
+	case sandboxTabDomains:
+		addLabel, removeLabel = "[a] Add domain", "[d] Remove"
+	case sandboxTabPorts:
+		addLabel, removeLabel = "[a] Add port", "[d] Remove"
+	case sandboxTabEnv:
+		addLabel, removeLabel = "[a] Add env var", "[d] Remove"
+	}
+	addBtn := zone.Mark("cfg-sandbox-btn-add", activeButtonStyle.Render(addLabel))
+	removeBtn := zone.Mark("cfg-sandbox-btn-remove", mutedStyle.Render(removeLabel))
+	hint := "  " + addBtn + "   " + removeBtn
+
+	// Pad list to fill height, leaving 1 row for hint
+	listH := max(0, height-1)
 	for len(items) < listH {
 		items = append(items, "")
 	}
