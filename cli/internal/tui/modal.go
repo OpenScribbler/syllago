@@ -13,6 +13,10 @@ type editSavedMsg struct {
 	name        string
 	description string
 	path        string // item directory path (context for saving)
+	// context disambiguates who should handle the save:
+	//   ""              — library/explorer edit (App writes to .syllago.yaml)
+	//   "wizard_rename" — add-wizard review rename (wizard updates in-memory item)
+	context string
 }
 
 // editCancelledMsg is emitted when the user cancels the edit modal.
@@ -28,6 +32,9 @@ type editModal struct {
 	path        string // item directory path
 	cursor      int    // cursor position within the focused text field
 	focusIdx    int    // 0=name, 1=description, 2=Cancel, 3=Save
+	// context is propagated into the emitted editSavedMsg so different callers
+	// (library edit vs wizard rename) can route the save correctly.
+	context string
 
 	width  int
 	height int
@@ -40,13 +47,30 @@ func newEditModal() editModal {
 	}
 }
 
+// SetWidth adjusts the modal's render width (the default 56 works for a
+// centered overlay, but inline placements like the drill-in tree column
+// need to clamp to the pane width).
+func (m *editModal) SetWidth(w int) {
+	if w < 24 {
+		w = 24
+	}
+	m.width = w
+}
+
 // Open activates the modal with pre-filled values.
 func (m *editModal) Open(title, name, description, path string) {
+	m.OpenWithContext(title, name, description, path, "")
+}
+
+// OpenWithContext activates the modal and tags the save with a context string
+// so the recipient can disambiguate (e.g., "wizard_rename" vs library edit).
+func (m *editModal) OpenWithContext(title, name, description, path, context string) {
 	m.active = true
 	m.title = title
 	m.name = name
 	m.description = description
 	m.path = path
+	m.context = context
 	m.cursor = len([]rune(name))
 	m.focusIdx = 0
 }
@@ -58,6 +82,7 @@ func (m *editModal) Close() {
 	m.name = ""
 	m.description = ""
 	m.path = ""
+	m.context = ""
 	m.cursor = 0
 	m.focusIdx = 0
 }
@@ -94,8 +119,11 @@ func (m editModal) save() (editModal, tea.Cmd) {
 	name := m.name
 	desc := m.description
 	path := m.path
+	ctx := m.context
 	m.Close()
-	return m, func() tea.Msg { return editSavedMsg{name: name, description: desc, path: path} }
+	return m, func() tea.Msg {
+		return editSavedMsg{name: name, description: desc, path: path, context: ctx}
+	}
 }
 
 func (m editModal) cancel() (editModal, tea.Cmd) {
@@ -267,6 +295,23 @@ func (m editModal) View() string {
 	descLabel := pad + mutedStyle.Render("Description")
 	descInput := m.renderField(m.description, 1, usableW, "modal-desc")
 
+	// Microcopy — clarifies where Name and Description actually show up. The
+	// wizard_rename context adds "after you add it" since the item isn't in
+	// the library yet; the library edit path is already editing a saved item.
+	// Wrapped (not truncated) so the full message is visible in narrow modal
+	// placements like the drill-in tree column.
+	var hint string
+	if m.context == "wizard_rename" {
+		hint = "Shown in your library after you add this item. The on-disk name is unchanged."
+	} else {
+		hint = "Shown in your library. The on-disk name is unchanged."
+	}
+	hintLines := wordWrap(hint, usableW)
+	hintRendered := make([]string, len(hintLines))
+	for i, hl := range hintLines {
+		hintRendered[i] = pad + mutedStyle.Render(hl)
+	}
+
 	// Buttons
 	cancelBtn := m.renderButton("Cancel", 2, "modal-cancel")
 	saveBtn := m.renderButton("Save", 3, "modal-save")
@@ -275,7 +320,7 @@ func (m editModal) View() string {
 	buttonPad := max(0, usableW-buttonsW)
 	buttonRow := pad + strings.Repeat(" ", buttonPad) + buttons
 
-	content := lipgloss.JoinVertical(lipgloss.Left,
+	rows := []string{
 		title,
 		"",
 		nameLabel,
@@ -283,9 +328,10 @@ func (m editModal) View() string {
 		"",
 		descLabel,
 		descInput,
-		"",
-		buttonRow,
-	)
+	}
+	rows = append(rows, hintRendered...)
+	rows = append(rows, "", buttonRow)
+	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -297,7 +343,7 @@ func (m editModal) View() string {
 
 // renderField renders a text input field with background tinting and cursor.
 func (m editModal) renderField(value string, fieldIdx, usableW int, zoneID string) string {
-	bg := inputInactiveBG
+	bg := modalFieldInactiveBG
 	if m.focusIdx == fieldIdx {
 		bg = inputActiveBG
 	}

@@ -12,8 +12,5 @@
         ]
       }
     ]
-  ,"PostToolUse":[{
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo golden-test"}]
-}]}
+  ,"PostToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"echo golden-test"}]}]}
 }

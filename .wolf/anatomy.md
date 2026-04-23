@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-23T19:19:00.154Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-23T19:29:37.781Z
 > Files: 1160 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
@@ -2026,11 +2026,11 @@
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
-- `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~4083 tok)
+- `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~6129 tok)
 - `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~8654 tok)
-- `add_wizard_update.go` (~8110 tok)
-- `add_wizard_view.go` — Struct: sourceOption (~9920 tok)
-- `add_wizard.go` — Struct: addConfirmItem (~20307 tok)
+- `add_wizard_update.go` (~8832 tok)
+- `add_wizard_view.go` — Struct: sourceOption (~10020 tok)
+- `add_wizard.go` — Struct: addConfirmItem (~20426 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
 - `app_update.go` — Declares checkbox (~5744 tok)
 - `app_view.go` (~1041 tok)

@@ -109,6 +109,225 @@ func TestReviewItems_EKeyOpensRenameModal(t *testing.T) {
 	}
 }
 
+// TestDrillIn_TabCyclesPanesToButtonsAndBack verifies that Tab in the drill-in
+// view cycles tree → preview → Back → Rename → Next → panes (tree). The first
+// reported bug was that drill-in had no keyboard path to the title-row buttons
+// at all — Tab only toggled tree↔preview.
+func TestDrillIn_TabCyclesPanesToButtonsAndBack(t *testing.T) {
+	items := []addDiscoveryItem{
+		{name: "hook-one", displayName: "hook-one", itemType: catalog.Hooks},
+	}
+	list := newCheckboxList([]checkboxItem{{label: "hook-one"}})
+	list.selected[0] = true
+
+	m := &addWizardModel{
+		step:              addStepReview,
+		reviewZone:        addReviewZoneItems,
+		reviewDrillIn:     true,
+		drillButtonCursor: -1,
+		discoveredItems:   items,
+		actionableCount:   1,
+		discoveryList:     list,
+		reviewItemCursor:  0,
+	}
+	m.reviewDrillTree.focused = true
+
+	// Tab 1: tree → preview
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyTab})
+	if m.reviewDrillTree.focused || !m.reviewDrillPreview.focused {
+		t.Fatalf("Tab from tree should focus preview; tree=%v preview=%v",
+			m.reviewDrillTree.focused, m.reviewDrillPreview.focused)
+	}
+	if m.drillButtonCursor != -1 {
+		t.Errorf("drillButtonCursor should stay -1 while on panes, got %d", m.drillButtonCursor)
+	}
+
+	// Tab 2: preview → Back button
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyTab})
+	if m.drillButtonCursor != 0 {
+		t.Errorf("Tab from preview should land on Back (0), got %d", m.drillButtonCursor)
+	}
+	if m.reviewDrillTree.focused || m.reviewDrillPreview.focused {
+		t.Errorf("panes should lose focus while buttons focused")
+	}
+
+	// Tab 3: Back → Rename
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyTab})
+	if m.drillButtonCursor != 1 {
+		t.Errorf("Tab from Back should land on Rename (1), got %d", m.drillButtonCursor)
+	}
+
+	// Tab 4: Rename → Next
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyTab})
+	if m.drillButtonCursor != 2 {
+		t.Errorf("Tab from Rename should land on Next (2), got %d", m.drillButtonCursor)
+	}
+
+	// Tab 5: Next → panes (back to tree)
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyTab})
+	if m.drillButtonCursor != -1 {
+		t.Errorf("Tab from Next should return focus to panes (cursor=-1), got %d", m.drillButtonCursor)
+	}
+	if !m.reviewDrillTree.focused {
+		t.Errorf("Tab from Next should land on tree, got tree=%v", m.reviewDrillTree.focused)
+	}
+}
+
+// TestDrillIn_EnterOnBackButtonExitsDrillIn verifies Enter on the focused Back
+// button returns to the review list — same as Esc, but triggered from the
+// button row via the keyboard path the user now has access to.
+func TestDrillIn_EnterOnBackButtonExitsDrillIn(t *testing.T) {
+	items := []addDiscoveryItem{
+		{name: "hook-one", displayName: "hook-one", itemType: catalog.Hooks},
+	}
+	list := newCheckboxList([]checkboxItem{{label: "hook-one"}})
+	list.selected[0] = true
+
+	m := &addWizardModel{
+		step:              addStepReview,
+		reviewDrillIn:     true,
+		drillButtonCursor: 0, // Back focused
+		discoveredItems:   items,
+		actionableCount:   1,
+		discoveryList:     list,
+		reviewItemCursor:  0,
+	}
+
+	m2, _ := m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if m2.reviewDrillIn {
+		t.Errorf("Enter on Back should exit drill-in, still in=%v", m2.reviewDrillIn)
+	}
+	if m2.reviewZone != addReviewZoneItems {
+		t.Errorf("exit should return focus to items zone, got %v", m2.reviewZone)
+	}
+}
+
+// TestDrillIn_EnterOnRenameButtonOpensModal verifies Enter on the focused
+// Rename button opens the rename modal with wizard_rename context.
+func TestDrillIn_EnterOnRenameButtonOpensModal(t *testing.T) {
+	items := []addDiscoveryItem{
+		{name: "hook-one", displayName: "hook-one", description: "x", itemType: catalog.Hooks},
+	}
+	list := newCheckboxList([]checkboxItem{{label: "hook-one"}})
+	list.selected[0] = true
+
+	m := &addWizardModel{
+		step:              addStepReview,
+		reviewDrillIn:     true,
+		drillButtonCursor: 1, // Rename focused
+		renameModal:       newEditModal(),
+		discoveredItems:   items,
+		actionableCount:   1,
+		discoveryList:     list,
+		reviewItemCursor:  0,
+	}
+
+	m2, _ := m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if !m2.renameModal.active {
+		t.Fatalf("Enter on Rename should open the modal")
+	}
+	if m2.renameModal.context != "wizard_rename" {
+		t.Errorf("modal context: got %q want %q", m2.renameModal.context, "wizard_rename")
+	}
+}
+
+// TestDrillIn_EnterOnNextButtonAdvancesItem verifies Enter on the focused Next
+// button advances to the next selected item's drill-in (still inside the
+// drill-in view, not bounced back to the review list).
+func TestDrillIn_EnterOnNextButtonAdvancesItem(t *testing.T) {
+	items := []addDiscoveryItem{
+		{name: "hook-one", displayName: "hook-one", itemType: catalog.Hooks},
+		{name: "hook-two", displayName: "hook-two", itemType: catalog.Hooks},
+	}
+	list := newCheckboxList([]checkboxItem{
+		{label: "hook-one"},
+		{label: "hook-two"},
+	})
+	list.selected[0] = true
+	list.selected[1] = true
+
+	m := &addWizardModel{
+		step:              addStepReview,
+		reviewDrillIn:     true,
+		drillButtonCursor: 2, // Next focused
+		discoveredItems:   items,
+		actionableCount:   2,
+		discoveryList:     list,
+		reviewItemCursor:  0,
+		width:             120,
+		height:            40,
+	}
+
+	m2, _ := m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if m2.reviewItemCursor != 1 {
+		t.Errorf("Next should advance cursor to 1, got %d", m2.reviewItemCursor)
+	}
+	if !m2.reviewDrillIn {
+		t.Errorf("Next should stay in drill-in for the new item, got in=%v", m2.reviewDrillIn)
+	}
+}
+
+// TestDrillIn_EnterOnNextButtonExitsIfLast verifies Enter on Next when already
+// on the last selected item exits drill-in instead of dead-ending.
+func TestDrillIn_EnterOnNextButtonExitsIfLast(t *testing.T) {
+	items := []addDiscoveryItem{
+		{name: "only", displayName: "only", itemType: catalog.Hooks},
+	}
+	list := newCheckboxList([]checkboxItem{{label: "only"}})
+	list.selected[0] = true
+
+	m := &addWizardModel{
+		step:              addStepReview,
+		reviewDrillIn:     true,
+		drillButtonCursor: 2, // Next focused
+		discoveredItems:   items,
+		actionableCount:   1,
+		discoveryList:     list,
+		reviewItemCursor:  0,
+	}
+
+	m2, _ := m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyEnter})
+
+	if m2.reviewDrillIn {
+		t.Errorf("Next on last item should exit drill-in, still in=%v", m2.reviewDrillIn)
+	}
+}
+
+// TestDrillIn_LeftRightNavigatesButtonsWhenFocused verifies that once focus is
+// on the title-row buttons, Left/Right walk between them without falling back
+// to the pane-swap behavior that Left/Right does when panes are focused.
+func TestDrillIn_LeftRightNavigatesButtonsWhenFocused(t *testing.T) {
+	m := &addWizardModel{
+		reviewDrillIn:     true,
+		drillButtonCursor: 0, // Back
+	}
+
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyRight})
+	if m.drillButtonCursor != 1 {
+		t.Errorf("Right on Back should advance to Rename (1), got %d", m.drillButtonCursor)
+	}
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyRight})
+	if m.drillButtonCursor != 2 {
+		t.Errorf("Right on Rename should advance to Next (2), got %d", m.drillButtonCursor)
+	}
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyRight})
+	if m.drillButtonCursor != 2 {
+		t.Errorf("Right on Next should clamp at 2, got %d", m.drillButtonCursor)
+	}
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyLeft})
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.drillButtonCursor != 0 {
+		t.Errorf("Left twice should return to Back (0), got %d", m.drillButtonCursor)
+	}
+	m, _ = m.updateKeyReviewDrillIn(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.drillButtonCursor != 0 {
+		t.Errorf("Left on Back should clamp at 0, got %d", m.drillButtonCursor)
+	}
+}
+
 // TestDrillIn_EKeyOpensRenameModal verifies that pressing [e] while in the
 // drill-in file/preview view opens the rename modal for the current item —
 // the same behavior as the review list, so users can pick a display name

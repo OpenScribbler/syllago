@@ -82,16 +82,18 @@ func RemoveLibraryItem(itemPath string) error {
 }
 
 // HookSummary returns a one-line summary of a hook item's configuration
-// (event, matcher, handler type). Returns empty string on read errors.
+// (event, matcher, handler type). Reads the canonical hooks/0.1 Manifest
+// shape: top-level hooks[0].{event, matcher, handler.type}. Returns empty
+// string on read errors.
 func HookSummary(item ContentItem) string {
 	hookPath := filepath.Join(item.Path, "hook.json")
 	data, err := os.ReadFile(hookPath)
 	if err != nil {
 		return ""
 	}
-	event := gjson.GetBytes(data, "event").String()
-	matcher := gjson.GetBytes(data, "matcher").String()
-	hookType := gjson.GetBytes(data, "hooks.0.type").String()
+	event := gjson.GetBytes(data, "hooks.0.event").String()
+	matcher := gjson.GetBytes(data, "hooks.0.matcher").String()
+	hookType := gjson.GetBytes(data, "hooks.0.handler.type").String()
 	if hookType == "" {
 		hookType = "command"
 	}

@@ -62,9 +62,14 @@ func setupIntegrationEnv(t *testing.T) (homeDir, projectRoot string, manifest *M
 	hookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{
-  "event": "PostToolUse",
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo integration-test"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": ".*",
+      "handler": {"type": "command", "command": "echo integration-test"}
+    }
+  ]
 }`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
@@ -395,10 +400,10 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 	})
 	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-b"})
 
-	// Replace the good hook with a broken one (missing event field triggers
-	// applyHook's "hook file missing 'event' field" error).
+	// Replace the good hook with a broken one — valid manifest shape but an
+	// empty event, which trips HookDataFromManifest with an "event" error.
 	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
-	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"matcher":".*","hooks":[{"type":"command","command":"echo oops"}]}`), 0644)
+	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"matcher":".*","handler":{"type":"command","command":"echo oops"}}]}`), 0644)
 
 	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
 	originalSettings, err := os.ReadFile(settingsPath)

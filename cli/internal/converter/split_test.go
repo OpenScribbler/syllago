@@ -108,6 +108,59 @@ func TestDeriveHookName_EventCommand(t *testing.T) {
 	}
 }
 
+// TestSplitSettingsHooks_PerHandlerSplit is the regression test for the
+// "one library hook.json bundled four commands" bug. A single
+// (event, matcher) that carries multiple handler commands must be split
+// into one HookData per handler — each with a distinct derivable name —
+// so each script ends up as its own library item with its own spec-shape
+// hook.json rather than a bundled multi-command blob.
+func TestSplitSettingsHooks_PerHandlerSplit(t *testing.T) {
+	// Four commands under a single (UserPromptSubmit, ".*") pair — the real
+	// shape that Holden's drill-in screenshot showed.
+	input := `{"hooks":{"UserPromptSubmit":[{"matcher":".*","hooks":[
+		{"type":"command","command":"bash /home/hhewett/.config/pai/hooks/detect-research-intent.sh"},
+		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/update-tab-titles.ts"},
+		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/capture-rating.ts"},
+		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/capture-all-events.ts"}
+	]}]}}`
+
+	items, err := SplitSettingsHooks([]byte(input), "claude-code")
+	if err != nil {
+		t.Fatalf("SplitSettingsHooks: %v", err)
+	}
+	if len(items) != 4 {
+		t.Fatalf("expected 4 items (one per handler), got %d", len(items))
+	}
+
+	seen := map[string]bool{}
+	for i, it := range items {
+		if len(it.Hooks) != 1 {
+			t.Errorf("item[%d]: expected exactly one hook entry (Manifest shape), got %d", i, len(it.Hooks))
+		}
+		if it.Event != "before_prompt" {
+			t.Errorf("item[%d]: expected canonical event before_prompt, got %q", i, it.Event)
+		}
+		name := DeriveHookName(it)
+		if seen[name] {
+			t.Errorf("item[%d]: derived name %q collides with a prior item — each script must disambiguate", i, name)
+		}
+		seen[name] = true
+	}
+
+	// Each script basename should be in the derived-name set (slugify
+	// normalizes underscores to hyphens, so before_prompt -> before-prompt).
+	for _, want := range []string{
+		"before-prompt-detect-research-intent",
+		"before-prompt-update-tab-titles",
+		"before-prompt-capture-rating",
+		"before-prompt-capture-all-events",
+	} {
+		if !seen[want] {
+			t.Errorf("expected a hook named %q, got: %v", want, seen)
+		}
+	}
+}
+
 func TestSlugify(t *testing.T) {
 	tests := []struct {
 		input string

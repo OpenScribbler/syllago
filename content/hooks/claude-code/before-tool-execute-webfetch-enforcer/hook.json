@@ -1,0 +1,13 @@
+{
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "matcher": "web_fetch",
+      "handler": {
+        "type": "command",
+        "command": "python3 ./webfetch-enforcer.py"
+      }
+    }
+  ]
+}

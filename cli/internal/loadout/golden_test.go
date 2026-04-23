@@ -77,9 +77,14 @@ func TestGolden_HookMerge(t *testing.T) {
 	hookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "golden-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{
-  "event": "PostToolUse",
-  "matcher": ".*",
-  "hooks": [{"type": "command", "command": "echo golden-test"}]
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": ".*",
+      "handler": {"type": "command", "command": "echo golden-test"}
+    }
+  ]
 }`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 

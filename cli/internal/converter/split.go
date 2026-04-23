@@ -3,11 +3,15 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
 // SplitSettingsHooks reads the hooks section of a settings.json-style file
-// and returns one HookData per event+matcher group.
+// and returns one HookData per (event, matcher, handler) triple. Each result
+// HookData has exactly one entry in its Hooks slice, matching the canonical
+// hooks/0.1 spec shape (one hook = one handler).
+//
 // sourceProvider is used to reverse-translate event and tool names to canonical.
 func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, error) {
 	var raw map[string]json.RawMessage
@@ -64,19 +68,18 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 				if matcher != "" {
 					matcher = ReverseTranslateMatcher(matcher, sourceProvider)
 				}
-				// Convert provider ms timeouts to canonical seconds
-				hooks := make([]HookEntry, len(m.Hooks))
-				copy(hooks, m.Hooks)
-				for i := range hooks {
-					if hooks[i].Timeout > 0 {
-						hooks[i].Timeout = hooks[i].Timeout / 1000
+				for _, h := range m.Hooks {
+					entry := h
+					// Convert provider ms timeouts to canonical seconds
+					if entry.Timeout > 0 {
+						entry.Timeout = entry.Timeout / 1000
 					}
+					items = append(items, HookData{
+						Event:   canonicalEvent,
+						Matcher: matcher,
+						Hooks:   []HookEntry{entry},
+					})
 				}
-				items = append(items, HookData{
-					Event:   canonicalEvent,
-					Matcher: matcher,
-					Hooks:   hooks,
-				})
 			}
 		}
 	}
@@ -85,24 +88,37 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 }
 
 // DeriveHookName generates a filesystem-safe name from a HookData item.
+// With per-handler splitting (post-2026-04-23), hook.Hooks typically has
+// exactly one entry; older callers with multi-entry slices still work by
+// falling back to the first entry that yields a usable signal.
+//
 // Priority:
-//  1. statusMessage if present → slugify
-//  2. matcher + event → slugify (e.g., "pretooluse-bash")
-//  3. event + first meaningful word(s) from command
+//  1. statusMessage — highest-signal human-readable label
+//  2. script basename — e.g., "before_prompt-capture-rating" for `bun run capture-rating.ts`
+//  3. event + matcher — when matcher is not a wildcard
+//  4. event + first command token — last-resort differentiator
+//  5. event alone
 func DeriveHookName(hook HookData) string {
-	// Priority 1: use statusMessage from the first hook that has one
+	// Priority 1: status message from any entry that sets one
 	for _, h := range hook.Hooks {
 		if h.StatusMessage != "" {
 			return slugify(h.StatusMessage)
 		}
 	}
 
-	// Priority 2: matcher + event
-	if hook.Matcher != "" {
+	// Priority 2: script basename extracted from command
+	for _, h := range hook.Hooks {
+		if base := scriptBasename(h.Command); base != "" {
+			return slugify(hook.Event + "-" + base)
+		}
+	}
+
+	// Priority 3: event + matcher (skip trivial wildcards)
+	if hook.Matcher != "" && hook.Matcher != "*" {
 		return slugify(hook.Event + "-" + hook.Matcher)
 	}
 
-	// Priority 3: event + first meaningful word from command
+	// Priority 4: event + first command token
 	for _, h := range hook.Hooks {
 		if h.Command != "" {
 			fields := strings.Fields(h.Command)
@@ -113,4 +129,29 @@ func DeriveHookName(hook HookData) string {
 	}
 
 	return slugify(hook.Event)
+}
+
+// scriptExtensions are file suffixes recognized as script references in
+// shell-style command strings. Ordered by rough frequency in AI-tool hooks.
+var scriptExtensions = []string{".sh", ".ts", ".js", ".mjs", ".cjs", ".py", ".rb", ".pl", ".ps1", ".bat"}
+
+// scriptBasename scans a command string for a token that looks like a script
+// path (e.g., "bash path/to/foo.sh --flag") and returns the file name without
+// its extension. Returns empty string when no script reference is found.
+func scriptBasename(cmd string) string {
+	if cmd == "" {
+		return ""
+	}
+	for _, tok := range strings.Fields(cmd) {
+		// Strip surrounding quotes that survive a naive Fields() split.
+		tok = strings.Trim(tok, `"'`)
+		lower := strings.ToLower(tok)
+		for _, ext := range scriptExtensions {
+			if strings.HasSuffix(lower, ext) {
+				base := filepath.Base(tok)
+				return strings.TrimSuffix(base, filepath.Ext(base))
+			}
+		}
+	}
+	return ""
 }

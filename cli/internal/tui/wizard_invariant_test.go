@@ -531,6 +531,8 @@ func TestAddWizard_ValidateStep_TriageForward(t *testing.T) {
 	}
 	m.actionableCount = 1
 	m.installedCount = 0
+	m.preMergeActionableCount = 1
+	m.preMergeInstalledCount = 0
 	m.mergeConfirmIntoDiscovery()
 
 	// Step 4: Review — discoveredItems + selectedItems non-empty
@@ -666,6 +668,8 @@ func TestAddWizard_MergeIdempotency(t *testing.T) {
 	}
 	m.actionableCount = 2
 	m.installedCount = 0
+	m.preMergeActionableCount = 2
+	m.preMergeInstalledCount = 0
 	m.discoveryList = m.buildDiscoveryList()
 
 	// First merge
@@ -685,6 +689,74 @@ func TestAddWizard_MergeIdempotency(t *testing.T) {
 	expected := 2 + 2
 	if countAfterFirst != expected {
 		t.Errorf("expected %d items after merge, got %d", expected, countAfterFirst)
+	}
+}
+
+// TestAddWizard_MergePreservesLayoutWithInstalled is a regression test for a
+// panic where mergeConfirmIntoDiscovery appended merged items AFTER the
+// installed block, violating the [actionable][installed] layout invariant.
+// The old code's selection loop then indexed discoveryList.selected past its
+// length (which was sized to actionableCount when showInstalled=false),
+// crashing with "index out of range".
+func TestAddWizard_MergePreservesLayoutWithInstalled(t *testing.T) {
+	t.Parallel()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceLocal
+	m.hasTriageStep = true
+
+	// One confirm item selected
+	m.confirmItems = []addConfirmItem{
+		{displayName: "new-from-triage", itemType: catalog.Rules,
+			path: "rules/new.md", sourceDir: "/tmp/src"},
+	}
+	m.confirmSelected = map[int]bool{0: true}
+	m.shell.SetSteps(m.buildShellLabels())
+
+	// Seed: 1 actionable + 1 installed. This is the layout that triggered the
+	// original panic — installedCount>0 with showInstalled=false.
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "actionable-rule", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "actionable-rule", Type: catalog.Rules}},
+		{name: "installed-rule", itemType: catalog.Rules, status: add.StatusInLibrary,
+			underlying: &add.DiscoveryItem{Name: "installed-rule", Type: catalog.Rules, Status: add.StatusInLibrary}},
+	}
+	m.actionableCount = 1
+	m.installedCount = 1
+	m.preMergeActionableCount = 1
+	m.preMergeInstalledCount = 1
+	m.showInstalled = false
+	m.discoveryList = m.buildDiscoveryList()
+
+	// Must not panic.
+	m.mergeConfirmIntoDiscovery()
+
+	// Layout after merge: [actionable-rule, new-from-triage] + [installed-rule]
+	if got, want := len(m.discoveredItems), 3; got != want {
+		t.Fatalf("expected %d items after merge, got %d", want, got)
+	}
+	if m.actionableCount != 2 {
+		t.Errorf("expected actionableCount=2 after merging 1 item, got %d", m.actionableCount)
+	}
+	if m.installedCount != 1 {
+		t.Errorf("expected installedCount unchanged at 1, got %d", m.installedCount)
+	}
+	if m.discoveredItems[1].name != "new-from-triage" {
+		t.Errorf("merged item should be at index 1 (actionable block), got %q",
+			m.discoveredItems[1].name)
+	}
+	if m.discoveredItems[2].status != add.StatusInLibrary {
+		t.Errorf("installed item should remain in trailing block, got status %v at index 2",
+			m.discoveredItems[2].status)
+	}
+
+	// Second merge must produce identical layout (idempotency).
+	m.mergeConfirmIntoDiscovery()
+	if got, want := len(m.discoveredItems), 3; got != want {
+		t.Errorf("second merge broke idempotency: expected %d items, got %d", want, got)
+	}
+	if m.actionableCount != 2 {
+		t.Errorf("second merge broke actionableCount: expected 2, got %d", m.actionableCount)
 	}
 }
 
