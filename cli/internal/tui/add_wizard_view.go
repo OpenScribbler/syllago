@@ -28,8 +28,6 @@ func (m *addWizardModel) View() string {
 		content = m.viewType()
 	case addStepDiscovery:
 		content = m.viewDiscovery()
-	case addStepTriage:
-		content = m.viewTriage()
 	case addStepReview:
 		content = m.viewReview()
 	case addStepExecute:
@@ -312,7 +310,7 @@ func (m *addWizardModel) viewDiscovery() string {
 		return strings.Join(lines, "\n")
 	}
 
-	if len(m.discoveredItems) == 0 {
+	if len(m.confirmItems) == 0 {
 		var lines []string
 		lines = append(lines, m.renderTitleRow("No content found", true, ""))
 		lines = append(lines, "")
@@ -325,34 +323,8 @@ func (m *addWizardModel) viewDiscovery() string {
 		return strings.Join(lines, "\n")
 	}
 
-	selected := len(m.discoveryList.SelectedIndices())
-	actionable := m.actionableCount
-	header := fmt.Sprintf("Found %d items (%d selected)", len(m.discoveredItems), selected)
-	if m.installedCount > 0 && !m.showInstalled {
-		header = fmt.Sprintf("Found %d new items (%d selected)", actionable, selected)
-	}
-
-	var lines []string
-	lines = append(lines, m.renderTitleRow(header, true, ""))
-	lines = append(lines, "")
-	lines = append(lines, m.discoveryHeader())
-	lines = append(lines, m.discoveryList.View())
-
-	// Installed items toggle
-	if m.installedCount > 0 {
-		lines = append(lines, "")
-		if m.showInstalled {
-			toggle := zone.Mark("add-installed-toggle",
-				mutedStyle.Render(fmt.Sprintf("  [h] Hide %d already-installed items", m.installedCount)))
-			lines = append(lines, toggle)
-		} else {
-			toggle := zone.Mark("add-installed-toggle",
-				mutedStyle.Render(fmt.Sprintf("  [h] Show %d already-installed items", m.installedCount)))
-			lines = append(lines, toggle)
-		}
-	}
-
-	return strings.Join(lines, "\n")
+	// Normal state — delegate to the triage-style split-pane view
+	return m.viewTriage()
 }
 
 // typePlural returns the plural display label for a content type (e.g. "Skills").
@@ -393,8 +365,8 @@ func buildTriageLegend() string {
 // --- Triage step view ---
 
 func (m *addWizardModel) viewTriage() string {
-	title := m.renderTitleRow("Triage: detected content", true, "Next")
-	subtitle := "  " + mutedStyle.Render("Include items to add them, or skip (skipped items reappear next time you add from this source).")
+	title := m.renderTitleRow("Discovery: found content", true, "Next")
+	subtitle := "  " + mutedStyle.Render("Auto-detected items are pre-included (✓). Review and toggle any item, then click Next.")
 	legend := buildTriageLegend()
 
 	// Compute pane dimensions.
@@ -486,7 +458,7 @@ func (m *addWizardModel) viewTriage() string {
 
 // renderTriageItems renders the list of confirm items in the left pane.
 // Items are grouped by content type, each group preceded by a section header.
-// Items must already be sorted by type (sortConfirmItemsByType in enterTriage).
+// Items must already be sorted by type (sortConfirmItemsByType in handleDiscoveryDone).
 func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 	if len(m.confirmItems) == 0 {
 		return []string{mutedStyle.Render("  No items to triage")}

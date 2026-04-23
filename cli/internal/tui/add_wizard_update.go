@@ -94,8 +94,6 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m.updateMouseType(msg)
 	case addStepDiscovery:
 		return m.updateMouseDiscovery(msg)
-	case addStepTriage:
-		return m.updateMouseTriage(msg)
 	case addStepReview:
 		return m.updateMouseReview(msg)
 	case addStepExecute:
@@ -111,21 +109,9 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 
 	switch m.step {
 	case addStepDiscovery:
-		if m.discovering || m.discoveryErr != "" || len(m.discoveredItems) == 0 {
+		if m.discovering || m.discoveryErr != "" || len(m.confirmItems) == 0 {
 			return m, nil
 		}
-		if up {
-			if m.discoveryList.cursor > 0 {
-				m.discoveryList.cursor--
-				m.discoveryList.adjustOffset()
-			}
-		} else {
-			if m.discoveryList.cursor < len(m.discoveryList.items)-1 {
-				m.discoveryList.cursor++
-				m.discoveryList.adjustOffset()
-			}
-		}
-	case addStepTriage:
 		if up {
 			if m.confirmCursor > 0 {
 				m.confirmCursor--
@@ -309,21 +295,38 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 		return m, nil
 	}
 
-	// Installed items toggle
-	if zone.Get("add-installed-toggle").InBounds(msg) {
-		if m.installedCount > 0 {
-			m.toggleInstalled()
+	// Normal state — triage-style split-pane buttons
+	if zone.Get("triage-cancel").InBounds(msg) {
+		return m, func() tea.Msg { return addCloseMsg{} }
+	}
+	if zone.Get("triage-back").InBounds(msg) {
+		m.goBackFromDiscovery()
+		return m, nil
+	}
+	if zone.Get("triage-next").InBounds(msg) {
+		m.mergeConfirmIntoDiscovery()
+		if len(m.selectedItems()) > 0 {
+			m.enterReview()
 		}
 		return m, nil
 	}
 
-	// Checkbox list row clicks — toggle selection
-	if idx, ok := m.discoveryList.HandleClick(msg); ok {
-		m.discoveryList.cursor = idx
-		if !m.discoveryList.items[idx].disabled {
-			m.discoveryList.selected[idx] = !m.discoveryList.selected[idx]
+	// Item row clicks — first click selects/previews, second click toggles
+	for i := range m.confirmItems {
+		if zone.Get(fmt.Sprintf("triage-item-%d", i)).InBounds(msg) {
+			m.confirmFocus = triageZoneItems
+			if m.confirmSelected == nil {
+				m.confirmSelected = make(map[int]bool)
+			}
+			if m.confirmCursor == i {
+				m.confirmSelected[i] = !m.confirmSelected[i]
+			} else {
+				m.confirmCursor = i
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+			return m, nil
 		}
-		return m, nil
 	}
 
 	return m, nil
@@ -393,13 +396,8 @@ func (m *addWizardModel) updateMouseReview(msg tea.MouseMsg) (*addWizardModel, t
 		return m, func() tea.Msg { return addCloseMsg{} }
 	}
 	if zone.Get("add-back").InBounds(msg) {
-		if m.hasTriageStep {
-			m.step = addStepTriage
-			m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-		} else {
-			m.step = addStepDiscovery
-			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-		}
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 		m.reviewAcknowledged = false
 		return m, nil
 	}
@@ -462,8 +460,6 @@ func (m *addWizardModel) updateKey(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 		return m.updateKeyType(msg)
 	case addStepDiscovery:
 		return m.updateKeyDiscovery(msg)
-	case addStepTriage:
-		return m.updateKeyTriage(msg)
 	case addStepReview:
 		return m.updateKeyReview(msg)
 	case addStepExecute:
@@ -762,32 +758,89 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 		return m, nil
 	}
 
-	// Normal results
-	switch {
-	case msg.Type == tea.KeyEsc:
+	// Normal state — triage-style split-pane navigation
+	if len(m.confirmItems) == 0 {
+		if msg.Type == tea.KeyEsc {
+			m.goBackFromDiscovery()
+		}
+		return m, nil
+	}
+
+	switch msg.Type {
+	case tea.KeyEsc:
 		m.goBackFromDiscovery()
 		return m, nil
 
-	case msg.Type == tea.KeyRight || msg.Type == tea.KeyEnter:
-		if len(m.discoveryList.SelectedIndices()) > 0 {
-			if m.hasTriageStep {
-				m.enterTriage()
-			} else {
-				m.enterReview()
+	case tea.KeyRight, tea.KeyEnter:
+		m.mergeConfirmIntoDiscovery()
+		if len(m.selectedItems()) > 0 {
+			m.enterReview()
+		}
+		return m, nil
+
+	case tea.KeyTab:
+		m.confirmFocus = (m.confirmFocus + 1) % 3
+		return m, nil
+
+	case tea.KeyShiftTab:
+		m.confirmFocus = (m.confirmFocus + 2) % 3
+		return m, nil
+
+	case tea.KeyUp:
+		switch m.confirmFocus {
+		case triageZoneItems:
+			if m.confirmCursor > 0 {
+				m.confirmCursor--
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
 			}
-			return m, nil
+		case triageZonePreview:
+			if m.confirmPreview.offset > 0 {
+				m.confirmPreview.offset--
+			}
 		}
+		return m, nil
 
-	case msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'h':
-		if m.installedCount > 0 {
-			m.toggleInstalled()
-			return m, nil
+	case tea.KeyDown:
+		switch m.confirmFocus {
+		case triageZoneItems:
+			if m.confirmCursor < len(m.confirmItems)-1 {
+				m.confirmCursor++
+				m.adjustTriageOffset()
+				m.loadTriagePreview()
+			}
+		case triageZonePreview:
+			maxOff := max(0, len(m.confirmPreview.lines)-1)
+			if m.confirmPreview.offset < maxOff {
+				m.confirmPreview.offset++
+			}
 		}
+		return m, nil
 
-	default:
-		var cmd tea.Cmd
-		m.discoveryList, cmd = m.discoveryList.Update(msg)
-		return m, cmd
+	case tea.KeySpace:
+		if m.confirmFocus == triageZoneItems && m.confirmCursor < len(m.confirmItems) {
+			if m.confirmSelected == nil {
+				m.confirmSelected = make(map[int]bool)
+			}
+			m.confirmSelected[m.confirmCursor] = !m.confirmSelected[m.confirmCursor]
+		}
+		return m, nil
+
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 {
+			switch msg.Runes[0] {
+			case 'a':
+				if m.confirmSelected == nil {
+					m.confirmSelected = make(map[int]bool)
+				}
+				for i := range m.confirmItems {
+					m.confirmSelected[i] = true
+				}
+			case 'n':
+				m.confirmSelected = make(map[int]bool)
+			}
+		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -802,8 +855,9 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 		return m, nil
 	}
 
-	// Sort items: actionable (New/Outdated) first, installed (InLibrary) last
-	var actionable, installed []addDiscoveryItem
+	// Separate installed items (already in library) from actionable (new/outdated)
+	var installed []addDiscoveryItem
+	var actionable []addDiscoveryItem
 	for _, item := range msg.items {
 		if item.status == add.StatusInLibrary {
 			installed = append(installed, item)
@@ -811,11 +865,14 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			actionable = append(actionable, item)
 		}
 	}
-	m.actionableCount = len(actionable)
+
+	// Installed items serve as the pre-merge baseline in discoveredItems so
+	// mergeConfirmIntoDiscovery can preserve them when it rebuilds the slice.
+	m.actionableCount = 0
 	m.installedCount = len(installed)
-	m.preMergeActionableCount = len(actionable)
+	m.preMergeActionableCount = 0
 	m.preMergeInstalledCount = len(installed)
-	m.discoveredItems = append(actionable, installed...)
+	m.discoveredItems = installed
 	m.showInstalled = false
 
 	if msg.tmpDir != "" {
@@ -825,24 +882,41 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 	m.sourceVisibility = msg.sourceVisibility
 	m.discoveryList = m.buildDiscoveryList()
 
-	// Handle triage step activation
-	if len(msg.confirmItems) > 0 {
-		m.hasTriageStep = true
-		m.confirmItems = msg.confirmItems
-		m.confirmSelected = make(map[int]bool, len(msg.confirmItems))
-		for i, ci := range msg.confirmItems {
-			m.confirmSelected[i] = ci.tier == analyzer.TierHigh || ci.tier == analyzer.TierUser
+	// Convert auto-discovered actionable items to addConfirmItem (pre-selected).
+	autoConfirm := make([]addConfirmItem, len(actionable))
+	for i, di := range actionable {
+		name := di.displayName
+		if name == "" {
+			name = di.name
 		}
-		m.confirmCursor = 0
-		m.confirmOffset = 0
-		m.confirmFocus = triageZoneItems
-	} else {
-		m.hasTriageStep = false
-		m.confirmItems = nil
-		m.confirmSelected = nil
+		autoConfirm[i] = addConfirmItem{
+			displayName: name,
+			itemType:    di.itemType,
+			path:        filepath.Base(di.path),
+			sourceDir:   di.sourceDir,
+			tier:        di.tier,
+			status:      di.status,     // preserve StatusOutdated for conflict detection
+			underlying:  di.underlying, // preserve for merge fidelity
+		}
 	}
-	// Rebuild shell labels now that hasTriageStep is determined
-	m.shell.SetSteps(m.buildShellLabels())
+
+	// Build unified list: auto items first (pre-selected), then needs-review items.
+	allConfirm := append(autoConfirm, msg.confirmItems...)
+	newSel := make(map[int]bool, len(allConfirm))
+	for i := range autoConfirm {
+		newSel[i] = true // auto-discovered items are always pre-selected
+	}
+	for i, ci := range msg.confirmItems {
+		idx := len(autoConfirm) + i
+		newSel[idx] = ci.tier == analyzer.TierHigh || ci.tier == analyzer.TierUser
+	}
+
+	m.confirmItems, m.confirmSelected = sortConfirmItemsByType(allConfirm, newSel)
+	m.confirmCursor = 0
+	m.confirmOffset = 0
+	m.confirmFocus = triageZoneItems
+	m.confirmPreview = newPreviewModel()
+	m.loadTriagePreview()
 	m.updateMaxStep()
 
 	return m, nil
@@ -858,14 +932,8 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		// Go back to Triage (if active) or Discovery
-		if m.hasTriageStep {
-			m.step = addStepTriage
-			m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-		} else {
-			m.step = addStepDiscovery
-			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-		}
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 		m.reviewAcknowledged = false
 		return m, nil
 
@@ -1193,123 +1261,4 @@ func (m *addWizardModel) handleExecItemDone(msg addExecItemDoneMsg) (*addWizardM
 	m.executing = false
 	seq := m.seq
 	return m, func() tea.Msg { return addExecAllDoneMsg{seq: seq} }
-}
-
-// --- Triage step ---
-
-func (m *addWizardModel) updateKeyTriage(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.step = addStepDiscovery
-		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-		return m, nil
-
-	case tea.KeyEnter:
-		m.mergeConfirmIntoDiscovery()
-		if len(m.discoveryList.SelectedIndices()) > 0 {
-			m.enterReview()
-		}
-		return m, nil
-
-	case tea.KeyTab:
-		m.confirmFocus = (m.confirmFocus + 1) % 3
-		return m, nil
-
-	case tea.KeyShiftTab:
-		m.confirmFocus = (m.confirmFocus + 2) % 3
-		return m, nil
-
-	case tea.KeyUp:
-		switch m.confirmFocus {
-		case triageZoneItems:
-			if m.confirmCursor > 0 {
-				m.confirmCursor--
-				m.adjustTriageOffset()
-				m.loadTriagePreview()
-			}
-		case triageZonePreview:
-			if m.confirmPreview.offset > 0 {
-				m.confirmPreview.offset--
-			}
-		}
-
-	case tea.KeyDown:
-		switch m.confirmFocus {
-		case triageZoneItems:
-			if m.confirmCursor < len(m.confirmItems)-1 {
-				m.confirmCursor++
-				m.adjustTriageOffset()
-				m.loadTriagePreview()
-			}
-		case triageZonePreview:
-			maxOff := max(0, len(m.confirmPreview.lines)-1)
-			if m.confirmPreview.offset < maxOff {
-				m.confirmPreview.offset++
-			}
-		}
-
-	case tea.KeySpace:
-		if m.confirmFocus == triageZoneItems && m.confirmCursor < len(m.confirmItems) {
-			if m.confirmSelected == nil {
-				m.confirmSelected = make(map[int]bool)
-			}
-			m.confirmSelected[m.confirmCursor] = !m.confirmSelected[m.confirmCursor]
-		}
-
-	case tea.KeyRunes:
-		if len(msg.Runes) == 1 {
-			switch msg.Runes[0] {
-			case 'a':
-				if m.confirmSelected == nil {
-					m.confirmSelected = make(map[int]bool)
-				}
-				for i := range m.confirmItems {
-					m.confirmSelected[i] = true
-				}
-			case 'n':
-				m.confirmSelected = make(map[int]bool)
-			}
-		}
-	}
-	return m, nil
-}
-
-func (m *addWizardModel) updateMouseTriage(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
-	// Button clicks
-	if zone.Get("triage-cancel").InBounds(msg) {
-		return m, func() tea.Msg { return addCloseMsg{} }
-	}
-	if zone.Get("triage-back").InBounds(msg) {
-		m.step = addStepDiscovery
-		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-		return m, nil
-	}
-	if zone.Get("triage-next").InBounds(msg) {
-		m.mergeConfirmIntoDiscovery()
-		if len(m.discoveryList.SelectedIndices()) > 0 {
-			m.enterReview()
-		}
-		return m, nil
-	}
-
-	// Item row clicks
-	for i := range m.confirmItems {
-		if zone.Get(fmt.Sprintf("triage-item-%d", i)).InBounds(msg) {
-			m.confirmFocus = triageZoneItems
-			if m.confirmSelected == nil {
-				m.confirmSelected = make(map[int]bool)
-			}
-			if m.confirmCursor == i {
-				// Second click on same row — toggle selection
-				m.confirmSelected[i] = !m.confirmSelected[i]
-			} else {
-				m.confirmCursor = i
-				m.adjustTriageOffset()
-				m.loadTriagePreview()
-			}
-			return m, nil
-		}
-	}
-
-	return m, nil
 }

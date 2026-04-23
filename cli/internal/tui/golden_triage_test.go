@@ -8,7 +8,6 @@ import (
 )
 
 // testConfirmItemsUnsorted returns confirm items in arrival order (before type-sort).
-// Use this as input to sortConfirmItemsByType to match enterTriage() behavior.
 func testConfirmItemsUnsorted() []addConfirmItem {
 	return []addConfirmItem{
 		{
@@ -49,9 +48,9 @@ func testConfirmItemsUnsorted() []addConfirmItem {
 	}
 }
 
-// setupTriageWizard creates an addWizardModel ready for triage golden tests.
-// Items are sorted by type (matching enterTriage() behavior) and High/User
-// items are pre-checked; Medium and Low are unchecked.
+// setupTriageWizard creates an addWizardModel at the Discovery step with
+// confirm items loaded, ready for golden snapshot tests. High/User items
+// are pre-checked; Medium and Low are unchecked.
 func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	t.Helper()
 	m := testOpenAddWizard(t)
@@ -59,7 +58,7 @@ func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	m.height = h
 	m.shell.SetWidth(w)
 
-	// Reproduce enterTriage() sort so golden output matches production.
+	// Sort items as handleDiscoveryDone does when populating the discovery view.
 	rawItems := testConfirmItemsUnsorted()
 	rawSelected := map[int]bool{
 		0: true, // security-scanner (High) — checked
@@ -67,21 +66,16 @@ func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	}
 	items, selected := sortConfirmItemsByType(rawItems, rawSelected)
 
-	// Inject sorted confirm items and enable triage step
+	// Inject sorted confirm items into the discovery step
 	m.confirmItems = items
 	m.confirmSelected = selected
-	m.hasTriageStep = true
 
 	m.confirmCursor = 0
 	m.confirmOffset = 0
 	m.confirmFocus = triageZoneItems
 
-	// Rebuild shell labels to include Triage step
-	m.shell.SetSteps(m.buildShellLabels())
-	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
-
-	// Set step to triage (bypassing wizard flow — test-only)
-	m.step = addStepTriage
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.step = addStepDiscovery
 
 	return m
 }
@@ -97,7 +91,7 @@ func snapshotWizard(t *testing.T, m *addWizardModel) string {
 // These assertions catch regressions that would be silently blessed by -update-golden.
 func assertTriageRender(t *testing.T, view string) {
 	t.Helper()
-	assertContains(t, view, "Triage: detected content") // wizard step label
+	assertContains(t, view, "Discovery: found content") // wizard step label
 	assertContains(t, view, "Match confidence")         // legend line
 	// Section headers for each type group present.
 	assertContains(t, view, "Skills")
