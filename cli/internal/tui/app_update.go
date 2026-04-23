@@ -670,6 +670,8 @@ func (a App) handleEdit() (tea.Model, tea.Cmd) {
 // Directory items use metadata.Load/Save (writes <dir>/.syllago.yaml).
 // Single-file items (legacy hooks/MCP) use metadata.LoadProvider/SaveProvider
 // (writes <parentdir>/.syllago.<filename>.yaml).
+// This is the same implementation path as the CLI's 'syllago edit' command —
+// both delegate to the metadata package; no separate code path exists.
 func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
 	if msg.path == "" {
 		return a, nil
