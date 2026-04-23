@@ -12,7 +12,7 @@ The registry is listed in your configuration but its local clone is missing. Syl
 ## How to Fix
 
 1. Sync your registries to re-clone missing ones: `syllago registry sync`
-2. If sync fails, try removing and re-adding the registry: `syllago registry remove <name>` then `syllago registry add <name> <url>`
+2. If sync fails, try removing and re-adding the registry: `syllago registry remove <name>` then `syllago registry add <url>`
 
 ## Example Output
 

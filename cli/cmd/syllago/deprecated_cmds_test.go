@@ -39,11 +39,11 @@ func TestDeprecatedStubMessages(t *testing.T) {
 			wantMsg: "syllago share",
 		},
 		{
-			name: "promote stub mentions publish",
+			name: "promote stub does not mention phantom publish command",
 			cmd: func() error {
 				return deprecatedPromoteCmd.RunE(deprecatedPromoteCmd, nil)
 			},
-			wantMsg: "syllago publish",
+			wantMsg: "syllago share",
 		},
 	}
 
