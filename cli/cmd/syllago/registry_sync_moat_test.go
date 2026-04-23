@@ -236,8 +236,8 @@ func TestSyncMOAT_ProfileChanged_ReturnsExit11(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	// ProfileChanged MUST gate even with --yes; the re-approval must flow
-	// through `syllago registry approve`.
+	// ProfileChanged MUST gate even with --yes; re-approval requires
+	// removing and re-adding the registry interactively.
 	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

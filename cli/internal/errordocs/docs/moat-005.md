@@ -14,10 +14,10 @@ This is an operator action, not a registry action. Updating your syllago binary 
 
 ## How to Fix
 
-Run the self-updater to pick up the latest release, which always carries a refreshed trusted root:
+Run the updater to pick up the latest release, which always carries a refreshed trusted root:
 
 ```
-syllago self-update
+syllago update
 ```
 
 If your environment pins syllago to a specific version, bump that pin. You can also check staleness at any time without running a verify:
@@ -34,6 +34,6 @@ For air-gapped environments, download a newer release artifact on an online mach
 
 ```
 Error MOAT_005: bundled Sigstore trusted root expired
-  Suggestion: Run `syllago self-update` to refresh. The bundled root passed its 365-day cliff; verification refuses to proceed.
+  Suggestion: Run `syllago update` to refresh. The bundled root passed its 365-day cliff; verification refuses to proceed.
   Details: MOAT_TRUSTED_ROOT_STALE: trusted root issued 2025-03-01, age 420 days, cliff 2026-03-01
 ```

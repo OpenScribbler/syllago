@@ -160,7 +160,7 @@ func runInstallFromRegistry(
 		return output.NewStructuredErrorDetail(
 			output.ErrMoatTrustedRootStale,
 			fmt.Sprintf("bundled trusted root unusable while installing from registry %q", registryName),
-			"Run `syllago self-update` to refresh the bundled Sigstore trusted root.",
+			"Run `syllago update` to refresh the bundled Sigstore trusted root.",
 			rootInfo.Status.String(),
 		)
 	}

@@ -189,7 +189,7 @@ func EnrichFromMOATManifests(
 		pinned := pinnedProfileForEnrich(reg)
 		if pinned == nil {
 			cat.Warnings = append(cat.Warnings,
-				fmt.Sprintf("%s: registry %q has no pinned signing profile; run `syllago registry approve %s`", CodeIdentityUnpinned, reg.Name, reg.Name))
+				fmt.Sprintf("%s: registry %q has no pinned signing profile; run `syllago registry sync %s` to pin the signing profile", CodeIdentityUnpinned, reg.Name, reg.Name))
 			continue
 		}
 		if _, err := enrichVerifyFn(manifestPath, bundlePath, pinned, trInfo.Bytes); err != nil {

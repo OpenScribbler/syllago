@@ -126,7 +126,7 @@ func TestExitCodeForStatus(t *testing.T) {
 // TestStalenessMessage_ShapeByBand asserts the human-readable message
 // follows the promised structure per band:
 //   - Fresh      → empty (no stderr spam in the common case)
-//   - Warn       → single line mentioning "warning" + self-update action
+//   - Warn       → single line mentioning "warning" + update action
 //   - Escalated  → multi-line, mentions "ESCALATED" + days-remaining
 //   - Expired    → mentions "expired" + refuses-to-proceed + action
 //   - Missing    → mentions "missing"
@@ -145,8 +145,8 @@ func TestStalenessMessage_ShapeByBand(t *testing.T) {
 	if !strings.Contains(warnMsg, "warning") {
 		t.Errorf("Warn message must contain 'warning', got %q", warnMsg)
 	}
-	if !strings.Contains(warnMsg, "syllago self-update") {
-		t.Errorf("Warn message must point operator to self-update, got %q", warnMsg)
+	if !strings.Contains(warnMsg, "syllago update") {
+		t.Errorf("Warn message must point operator to update, got %q", warnMsg)
 	}
 	if strings.Count(warnMsg, "\n") != 0 {
 		t.Errorf("Warn must be single line, got %d newlines: %q", strings.Count(warnMsg, "\n"), warnMsg)

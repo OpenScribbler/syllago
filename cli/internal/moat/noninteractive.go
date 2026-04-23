@@ -59,7 +59,7 @@ const (
 	// `registry_signing_profile` moved to a different identity. Could
 	// indicate registry-key compromise; non-interactive clients MUST NOT
 	// silently trust the new profile. Recover with
-	// `syllago registry approve <name>` interactively. Spec row 2.
+	// `syllago registry remove <name>` + `syllago registry add <url>` interactively. Spec row 2.
 	FailureSigningProfileChange
 
 	// FailurePublisherRevocation indicates a publisher-source revocation
@@ -150,7 +150,7 @@ func (f NonInteractiveFailure) Message() string {
 			"interactively or provide a pre-approved trust anchor"
 	case FailureSigningProfileChange:
 		return "registry_signing_profile has changed since the last approval; " +
-			"re-approve interactively with `syllago registry approve <name>`"
+			"run `syllago registry remove <name>` then `syllago registry add <url>` to re-approve the new signing profile"
 	case FailurePublisherRevocation:
 		return "publisher revocation encountered; non-interactive installs " +
 			"cannot proceed past publisher advisories"

@@ -80,7 +80,7 @@ func syncMOATRegistry(
 		return 0, output.NewStructuredErrorDetail(
 			output.ErrMoatTrustedRootStale,
 			fmt.Sprintf("bundled trusted root unusable while syncing registry %q", reg.Name),
-			"Run `syllago self-update` to refresh the bundled Sigstore trusted root.",
+			"Run `syllago update` to refresh the bundled Sigstore trusted root.",
 			rootInfo.Status.String(),
 		)
 	}
@@ -106,8 +106,8 @@ func syncMOATRegistry(
 	}
 
 	// Map SyncResult flags to NonInteractiveFailure codes. ProfileChanged
-	// always gates, regardless of --yes — re-approval MUST flow through
-	// `syllago registry approve` where the diff is shown explicitly.
+	// always gates, regardless of --yes — re-approval requires removing and
+	// re-adding the registry interactively.
 	if res.ProfileChanged {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureSigningProfileChange.Message())
 		return moat.ExitMoatSigningProfileChange, nil
