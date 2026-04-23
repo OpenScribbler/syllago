@@ -172,7 +172,7 @@ func verifyRegistryForAdd(reg *config.Registry, cloneDir string, trustedRootOver
 		return nil, output.NewStructuredErrorDetail(
 			output.ErrMoatTrustedRootStale,
 			"bundled Sigstore trusted root is expired — cannot verify",
-			"Run `syllago self-update` to pick up a fresh trusted root. See `syllago moat trust status` for details.",
+			"Run `syllago update` to pick up a fresh trusted root. See `syllago moat trust status` for details.",
 			moat.StalenessMessage(rootInfo),
 		)
 	}
@@ -277,7 +277,7 @@ func classifyVerifyError(regName string, err error) error {
 			return output.NewStructuredErrorDetail(
 				output.ErrMoatTrustedRootStale,
 				fmt.Sprintf("bundled trusted root unusable while verifying registry %q", regName),
-				"Run `syllago self-update` to refresh the bundled Sigstore trusted root.",
+				"Run `syllago update` to refresh the bundled Sigstore trusted root.",
 				err.Error(),
 			)
 		case moat.CodeIdentityUnpinned:

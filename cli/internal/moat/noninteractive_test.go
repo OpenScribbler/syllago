@@ -182,7 +182,7 @@ func TestNonInteractiveFailure_MessageEmptyForNone(t *testing.T) {
 func TestNonInteractiveFailure_MessageIsActionable(t *testing.T) {
 	cases := map[NonInteractiveFailure]string{
 		FailureTOFUAcceptance:       "syllago registry add",
-		FailureSigningProfileChange: "syllago registry approve",
+		FailureSigningProfileChange: "syllago registry remove",
 		FailureManifestStale:        "syllago registry sync",
 	}
 	for f, needle := range cases {

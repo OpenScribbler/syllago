@@ -20,7 +20,7 @@ package moat
 //   - Emit any stdout/stderr output. Callers decide how to surface status.
 //   - Make the install/abort decision. The SyncResult carries the flags a
 //     caller maps into ExitCodeFor(FailureSigningProfileChange) or a
-//     `syllago registry approve` nudge, per context.
+//     remove+re-add recovery nudge, per context.
 //
 // Why a single Sync entrypoint instead of leaving callers to stitch the
 // primitives themselves: the fetch→verify→parse order is load-bearing, the
@@ -115,7 +115,8 @@ type SyncResult struct {
 	// ProfileChanged is true when an existing pinned profile exists AND the
 	// incoming profile does not equal it. Non-interactive callers MUST exit
 	// with FailureSigningProfileChange (G-18 row 2). Interactive callers
-	// SHOULD prompt for re-approval via `syllago registry approve <name>`.
+	// SHOULD re-approve by running `syllago registry remove <name>` then
+	// `syllago registry add <url>`.
 	ProfileChanged bool
 
 	// Staleness classifies the manifest against the 72h window paired with

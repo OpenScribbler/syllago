@@ -197,7 +197,7 @@ func StalenessMessage(info TrustedRootInfo) string {
 	case TrustedRootStatusWarn:
 		return fmt.Sprintf(
 			"warning: bundled Sigstore trusted root is %d days old (issued %s). "+
-				"Hard-fail at %s. Run `syllago self-update` to refresh.",
+				"Hard-fail at %s. Run `syllago update` to refresh.",
 			info.AgeDays,
 			info.IssuedAt.Format("2006-01-02"),
 			info.CliffDate.Format("2006-01-02"),
@@ -206,7 +206,7 @@ func StalenessMessage(info TrustedRootInfo) string {
 		return fmt.Sprintf(
 			"ESCALATED: bundled Sigstore trusted root is %d days old (issued %s).\n"+
 				"             Hard-fail at %s — only %d days remain.\n"+
-				"             Action: run `syllago self-update` to pick up the latest bundled root.",
+				"             Action: run `syllago update` to pick up the latest bundled root.",
 			info.AgeDays,
 			info.IssuedAt.Format("2006-01-02"),
 			info.CliffDate.Format("2006-01-02"),
@@ -215,7 +215,7 @@ func StalenessMessage(info TrustedRootInfo) string {
 	case TrustedRootStatusExpired:
 		return fmt.Sprintf(
 			"bundled Sigstore trusted root expired %d days ago (cliff %s, issued %s). "+
-				"Verification refuses to proceed. Run `syllago self-update`.",
+				"Verification refuses to proceed. Run `syllago update`.",
 			info.AgeDays-TrustedRootEscalatedDays,
 			info.CliffDate.Format("2006-01-02"),
 			info.IssuedAt.Format("2006-01-02"),
