@@ -41,6 +41,14 @@ func (m *addWizardModel) View() string {
 	if outputLines < m.height {
 		output += strings.Repeat("\n", m.height-outputLines)
 	}
+
+	// Overlay the rename modal on top of the review step. In drill-in mode
+	// the modal is rendered inline at the bottom of the tree pane (see
+	// viewReviewDrillIn) so the preview stays visible — don't double-paint it.
+	if m.renameModal.active && !m.reviewDrillIn {
+		output = overlayModal(output, m.renameModal.View(), m.width, m.height)
+	}
+
 	return output
 }
 
@@ -73,6 +81,29 @@ func (m *addWizardModel) renderTitleRow(title string, showBack bool, nextLabel s
 		parts = append(parts, zone.Mark(b.zoneID, style.Render(b.label)))
 	}
 	btns := strings.Join(parts, "  ")
+	btnsW := lipgloss.Width(btns)
+
+	gap := max(1, m.width-titleW-btnsW-4)
+	return titleRendered + strings.Repeat(" ", gap) + btns
+}
+
+// renderDrillInTitleRow renders the title row for the drill-in view, with
+// Back / Rename / Next buttons right-aligned. Mirrors renderTitleRow but
+// inserts a Rename button so mouse users can discover the same action that
+// the [e] shortcut provides.
+func (m *addWizardModel) renderDrillInTitleRow(title string) string {
+	pad := "  "
+	titleRendered := pad + lipgloss.NewStyle().Bold(true).Foreground(primaryText).Render(title)
+	titleW := lipgloss.Width(titleRendered)
+
+	btnStyle := lipgloss.NewStyle().Padding(0, 2).
+		Foreground(primaryText).
+		Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"})
+
+	backBtn := zone.Mark("add-nav-back", btnStyle.Render("Back"))
+	renameBtn := zone.Mark("add-rename", btnStyle.Render("Rename"))
+	nextBtn := zone.Mark("add-nav-next", btnStyle.Render("Next"))
+	btns := strings.Join([]string{backBtn, renameBtn, nextBtn}, "  ")
 	btnsW := lipgloss.Width(btns)
 
 	gap := max(1, m.width-titleW-btnsW-4)
@@ -560,12 +591,15 @@ func (m *addWizardModel) viewReview() string {
 	}
 	addLabel := fmt.Sprintf("Add %d items", len(selected))
 
-	// Build button string (right-aligned)
+	// Build button string (right-aligned). Rename sits next to Add so the user
+	// can tweak the display name of the highlighted item before committing; it
+	// mirrors the [e] shortcut but is discoverable for mouse users.
 	var btnParts []string
 	for _, b := range []buttonDef{
 		{addLabel, "add-confirm", 0},
-		{"Back", "add-back", 1},
-		{"Cancel", "add-cancel", 2},
+		{"Rename", "add-rename", 1},
+		{"Back", "add-back", 2},
+		{"Cancel", "add-cancel", 3},
 	} {
 		style := lipgloss.NewStyle().Padding(0, 2)
 		if btnFocus == b.focusAt {
@@ -778,17 +812,40 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 	}
 
 	var lines []string
-	lines = append(lines, m.renderTitleRow("Inspecting: "+name, true, ""))
+	lines = append(lines, m.renderDrillInTitleRow("Inspecting: "+name))
 
 	// Compute pane dimensions
 	innerW := m.width - borderSize
 	paneH := max(5, m.height-7) // shell(3) + title(1) + blank(1) + border(2)
 
-	// Always show the file tree pane for consistent drill-in experience
+	// Tree column stays at 30% regardless of modal state — widening it when
+	// the modal opens would push the preview pane right, causing wrap/reflow
+	// that obscures the content the user is inspecting. The modal narrows
+	// (via SetWidth) to fit the existing tree column, and grows vertically
+	// by shrinking the tree's visible row count instead.
 	treeW := max(18, innerW*30/100)
 	previewW := innerW - treeW - 1
 
-	m.reviewDrillTree.SetSize(treeW, paneH)
+	// Reserve a horizontal strip at the bottom of the tree column for the
+	// modal. Tree content shrinks; preview keeps full height so the user
+	// can still scroll file contents while renaming.
+	treePaneH := paneH
+	modalLines := []string{}
+	if m.renameModal.active {
+		m.renameModal.SetWidth(treeW)
+		modalLines = strings.Split(m.renameModal.View(), "\n")
+		// Cap modal height so the tree still has at least 3 visible rows.
+		maxModalH := max(0, paneH-3)
+		if len(modalLines) > maxModalH {
+			modalLines = modalLines[:maxModalH]
+		}
+		treePaneH = paneH - len(modalLines)
+		if treePaneH < 3 {
+			treePaneH = 3
+		}
+	}
+
+	m.reviewDrillTree.SetSize(treeW, treePaneH)
 	m.reviewDrillPreview.SetSize(previewW, paneH)
 
 	mBorder := mutedStyle.Render                                   // inactive border
@@ -819,7 +876,7 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 
 	// Build tree + preview content
 	treeContent := strings.Split(m.reviewDrillTree.View(), "\n")
-	for len(treeContent) < paneH {
+	for len(treeContent) < treePaneH {
 		treeContent = append(treeContent, strings.Repeat(" ", treeW))
 	}
 
@@ -834,11 +891,27 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 		previewContent = append(previewContent, strings.Repeat(" ", previewW))
 	}
 
+	// Build left-column rows = tree content (shrunk) + modal lines (inline).
+	// The combined slice is always paneH lines so it lines up with the
+	// preview column on the right.
+	leftCol := make([]string, 0, paneH)
+	for i := 0; i < treePaneH; i++ {
+		row := ""
+		if i < len(treeContent) {
+			row = treeContent[i]
+		}
+		leftCol = append(leftCol, row)
+	}
+	leftCol = append(leftCol, modalLines...)
+	for len(leftCol) < paneH {
+		leftCol = append(leftCol, strings.Repeat(" ", treeW))
+	}
+
 	// Pane rows
 	for i := 0; i < paneH; i++ {
 		tl := ""
-		if i < len(treeContent) {
-			tl = treeContent[i]
+		if i < len(leftCol) {
+			tl = leftCol[i]
 		}
 		pl := ""
 		if i < len(previewContent) {
