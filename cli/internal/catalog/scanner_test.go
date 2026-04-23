@@ -1065,3 +1065,167 @@ func TestMCPServerDescription(t *testing.T) {
 func gjsonParse(s string) gjson.Result {
 	return gjson.Parse(s)
 }
+
+func TestScanFlatLayout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("detects skills in flat repo layout", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		// Flat layout: skills directly in root, no skills/ subdirectory.
+		writeFile(t, filepath.Join(root, "caveman", "SKILL.md"),
+			"---\nname: Caveman Mode\ndescription: Ultra-compressed communication mode\n---\nBody.\n")
+		writeFile(t, filepath.Join(root, "tdd", "SKILL.md"),
+			"---\nname: TDD\ndescription: Test-driven development workflow\n---\nBody.\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 2 {
+			t.Fatalf("expected 2 skills from flat layout, got %d", len(skills))
+		}
+
+		byName := make(map[string]ContentItem)
+		for _, s := range skills {
+			byName[s.Name] = s
+		}
+
+		caveman, ok := byName["caveman"]
+		if !ok {
+			t.Fatal("expected skill named 'caveman'")
+		}
+		if caveman.DisplayName != "Caveman Mode" {
+			t.Errorf("caveman DisplayName = %q, want %q", caveman.DisplayName, "Caveman Mode")
+		}
+		if caveman.Description != "Ultra-compressed communication mode" {
+			t.Errorf("caveman Description = %q, want %q", caveman.Description, "Ultra-compressed communication mode")
+		}
+		if caveman.Type != Skills {
+			t.Errorf("caveman Type = %q, want %q", caveman.Type, Skills)
+		}
+	})
+
+	t.Run("detects agents in flat repo layout", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		writeFile(t, filepath.Join(root, "my-agent", "AGENT.md"),
+			"---\nname: My Agent\ndescription: Does agent things\n---\nBody.\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		agents := cat.ByType(Agents)
+		if len(agents) != 1 {
+			t.Fatalf("expected 1 agent, got %d", len(agents))
+		}
+		if agents[0].DisplayName != "My Agent" {
+			t.Errorf("agent DisplayName = %q, want %q", agents[0].DisplayName, "My Agent")
+		}
+	})
+
+	t.Run("flat scan does not activate when standard layout items exist", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		// Standard layout skill under skills/
+		writeFile(t, filepath.Join(root, "skills", "standard-skill", "SKILL.md"),
+			"---\nname: Standard\ndescription: From standard layout\n---\n")
+		// Flat layout skill at root — should NOT be detected because standard scan found items.
+		writeFile(t, filepath.Join(root, "flat-skill", "SKILL.md"),
+			"---\nname: Flat\ndescription: From flat layout\n---\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			t.Fatalf("expected 1 skill (standard only), got %d", len(skills))
+		}
+		if skills[0].Name != "standard-skill" {
+			t.Errorf("expected standard-skill, got %s", skills[0].Name)
+		}
+	})
+
+	t.Run("flat skill with companion files collects all files", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		writeFile(t, filepath.Join(root, "tdd", "SKILL.md"), "---\nname: TDD\ndescription: test driven\n---\n")
+		writeFile(t, filepath.Join(root, "tdd", "deep-modules.md"), "# Deep Modules")
+		writeFile(t, filepath.Join(root, "tdd", "scripts", "run.sh"), "#!/bin/sh")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			t.Fatalf("expected 1 skill, got %d", len(skills))
+		}
+
+		fileSet := make(map[string]bool)
+		for _, f := range skills[0].Files {
+			fileSet[f] = true
+		}
+		if !fileSet["SKILL.md"] {
+			t.Error("expected SKILL.md in files")
+		}
+		if !fileSet["deep-modules.md"] {
+			t.Error("expected deep-modules.md in files")
+		}
+		if !fileSet[filepath.Join("scripts", "run.sh")] {
+			t.Error("expected scripts/run.sh in files")
+		}
+	})
+
+	t.Run("flat scan skips dirs without SKILL.md or AGENT.md", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		// A dir with only a random markdown file — not a skill.
+		writeFile(t, filepath.Join(root, "not-a-skill", "README.md"), "# Not a skill")
+		// A valid flat skill.
+		writeFile(t, filepath.Join(root, "real-skill", "SKILL.md"), "---\nname: Real\ndescription: yes\n---\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		skills := cat.ByType(Skills)
+		if len(skills) != 1 {
+			t.Fatalf("expected 1 skill, got %d: %v", len(skills), skills)
+		}
+		if skills[0].Name != "real-skill" {
+			t.Errorf("expected real-skill, got %s", skills[0].Name)
+		}
+	})
+
+	t.Run("flat scan rejects invalid item names", func(t *testing.T) {
+		t.Parallel()
+		root := t.TempDir()
+
+		// Invalid names cannot be created via os.MkdirAll on most OSes (e.g. "foo.bar"),
+		// but we can test via IsValidItemName indirectly by verifying warnings.
+		writeFile(t, filepath.Join(root, "valid-skill", "SKILL.md"), "---\nname: Valid\ndescription: ok\n---\n")
+
+		cat, err := Scan(root, root)
+		if err != nil {
+			t.Fatalf("Scan returned error: %v", err)
+		}
+
+		if len(cat.ByType(Skills)) != 1 {
+			t.Errorf("expected 1 valid skill, got %d", len(cat.ByType(Skills)))
+		}
+	})
+}

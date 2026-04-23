@@ -3420,3 +3420,353 @@
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 16:30 | feat(loadout): multi-provider loadouts + syllago-starter content (814bfa7) | cli/internal/loadout/*, cli/internal/catalog/precedence.go, content/ | shipped; ohdb+5dwo closed | ~14k |
+
+## Session: 2026-04-23 22:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 22:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:41 | Created cli/internal/doctor/doctor.go | — | ~2504 |
+| 22:41 | Session end: 1 writes across 1 files (doctor.go) | 7 reads | ~11612 tok |
+| 22:41 | Edited cli/cmd/syllago/doctor_cmd.go | removed 39 lines | ~46 |
+| 22:41 | Created cli/cmd/syllago/doctor_cmd.go | — | ~510 |
+| 22:43 | Created cli/internal/doctor/doctor.go | — | ~2680 |
+| 22:43 | Edited cli/cmd/syllago/doctor_cmd.go | modified checkLibrary() | ~309 |
+| 22:44 | Edited cli/internal/tui/topbar.go | 3→3 lines | ~25 |
+| 22:44 | Created cli/internal/tui/golden_config_test.go | — | ~912 |
+| 22:44 | Created cli/internal/tui/config_system_test.go | — | ~1156 |
+| 22:45 | Created cli/internal/tui/config_settings_test.go | — | ~1218 |
+| 22:47 | Session end: 9 writes across 6 files (doctor.go, doctor_cmd.go, topbar.go, golden_config_test.go, config_system_test.go) | 17 reads | ~35776 tok |
+
+## Session: 2026-04-23 22:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:49 | Created cli/internal/tui/config_sandbox_test.go | — | ~1613 |
+| 22:50 | Created cli/internal/tui/config_system.go | — | ~1327 |
+| 22:50 | Edited cli/internal/tui/config_system.go | — | ~0 |
+| 22:51 | Created cli/internal/tui/config_settings.go | — | ~1803 |
+| 22:51 | Edited cli/internal/tui/config_settings.go | 6→6 lines | ~40 |
+| 22:51 | Edited cli/internal/tui/config_settings.go | 5→5 lines | ~25 |
+| 22:51 | Edited cli/internal/tui/config_settings.go | inline fix | ~4 |
+| 22:52 | Created cli/internal/tui/config_sandbox.go | — | ~2515 |
+| 22:53 | Edited cli/internal/tui/app.go | 2→7 lines | ~56 |
+
+## Session: 2026-04-23 22:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:53 | Edited cli/internal/tui/app.go | expanded (+9 lines) | ~127 |
+| 22:53 | Edited cli/internal/tui/app_update.go | 2→5 lines | ~52 |
+| 22:54 | Edited cli/internal/tui/app_update.go | modified isLibraryTab() | ~308 |
+| 22:54 | Edited cli/internal/tui/app_update.go | modified isLibraryTab() | ~186 |
+| 22:54 | Edited cli/internal/tui/app_update.go | expanded (+33 lines) | ~261 |
+| 22:54 | Edited cli/internal/tui/app_view.go | renderPlaceholder() → renderConfigContent() | ~16 |
+| 22:54 | Edited cli/internal/tui/app_view.go | modified ActiveTabLabel() | ~112 |
+| 22:56 | Edited cli/internal/installer/hooks.go | modified IsValidHookEvent() | ~188 |
+| 22:56 | Edited cli/internal/tui/app_update.go | 3→6 lines | ~50 |
+| 22:56 | Edited cli/internal/installer/hooks.go | modified uninstallHook() | ~132 |
+| 22:56 | Edited cli/internal/tui/app_update.go | 3→6 lines | ~46 |
+| 22:56 | Edited cli/internal/installer/hooks.go | modified checkHookStatus() | ~132 |
+| 22:56 | Edited cli/internal/tui/add_wizard.go | 17→22 lines | ~200 |
+| 22:56 | Edited cli/internal/tui/add_wizard.go | 17→20 lines | ~147 |
+| 22:57 | Edited cli/internal/tui/add_wizard.go | 30→32 lines | ~270 |
+| 22:57 | Edited cli/internal/tui/add_wizard.go | modified addSingleItem() | ~287 |
+| 22:57 | Edited cli/internal/tui/add_wizard.go | 20→22 lines | ~168 |
+| 22:57 | Edited cli/internal/tui/add_wizard.go | modified writeHookToLibrary() | ~710 |
+| 22:58 | Edited cli/internal/tui/golden_config_test.go | — | ~0 |
+| 22:58 | Edited cli/internal/tui/golden_config_test.go | 5→3 lines | ~6 |
+| 22:59 | Edited cli/internal/tui/app_test.go | TestApp_ConfigTabPlaceholder() → TestApp_ConfigTabSettings() | ~62 |
+| 22:59 | Edited cli/internal/installer/hooks_e2e_test.go | modified TestInstallHook_TranslatesCanonicalEvent() | ~780 |
+| 22:59 | Created cli/internal/tui/add_wizard_hook_write_test.go | — | ~803 |
+| 23:01 | Edited cli/cmd/syllago/doctor_cmd.go | 5→3 lines | ~22 |
+| 23:05 | Fixed Bug 1+2 (hook install/add coupled) | installer/hooks.go + tui/add_wizard.go | all tests pass | ~0 |
+
+| $(date +%H:%M) | Implemented Config TUI sub-tabs: Settings, Sandbox, System | config_settings.go, config_sandbox.go, config_system.go + test files | GREEN, all tests pass, pushed d85eea2 | ~8k |
+| 23:02 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/learning_hook_event_translation.md | — | ~445 |
+| 23:02 | Session end: 25 writes across 11 files (app.go, app_update.go, app_view.go, hooks.go, add_wizard.go) | 12 reads | ~64799 tok |
+| 23:02 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/learning_tui_add_container_types.md | — | ~469 |
+| 23:02 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 1→6 lines | ~134 |
+| 23:03 | Session end: 27 writes across 13 files (app.go, app_update.go, app_view.go, hooks.go, add_wizard.go) | 13 reads | ~65445 tok |
+
+## Session: 2026-04-23 23:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-23 07:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:34 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~163 |
+| 07:35 | Edited cli/internal/tui/add_wizard.go | modified mergeConfirmIntoDiscovery() | ~662 |
+| 07:35 | Edited cli/internal/tui/add_wizard_update.go | 4→6 lines | ~64 |
+| 07:35 | Edited cli/internal/tui/wizard_invariant_test.go | 8→10 lines | ~106 |
+| 07:35 | Edited cli/internal/tui/wizard_invariant_test.go | 11→13 lines | ~101 |
+| 07:36 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestAddWizard_MergePreservesLayoutWithInstalled() | ~788 |
+| 07:39 | Session end: 6 writes across 3 files (add_wizard.go, add_wizard_update.go, wizard_invariant_test.go) | 4 reads | ~35159 tok |
+| 07:46 | Session end: 6 writes across 3 files (add_wizard.go, add_wizard_update.go, wizard_invariant_test.go) | 7 reads | ~45026 tok |
+| 07:47 | Created ../../../../../tmp/migrate_hooks.go | — | ~1677 |
+| 07:49 | Created cli/cmd/migrate_hooks/main.go | — | ~1838 |
+| 07:49 | Edited cli/internal/tui/app_update.go | expanded (+18 lines) | ~248 |
+| 07:50 | Edited cli/internal/tui/app_update.go | modified ActiveTabLabel() | ~136 |
+| 07:51 | Created cli/internal/tui/config_settings.go | — | ~2210 |
+| 07:51 | Created cli/internal/tui/config_system.go | — | ~1558 |
+| 07:52 | Created cli/internal/tui/config_sandbox.go | — | ~2898 |
+
+## Session: 2026-04-23 07:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:55 | Edited cli/internal/tui/golden_config_test.go | System() → keyPress() | ~136 |
+| 07:55 | Edited cli/internal/tui/golden_config_test.go | 3→5 lines | ~18 |
+| 07:57 | Edited cli/cmd/migrate_hooks/main.go | modified func() | ~24 |
+| 07:58 | fix Config tab interactivity: Tab→sub-model, Left/Right→topbar, zone.Mark+updateMouse on all 3 Config sub-models | app_update.go config_{sandbox,settings,system}.go golden_config_test.go | committed 1461018, pushed | ~8k |
+| 07:58 | Session end: 3 writes across 2 files (golden_config_test.go, main.go) | 3 reads | ~8346 tok |
+| 08:03 | Edited cli/internal/tui/config_system.go | 5→5 lines | ~36 |
+| 08:03 | Session end: 4 writes across 3 files (golden_config_test.go, main.go, config_system.go) | 13 reads | ~58838 tok |
+
+## Session: 2026-04-23 08:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:07 | Edited cli/internal/tui/add_wizard.go | modified buildHookPreviewFiles() | ~792 |
+| 08:08 | Edited cli/internal/tui/add_wizard.go | modified Contains() | ~638 |
+| 08:08 | Edited cli/internal/tui/add_wizard.go | modified loadDrillInFile() | ~400 |
+| 08:10 | Created cli/internal/tui/add_wizard_hook_preview_test.go | — | ~1656 |
+| 08:11 | unify hook drill-in across TUI surfaces | tui/add_wizard.go, tui/add_wizard_hook_preview_test.go | make test PASS, binary rebuilt | ~1200 |
+| 08:11 | Session end: 4 writes across 2 files (add_wizard.go, add_wizard_hook_preview_test.go) | 5 reads | ~21484 tok |
+| 08:14 | Session end: 4 writes across 2 files (add_wizard.go, add_wizard_hook_preview_test.go) | 5 reads | ~21484 tok |
+| 08:32 | Edited cli/internal/converter/scripts.go | modified HasPrefix() | ~72 |
+| 08:32 | Edited cli/internal/tui/add_wizard.go | modified buildHookPreviewFiles() | ~457 |
+| 08:33 | Edited cli/internal/tui/add_wizard.go | reduced (-10 lines) | ~166 |
+| 08:33 | Edited cli/internal/converter/scripts_test.go | expanded (+6 lines) | ~149 |
+| 08:33 | Edited cli/internal/tui/add_wizard_hook_preview_test.go | modified TestBuildHookPreviewFiles_ExpandsEnvVars() | ~685 |
+| 08:35 | Session end: 9 writes across 4 files (add_wizard.go, add_wizard_hook_preview_test.go, scripts.go, scripts_test.go) | 6 reads | ~23122 tok |
+| 08:53 | Edited cli/internal/converter/scripts.go | added 1 condition(s) | ~171 |
+| 08:54 | Edited cli/internal/tui/add_wizard.go | removed 53 lines | ~43 |
+| 08:54 | Edited cli/internal/tui/add_wizard.go | modified hooksFromSettingsFile() | ~511 |
+| 08:55 | Edited cli/internal/tui/add_wizard.go | expanded (+25 lines) | ~304 |
+| 08:55 | Edited cli/internal/converter/scripts_test.go | expanded (+6 lines) | ~216 |
+
+## Session: 2026-04-23 08:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:58 | Edited cli/internal/tui/add_wizard_hook_preview_test.go | 9→10 lines | ~62 |
+| 08:58 | Edited cli/internal/tui/add_wizard_hook_preview_test.go | modified TestNativeItemsToDiscovery_HooksSplitPerEntry() | ~753 |
+| 08:59 | Session end: 2 writes across 1 files (add_wizard_hook_preview_test.go) | 3 reads | ~21755 tok |
+| 09:06 | Edited cli/internal/moat/trusted_root_loader.go | inline fix | ~15 |
+| 09:06 | Edited cli/internal/moat/trusted_root_loader.go | inline fix | ~23 |
+| 09:06 | Edited cli/internal/moat/trusted_root_loader.go | inline fix | ~17 |
+| 09:06 | Edited cli/cmd/syllago/registry_sync_moat.go | inline fix | ~20 |
+| 09:06 | Edited cli/cmd/syllago/registry_verify.go | inline fix | ~28 |
+| 09:06 | Edited cli/cmd/syllago/registry_verify.go | 4→4 lines | ~35 |
+| 09:06 | Edited cli/cmd/syllago/install_moat.go | inline fix | ~20 |
+| 09:06 | Edited cli/internal/moat/trusted_root_loader_test.go | inline fix | ~19 |
+| 09:07 | Edited cli/internal/moat/trusted_root_loader_test.go | modified Contains() | ~34 |
+| 09:07 | Edited cli/internal/errordocs/docs/moat-005.md | 5→5 lines | ~32 |
+| 09:07 | Edited cli/internal/errordocs/docs/moat-005.md | "syllago self-update" → "syllago update" | ~33 |
+| 09:07 | Edited cli/internal/moat/noninteractive.go | 5→5 lines | ~91 |
+| 09:07 | Edited cli/internal/moat/noninteractive.go | 3→3 lines | ~60 |
+| 09:07 | Edited cli/internal/moat/sync.go | 4→5 lines | ~87 |
+| 09:07 | Edited cli/cmd/syllago/registry_sync_moat.go | 3→3 lines | ~50 |
+| 09:07 | Edited cli/cmd/syllago/registry_sync_moat_test.go | 2→2 lines | ~33 |
+| 09:07 | Edited cli/internal/moat/noninteractive_test.go | "syllago registry approve" → "syllago registry remove" | ~16 |
+| 09:08 | Edited cli/internal/moat/producer.go | inline fix | ~45 |
+| 09:09 | Created cli/internal/converter/derivename_probe_test.go | — | ~286 |
+| 09:10 | fix ir5t4: replaced 'syllago self-update' (phantom) with 'syllago update' | 7 moat/cmd files + errordoc + test | all tests pass, pushed a22aced | ~800 |
+| 09:10 | fix b0gf1: replaced 'syllago registry approve' (phantom) with remove+re-add recovery | noninteractive.go, producer.go, sync.go, test, comments | all tests pass, pushed a22aced | ~600 |
+| 09:10 | Session end: 21 writes across 13 files (add_wizard_hook_preview_test.go, trusted_root_loader.go, registry_sync_moat.go, registry_verify.go, install_moat.go) | 17 reads | ~61417 tok |
+| 09:11 | Session end: 21 writes across 13 files (add_wizard_hook_preview_test.go, trusted_root_loader.go, registry_sync_moat.go, registry_verify.go, install_moat.go) | 17 reads | ~61417 tok |
+| 09:48 | Session end: 21 writes across 13 files (add_wizard_hook_preview_test.go, trusted_root_loader.go, registry_sync_moat.go, registry_verify.go, install_moat.go) | 20 reads | ~61417 tok |
+| 09:51 | Created cli/internal/converter/manifest.go | — | ~1363 |
+| 09:51 | Session end: 22 writes across 14 files (add_wizard_hook_preview_test.go, trusted_root_loader.go, registry_sync_moat.go, registry_verify.go, install_moat.go) | 22 reads | ~67046 tok |
+
+## Session: 2026-04-23 09:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:53 | Edited cli/internal/converter/manifest.go | 4→1 lines | ~17 |
+| 09:54 | Edited cli/internal/converter/split.go | modified SplitSettingsHooks() | ~668 |
+| 09:54 | Edited cli/internal/converter/split.go | 5→6 lines | ~17 |
+| 09:54 | Edited cli/internal/converter/split.go | modified DeriveHookName() | ~622 |
+| 09:55 | Edited cli/internal/tui/add_wizard.go | expanded (+9 lines) | ~158 |
+| 09:55 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~256 |
+| 09:55 | Edited cli/internal/tui/add_wizard.go | modified readHookPreviewContent() | ~196 |
+| 09:56 | Edited cli/internal/installer/hooks.go | modified parseHookFile() | ~414 |
+| 09:57 | Edited cli/internal/catalog/fileinfo.go | modified HookSummary() | ~234 |
+| 09:57 | Edited cli/internal/catalog/scanner.go | modified describeHookJSON() | ~393 |
+| 09:57 | Edited cli/internal/catalog/scanner.go | modified hookScriptName() | ~349 |
+| 09:58 | Edited cli/internal/catalog/scanner.go | modified hookEventName() | ~417 |
+| 09:58 | Edited cli/internal/loadout/apply.go | 5→6 lines | ~93 |
+| 09:58 | Edited cli/internal/loadout/apply.go | expanded (+18 lines) | ~320 |
+| 09:59 | Edited cli/internal/converter/hooks.go | modified DetectHookFormat() | ~195 |
+| 09:59 | Edited cli/internal/converter/hooks.go | modified DetectHookFormat() | ~159 |
+| 10:00 | Edited cli/internal/installer/hooks_e2e_test.go | 5→5 lines | ~71 |
+| 10:00 | Edited cli/internal/installer/hooks_e2e_test.go | inline fix | ~41 |
+| 10:00 | Edited cli/internal/installer/hooks_e2e_test.go | inline fix | ~37 |
+| 10:00 | Edited cli/internal/installer/hooks_e2e_test.go | inline fix | ~39 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | 10→15 lines | ~89 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | 10→15 lines | ~90 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | modified Exists() | ~257 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | modified Exists() | ~140 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | inline fix | ~38 |
+| 10:01 | Edited cli/internal/installer/hooks_test.go | inline fix | ~36 |
+| 10:02 | Edited cli/internal/installer/hooks_test.go | inline fix | ~43 |
+| 10:02 | Edited cli/internal/installer/hooks_test.go | inline fix | ~41 |
+| 10:02 | Edited cli/internal/installer/hooks_test.go | inline fix | ~39 |
+| 10:02 | Edited cli/internal/installer/hooks_test.go | inline fix | ~37 |
+| 10:02 | Edited cli/internal/installer/installer_resolver_test.go | inline fix | ~36 |
+| 10:03 | Edited cli/internal/converter/hook_security.go | modified DetectHookFormat() | ~149 |
+| 10:03 | Edited cli/internal/loadout/apply_test.go | 8→13 lines | ~76 |
+| 10:03 | Edited cli/internal/loadout/golden_test.go | 5→10 lines | ~51 |
+| 10:03 | Edited cli/internal/loadout/integration_test.go | 5→10 lines | ~53 |
+| 10:04 | Edited cli/internal/loadout/integration_test.go | 4→4 lines | ~110 |
+
+## Session: 2026-04-23 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:06 | Edited cli/internal/tui/add_wizard_hook_write_test.go | modified TestWriteHookToLibrary_WritesManifestHookJSON() | ~682 |
+| 10:06 | Edited cli/internal/tui/add_wizard_hook_preview_test.go | modified TestReadHookPreviewContent_HookJSON() | ~407 |
+| 10:07 | Edited cli/internal/catalog/fileinfo_test.go | modified Run() | ~302 |
+| 10:09 | Edited cli/internal/converter/split_test.go | modified TestSplitSettingsHooks_PerHandlerSplit() | ~567 |
+| 10:09 | Edited cli/internal/converter/split_test.go | 7→8 lines | ~88 |
+| 10:10 | Session end: 5 writes across 4 files (add_wizard_hook_write_test.go, add_wizard_hook_preview_test.go, fileinfo_test.go, split_test.go) | 7 reads | ~8494 tok |
+| 10:12 | Session end: 5 writes across 4 files (add_wizard_hook_write_test.go, add_wizard_hook_preview_test.go, fileinfo_test.go, split_test.go) | 8 reads | ~18740 tok |
+| 10:14 | Session end: 5 writes across 4 files (add_wizard_hook_write_test.go, add_wizard_hook_preview_test.go, fileinfo_test.go, split_test.go) | 8 reads | ~18740 tok |
+
+## Session: 2026-04-23 10:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:26 | Edited cli/internal/tui/add_wizard.go | reduced (-11 lines) | ~172 |
+| 10:26 | Edited cli/internal/tui/add_wizard.go | reduced (-17 lines) | ~46 |
+| 10:26 | Edited cli/internal/tui/add_wizard.go | modified IsDir() | ~812 |
+| 10:27 | Session end: 3 writes across 1 files (add_wizard.go) | 3 reads | ~19892 tok |
+| 10:36 | Edited cli/internal/add/add.go | expanded (+7 lines) | ~227 |
+| 10:36 | Edited cli/internal/add/add.go | 12→17 lines | ~120 |
+| 10:36 | Edited cli/internal/tui/add_wizard.go | 12→13 lines | ~120 |
+| 10:36 | Edited cli/internal/tui/add_wizard.go | 14→15 lines | ~117 |
+| 10:37 | Edited cli/internal/tui/add_wizard.go | expanded (+9 lines) | ~150 |
+| 10:37 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~166 |
+| 10:37 | Edited cli/internal/tui/add_wizard.go | 11→12 lines | ~89 |
+| 10:37 | Edited cli/internal/tui/modal.go | 6→10 lines | ~114 |
+| 10:37 | Edited cli/internal/tui/modal.go | 12→15 lines | ~124 |
+| 10:37 | Edited cli/internal/tui/modal.go | modified Open() | ~210 |
+| 10:37 | Edited cli/internal/tui/modal.go | 7→10 lines | ~66 |
+| 10:37 | Edited cli/internal/tui/app_update.go | 2→7 lines | ~68 |
+| 10:38 | Edited cli/internal/tui/add_wizard.go | modified openRenameModal() | ~517 |
+| 10:38 | Edited cli/internal/tui/add_wizard_update.go | expanded (+17 lines) | ~226 |
+
+## Session: 2026-04-23 10:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:41 | Edited cli/internal/tui/add_wizard_update.go | 28→31 lines | ~302 |
+| 10:41 | Edited cli/internal/tui/add_wizard.go | inline fix | ~34 |
+| 10:41 | Edited cli/internal/tui/add_wizard_view.go | expanded (+6 lines) | ~96 |
+| 10:42 | Created cli/internal/tui/add_wizard_rename_test.go | — | ~1637 |
+| 10:43 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestReviewItems_EKeyOpensRenameModal() | ~380 |
+| 10:43 | Edited cli/internal/tui/add_wizard_rename_test.go | 16→11 lines | ~113 |
+| 10:44 | Edited cli/internal/add/helpers_test.go | modified TestWriteItem_HonorsDisplayNameAndDescription() | ~767 |
+| 10:45 | Session end: 7 writes across 5 files (add_wizard_update.go, add_wizard.go, add_wizard_view.go, add_wizard_rename_test.go, helpers_test.go) | 8 reads | ~48807 tok |
+| 10:59 | Edited cli/internal/tui/add_wizard.go | expanded (+11 lines) | ~141 |
+| 11:00 | Edited cli/internal/tui/app_update.go | modified String() | ~224 |
+| 11:00 | Edited cli/internal/tui/modal.go | expanded (+12 lines) | ~307 |
+| 11:00 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestCapturingTextInput() | ~691 |
+| 11:01 | Edited cli/internal/tui/add_wizard_rename_test.go | 12→13 lines | ~78 |
+| 11:01 | Session end: 12 writes across 7 files (add_wizard_update.go, add_wizard.go, add_wizard_view.go, add_wizard_rename_test.go, helpers_test.go) | 8 reads | ~50350 tok |
+| 11:16 | Edited cli/internal/tui/modal.go | modified SetWidth() | ~116 |
+| 11:16 | Edited cli/internal/tui/add_wizard_update.go | expanded (+6 lines) | ~142 |
+| 11:17 | Edited cli/internal/tui/add_wizard.go | 3→3 lines | ~42 |
+| 11:17 | Edited cli/internal/tui/add_wizard_view.go | 7→9 lines | ~96 |
+| 11:17 | Edited cli/internal/tui/add_wizard_view.go | expanded (+31 lines) | ~374 |
+| 11:17 | Edited cli/internal/tui/add_wizard_view.go | modified len() | ~377 |
+| 11:18 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestDrillIn_EKeyOpensRenameModal() | ~450 |
+| 11:18 | Session end: 19 writes across 7 files (add_wizard_update.go, add_wizard.go, add_wizard_view.go, add_wizard_rename_test.go, helpers_test.go) | 9 reads | ~54763 tok |
+
+## Session: 2026-04-23 11:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:35 | Edited cli/internal/tui/styles.go | 3→7 lines | ~130 |
+| 11:35 | Edited cli/internal/tui/modal.go | 6→6 lines | ~67 |
+| 11:36 | Edited cli/internal/tui/modal.go | expanded (+6 lines) | ~196 |
+| 11:36 | Edited cli/internal/tui/modal.go | 12→12 lines | ~61 |
+| 11:36 | Edited cli/internal/tui/add_wizard_view.go | reduced (-8 lines) | ~111 |
+
+## Session: 2026-04-23 11:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:40 | Edited cli/internal/catalog/scanner.go | modified IsUniversal() | ~163 |
+| 11:40 | Edited cli/internal/catalog/scanner.go | modified scanFlatLayout() | ~698 |
+| 11:41 | Edited cli/internal/catalog/scanner_test.go | modified gjsonParse() | ~1392 |
+| 11:42 | Added scanFlatLayout to scanner.go — detects repos with skills/agents in root dirs (e.g., mattpocock/skills) | cli/internal/catalog/scanner.go, scanner_test.go | All tests pass | ~300 |
+| 11:42 | Session end: 3 writes across 2 files (scanner.go, scanner_test.go) | 3 reads | ~20903 tok |
+| 11:43 | Session end: 3 writes across 2 files (scanner.go, scanner_test.go) | 3 reads | ~20903 tok |
+| 11:55 | Edited cli/internal/tui/add_wizard_view.go | 7→10 lines | ~107 |
+| 11:55 | Edited cli/internal/tui/add_wizard_update.go | 29→32 lines | ~251 |
+| 11:55 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~92 |
+| 11:56 | Edited cli/internal/tui/add_wizard_view.go | expanded (+23 lines) | ~303 |
+| 11:56 | Edited cli/internal/tui/add_wizard_view.go | renderTitleRow() → renderDrillInTitleRow() | ~24 |
+| 11:56 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~73 |
+| 11:56 | Edited cli/internal/tui/add_wizard.go | 2→2 lines | ~30 |
+| 11:56 | Edited cli/internal/tui/add_wizard.go | inline fix | ~18 |
+| 11:57 | Edited cli/internal/tui/add_wizard_test.go | expanded (+10 lines) | ~354 |
+| 11:57 | Edited cli/internal/tui/add_wizard_test.go | 6→8 lines | ~111 |
+| 11:57 | Edited cli/internal/tui/add_wizard_test.go | 3→3 lines | ~42 |
+| 11:57 | Edited cli/internal/tui/add_wizard_test.go | 3→3 lines | ~46 |
+| 11:57 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestReviewButtons_RenameButtonOpensModal() | ~789 |
+| 11:58 | Edited cli/internal/tui/add_wizard_test.go | 4→5 lines | ~93 |
+| 11:59 | Session end: 17 writes across 7 files (scanner.go, scanner_test.go, add_wizard_view.go, add_wizard_update.go, add_wizard.go) | 15 reads | ~84278 tok |
+| 12:02 | Session end: 17 writes across 7 files (scanner.go, scanner_test.go, add_wizard_view.go, add_wizard_update.go, add_wizard.go) | 18 reads | ~84688 tok |
+| 12:03 | Session end: 17 writes across 7 files (scanner.go, scanner_test.go, add_wizard_view.go, add_wizard_update.go, add_wizard.go) | 20 reads | ~95977 tok |
+| 12:07 | Edited cli/internal/tui/add_wizard_update.go | expanded (+7 lines) | ~238 |
+| 12:07 | Edited cli/cmd/syllago/main.go | 5→4 lines | ~66 |
+| 12:07 | Edited cli/cmd/syllago/deprecated_cmds.go | 5→5 lines | ~59 |
+| 12:08 | Created cli/internal/errordocs/docs/privacy-001.md | — | ~243 |
+| 12:08 | Edited cli/internal/errordocs/docs/registry-002.md | inline fix | ~19 |
+| 12:08 | Edited cli/internal/errordocs/docs/registry-004.md | inline fix | ~38 |
+| 12:08 | Edited cli/internal/errordocs/docs/registry-006.md | inline fix | ~34 |
+| 12:08 | Edited cli/internal/errordocs/docs/registry-007.md | inline fix | ~40 |
+| 12:08 | Edited cli/internal/errordocs/docs/install-005.md | 14→14 lines | ~82 |
+| 12:08 | Edited cli/internal/errordocs/docs/item-001.md | "syllago list --registry <" → "syllago registry items <n" | ~21 |
+| 12:08 | Edited cli/cmd/syllago/add_cmd.go | "  syllago config paths --" → "  syllago config paths se" | ~27 |
+| 12:08 | Edited cli/cmd/syllago/install_cmd.go | "  syllago config paths --" → "  syllago config paths se" | ~27 |
+| 12:08 | Edited cli/cmd/syllago/install_moat.go | inline fix | ~44 |
+| 12:08 | Edited cli/cmd/syllago/install_moat.go | "Run " → "Clear the cached ETag by " | ~52 |
+
+## Session: 2026-04-23 12:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:09 | Edited cli/internal/tui/add_wizard_update.go | expanded (+7 lines) | ~150 |
+| 12:09 | Edited cli/cmd/syllago/deprecated_cmds_test.go | 7→7 lines | ~53 |
+| 12:10 | Edited cli/cmd/syllago/install_cmd_test.go | modified Contains() | ~40 |
+| 12:10 | Edited cli/cmd/syllago/add_cmd_test.go | modified Contains() | ~39 |
+| 12:10 | Edited cli/internal/tui/add_wizard_rename_test.go | modified TestReviewButtons_CursorClampsAtFour() | ~803 |
+| 12:11 | Edited cli/internal/tui/add_wizard_view.go | 3→1 lines | ~11 |
+| 12:12 | Edited cli/internal/tui/add_wizard_rename_test.go | inline fix | ~14 |
+| 12:12 | Session end: 7 writes across 6 files (add_wizard_update.go, deprecated_cmds_test.go, install_cmd_test.go, add_cmd_test.go, add_wizard_rename_test.go) | 7 reads | ~42265 tok |
+| 12:12 | Session end: 7 writes across 6 files (add_wizard_update.go, deprecated_cmds_test.go, install_cmd_test.go, add_cmd_test.go, add_wizard_rename_test.go) | 8 reads | ~43373 tok |
+| 12:14 | Edited cli/internal/tui/add_wizard.go | 9→10 lines | ~28 |
+| 12:14 | Edited cli/internal/tui/add_wizard.go | modified sortConfirmItemsByType() | ~791 |
+| 12:15 | Edited cli/internal/tui/add_wizard_view.go | modified typePlural() | ~411 |
+| 12:15 | Edited cli/internal/tui/add_wizard_view.go | 5→6 lines | ~42 |
+| 12:16 | Edited cli/internal/tui/add_wizard_view.go | modified len() | ~1055 |
+| 12:16 | Edited cli/internal/tui/golden_triage_test.go | modified testConfirmItemsUnsorted() | ~589 |
+| 12:16 | Edited cli/internal/tui/golden_triage_test.go | modified assertTriageRender() | ~308 |
+| 12:18 | Edited cli/internal/tui/add_wizard_view.go | 12→16 lines | ~189 |
+| 12:19 | Edited cli/internal/tui/add_wizard_view.go | 2→3 lines | ~43 |
+
+## Session: 2026-04-23 12:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

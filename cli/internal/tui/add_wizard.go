@@ -2,10 +2,12 @@ package tui
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -106,6 +109,7 @@ type addExecAllDoneMsg struct {
 type addDiscoveryItem struct {
 	name        string
 	displayName string
+	description string // optional, set via review-step [e] rename modal
 	itemType    catalog.ContentType
 	path        string
 	sourceDir   string
@@ -115,6 +119,11 @@ type addDiscoveryItem struct {
 	overwrite   bool
 	underlying  *add.DiscoveryItem
 	catalogItem *catalog.ContentItem // original catalog item when available (has correct Files/Path)
+
+	// Hook-specific: populated by discoverHooksFromProvider so addSingleItem
+	// can write a proper flat hook.json instead of copying settings.json.
+	hookData      *converter.HookData
+	hookSourceDir string // directory of the settings.json, used to resolve relative script paths
 
 	confidence      float64
 	detectionSource string
@@ -166,8 +175,14 @@ type addWizardModel struct {
 	discoveryList   checkboxList
 	discoveryErr    string
 	showInstalled   bool // toggle for showing "in library" items
-	installedCount  int  // number of installed items (at end of discoveredItems)
-	actionableCount int  // number of actionable items (New/Outdated)
+	installedCount  int  // number of installed items (trailing block of discoveredItems)
+	actionableCount int  // number of actionable items (New/Outdated); grows when triage merges
+
+	// Pre-merge baselines. Captured once in handleDiscoveryDone and used by
+	// mergeConfirmIntoDiscovery to re-derive the layout idempotently across
+	// Back→Triage→Next cycles.
+	preMergeActionableCount int
+	preMergeInstalledCount  int
 
 	// Taint
 	sourceRegistry   string
@@ -190,6 +205,12 @@ type addWizardModel struct {
 	reviewDrillPreview previewModel
 	drillInRiskyFiles  map[string]catalog.RiskLevel // file path -> highest risk level
 	drillInItemRisks   []catalog.RiskIndicator      // risks for the drilled-in item
+
+	// Review rename modal — edits display name + description of the selected
+	// review item in memory. The on-disk identity (directory name) never changes.
+	renameModal        editModal
+	renameItemCursor   int // index into selectedItems() the modal is editing
+	renameDiscoveryIdx int // index into m.discoveredItems the modal is editing
 
 	// Execute step
 	executeResults   []addExecResult
@@ -249,7 +270,8 @@ func openAddWizard(
 		contentRoot:   contentRoot,
 		preFilterType: preFilterType,
 		sourceCursor:  sourceCursor,
-		buttonCursor:  1, // default to [Back]
+		buttonCursor:  2, // default to [Back] (0=Add, 1=Rename, 2=Back, 3=Cancel)
+		renameModal:   newEditModal(),
 	}
 	// buildShellLabels reads preFilterType and hasTriageStep, so call after struct init
 	m.shell = newWizardShell("Add", m.buildShellLabels())
@@ -259,6 +281,17 @@ func openAddWizard(
 
 // Init satisfies the tea.Model interface.
 func (m *addWizardModel) Init() tea.Cmd { return nil }
+
+// CapturingTextInput returns true when the wizard has a text field focused
+// that should receive every keystroke verbatim (including digits 1/2/3 that
+// the App otherwise hijacks for group navigation). Today that's the rename
+// modal (review step) and the path/URL input on the Source step.
+func (m *addWizardModel) CapturingTextInput() bool {
+	if m == nil {
+		return false
+	}
+	return m.renameModal.active || m.inputActive
+}
 
 // validateStep checks entry-prerequisites for the current step.
 func (m *addWizardModel) validateStep() {
@@ -342,9 +375,9 @@ func (m *addWizardModel) stepHints() []string {
 		}, base...)
 	case addStepReview:
 		if m.reviewDrillIn {
-			return append([]string{"tab/←/→ switch panes", "↑/↓ navigate", "pgup/pgdn scroll", "esc back to review"}, base...)
+			return append([]string{"tab/←/→ switch panes", "↑/↓ navigate", "pgup/pgdn scroll", "e rename", "esc back to review"}, base...)
 		}
-		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter inspect", "esc back"}, base...)
+		return append([]string{"tab cycle zones", "↑/↓ navigate", "←/→ buttons", "enter inspect", "e rename", "esc back"}, base...)
 	case addStepExecute:
 		if m.executeDone {
 			return append([]string{"enter close", "a add more", "↑/↓ scroll"}, base...)
@@ -606,7 +639,8 @@ func (m *addWizardModel) goBackFromDiscovery() {
 	}
 }
 
-// enterTriage transitions to the Triage step.
+// enterTriage transitions to the Triage step. Items are sorted by content type
+// so the grouped display in renderTriageItems matches the model's index order.
 func (m *addWizardModel) enterTriage() {
 	m.step = addStepTriage
 	m.shell.SetActive(m.shellIndexForStep(addStepTriage))
@@ -615,18 +649,79 @@ func (m *addWizardModel) enterTriage() {
 	m.confirmFocus = triageZoneItems
 	m.confirmPreview = newPreviewModel()
 	m.updateMaxStep()
+	m.confirmItems, m.confirmSelected = sortConfirmItemsByType(m.confirmItems, m.confirmSelected)
 	m.loadTriagePreview()
 }
 
 // adjustTriageOffset ensures the triage cursor stays in the visible window.
+// Uses visual row position (which accounts for section headers between type groups)
+// rather than raw item index, since renderTriageItems inserts non-item header rows.
 func (m *addWizardModel) adjustTriageOffset() {
-	vh := max(3, m.height-11)
-	if m.confirmCursor < m.confirmOffset {
-		m.confirmOffset = m.confirmCursor
+	vh := max(3, m.height-12) // -12: added legend line reduces visible pane by 1
+	vr := triageItemVisualRow(m.confirmItems, m.confirmCursor)
+	if vr < m.confirmOffset {
+		m.confirmOffset = vr
 	}
-	if m.confirmCursor >= m.confirmOffset+vh {
-		m.confirmOffset = m.confirmCursor - vh + 1
+	if vr >= m.confirmOffset+vh {
+		m.confirmOffset = vr - vh + 1
 	}
+}
+
+// triageTypeOrder assigns a display sort priority to each content type.
+// Skills and Agents are most common in community registries so they sort first.
+var triageTypeOrder = map[catalog.ContentType]int{
+	catalog.Skills:   0,
+	catalog.Agents:   1,
+	catalog.Rules:    2,
+	catalog.Hooks:    3,
+	catalog.Commands: 4,
+	catalog.MCP:      5,
+	catalog.Loadouts: 6,
+}
+
+// sortConfirmItemsByType returns a copy of items sorted by content type (using
+// triageTypeOrder) and a new selected map with indices remapped to the sorted
+// positions. A stable sort preserves relative order within each type group.
+func sortConfirmItemsByType(items []addConfirmItem, selected map[int]bool) ([]addConfirmItem, map[int]bool) {
+	type indexed struct {
+		origIdx int
+		item    addConfirmItem
+	}
+	work := make([]indexed, len(items))
+	for i, item := range items {
+		work[i] = indexed{origIdx: i, item: item}
+	}
+	sort.SliceStable(work, func(i, j int) bool {
+		oi := triageTypeOrder[work[i].item.itemType]
+		oj := triageTypeOrder[work[j].item.itemType]
+		return oi < oj
+	})
+	sorted := make([]addConfirmItem, len(items))
+	newSel := make(map[int]bool, len(selected))
+	for newIdx, w := range work {
+		sorted[newIdx] = w.item
+		if selected[w.origIdx] {
+			newSel[newIdx] = true
+		}
+	}
+	return sorted, newSel
+}
+
+// triageItemVisualRow returns the 0-indexed row position of the item at idx
+// within the scrollable section of the triage items pane. Items must already
+// be sorted by type (via sortConfirmItemsByType). Type-group section headers
+// inserted before each group add extra rows before each item.
+func triageItemVisualRow(items []addConfirmItem, idx int) int {
+	if len(items) == 0 {
+		return 0
+	}
+	headers := 1 // first group always has a header at row 0
+	for k := 1; k <= idx && k < len(items); k++ {
+		if items[k].itemType != items[k-1].itemType {
+			headers++
+		}
+	}
+	return idx + headers
 }
 
 // loadTriagePreview loads the file at the current triage cursor into the preview.
@@ -654,13 +749,25 @@ func (m *addWizardModel) loadTriagePreview() {
 	m.confirmPreview.lines = strings.Split(content, "\n")
 }
 
-// mergeConfirmIntoDiscovery appends user-selected confirm items to the discovery
-// list before entering Review. Safe to call multiple times — truncates to pre-merge
-// length first (idempotency guarantee for Back→Triage→Next flows).
+// mergeConfirmIntoDiscovery inserts user-selected confirm items into the
+// actionable block of discoveredItems before entering Review. Safe to call
+// multiple times — rebuilds from the pre-merge baselines each time
+// (idempotency guarantee for Back→Triage→Next flows).
+//
+// Layout invariant: discoveredItems = [actionable... + merged...] + [installed...]
+// Merged items carry StatusNew so they belong in the actionable block;
+// placing them in the trailing installed block would hide them from
+// visibleDiscoveryItems() when showInstalled=false.
 func (m *addWizardModel) mergeConfirmIntoDiscovery() {
-	// Strip any previously-merged confirm items to prevent duplicates.
-	m.discoveredItems = m.discoveredItems[:m.actionableCount+m.installedCount]
+	baseActionable := m.preMergeActionableCount
+	baseInstalled := m.preMergeInstalledCount
 
+	// Split the current slice back to its pre-merge halves. actionableCount may
+	// have grown past baseActionable on a prior merge; installedCount is stable.
+	origActionable := append([]addDiscoveryItem(nil), m.discoveredItems[:baseActionable]...)
+	origInstalled := append([]addDiscoveryItem(nil), m.discoveredItems[m.actionableCount:m.actionableCount+baseInstalled]...)
+
+	var merged []addDiscoveryItem
 	for i, item := range m.confirmItems {
 		if !m.confirmSelected[i] {
 			continue
@@ -697,15 +804,16 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.catalogItem = &ci
 			di.risks = catalog.RiskIndicators(ci)
 		}
-		m.discoveredItems = append(m.discoveredItems, di)
+		merged = append(merged, di)
 	}
 
-	// Rebuild discovery list and auto-select merged items.
+	m.discoveredItems = append(append(origActionable, merged...), origInstalled...)
+	m.actionableCount = baseActionable + len(merged)
+	m.installedCount = baseInstalled
+
+	// buildDiscoveryList pre-selects StatusNew/StatusOutdated items, which
+	// covers both the original actionable set and the newly merged items.
 	m.discoveryList = m.buildDiscoveryList()
-	mergeStart := m.actionableCount + m.installedCount
-	for i := mergeStart; i < len(m.discoveredItems); i++ {
-		m.discoveryList.selected[i] = true
-	}
 }
 
 // enterReview transitions to the Review step.
@@ -734,7 +842,7 @@ func (m *addWizardModel) enterReview() {
 
 	// Default focus: items zone so per-item risk info shows immediately
 	m.reviewZone = addReviewZoneItems
-	m.buttonCursor = 1 // [Back]
+	m.buttonCursor = 2 // [Back] (0=Add, 1=Rename, 2=Back, 3=Cancel)
 	m.reviewItemCursor = 0
 	m.reviewItemOffset = 0
 	m.reviewAcknowledged = false
@@ -765,10 +873,32 @@ func (m *addWizardModel) enterReviewDrillIn() {
 	// from the catalog scanner). Fall back to filesystem scan for items
 	// discovered from providers (hooks, MCP, file-based without catalog scan).
 	var ci catalog.ContentItem
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		// Canonical hook drill-in: show the flat hook.json object + any
+		// scripts it references, matching the on-disk layout that the
+		// library and Content > Hooks surfaces see.
+		files := buildHookPreviewFiles(item)
+		m.reviewDrillTree = newFileTreeModel(files)
+		m.reviewDrillTree.focused = true
+		// buildTree sorts alphabetically, so hook.json may land mid-list.
+		// Sync the cursor to match the preview we're about to load.
+		m.reviewDrillTree.SelectPath("hook.json")
+		m.reviewDrillPreview = newPreviewModel()
+		content, err := readHookPreviewContent(item, "hook.json")
+		if err != nil {
+			m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
+		} else {
+			m.reviewDrillPreview.lines = strings.Split(content, "\n")
+		}
+		m.reviewDrillPreview.fileName = "hook.json"
+
+		m.setupDrillInRisks(item)
+		return
+	}
 	if item.catalogItem != nil {
 		ci = *item.catalogItem
-	} else if (item.itemType == catalog.Hooks || item.itemType == catalog.MCP) && item.path != "" {
-		// Hooks/MCP from providers: extract just the relevant JSON section
+	} else if item.itemType == catalog.MCP && item.path != "" {
+		// MCP from providers: extract just the relevant JSON section
 		// instead of showing the entire settings file.
 		ci = catalog.ContentItem{
 			Name:  item.name,
@@ -776,7 +906,6 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			Path:  filepath.Dir(item.path),
 			Files: []string{filepath.Base(item.path)},
 		}
-		// Override the preview content with just the relevant section
 		extracted := extractJSONSection(item.path, item.name, item.itemType)
 		if extracted != "" {
 			m.reviewDrillTree = newFileTreeModel([]string{item.name + ".json"})
@@ -785,15 +914,13 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			m.reviewDrillPreview.fileName = item.name + ".json"
 			m.reviewDrillPreview.lines = strings.Split(extracted, "\n")
 
-			// Highlight key config lines (command, url, env) so the user
-			// can immediately see what this hook/MCP server does
 			highlights := make(map[int]bool)
 			for lineNum, line := range m.reviewDrillPreview.lines {
 				lower := strings.ToLower(line)
 				if strings.Contains(lower, `"command"`) ||
 					strings.Contains(lower, `"url"`) ||
 					strings.Contains(lower, `"env"`) {
-					highlights[lineNum+1] = true // 1-based
+					highlights[lineNum+1] = true
 				}
 			}
 			if len(highlights) > 0 {
@@ -803,7 +930,6 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			m.setupDrillInRisks(item)
 			return
 		}
-		// Fall through to normal handling if extraction fails
 	} else {
 		// Construct from discovery item fields
 		itemPath := item.path
@@ -864,25 +990,8 @@ func (m *addWizardModel) setupDrillInRisks(item addDiscoveryItem) {
 	}
 
 	// Set initial highlight lines for the primary file
-	if m.reviewDrillPreview.fileName != "" && len(m.drillInItemRisks) > 0 {
-		highlights := make(map[int]bool)
-		firstLine := 0
-		for _, r := range m.drillInItemRisks {
-			for _, rl := range r.Lines {
-				if rl.File == m.reviewDrillPreview.fileName {
-					highlights[rl.Line] = true
-					if firstLine == 0 || rl.Line < firstLine {
-						firstLine = rl.Line
-					}
-				}
-			}
-		}
-		if len(highlights) > 0 {
-			m.reviewDrillPreview.SetHighlightLines(highlights)
-			if firstLine > 0 {
-				m.reviewDrillPreview.offset = max(0, firstLine-3)
-			}
-		}
+	if m.reviewDrillPreview.fileName != "" {
+		m.applyDrillInHighlights(m.reviewDrillPreview.fileName, item.itemType)
 	}
 
 	// Pre-size the panes so scroll works before the first View()
@@ -910,6 +1019,29 @@ func (m *addWizardModel) loadDrillInFile() {
 	}
 	item := selected[m.reviewItemCursor]
 
+	relPath := m.reviewDrillTree.SelectedPath()
+	if relPath == "" {
+		return
+	}
+
+	// Hooks use a virtual tree (hook.json + bundled scripts) since the
+	// canonical representation is not a literal file on disk yet.
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		content, err := readHookPreviewContent(item, relPath)
+		if err != nil {
+			m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
+			m.reviewDrillPreview.fileName = relPath
+			m.reviewDrillPreview.offset = 0
+			m.reviewDrillPreview.SetHighlightLines(nil)
+			return
+		}
+		m.reviewDrillPreview.lines = strings.Split(content, "\n")
+		m.reviewDrillPreview.fileName = relPath
+		m.reviewDrillPreview.offset = 0
+		m.applyDrillInHighlights(relPath, item.itemType)
+		return
+	}
+
 	// Use catalogItem.Path when available (authoritative), fall back to discovery fields
 	var basePath string
 	if item.catalogItem != nil {
@@ -925,11 +1057,6 @@ func (m *addWizardModel) loadDrillInFile() {
 		}
 	}
 
-	relPath := m.reviewDrillTree.SelectedPath()
-	if relPath == "" {
-		return
-	}
-
 	content, err := catalog.ReadFileContent(basePath, relPath, 10000)
 	if err != nil {
 		m.reviewDrillPreview.lines = []string{"Error: " + err.Error()}
@@ -941,8 +1068,18 @@ func (m *addWizardModel) loadDrillInFile() {
 	m.reviewDrillPreview.lines = strings.Split(content, "\n")
 	m.reviewDrillPreview.fileName = relPath
 	m.reviewDrillPreview.offset = 0
+	m.applyDrillInHighlights(relPath, item.itemType)
+}
 
-	// Check if this file has any risk lines and set highlights
+// applyDrillInHighlights sets highlight lines on the drill-in preview for the
+// given file. Priority:
+//  1. Risk-line highlights from drillInItemRisks matching relPath (any file)
+//  2. For hooks viewing hook.json: command/url/env line highlights
+//  3. No highlights
+//
+// Scrolls to firstLine-3 when risk highlights are present.
+func (m *addWizardModel) applyDrillInHighlights(relPath string, itemType catalog.ContentType) {
+	// Priority 1: risk-line highlights for this file
 	highlights := make(map[int]bool)
 	firstLine := 0
 	for _, r := range m.drillInItemRisks {
@@ -957,13 +1094,83 @@ func (m *addWizardModel) loadDrillInFile() {
 	}
 	if len(highlights) > 0 {
 		m.reviewDrillPreview.SetHighlightLines(highlights)
-		// Scroll to center on the first highlighted line
 		if firstLine > 0 {
 			m.reviewDrillPreview.offset = max(0, firstLine-3)
 		}
-	} else {
-		m.reviewDrillPreview.SetHighlightLines(nil)
+		return
 	}
+
+	// Priority 2: hook.json command/url/env highlights (shown to surface intent)
+	if itemType == catalog.Hooks && relPath == "hook.json" {
+		hookHL := make(map[int]bool)
+		for i, line := range m.reviewDrillPreview.lines {
+			lower := strings.ToLower(line)
+			if strings.Contains(lower, `"command"`) ||
+				strings.Contains(lower, `"url"`) ||
+				strings.Contains(lower, `"env"`) {
+				hookHL[i+1] = true
+			}
+		}
+		if len(hookHL) > 0 {
+			m.reviewDrillPreview.SetHighlightLines(hookHL)
+			return
+		}
+	}
+
+	m.reviewDrillPreview.SetHighlightLines(nil)
+}
+
+// openRenameModal opens the review-step rename modal for the given cursor
+// position in selectedItems(). Pre-fills with the item's current display name
+// (falling back to its identifier) and description.
+func (m *addWizardModel) openRenameModal(cursor int) {
+	selected := m.selectedItems()
+	if cursor < 0 || cursor >= len(selected) {
+		return
+	}
+	item := selected[cursor]
+
+	// Map back to the source index in discoveredItems. selectedItems() walks
+	// discoveryList.SelectedIndices() into visibleDiscoveryItems(), which is a
+	// prefix slice of discoveredItems — so the selected index IS the
+	// discoveredItems index.
+	selIndices := m.discoveryList.SelectedIndices()
+	if cursor >= len(selIndices) {
+		return
+	}
+	discIdx := selIndices[cursor]
+	if discIdx < 0 || discIdx >= len(m.discoveredItems) {
+		return
+	}
+
+	currentName := item.displayName
+	if currentName == "" {
+		currentName = item.name
+	}
+
+	m.renameItemCursor = cursor
+	m.renameDiscoveryIdx = discIdx
+	m.renameModal.OpenWithContext(
+		"Rename: "+item.name,
+		currentName,
+		item.description,
+		item.name, // path field carries the identifier for display/reference
+		"wizard_rename",
+	)
+}
+
+// handleRenameSaved applies a rename from the review modal to the in-memory
+// discoveredItem. Nothing is written to disk — the new display name and
+// description are persisted into .syllago.yaml at execute time by
+// writeHookToLibrary / add.AddItems.
+func (m *addWizardModel) handleRenameSaved(msg editSavedMsg) {
+	if m.renameDiscoveryIdx < 0 || m.renameDiscoveryIdx >= len(m.discoveredItems) {
+		return
+	}
+	// Empty name falls back to the identifier so we never end up with a blank
+	// display name in the UI.
+	m.discoveredItems[m.renameDiscoveryIdx].displayName = strings.TrimSpace(msg.name)
+	m.discoveredItems[m.renameDiscoveryIdx].description = strings.TrimSpace(msg.description)
 }
 
 // enterExecute transitions to the Execute step.
@@ -1414,55 +1621,82 @@ func discoverHooksFromProvider(prov provider.Provider, projectRoot string, resol
 		if err != nil {
 			continue
 		}
-		for _, hook := range hooks {
-			name := converter.DeriveHookName(hook)
+		items := hooksFromSettingsFile(loc.Path, prov.Slug, loc.Scope.String(), idx, hooks)
+		result = append(result, items...)
+	}
+	return result
+}
 
-			key := string(catalog.Hooks) + "/" + prov.Slug + "/" + name
-			_, inLib := idx[key]
-			status := add.StatusNew
-			if inLib {
-				status = add.StatusInLibrary
-			}
-
-			di := add.DiscoveryItem{
-				Name:   name,
-				Type:   catalog.Hooks,
-				Path:   loc.Path,
-				Status: status,
-				Scope:  loc.Scope.String(),
-			}
-
-			// Compute risk from the hook's structured data
-			var hookRisks []catalog.RiskIndicator
-			for _, entry := range hook.Hooks {
-				if entry.Command != "" {
-					hookRisks = append(hookRisks, catalog.RiskIndicator{
-						Label:       "Runs commands",
-						Description: "Hook executes: " + truncate(entry.Command, 60),
-						Level:       catalog.RiskHigh,
-					})
-					break // one "Runs commands" indicator is enough
-				}
-				if entry.URL != "" {
-					hookRisks = append(hookRisks, catalog.RiskIndicator{
-						Label:       "Network access",
-						Description: "Hook calls: " + truncate(entry.URL, 60),
-						Level:       catalog.RiskMedium,
-					})
-					break
-				}
-			}
-
-			result = append(result, addDiscoveryItem{
-				name:       name,
-				itemType:   catalog.Hooks,
-				path:       loc.Path,
-				status:     status,
-				scope:      loc.Scope.String(),
-				risks:      hookRisks,
-				underlying: &di,
-			})
+// hooksFromSettingsFile converts an already-parsed list of HookData from a
+// single settings file into discovery items. Each HookData becomes one item
+// with full hookData + hookSourceDir populated so drill-in renders the
+// canonical flat hook.json + bundled scripts.
+func hooksFromSettingsFile(
+	settingsPath, providerSlug, scope string,
+	idx add.LibraryIndex,
+	hooks []converter.HookData,
+) []addDiscoveryItem {
+	var result []addDiscoveryItem
+	sourceDir := filepath.Dir(settingsPath)
+	seen := map[string]int{}
+	for _, hook := range hooks {
+		hookCopy := hook
+		baseName := converter.DeriveHookName(hookCopy)
+		// Two different handlers can derive the same name (same event+matcher
+		// with no script reference or status message). Suffix collisions with
+		// -2, -3, … so each discovery row is uniquely addressable.
+		name := baseName
+		seen[baseName]++
+		if n := seen[baseName]; n > 1 {
+			name = fmt.Sprintf("%s-%d", baseName, n)
 		}
+
+		key := string(catalog.Hooks) + "/" + providerSlug + "/" + name
+		_, inLib := idx[key]
+		status := add.StatusNew
+		if inLib {
+			status = add.StatusInLibrary
+		}
+
+		di := add.DiscoveryItem{
+			Name:   name,
+			Type:   catalog.Hooks,
+			Path:   settingsPath,
+			Status: status,
+			Scope:  scope,
+		}
+
+		var hookRisks []catalog.RiskIndicator
+		for _, entry := range hookCopy.Hooks {
+			if entry.Command != "" {
+				hookRisks = append(hookRisks, catalog.RiskIndicator{
+					Label:       "Runs commands",
+					Description: "Hook executes: " + truncate(entry.Command, 60),
+					Level:       catalog.RiskHigh,
+				})
+				break
+			}
+			if entry.URL != "" {
+				hookRisks = append(hookRisks, catalog.RiskIndicator{
+					Label:       "Network access",
+					Description: "Hook calls: " + truncate(entry.URL, 60),
+					Level:       catalog.RiskMedium,
+				})
+				break
+			}
+		}
+
+		result = append(result, addDiscoveryItem{
+			name:          name,
+			itemType:      catalog.Hooks,
+			path:          settingsPath,
+			status:        status,
+			scope:         scope,
+			risks:         hookRisks,
+			underlying:    &di,
+			hookData:      &hookCopy,
+			hookSourceDir: sourceDir,
+		})
 	}
 	return result
 }
@@ -1801,6 +2035,31 @@ func nativeItemsToDiscovery(
 			if !ok || !typeSet[ct] {
 				continue
 			}
+			// Hooks need special handling: each NativeItem is one hook inside
+			// a shared settings.json, but drill-in/library want one flat
+			// hook.json per entry. Parse the settings file and split it the
+			// same way discoverHooksFromProvider does so the drill-in shows
+			// just the single hook (not the whole settings.json).
+			if ct == catalog.Hooks {
+				seen := make(map[string]bool)
+				for _, ni := range nativeItems {
+					settingsPath := filepath.Join(baseDir, ni.Path)
+					if seen[settingsPath] {
+						continue
+					}
+					seen[settingsPath] = true
+					data, err := os.ReadFile(settingsPath)
+					if err != nil {
+						continue
+					}
+					hooks, err := converter.SplitSettingsHooks(data, pc.ProviderSlug)
+					if err != nil {
+						continue
+					}
+					items = append(items, hooksFromSettingsFile(settingsPath, pc.ProviderSlug, pc.ProviderSlug, idx, hooks)...)
+				}
+				continue
+			}
 			for _, ni := range nativeItems {
 				fullPath := filepath.Join(baseDir, ni.Path)
 
@@ -1945,6 +2204,15 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 		}
 	}
 
+	// Hooks discovered from a provider's settings.json need their own write
+	// path: item.path is the settings.json (not a hook.json), so the generic
+	// add.AddItems copy-from-path flow would write the whole settings file as
+	// hook.json. Instead, serialize the parsed HookData directly. Mirrors
+	// cli/cmd/syllago/add_cmd.go addHooksFromLocation.
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug)
+	}
+
 	opts := add.AddOptions{
 		Force:            item.overwrite,
 		Provider:         provSlug,
@@ -1952,7 +2220,16 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 		SourceVisibility: srcVis,
 	}
 
-	results := add.AddItems([]add.DiscoveryItem{*item.underlying}, opts, contentRoot, nil, "syllago")
+	// Forward review-step rename (if set) into the shared write path. Identity
+	// (directory layout) stays keyed on Name; only metadata.Name changes.
+	diCopy := *item.underlying
+	if item.displayName != "" {
+		diCopy.DisplayName = item.displayName
+	}
+	if item.description != "" {
+		diCopy.Description = item.description
+	}
+	results := add.AddItems([]add.DiscoveryItem{diCopy}, opts, contentRoot, nil, "syllago")
 	if len(results) == 0 {
 		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("no result")}
 	}
@@ -1974,6 +2251,81 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 	}
 }
 
+// writeHookToLibrary serializes a HookData to ~/.syllago/hooks/<provider>/<name>/hook.json,
+// bundles any referenced scripts into the same directory, and writes .syllago.yaml
+// metadata. Mirrors addHooksFromLocation in cli/cmd/syllago/add_cmd.go.
+func writeHookToLibrary(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug string) addExecResult {
+	itemDir := filepath.Join(contentRoot, string(catalog.Hooks), provSlug, item.name)
+
+	if !item.overwrite {
+		if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
+			return addExecResult{name: item.name, status: "skipped"}
+		}
+	}
+
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("creating %s: %w", itemDir, err)}
+	}
+
+	// Bundle script files referenced by the hook's commands. Failure here is
+	// non-fatal — the hook can still be installed if scripts are absolute paths.
+	bundled, _ := converter.BundleHookScripts(item.hookData, item.hookSourceDir, itemDir)
+
+	// Write the canonical hooks/0.1 Manifest shape (single handler per file).
+	// SplitSettingsHooks guarantees one entry in hookData.Hooks post-split.
+	manifest, err := converter.ManifestFromHookData(*item.hookData)
+	if err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("building manifest: %w", err)}
+	}
+	hookJSON, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("marshaling hook: %w", err)}
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "hook.json"), hookJSON, 0o644); err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("writing hook.json: %w", err)}
+	}
+
+	var bundledMeta []metadata.BundledScriptMeta
+	for _, b := range bundled {
+		bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{
+			OriginalPath: b.OriginalPath,
+			Filename:     b.Filename,
+		})
+	}
+
+	metaName := item.name
+	if item.displayName != "" {
+		metaName = item.displayName
+	}
+
+	now := time.Now().UTC()
+	meta := &metadata.Meta{
+		ID:               metadata.NewID(),
+		Name:             metaName,
+		Description:      item.description,
+		Type:             string(catalog.Hooks),
+		BundledScripts:   bundledMeta,
+		AddedAt:          &now,
+		SourceProvider:   provSlug,
+		SourceFormat:     "json",
+		SourceType:       "provider",
+		SourceRegistry:   srcReg,
+		SourceVisibility: srcVis,
+		SourceScope:      item.scope,
+	}
+	if srcReg != "" {
+		meta.SourceType = "registry"
+	}
+	if err := metadata.Save(itemDir, meta); err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("writing metadata: %w", err)}
+	}
+
+	if item.status == add.StatusInLibrary {
+		return addExecResult{name: item.name, status: "updated"}
+	}
+	return addExecResult{name: item.name, status: "added"}
+}
+
 // --- Git URL validation ---
 
 // validGitURL returns true if the URL looks like a valid git remote.
@@ -1990,6 +2342,110 @@ func validGitURL(url string) bool {
 		strings.HasPrefix(lower, "http://") ||
 		strings.HasPrefix(lower, "ssh://") ||
 		strings.HasPrefix(lower, "git@")
+}
+
+// buildHookPreviewFiles returns the virtual file list for a hook drill-in:
+// "hook.json" (the flat single-hook object) followed by any referenced
+// scripts that exist in item.hookSourceDir. This mirrors the on-disk layout
+// that writeHookToLibrary will produce, so the wizard preview shows the same
+// files the user will inspect in the library and Content > Hooks surfaces.
+func buildHookPreviewFiles(item addDiscoveryItem) []string {
+	files := []string{"hook.json"}
+	if item.hookData == nil {
+		return files
+	}
+	seen := map[string]bool{"hook.json": true}
+	for _, h := range item.hookData.Hooks {
+		ref := converter.ExtractScriptRef(h.Command)
+		if ref == "" {
+			continue
+		}
+		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
+		if !ok {
+			continue
+		}
+		base := filepath.Base(resolved)
+		if base == "." || base == "/" || seen[base] {
+			continue
+		}
+		if _, err := os.Stat(resolved); err != nil {
+			continue
+		}
+		files = append(files, base)
+		seen[base] = true
+	}
+	return files
+}
+
+// resolveHookScriptPath resolves a hook command's script reference to an
+// absolute path, expanding env vars ($PAI_DIR, ${PAI_DIR}), ~/, and relative
+// paths. Returns (path, true) on success, ("", false) if the ref cannot be
+// resolved (e.g. unset env var yielding a path that still contains '$').
+func resolveHookScriptPath(ref, sourceDir string) (string, bool) {
+	if ref == "" {
+		return "", false
+	}
+	// os.ExpandEnv handles both $VAR and ${VAR} forms. Unset vars expand to
+	// empty, so $UNSET/foo.sh becomes /foo.sh — caught by the Stat check
+	// upstream, but we also bail if the result still contains '$' (which
+	// means an escaped or malformed var was left behind).
+	expanded := os.ExpandEnv(ref)
+	if expanded == "" {
+		return "", false
+	}
+	if strings.HasPrefix(expanded, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", false
+		}
+		return filepath.Join(home, expanded[2:]), true
+	}
+	if filepath.IsAbs(expanded) {
+		return expanded, true
+	}
+	if sourceDir == "" {
+		return "", false
+	}
+	return filepath.Clean(filepath.Join(sourceDir, expanded)), true
+}
+
+// readHookPreviewContent returns the preview content for a virtual hook file.
+// "hook.json" returns a pretty-printed canonical Manifest JSON (hooks/0.1
+// shape); other names are read from item.hookSourceDir as bundled script
+// files would be.
+func readHookPreviewContent(item addDiscoveryItem, relPath string) (string, error) {
+	if relPath == "hook.json" {
+		if item.hookData == nil {
+			return "", fmt.Errorf("no hook data")
+		}
+		manifest, err := converter.ManifestFromHookData(*item.hookData)
+		if err != nil {
+			return "", fmt.Errorf("building manifest: %w", err)
+		}
+		out, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return "", fmt.Errorf("marshaling hook: %w", err)
+		}
+		return string(out), nil
+	}
+	// Find the matching script ref so we resolve the real path (./foo, ~/foo,
+	// $VAR/foo, or /abs/foo), not just a blind join of the basename.
+	for _, h := range item.hookData.Hooks {
+		ref := converter.ExtractScriptRef(h.Command)
+		if ref == "" {
+			continue
+		}
+		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
+		if !ok || filepath.Base(resolved) != relPath {
+			continue
+		}
+		data, err := os.ReadFile(resolved)
+		if err != nil {
+			return "", fmt.Errorf("reading %s: %w", relPath, err)
+		}
+		return string(data), nil
+	}
+	return "", fmt.Errorf("script %s not referenced by any hook entry", relPath)
 }
 
 // scanDrillInFiles collects visible files from a path for the drill-in preview.

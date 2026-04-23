@@ -239,6 +239,101 @@ func scanRoot(cat *Catalog, baseDir string, local bool) error {
 			}
 		}
 	}
+
+	// Flat-layout fallback: repos where skills/agents live directly in the base
+	// directory (e.g., <base>/my-skill/SKILL.md) rather than under type dirs.
+	// Only activates when the standard type-dir scan produced no items.
+	if err := scanFlatLayout(cat, baseDir, resolvedBase, beforeCount, local); err != nil {
+		return err
+	}
+	return nil
+}
+
+// scanFlatLayout detects repos where skills or agents live directly in baseDir
+// rather than under type-subdirectories (e.g., <base>/my-skill/SKILL.md).
+// It only activates when the standard type-dir scan produced no items
+// (len(cat.Items) == beforeCount). Each immediate subdirectory containing
+// SKILL.md or AGENT.md is treated as a skill or agent respectively.
+func scanFlatLayout(cat *Catalog, baseDir, resolvedBase string, beforeCount int, local bool) error {
+	if len(cat.Items) > beforeCount {
+		return nil
+	}
+
+	entries, err := os.ReadDir(baseDir)
+	if err != nil {
+		return nil
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() || shouldSkip(entry.Name()) {
+			continue
+		}
+		if !IsValidItemName(entry.Name()) {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping flat item %q — name contains characters unsafe for JSON key paths", entry.Name()))
+			continue
+		}
+
+		itemDir := filepath.Join(baseDir, entry.Name())
+		if err := validateRegistryPath(itemDir, resolvedBase); err != nil {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("skipping flat item %q: %s", entry.Name(), err))
+			continue
+		}
+
+		var ct ContentType
+		if _, statErr := os.Stat(filepath.Join(itemDir, "SKILL.md")); statErr == nil {
+			ct = Skills
+		} else if _, statErr := os.Stat(filepath.Join(itemDir, "AGENT.md")); statErr == nil {
+			ct = Agents
+		} else {
+			continue
+		}
+
+		files := collectFiles(itemDir, itemDir)
+		meta, metaErr := metadata.Load(itemDir)
+		if metaErr != nil {
+			return metaErr
+		}
+
+		item := ContentItem{
+			Name:    entry.Name(),
+			Type:    ct,
+			Path:    itemDir,
+			Library: local,
+			Files:   files,
+			Meta:    meta,
+		}
+
+		switch ct {
+		case Skills:
+			data, readErr := os.ReadFile(filepath.Join(itemDir, "SKILL.md"))
+			if readErr == nil {
+				if fm, fmErr := ParseFrontmatter(data); fmErr == nil {
+					if fm.Name != "" {
+						item.DisplayName = fm.Name
+					}
+					item.Description = fm.Description
+				}
+			}
+		case Agents:
+			data, readErr := os.ReadFile(filepath.Join(itemDir, "AGENT.md"))
+			if readErr == nil {
+				if fm, fmErr := ParseFrontmatter(data); fmErr == nil {
+					if fm.Name != "" {
+						item.DisplayName = fm.Name
+					}
+					item.Description = fm.Description
+				}
+			}
+		}
+
+		applyMetaOverrides(&item, item.Meta)
+		cat.Items = append(cat.Items, item)
+
+		if len(cat.Items)-beforeCount >= maxScanItems {
+			cat.Warnings = append(cat.Warnings, fmt.Sprintf("registry at %s exceeded %d item limit during flat scan; truncating", baseDir, maxScanItems))
+			return nil
+		}
+	}
 	return nil
 }
 
@@ -823,8 +918,20 @@ func deriveHookDisplayName(item *ContentItem) string {
 
 // hookScriptName extracts the script filename from a hook's command field.
 // Returns the basename without extension (e.g., "./scripts/lint-check.sh" → "lint-check").
+// Handles Manifest (hooks[0].handler.command), provider settings
+// (hooks.<event>[0].command), and legacy flat (command) shapes.
 func hookScriptName(data []byte) string {
-	// Try nested format: hooks.Event[0].command
+	// Manifest shape: hooks[] array with handler.command on each
+	if hooksArr := gjson.GetBytes(data, "hooks"); hooksArr.Exists() && hooksArr.IsArray() {
+		for _, entry := range hooksArr.Array() {
+			c := entry.Get("handler.command").String()
+			if c != "" && looksLikeScript(c) {
+				return scriptBaseName(c)
+			}
+		}
+	}
+
+	// Provider settings shape: hooks.Event[0].command
 	hooksObj := gjson.GetBytes(data, "hooks")
 	if hooksObj.Exists() && hooksObj.IsObject() {
 		var cmd string
@@ -845,7 +952,7 @@ func hookScriptName(data []byte) string {
 		}
 	}
 
-	// Try flat format
+	// Legacy flat shape
 	cmd := gjson.GetBytes(data, "command").String()
 	if cmd != "" && looksLikeScript(cmd) {
 		return scriptBaseName(cmd)
@@ -854,9 +961,30 @@ func hookScriptName(data []byte) string {
 	return ""
 }
 
-// hookEventName builds a display name from event+matcher fields.
+// hookEventName builds a display name from event+matcher fields. Handles
+// Manifest, provider settings, and legacy flat shapes in that order.
 func hookEventName(data []byte) string {
-	// Nested format
+	// Manifest shape: hooks[] array with event/matcher on each entry
+	if hooksArr := gjson.GetBytes(data, "hooks"); hooksArr.Exists() && hooksArr.IsArray() {
+		var parts []string
+		for _, entry := range hooksArr.Array() {
+			event := entry.Get("event").String()
+			matcher := entry.Get("matcher").String()
+			if event == "" {
+				continue
+			}
+			if matcher != "" {
+				parts = append(parts, event+" · "+matcher)
+			} else {
+				parts = append(parts, event)
+			}
+		}
+		if len(parts) > 0 {
+			return strings.Join(parts, ", ")
+		}
+	}
+
+	// Provider settings shape: hooks object keyed by event
 	hooksObj := gjson.GetBytes(data, "hooks")
 	if hooksObj.Exists() && hooksObj.IsObject() {
 		var parts []string
@@ -879,7 +1007,7 @@ func hookEventName(data []byte) string {
 		}
 	}
 
-	// Flat format
+	// Legacy flat shape
 	event := gjson.GetBytes(data, "event").String()
 	matcher := gjson.GetBytes(data, "matcher").String()
 	if event != "" {
@@ -960,10 +1088,25 @@ func collectFiles(itemDir string, baseDir string) []string {
 }
 
 // describeHookJSON generates a description from hook JSON content.
-// Handles canonical format: {"hooks":{"Event":[{"matcher":"..."}]}}
-// Falls back to flat format: {"event":"...", "matcher":"..."}
+// Handles three shapes, in priority order:
+//  1. Canonical Manifest (hooks/0.1): {"spec":"hooks/0.1","hooks":[{"event":"...","matcher":"..."}]}
+//  2. Provider settings: {"hooks":{"PostToolUse":[...]}}
+//  3. Legacy flat: {"event":"...","matcher":"..."}
 func describeHookJSON(data []byte) string {
-	// Try Claude Code hooks format: {"hooks":{"PostToolUse":[...]}}
+	// Manifest shape — hooks is an ARRAY of {event, matcher, handler}
+	if hooksArr := gjson.GetBytes(data, "hooks"); hooksArr.Exists() && hooksArr.IsArray() {
+		if first := hooksArr.Array(); len(first) > 0 {
+			event := first[0].Get("event").String()
+			matcher := first[0].Get("matcher").String()
+			if event != "" {
+				if matcher != "" {
+					return fmt.Sprintf("%s hook for %s", event, matcher)
+				}
+				return fmt.Sprintf("%s hook", event)
+			}
+		}
+	}
+	// Provider settings shape — hooks is an OBJECT keyed by event name
 	hooksObj := gjson.GetBytes(data, "hooks")
 	if hooksObj.Exists() && hooksObj.IsObject() {
 		var events []string
@@ -975,7 +1118,7 @@ func describeHookJSON(data []byte) string {
 			return strings.Join(events, ", ") + " hook"
 		}
 	}
-	// Fall back to flat format
+	// Legacy flat shape
 	event := gjson.GetBytes(data, "event").String()
 	matcher := gjson.GetBytes(data, "matcher").String()
 	if event != "" {

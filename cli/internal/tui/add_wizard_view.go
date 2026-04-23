@@ -343,15 +343,52 @@ func (m *addWizardModel) viewDiscovery() string {
 	return strings.Join(lines, "\n")
 }
 
+// typePlural returns the plural display label for a content type (e.g. "Skills").
+func typePlural(ct catalog.ContentType) string {
+	switch ct {
+	case catalog.Skills:
+		return "Skills"
+	case catalog.Agents:
+		return "Agents"
+	case catalog.MCP:
+		return "MCP"
+	case catalog.Rules:
+		return "Rules"
+	case catalog.Hooks:
+		return "Hooks"
+	case catalog.Commands:
+		return "Commands"
+	case catalog.Loadouts:
+		return "Loadouts"
+	default:
+		return string(ct)
+	}
+}
+
+// buildTriageLegend renders the confidence-level legend so users know what
+// High / Med / Low mean without looking up documentation.
+func buildTriageLegend() string {
+	high := lipgloss.NewStyle().Foreground(successColor).Render("●High")
+	med := lipgloss.NewStyle().Foreground(primaryColor).Render("●Med")
+	low := lipgloss.NewStyle().Foreground(warningColor).Render("●Low")
+	sep := mutedStyle.Render("   ")
+	return "  " + mutedStyle.Render("Match confidence — ") +
+		high + mutedStyle.Render(" = reliable") + sep +
+		med + mutedStyle.Render(" = possible") + sep +
+		low + mutedStyle.Render(" = uncertain")
+}
+
 // --- Triage step view ---
 
 func (m *addWizardModel) viewTriage() string {
 	title := m.renderTitleRow("Triage: detected content", true, "Next")
 	subtitle := "  " + mutedStyle.Render("Include items to add them, or skip (skipped items reappear next time you add from this source).")
+	legend := buildTriageLegend()
 
-	// Compute pane dimensions
+	// Compute pane dimensions.
+	// shell(3) + title(1) + subtitle(1) + legend(1) + border(2) = 8
 	innerW := m.width - borderSize
-	paneH := max(3, m.height-7) // shell(3) + title(1) + subtitle(1) + border(2) = 7
+	paneH := max(3, m.height-8)
 
 	itemsW := max(10, innerW*30/100)
 	previewW := innerW - itemsW - 1
@@ -390,6 +427,7 @@ func (m *addWizardModel) viewTriage() string {
 	var lines []string
 	lines = append(lines, title)
 	lines = append(lines, subtitle)
+	lines = append(lines, legend)
 
 	// Top border: ╭─ Items ──┬─ Preview ──╮
 	itemsHdr := " Items " + strings.Repeat("─", max(0, itemsW-8))
@@ -435,6 +473,8 @@ func (m *addWizardModel) viewTriage() string {
 }
 
 // renderTriageItems renders the list of confirm items in the left pane.
+// Items are grouped by content type, each group preceded by a section header.
+// Items must already be sorted by type (sortConfirmItemsByType in enterTriage).
 func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 	if len(m.confirmItems) == 0 {
 		return []string{mutedStyle.Render("  No items to triage")}
@@ -454,9 +494,84 @@ func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 		return mutedColor
 	}
 
-	var rows []string
+	// Fixed tier column width ensures all dots align at the same column.
+	// Label text is padded to a constant width within each responsive tier.
+	var tierColW int  // total visible width of "● <label>"
+	var labelPad int  // number of chars the label is padded to
+	switch {
+	case availW >= 30:
+		labelPad = 6 // "Medium" = 6; "High  ", "Low   ", "User  " padded to 6
+		tierColW = 8 // "●" + " " + 6
+	case availW >= 24:
+		labelPad = 4 // "High", "Med ", "Low ", "User"
+		tierColW = 6 // "●" + " " + 4
+	default:
+		labelPad = 1 // "H", "M", "L", "U"
+		tierColW = 3 // "●" + " " + 1
+	}
+
+	tierLabel := func(tier analyzer.ConfidenceTier) string {
+		var raw string
+		switch {
+		case availW >= 30:
+			switch tier {
+			case analyzer.TierHigh:
+				raw = "High"
+			case analyzer.TierMedium:
+				raw = "Medium"
+			case analyzer.TierLow:
+				raw = "Low"
+			case analyzer.TierUser:
+				raw = "User"
+			}
+		case availW >= 24:
+			switch tier {
+			case analyzer.TierHigh:
+				raw = "High"
+			case analyzer.TierMedium:
+				raw = "Med"
+			case analyzer.TierLow:
+				raw = "Low"
+			case analyzer.TierUser:
+				raw = "User"
+			}
+		default:
+			switch tier {
+			case analyzer.TierHigh:
+				raw = "H"
+			case analyzer.TierMedium:
+				raw = "M"
+			case analyzer.TierLow:
+				raw = "L"
+			case analyzer.TierUser:
+				raw = "U"
+			}
+		}
+		// Pad to labelPad width so the dot column stays fixed across all rows.
+		if len(raw) < labelPad {
+			raw += strings.Repeat(" ", labelPad-len(raw))
+		}
+		return raw
+	}
+
+	nameW := max(4, availW-2-tierColW-1) // prefix(1)+space(1) + name + space(1) + tier
+
+	// Build all rows (section headers interleaved with item rows).
+	var allRows []string
+	var prevType catalog.ContentType
 	for idx := range m.confirmItems {
 		item := m.confirmItems[idx]
+
+		// Emit a section header at each type boundary.
+		if idx == 0 || item.itemType != prevType {
+			label := typePlural(item.itemType)
+			dashW := max(0, availW-5-len(label)) // "  ─ " + label + " " + dashes
+			hdr := mutedStyle.Render("  ─ ") + sectionTitleStyle.Render(label) +
+				mutedStyle.Render(" "+strings.Repeat("─", dashW))
+			allRows = append(allRows, hdr)
+			prevType = item.itemType
+		}
+
 		selected := m.confirmSelected[idx]
 		isCursor := idx == m.confirmCursor
 
@@ -469,72 +584,37 @@ func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 			prefix = " "
 		}
 
+		// Pad the name to nameW so the tier dot lands at the same column on every row.
 		name := sanitizeLine(item.displayName)
-
-		// Tier dot + label (responsive)
+		namePart := truncate(name, nameW)
+		if padLen := nameW - lipgloss.Width(namePart); padLen > 0 {
+			namePart += strings.Repeat(" ", padLen)
+		}
 		dot := lipgloss.NewStyle().Foreground(tierColor(item.tier)).Render("●")
-		var tierLabel string
-		switch {
-		case availW >= 30:
-			switch item.tier {
-			case analyzer.TierHigh:
-				tierLabel = "High"
-			case analyzer.TierMedium:
-				tierLabel = "Medium"
-			case analyzer.TierLow:
-				tierLabel = "Low"
-			case analyzer.TierUser:
-				tierLabel = "User"
-			}
-		case availW >= 24:
-			switch item.tier {
-			case analyzer.TierHigh:
-				tierLabel = "High"
-			case analyzer.TierMedium:
-				tierLabel = "Med"
-			case analyzer.TierLow:
-				tierLabel = "Low"
-			case analyzer.TierUser:
-				tierLabel = "User"
-			}
-		default:
-			switch item.tier {
-			case analyzer.TierHigh:
-				tierLabel = "H"
-			case analyzer.TierMedium:
-				tierLabel = "M"
-			case analyzer.TierLow:
-				tierLabel = "L"
-			case analyzer.TierUser:
-				tierLabel = "U"
-			}
-		}
+		tierStr := dot + " " + lipgloss.NewStyle().Foreground(tierColor(item.tier)).Render(tierLabel(item.tier))
 
-		tierStr := dot + " " + lipgloss.NewStyle().Foreground(tierColor(item.tier)).Render(tierLabel)
-		tierStrW := lipgloss.Width(tierStr)
-
-		nameW := max(4, availW-2-tierStrW-1) // prefix(1)+space(1) + space(1) + tier
-		row := prefix + " " + truncate(name, nameW) + " " + tierStr
-
+		var row string
 		if isCursor {
-			row = prefix + " " + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(truncate(name, nameW)) + " " + tierStr
-		} else if !selected {
-			row = prefix + " " + mutedStyle.Render(truncate(name, nameW)) + " " + tierStr
+			row = prefix + " " + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(namePart) + " " + tierStr
+		} else if selected {
+			row = prefix + " " + namePart + " " + tierStr
+		} else {
+			row = prefix + " " + mutedStyle.Render(namePart) + " " + tierStr
 		}
 
-		rows = append(rows, zone.Mark(fmt.Sprintf("triage-item-%d", idx), row))
+		allRows = append(allRows, zone.Mark(fmt.Sprintf("triage-item-%d", idx), row))
 	}
 
-	// Apply scroll window
+	// Apply scroll window to the combined rows (headers + items).
 	start := m.confirmOffset
+	if start > len(allRows) {
+		start = len(allRows)
+	}
 	end := start + maxH
-	if start > len(rows) {
-		start = len(rows)
+	if end > len(allRows) {
+		end = len(allRows)
 	}
-	if end > len(rows) {
-		end = len(rows)
-	}
-	return rows[start:end]
+	return allRows[start:end]
 }
 
 // renderTriagePreview renders the file preview in the right pane.
