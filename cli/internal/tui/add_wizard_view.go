@@ -496,8 +496,8 @@ func (m *addWizardModel) renderTriageItems(availW, maxH int) []string {
 
 	// Fixed tier column width ensures all dots align at the same column.
 	// Label text is padded to a constant width within each responsive tier.
-	var tierColW int  // total visible width of "● <label>"
-	var labelPad int  // number of chars the label is padded to
+	var tierColW int // total visible width of "● <label>"
+	var labelPad int // number of chars the label is padded to
 	switch {
 	case availW >= 30:
 		labelPad = 6 // "Medium" = 6; "High  ", "Low   ", "User  " padded to 6
