@@ -1,8 +1,7 @@
-Source updated, rebuilding syllago...
 {
   "version": "1",
-  "generatedAt": "2026-04-23T21:54:23Z",
-  "syllagoVersion": "0.9.0",
+  "generatedAt": "2026-04-23T21:54:47Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
