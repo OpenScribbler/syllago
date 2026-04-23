@@ -3,16 +3,16 @@
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
   Triage: detected content                                                                          Back      Next
   Include items to add them, or skip (skipped items reappear next time you add from this source).
+  Match confidence — ●High = reliable   ●Med = possible   ●Low = uncertain
 ╭ Items ───────────────────────────┬ Preview ────────────────────────────────────────────────────────────────────────╮
-│✓ security-scanner ● High          │  Select an item to preview                                                       │
-│  code-style-guide ● Medium        │                                                                                  │
-│  experimental-linter ● Low        │                                                                                  │
-│✓ user-custom-agent ● User         │                                                                                  │
-│  api-docs-helper ● Medium         │                                                                                  │
-│                                   │                                                                                  │
-│                                   │                                                                                  │
-│                                   │                                                                                  │
-│                                   │                                                                                  │
+│  ─ Skills ────────────────────────│  Select an item to preview                                                       │
+│> code-style-guide         ● Medium│                                                                                  │
+│  api-docs-helper          ● Medium│                                                                                  │
+│  ─ Agents ────────────────────────│                                                                                  │
+│✓ user-custom-agent        ● User  │                                                                                  │
+│  ─ Rules ─────────────────────────│                                                                                  │
+│✓ security-scanner         ● High  │                                                                                  │
+│  experimental-linter      ● Low   │                                                                                  │
 │                                   │                                                                                  │
 │                                   │                                                                                  │
 │                                   │                                                                                  │

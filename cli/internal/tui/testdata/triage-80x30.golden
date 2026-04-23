@@ -3,16 +3,16 @@
 ╰──────────────────────────────────────────────────────────────────────────────╯
   Triage: detected content                                  Back      Next
   Include items to add them, or skip (skipped items reappear next time you add from this source).
+  Match confidence — ●High = reliable   ●Med = possible   ●Low = uncertain
 ╭ Items ───────────────┬ Preview ────────────────────────────────────────────╮
-│✓ security-scanner ● H │  Select an item to preview                           │
-│  code-style-guide ● M │                                                      │
-│  experimental-l... ● L│                                                      │
+│  ─ Skills ────────────│  Select an item to preview                           │
+│> code-style-guide  ● M│                                                      │
+│  api-docs-helper   ● M│                                                      │
+│  ─ Agents ────────────│                                                      │
 │✓ user-custom-agent ● U│                                                      │
-│  api-docs-helper ● M  │                                                      │
-│                       │                                                      │
-│                       │                                                      │
-│                       │                                                      │
-│                       │                                                      │
+│  ─ Rules ─────────────│                                                      │
+│✓ security-scanner  ● H│                                                      │
+│  experimental-l... ● L│                                                      │
 │                       │                                                      │
 │                       │                                                      │
 │                       │                                                      │

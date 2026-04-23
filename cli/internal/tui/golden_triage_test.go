@@ -7,8 +7,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
-// testConfirmItems returns a set of addConfirmItems with varied tiers for triage golden tests.
-func testConfirmItems() []addConfirmItem {
+// testConfirmItemsUnsorted returns confirm items in arrival order (before type-sort).
+// Use this as input to sortConfirmItemsByType to match enterTriage() behavior.
+func testConfirmItemsUnsorted() []addConfirmItem {
 	return []addConfirmItem{
 		{
 			displayName: "security-scanner",
@@ -49,7 +50,8 @@ func testConfirmItems() []addConfirmItem {
 }
 
 // setupTriageWizard creates an addWizardModel ready for triage golden tests.
-// High and User items are pre-checked; Medium and Low are unchecked.
+// Items are sorted by type (matching enterTriage() behavior) and High/User
+// items are pre-checked; Medium and Low are unchecked.
 func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	t.Helper()
 	m := testOpenAddWizard(t)
@@ -57,18 +59,19 @@ func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	m.height = h
 	m.shell.SetWidth(w)
 
-	// Inject confirm items and enable triage step
-	m.confirmItems = testConfirmItems()
+	// Reproduce enterTriage() sort so golden output matches production.
+	rawItems := testConfirmItemsUnsorted()
+	rawSelected := map[int]bool{
+		0: true,  // security-scanner (High) — checked
+		3: true,  // user-custom-agent (User) — checked
+	}
+	items, selected := sortConfirmItemsByType(rawItems, rawSelected)
+
+	// Inject sorted confirm items and enable triage step
+	m.confirmItems = items
+	m.confirmSelected = selected
 	m.hasTriageStep = true
 
-	// Pre-populate confirmSelected: High(0) and User(3) checked, Medium(1,4) and Low(2) unchecked
-	m.confirmSelected = map[int]bool{
-		0: true,  // security-scanner (High) — checked
-		1: false, // code-style-guide (Medium) — unchecked
-		2: false, // experimental-linter (Low) — unchecked
-		3: true,  // user-custom-agent (User) — checked
-		4: false, // api-docs-helper (Medium) — unchecked
-	}
 	m.confirmCursor = 0
 	m.confirmOffset = 0
 	m.confirmFocus = triageZoneItems
@@ -90,13 +93,16 @@ func snapshotWizard(t *testing.T, m *addWizardModel) string {
 }
 
 // assertTriageRender checks the semantic properties of a triage-step render:
-// step label, all item names present, and correct checkbox state for the
-// pre-checked items. These assertions must hold no matter what golden file
-// exists — they catch regressions that would otherwise be silently blessed
-// by a -update-golden run.
+// legend, section headers, item names, and correct checkbox state.
+// These assertions catch regressions that would be silently blessed by -update-golden.
 func assertTriageRender(t *testing.T, view string) {
 	t.Helper()
 	assertContains(t, view, "Triage: detected content") // wizard step label
+	assertContains(t, view, "Match confidence")          // legend line
+	// Section headers for each type group present.
+	assertContains(t, view, "Skills")
+	assertContains(t, view, "Agents")
+	assertContains(t, view, "Rules")
 	// All five items rendered (80x30 column truncates to "experimental-l...").
 	assertContains(t, view, "security-scanner")
 	assertContains(t, view, "code-style-guide")
