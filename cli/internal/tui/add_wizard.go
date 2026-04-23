@@ -695,12 +695,22 @@ func (m *addWizardModel) loadTriagePreview() {
 		m.confirmPreview = newPreviewModel()
 		return
 	}
-	// Guard against path traversal from untrusted repos
-	_, err := catalog.SafeResolve(item.sourceDir, item.path)
-	if err != nil {
+
+	// MCPs: extract just the relevant server JSON section instead of reading
+	// the full settings file (which can be thousands of lines).
+	if item.itemType == catalog.MCP {
+		fullPath := filepath.Join(item.sourceDir, item.path)
+		extracted := extractJSONSection(fullPath, item.displayName, item.itemType)
 		m.confirmPreview = newPreviewModel()
+		if extracted != "" {
+			m.confirmPreview.lines = strings.Split(extracted, "\n")
+			m.confirmPreview.fileName = item.displayName + ".json"
+		}
 		return
 	}
+
+	// ReadFileContent has its own path traversal guard (string-prefix check,
+	// does not follow symlinks), so no SafeResolve needed here.
 	content, readErr := catalog.ReadFileContent(item.sourceDir, item.path, 200)
 	if readErr != nil {
 		m.confirmPreview = newPreviewModel()
@@ -887,17 +897,10 @@ func (m *addWizardModel) enterReviewDrillIn() {
 		m.setupDrillInRisks(item)
 		return
 	}
-	if item.catalogItem != nil {
-		ci = *item.catalogItem
-	} else if item.itemType == catalog.MCP && item.path != "" {
-		// MCP from providers: extract just the relevant JSON section
-		// instead of showing the entire settings file.
-		ci = catalog.ContentItem{
-			Name:  item.name,
-			Type:  item.itemType,
-			Path:  filepath.Dir(item.path),
-			Files: []string{filepath.Base(item.path)},
-		}
+	// MCPs always use extractJSONSection (checked before catalogItem so that
+	// the synthesized catalogItem from mergeConfirmIntoDiscovery doesn't
+	// bypass extraction and cause LoadItem to read the entire settings file).
+	if item.itemType == catalog.MCP && item.path != "" {
 		extracted := extractJSONSection(item.path, item.name, item.itemType)
 		if extracted != "" {
 			m.reviewDrillTree = newFileTreeModel([]string{item.name + ".json"})
@@ -922,6 +925,10 @@ func (m *addWizardModel) enterReviewDrillIn() {
 			m.setupDrillInRisks(item)
 			return
 		}
+		// extractJSONSection failed; fall through to generic file view.
+	}
+	if item.catalogItem != nil {
+		ci = *item.catalogItem
 	} else {
 		// Construct from discovery item fields
 		itemPath := item.path
@@ -2428,15 +2435,21 @@ func readHookPreviewContent(item addDiscoveryItem, relPath string) (string, erro
 // scanDrillInFiles collects visible files from a path for the drill-in preview.
 // For files it returns the basename. For directories it walks and collects relative paths.
 func scanDrillInFiles(path string) []string {
-	info, err := os.Stat(path)
+	info, err := os.Stat(path) // follows symlinks
 	if err != nil {
 		return nil
 	}
 	if !info.IsDir() {
 		return []string{filepath.Base(path)}
 	}
+	// WalkDir uses Lstat internally, so a symlinked root shows up as a
+	// single non-directory entry instead of being walked. Resolve first.
+	resolved := path
+	if r, resolveErr := filepath.EvalSymlinks(path); resolveErr == nil {
+		resolved = r
+	}
 	var files []string
-	_ = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(resolved, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -2449,7 +2462,7 @@ func scanDrillInFiles(path string) []string {
 		if d.IsDir() {
 			return nil
 		}
-		rel, _ := filepath.Rel(path, p)
+		rel, _ := filepath.Rel(resolved, p)
 		if rel != "" {
 			files = append(files, rel)
 		}
