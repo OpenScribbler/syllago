@@ -62,8 +62,8 @@ func setupTriageWizard(t *testing.T, w, h int) *addWizardModel {
 	// Reproduce enterTriage() sort so golden output matches production.
 	rawItems := testConfirmItemsUnsorted()
 	rawSelected := map[int]bool{
-		0: true,  // security-scanner (High) — checked
-		3: true,  // user-custom-agent (User) — checked
+		0: true, // security-scanner (High) — checked
+		3: true, // user-custom-agent (User) — checked
 	}
 	items, selected := sortConfirmItemsByType(rawItems, rawSelected)
 
@@ -98,7 +98,7 @@ func snapshotWizard(t *testing.T, m *addWizardModel) string {
 func assertTriageRender(t *testing.T, view string) {
 	t.Helper()
 	assertContains(t, view, "Triage: detected content") // wizard step label
-	assertContains(t, view, "Match confidence")          // legend line
+	assertContains(t, view, "Match confidence")         // legend line
 	// Section headers for each type group present.
 	assertContains(t, view, "Skills")
 	assertContains(t, view, "Agents")
