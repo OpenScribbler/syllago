@@ -3875,3 +3875,5 @@
 | 14:21 | Edited cli/internal/tui/add_wizard_triage_preview_test.go | 3→3 lines | ~22 |
 
 | 14:23 | Fixed 5 triage preview bugs: sourceDir derivation, hookData propagation, catalogItem preservation, discoverFromProvider ci.Path, TierHigh default | add_wizard.go, add_wizard_update.go | commit d4607d6 | ~4000 |
+
+| 15:30 | Fixed 3 preview/drill-in bugs: removed SafeResolve from loadTriagePreview (symlink-incompatible), resolved symlinked root in scanDrillInFiles (WalkDir uses Lstat), moved MCP extractJSONSection before catalogItem check in enterReviewDrillIn | cli/internal/tui/add_wizard.go | bugs 411-413 | ~3k |
