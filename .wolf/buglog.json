@@ -7,7 +7,7 @@
       "error_message": "Significant refactor of ",
       "file": ".beads/config.yaml",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 7→3 lines (4 removed)",
+      "fix": "Rewrote 7\u21923 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -23,7 +23,7 @@
       "error_message": "Significant refactor of ",
       "file": "../../../.claude/skills/handoff/workflows/write-handoff.md",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 12→40 lines (5 removed)",
+      "fix": "Rewrote 12\u219240 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -39,7 +39,7 @@
       "error_message": "Significant refactor of ",
       "file": "../../../.claude/skills/handoff/SKILL.md",
       "root_cause": "12 lines replaced/restructured",
-      "fix": "Rewrote 39→56 lines (12 removed)",
+      "fix": "Rewrote 39\u219256 lines (12 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -55,7 +55,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/formatdoc.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 13→26 lines (6 removed)",
+      "fix": "Rewrote 13\u219226 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -71,7 +71,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/gencapabilities.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 9→20 lines (5 removed) | Also: ID          string `json:\"id\"`; Name        string `json:\"name\"`",
+      "fix": "Rewrote 9\u219220 lines (5 removed) | Also: ID          string `json:\"id\"`; Name        string `json:\"name\"`",
       "tags": [
         "auto-detected",
         "refactor",
@@ -87,7 +87,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/gencapabilities_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→6 lines (2 removed)",
+      "fix": "Rewrote 4\u21926 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -103,7 +103,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/check.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→14 lines (2 removed)",
+      "fix": "Rewrote 4\u219214 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -119,7 +119,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/gencapabilities.go",
       "root_cause": "13 lines replaced/restructured",
-      "fix": "Rewrote 101→132 lines (13 removed)",
+      "fix": "Rewrote 101\u2192132 lines (13 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -135,7 +135,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/local-dashboard-mockups/index.html",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 12→6 lines (10 removed) | Also: All mockups share <code>shared/tokens.css</code> (; (mock catalog + providers). Each mockup is self-co",
+      "fix": "Rewrote 12\u21926 lines (10 removed) | Also: All mockups share <code>shared/tokens.css</code> (; (mock catalog + providers). Each mockup is self-co",
       "tags": [
         "auto-detected",
         "refactor",
@@ -186,7 +186,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/check.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 25→51 lines (5 removed)",
+      "fix": "Rewrote 25\u219251 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -202,7 +202,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/fetch_chromedp.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 61→98 lines (6 removed)",
+      "fix": "Rewrote 61\u219298 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -234,7 +234,7 @@
       "error_message": "Wrong reference: realisticUA should be RealisticUA",
       "file": "cli/internal/capmon/fetch_chromedp.go",
       "root_cause": "Used \"realisticUA\" instead of \"RealisticUA\"",
-      "fix": "Changed realisticUA → RealisticUA",
+      "fix": "Changed realisticUA \u2192 RealisticUA",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -250,7 +250,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-16-capmon-phase6-recognition-plan.md",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 16→41 lines (9 removed)",
+      "fix": "Rewrote 16\u219241 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -266,7 +266,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/amp.yaml",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 4→8 lines (3 removed)",
+      "fix": "Rewrote 4\u21928 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -282,7 +282,7 @@
       "error_message": "Wrong reference: create should be add",
       "file": "docs/provider-sources/copilot-cli.yaml",
       "root_cause": "Used \"create\" instead of \"add\"",
-      "fix": "Changed create → add",
+      "fix": "Changed create \u2192 add",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -329,7 +329,7 @@
       "timestamp": "2026-04-16T16:07:25.520Z",
       "error_message": "Missing error handling in unknown",
       "file": "../../../personal/stealth-fetch/stealth-fetch.ts",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -346,7 +346,7 @@
       "error_message": "Wrong reference: false should be true",
       "file": ".claude/projects/continue-capmon-audit.md",
       "root_cause": "Used \"false\" instead of \"true\"",
-      "fix": "Changed false → true",
+      "fix": "Changed false \u2192 true",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -394,7 +394,7 @@
       "error_message": "Significant refactor of ",
       "file": "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→3 lines (2 removed)",
+      "fix": "Rewrote 7\u21923 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -410,7 +410,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/formatdoc.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 8→19 lines (4 removed)",
+      "fix": "Rewrote 8\u219219 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -426,7 +426,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/formatdoc_validate.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 23→35 lines (2 removed)",
+      "fix": "Rewrote 23\u219235 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -442,7 +442,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/formatdoc_validate_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→50 lines (3 removed)",
+      "fix": "Rewrote 10\u219250 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -458,7 +458,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/cline.yaml",
       "root_cause": "27 lines replaced/restructured",
-      "fix": "Rewrote 44→26 lines (27 removed) | Also: description: >; Cline automatically detects and loads rule files f | Also: description: >; Cline defines 8 hook types covering the full task  | Also: description: >; Cline includes a dedicated MCP Marketplace UI acce | Also: description: >; Cline ships six built-in slash commands accessible",
+      "fix": "Rewrote 44\u219226 lines (27 removed) | Also: description: >; Cline automatically detects and loads rule files f | Also: description: >; Cline defines 8 hook types covering the full task  | Also: description: >; Cline includes a dedicated MCP Marketplace UI acce | Also: description: >; Cline ships six built-in slash commands accessible",
       "tags": [
         "auto-detected",
         "refactor",
@@ -474,7 +474,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/amp.yaml",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 25→30 lines (5 removed) | Also: description: \"Amp rules files are named AGENT.md. ; description: \"AGENT.md is placed at the root of th | Also: description: \"Amp hooks support two trigger events; description: \"The 'send-user-message' action sends | Also: description: \"MCP servers are configured under the; description: \"The Amp settings file containing 'am",
+      "fix": "Rewrote 25\u219230 lines (5 removed) | Also: description: \"Amp rules files are named AGENT.md. ; description: \"AGENT.md is placed at the root of th | Also: description: \"Amp hooks support two trigger events; description: \"The 'send-user-message' action sends | Also: description: \"MCP servers are configured under the; description: \"The Amp settings file containing 'am",
       "tags": [
         "auto-detected",
         "refactor",
@@ -490,7 +490,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/codex.yaml",
       "root_cause": "58 lines replaced/restructured",
-      "fix": "Rewrote 103→73 lines (58 removed) | Also: description: >; Codex loads AI instruction rules from a file named | Also: description: >; MCP servers are configured in config.toml under th | Also: description: >; Codex supports a multi-agent system where spawned ",
+      "fix": "Rewrote 103\u219273 lines (58 removed) | Also: description: >; Codex loads AI instruction rules from a file named | Also: description: >; MCP servers are configured in config.toml under th | Also: description: >; Codex supports a multi-agent system where spawned ",
       "tags": [
         "auto-detected",
         "refactor",
@@ -506,7 +506,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/factory-droid.yaml",
       "root_cause": "25 lines replaced/restructured",
-      "fix": "Rewrote 46→31 lines (25 removed)",
+      "fix": "Rewrote 46\u219231 lines (25 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -522,7 +522,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/copilot-cli.yaml",
       "root_cause": "30 lines replaced/restructured",
-      "fix": "Rewrote 50→28 lines (30 removed) | Also: description: >; A `.github/copilot-instructions.md` file at the re | Also: description: >; Copilot CLI exposes six named hook events: `sessio | Also: description: >; The GitHub MCP server is built into Copilot CLI an | Also: description: >; Custom agents are defined as Markdown files with a | Also: description: >; Copilot CLI does not have a standalone \"commands\" ",
+      "fix": "Rewrote 50\u219228 lines (30 removed) | Also: description: >; A `.github/copilot-instructions.md` file at the re | Also: description: >; Copilot CLI exposes six named hook events: `sessio | Also: description: >; The GitHub MCP server is built into Copilot CLI an | Also: description: >; Custom agents are defined as Markdown files with a | Also: description: >; Copilot CLI does not have a standalone \"commands\" ",
       "tags": [
         "auto-detected",
         "refactor",
@@ -538,7 +538,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/gemini-cli.yaml",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 19→13 lines (10 removed) | Also: description: >; Gemini CLI loads GEMINI.md files from three tiers  | Also: description: >; Gemini CLI supports 11 hook events covering the fu | Also: description: >; Gemini CLI supports three MCP transport types: std | Also: description: >; Commands are defined as TOML files with a .toml ex",
+      "fix": "Rewrote 19\u219213 lines (10 removed) | Also: description: >; Gemini CLI loads GEMINI.md files from three tiers  | Also: description: >; Gemini CLI supports 11 hook events covering the fu | Also: description: >; Gemini CLI supports three MCP transport types: std | Also: description: >; Commands are defined as TOML files with a .toml ex",
       "tags": [
         "auto-detected",
         "refactor",
@@ -554,7 +554,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/windsurf.yaml",
       "root_cause": "26 lines replaced/restructured",
-      "fix": "Rewrote 43→27 lines (26 removed) | Also: description: >; Workspace rules declare an activation mode in fron | Also: description: >; Windsurf Cascade Hooks support twelve named event  | Also: description: >; Windsurf supports stdio, Streamable HTTP, and SSE  | Also: description: >; Windsurf's agent instruction format is AGENTS.md ( | Also: description: >; Windsurf Command is an inline AI code generation a",
+      "fix": "Rewrote 43\u219227 lines (26 removed) | Also: description: >; Workspace rules declare an activation mode in fron | Also: description: >; Windsurf Cascade Hooks support twelve named event  | Also: description: >; Windsurf supports stdio, Streamable HTTP, and SSE  | Also: description: >; Windsurf's agent instruction format is AGENTS.md ( | Also: description: >; Windsurf Command is an inline AI code generation a",
       "tags": [
         "auto-detected",
         "refactor",
@@ -570,7 +570,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/pi.yaml",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 46→55 lines (9 removed) | Also: description: \"Prompt templates support positional ; description: \"Templates accept an optional YAML fr",
+      "fix": "Rewrote 46\u219255 lines (9 removed) | Also: description: \"Prompt templates support positional ; description: \"Templates accept an optional YAML fr",
       "tags": [
         "auto-detected",
         "refactor",
@@ -618,7 +618,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/seederspec_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 7→18 lines (4 removed)",
+      "fix": "Rewrote 7\u219218 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -634,7 +634,7 @@
       "error_message": "Wrong reference: recognizeAmpSkills should be recognizeAmp",
       "file": "cli/internal/capmon/recognize_amp.go",
       "root_cause": "Used \"recognizeAmpSkills\" instead of \"recognizeAmp\"",
-      "fix": "Changed recognizeAmpSkills → recognizeAmp",
+      "fix": "Changed recognizeAmpSkills \u2192 recognizeAmp",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -650,7 +650,7 @@
       "error_message": "Wrong reference: recognizeClaudeCodeSkills should be recognizeClaudeCode",
       "file": "cli/internal/capmon/recognize_claude_code.go",
       "root_cause": "Used \"recognizeClaudeCodeSkills\" instead of \"recognizeClaudeCode\"",
-      "fix": "Changed recognizeClaudeCodeSkills → recognizeClaudeCode",
+      "fix": "Changed recognizeClaudeCodeSkills \u2192 recognizeClaudeCode",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -666,7 +666,7 @@
       "error_message": "Wrong reference: recognizeClineSkills should be recognizeCline",
       "file": "cli/internal/capmon/recognize_cline.go",
       "root_cause": "Used \"recognizeClineSkills\" instead of \"recognizeCline\"",
-      "fix": "Changed recognizeClineSkills → recognizeCline",
+      "fix": "Changed recognizeClineSkills \u2192 recognizeCline",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -682,7 +682,7 @@
       "error_message": "Wrong reference: recognizeCodexSkills should be recognizeCodex",
       "file": "cli/internal/capmon/recognize_codex.go",
       "root_cause": "Used \"recognizeCodexSkills\" instead of \"recognizeCodex\"",
-      "fix": "Changed recognizeCodexSkills → recognizeCodex",
+      "fix": "Changed recognizeCodexSkills \u2192 recognizeCodex",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -698,7 +698,7 @@
       "error_message": "Wrong reference: recognizeCopilotCliSkills should be recognizeCopilotCli",
       "file": "cli/internal/capmon/recognize_copilot_cli.go",
       "root_cause": "Used \"recognizeCopilotCliSkills\" instead of \"recognizeCopilotCli\"",
-      "fix": "Changed recognizeCopilotCliSkills → recognizeCopilotCli",
+      "fix": "Changed recognizeCopilotCliSkills \u2192 recognizeCopilotCli",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -714,7 +714,7 @@
       "error_message": "Wrong reference: recognizeCrushSkills should be recognizeCrush",
       "file": "cli/internal/capmon/recognize_crush.go",
       "root_cause": "Used \"recognizeCrushSkills\" instead of \"recognizeCrush\"",
-      "fix": "Changed recognizeCrushSkills → recognizeCrush",
+      "fix": "Changed recognizeCrushSkills \u2192 recognizeCrush",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -730,7 +730,7 @@
       "error_message": "Wrong reference: recognizeCursorSkills should be recognizeCursor",
       "file": "cli/internal/capmon/recognize_cursor.go",
       "root_cause": "Used \"recognizeCursorSkills\" instead of \"recognizeCursor\"",
-      "fix": "Changed recognizeCursorSkills → recognizeCursor",
+      "fix": "Changed recognizeCursorSkills \u2192 recognizeCursor",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -746,7 +746,7 @@
       "error_message": "Wrong reference: recognizeFactoryDroidSkills should be recognizeFactoryDroid",
       "file": "cli/internal/capmon/recognize_factory_droid.go",
       "root_cause": "Used \"recognizeFactoryDroidSkills\" instead of \"recognizeFactoryDroid\"",
-      "fix": "Changed recognizeFactoryDroidSkills → recognizeFactoryDroid",
+      "fix": "Changed recognizeFactoryDroidSkills \u2192 recognizeFactoryDroid",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -762,7 +762,7 @@
       "error_message": "Wrong reference: recognizeGeminiCliSkills should be recognizeGeminiCli",
       "file": "cli/internal/capmon/recognize_gemini_cli.go",
       "root_cause": "Used \"recognizeGeminiCliSkills\" instead of \"recognizeGeminiCli\"",
-      "fix": "Changed recognizeGeminiCliSkills → recognizeGeminiCli",
+      "fix": "Changed recognizeGeminiCliSkills \u2192 recognizeGeminiCli",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -778,7 +778,7 @@
       "error_message": "Wrong reference: recognizeKiroSkills should be recognizeKiro",
       "file": "cli/internal/capmon/recognize_kiro.go",
       "root_cause": "Used \"recognizeKiroSkills\" instead of \"recognizeKiro\"",
-      "fix": "Changed recognizeKiroSkills → recognizeKiro",
+      "fix": "Changed recognizeKiroSkills \u2192 recognizeKiro",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -794,7 +794,7 @@
       "error_message": "Wrong reference: recognizeOpencodeSkills should be recognizeOpencode",
       "file": "cli/internal/capmon/recognize_opencode.go",
       "root_cause": "Used \"recognizeOpencodeSkills\" instead of \"recognizeOpencode\"",
-      "fix": "Changed recognizeOpencodeSkills → recognizeOpencode",
+      "fix": "Changed recognizeOpencodeSkills \u2192 recognizeOpencode",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -810,7 +810,7 @@
       "error_message": "Wrong reference: recognizePiSkills should be recognizePi",
       "file": "cli/internal/capmon/recognize_pi.go",
       "root_cause": "Used \"recognizePiSkills\" instead of \"recognizePi\"",
-      "fix": "Changed recognizePiSkills → recognizePi",
+      "fix": "Changed recognizePiSkills \u2192 recognizePi",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -826,7 +826,7 @@
       "error_message": "Wrong reference: recognizeRooCodeSkills should be recognizeRooCode",
       "file": "cli/internal/capmon/recognize_roo_code.go",
       "root_cause": "Used \"recognizeRooCodeSkills\" instead of \"recognizeRooCode\"",
-      "fix": "Changed recognizeRooCodeSkills → recognizeRooCode",
+      "fix": "Changed recognizeRooCodeSkills \u2192 recognizeRooCode",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -842,7 +842,7 @@
       "error_message": "Wrong reference: recognizeWindsurfSkills should be recognizeWindsurf",
       "file": "cli/internal/capmon/recognize_windsurf.go",
       "root_cause": "Used \"recognizeWindsurfSkills\" instead of \"recognizeWindsurf\"",
-      "fix": "Changed recognizeWindsurfSkills → recognizeWindsurf",
+      "fix": "Changed recognizeWindsurfSkills \u2192 recognizeWindsurf",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -858,7 +858,7 @@
       "error_message": "Wrong reference: recognizeZedSkills should be recognizeZed",
       "file": "cli/internal/capmon/recognize_zed.go",
       "root_cause": "Used \"recognizeZedSkills\" instead of \"recognizeZed\"",
-      "fix": "Changed recognizeZedSkills → recognizeZed",
+      "fix": "Changed recognizeZedSkills \u2192 recognizeZed",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -874,7 +874,7 @@
       "error_message": "Wrong reference: recognizeCrushSkills should be recognizeCrush",
       "file": "cli/internal/capmon/recognize.go",
       "root_cause": "Used \"recognizeCrushSkills\" instead of \"recognizeCrush\"",
-      "fix": "Changed recognizeCrushSkills → recognizeCrush",
+      "fix": "Changed recognizeCrushSkills \u2192 recognizeCrush",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -906,7 +906,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/gencapabilities.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 9→4 lines (6 removed)",
+      "fix": "Rewrote 9\u21924 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -922,7 +922,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize.go",
       "root_cause": "20 lines replaced/restructured",
-      "fix": "Rewrote 62→94 lines (20 removed)",
+      "fix": "Rewrote 62\u219294 lines (20 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -938,7 +938,7 @@
       "error_message": "Wrong reference: recognizeSkillsGoStruct should be recognizeGoStruct",
       "file": "cli/internal/capmon/recognize_test.go",
       "root_cause": "Used \"recognizeSkillsGoStruct\" instead of \"recognizeGoStruct\"",
-      "fix": "Changed recognizeSkillsGoStruct → recognizeGoStruct",
+      "fix": "Changed recognizeSkillsGoStruct \u2192 recognizeGoStruct",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -954,7 +954,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/seederspec_audit_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→11 lines (2 removed)",
+      "fix": "Rewrote 8\u219211 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -970,7 +970,7 @@
       "error_message": "Significant refactor of ",
       "file": "../syllago-capmon-heal-wt/cli/internal/capmon/healing_github.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 5→6 lines (4 removed)",
+      "fix": "Rewrote 5\u21926 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1162,7 +1162,7 @@
       "error_message": "Significant refactor of ",
       "file": ".panels/recognizer-api-evolution/consensus.md",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 9→16 lines (5 removed) | Also: **PR4 — Doc recognition primitive + first doc cana; - First canary provider (amp or claude-code per D3",
+      "fix": "Rewrote 9\u219216 lines (5 removed) | Also: **PR4 \u2014 Doc recognition primitive + first doc cana; - First canary provider (amp or claude-code per D3",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1177,7 +1177,7 @@
       "timestamp": "2026-04-16T23:28:05.636Z",
       "error_message": "Missing error handling in that",
       "file": "cli/internal/capmon/recognize.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -1194,7 +1194,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_internal_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 34→126 lines (3 removed)",
+      "fix": "Rewrote 34\u2192126 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1210,7 +1210,7 @@
       "error_message": "Wrong reference: sortedKeys should be sortedSetKeys",
       "file": "cli/internal/capmon/recognize_landmarks.go",
       "root_cause": "Used \"sortedKeys\" instead of \"sortedSetKeys\"",
-      "fix": "Changed sortedKeys → sortedSetKeys",
+      "fix": "Changed sortedKeys \u2192 sortedSetKeys",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -1226,7 +1226,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_landmarks.go",
       "root_cause": "13 lines replaced/restructured",
-      "fix": "Rewrote 13→5 lines (13 removed)",
+      "fix": "Rewrote 13\u21925 lines (13 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1259,7 +1259,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/helpers.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 37→50 lines (5 removed)",
+      "fix": "Rewrote 37\u219250 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1275,7 +1275,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/gencapabilities.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 8→18 lines (4 removed) | Also: Supported bool     `json:\"supported\"`; Mechanism string   `json:\"mechanism\"` | Also: ID          string            `json:\"id\"`; Name        string            `json:\"name\"`",
+      "fix": "Rewrote 8\u219218 lines (4 removed) | Also: Supported bool     `json:\"supported\"`; Mechanism string   `json:\"mechanism\"` | Also: ID          string            `json:\"id\"`; Name        string            `json:\"name\"`",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1291,7 +1291,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_compose.go",
       "root_cause": "13 lines replaced/restructured",
-      "fix": "Rewrote 19→4 lines (13 removed)",
+      "fix": "Rewrote 19\u21924 lines (13 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1307,7 +1307,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_claude_code_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 58→94 lines (4 removed)",
+      "fix": "Rewrote 58\u219294 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1323,7 +1323,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro.go",
       "root_cause": "11 lines replaced/restructured",
-      "fix": "Rewrote 15→51 lines (11 removed)",
+      "fix": "Rewrote 15\u219251 lines (11 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1339,7 +1339,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 9→41 lines (3 removed)",
+      "fix": "Rewrote 9\u219241 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1355,7 +1355,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline.go",
       "root_cause": "11 lines replaced/restructured",
-      "fix": "Rewrote 14→44 lines (11 removed)",
+      "fix": "Rewrote 14\u219244 lines (11 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1371,7 +1371,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→36 lines (3 removed)",
+      "fix": "Rewrote 10\u219236 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1387,7 +1387,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_codex.go",
       "root_cause": "11 lines replaced/restructured",
-      "fix": "Rewrote 14→52 lines (11 removed)",
+      "fix": "Rewrote 14\u219252 lines (11 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1403,7 +1403,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_zed.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 12→61 lines (5 removed)",
+      "fix": "Rewrote 12\u219261 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1419,7 +1419,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/capyaml/types.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 7→15 lines (4 removed)",
+      "fix": "Rewrote 7\u219215 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1435,7 +1435,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/seed.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 50→78 lines (2 removed)",
+      "fix": "Rewrote 50\u219278 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1483,7 +1483,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 16→47 lines (5 removed)",
+      "fix": "Rewrote 16\u219247 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1499,7 +1499,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 11→34 lines (3 removed)",
+      "fix": "Rewrote 11\u219234 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1515,7 +1515,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_copilot_cli.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 16→43 lines (5 removed)",
+      "fix": "Rewrote 16\u219243 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1531,7 +1531,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_gemini_cli.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 16→50 lines (4 removed)",
+      "fix": "Rewrote 16\u219250 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1547,7 +1547,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 17→51 lines (7 removed)",
+      "fix": "Rewrote 17\u219251 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1563,7 +1563,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→31 lines (3 removed)",
+      "fix": "Rewrote 10\u219231 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1579,7 +1579,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_pi.go",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 13→42 lines (10 removed)",
+      "fix": "Rewrote 13\u219242 lines (10 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1595,7 +1595,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_windsurf.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 19→49 lines (7 removed)",
+      "fix": "Rewrote 19\u219249 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1611,7 +1611,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_amp.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 16→51 lines (5 removed)",
+      "fix": "Rewrote 16\u219251 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1627,7 +1627,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_claude_code.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 22→66 lines (3 removed)",
+      "fix": "Rewrote 22\u219266 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1643,7 +1643,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_claude_code_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 20→25 lines (2 removed)",
+      "fix": "Rewrote 20\u219225 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1659,7 +1659,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_amp.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 21→63 lines (5 removed)",
+      "fix": "Rewrote 21\u219263 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1675,7 +1675,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 17→58 lines (5 removed)",
+      "fix": "Rewrote 17\u219258 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1691,7 +1691,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_codex.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 8→39 lines (4 removed)",
+      "fix": "Rewrote 8\u219239 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1707,7 +1707,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cursor.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 6→49 lines (3 removed)",
+      "fix": "Rewrote 6\u219249 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1723,7 +1723,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_gemini_cli.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 18→70 lines (5 removed)",
+      "fix": "Rewrote 18\u219270 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1739,7 +1739,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 19→62 lines (3 removed)",
+      "fix": "Rewrote 19\u219262 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1755,7 +1755,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_windsurf.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 20→75 lines (7 removed)",
+      "fix": "Rewrote 20\u219275 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1771,7 +1771,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_zed.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 7→49 lines (5 removed)",
+      "fix": "Rewrote 7\u219249 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1787,7 +1787,7 @@
       "error_message": "Wrong reference: false should be true",
       "file": ".claude/projects/start-epic4-mcp-recognition.md",
       "root_cause": "Used \"false\" instead of \"true\"",
-      "fix": "Changed false → true",
+      "fix": "Changed false \u2192 true",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -1803,7 +1803,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_claude_code.go",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 23→71 lines (9 removed)",
+      "fix": "Rewrote 23\u219271 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1819,7 +1819,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_kiro.go",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 20→64 lines (8 removed) | Also: // Kiro's agents doc maps 3 of 7 canonical agents ; // The other 4 keys are intentionally unmapped:",
+      "fix": "Rewrote 20\u219264 lines (8 removed) | Also: // Kiro's agents doc maps 3 of 7 canonical agents ; // The other 4 keys are intentionally unmapped:",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1867,7 +1867,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_zed.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 9→67 lines (5 removed)",
+      "fix": "Rewrote 9\u219267 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1883,7 +1883,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_roo_code.go",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 33→103 lines (9 removed)",
+      "fix": "Rewrote 33\u2192103 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1899,7 +1899,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_roo_code_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 12→14 lines (4 removed)",
+      "fix": "Rewrote 12\u219214 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1915,7 +1915,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_opencode.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→33 lines (3 removed)",
+      "fix": "Rewrote 7\u219233 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1931,7 +1931,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_cline.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 18→46 lines (5 removed)",
+      "fix": "Rewrote 18\u219246 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1947,7 +1947,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_factory_droid.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 19→57 lines (7 removed)",
+      "fix": "Rewrote 19\u219257 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1963,7 +1963,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_gemini_cli.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 20→54 lines (6 removed)",
+      "fix": "Rewrote 20\u219254 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1979,7 +1979,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_pi.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 16→50 lines (4 removed)",
+      "fix": "Rewrote 16\u219250 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -1995,7 +1995,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_codex.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 10→31 lines (5 removed)",
+      "fix": "Rewrote 10\u219231 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2011,7 +2011,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_copilot_cli.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 6→35 lines (4 removed)",
+      "fix": "Rewrote 6\u219235 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2027,7 +2027,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_opencode.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→29 lines (2 removed)",
+      "fix": "Rewrote 7\u219229 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2043,7 +2043,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_roo_code.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 24→55 lines (2 removed)",
+      "fix": "Rewrote 24\u219255 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2059,7 +2059,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/recognize_windsurf.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→35 lines (2 removed)",
+      "fix": "Rewrote 8\u219235 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2075,7 +2075,7 @@
       "error_message": "Significant refactor of ",
       "file": ".claude/skills/release/workflows/create-release.md",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 12→41 lines (2 removed)",
+      "fix": "Rewrote 12\u219241 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2107,7 +2107,7 @@
       "error_message": "Wrong reference: example should be smoke",
       "file": "tests/smoke/claude-code.sh",
       "root_cause": "Used \"example\" instead of \"smoke\"",
-      "fix": "Changed example → smoke",
+      "fix": "Changed example \u2192 smoke",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -2139,7 +2139,7 @@
       "error_message": "Wrong reference: mcp should be stdio",
       "file": "tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/loadout.yaml",
       "root_cause": "Used \"mcp\" instead of \"stdio\"",
-      "fix": "Changed mcp → stdio",
+      "fix": "Changed mcp \u2192 stdio",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -2155,7 +2155,7 @@
       "error_message": "Significant refactor of ",
       "file": ".github/workflows/smoke-test-providers.yml",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 7→4 lines (4 removed)",
+      "fix": "Rewrote 7\u21924 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2283,7 +2283,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 12→67 lines (8 removed)",
+      "fix": "Rewrote 12\u219267 lines (8 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2299,7 +2299,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-17-provider-coverage-reconciliation-plan.md",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 8→41 lines (6 removed) | Also: ### Q5 — Crush successor status to OpenCode; Earlier capmon work characterized Crush as the suc | Also: **Status:** Planning; **Scope:** Reconcile syllago provider capability d",
+      "fix": "Rewrote 8\u219241 lines (6 removed) | Also: ### Q5 \u2014 Crush successor status to OpenCode; Earlier capmon work characterized Crush as the suc | Also: **Status:** Planning; **Scope:** Reconcile syllago provider capability d",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2315,7 +2315,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 6→8 lines (3 removed) | Also: - **66 normative client requirements** extracted f; - **12 major gaps** in Syllago's implementation | Also: **MOAT requires:** 24-hour staleness threshold com; **Gap:** No `last_fetched_at` timestamp per regist | Also: ### G-12: Content Type Alignment [MODERATE — Renam; **MOAT normative types:** `skill`, `subagent`, `ru | Also: ### Phase 0: Spec Fixes + Meta-Registry Bootstrap; **Goal:** Fix MOAT spec blockers. Bootstrap meta-r | Also: **Goal:** Go implementation of MOAT `content_hash`; 1. Create `cli/internal/moat/hash.go` — port of `m | Also: 13. Implement revocation checking against manifest; 14. Implement hard-block for registry revocations | Also: 3. `expires_at` manifest rejection; 5. `self_published` surfacing in UI | Also: - `.github/workflows/moat.yml` — Publisher Action; - `.github/workflows/moat-registry.yml` — Registry | Also: | Topic | Position A | Position B |; |-------|-----------|-----------|",
+      "fix": "Rewrote 6\u21928 lines (3 removed) | Also: - **66 normative client requirements** extracted f; - **12 major gaps** in Syllago's implementation | Also: **MOAT requires:** 24-hour staleness threshold com; **Gap:** No `last_fetched_at` timestamp per regist | Also: ### G-12: Content Type Alignment [MODERATE \u2014 Renam; **MOAT normative types:** `skill`, `subagent`, `ru | Also: ### Phase 0: Spec Fixes + Meta-Registry Bootstrap; **Goal:** Fix MOAT spec blockers. Bootstrap meta-r | Also: **Goal:** Go implementation of MOAT `content_hash`; 1. Create `cli/internal/moat/hash.go` \u2014 port of `m | Also: 13. Implement revocation checking against manifest; 14. Implement hard-block for registry revocations | Also: 3. `expires_at` manifest rejection; 5. `self_published` surfacing in UI | Also: - `.github/workflows/moat.yml` \u2014 Publisher Action; - `.github/workflows/moat-registry.yml` \u2014 Registry | Also: | Topic | Position A | Position B |; |-------|-----------|-----------|",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2331,7 +2331,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/roocode_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 13→46 lines (2 removed)",
+      "fix": "Rewrote 13\u219246 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2347,7 +2347,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/amp_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 5→30 lines (2 removed)",
+      "fix": "Rewrote 5\u219230 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2363,7 +2363,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/cline_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 13→46 lines (2 removed)",
+      "fix": "Rewrote 13\u219246 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2379,7 +2379,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/coverage_test.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 34→42 lines (5 removed)",
+      "fix": "Rewrote 34\u219242 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2429,7 +2429,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/cline.yaml",
       "root_cause": "14 lines replaced/restructured",
-      "fix": "Rewrote 49→75 lines (14 removed)",
+      "fix": "Rewrote 49\u219275 lines (14 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2461,7 +2461,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/windsurf.yaml",
       "root_cause": "28 lines replaced/restructured",
-      "fix": "Rewrote 49→74 lines (28 removed)",
+      "fix": "Rewrote 49\u219274 lines (28 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2477,7 +2477,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/cline_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 13→58 lines (2 removed)",
+      "fix": "Rewrote 13\u219258 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2493,7 +2493,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/opencode.yaml",
       "root_cause": "15 lines replaced/restructured",
-      "fix": "Rewrote 22→9 lines (15 removed)",
+      "fix": "Rewrote 22\u21929 lines (15 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2509,7 +2509,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-formats/windsurf.yaml",
       "root_cause": "13 lines replaced/restructured",
-      "fix": "Rewrote 25→9 lines (13 removed) | Also: status: supported; sources:",
+      "fix": "Rewrote 25\u21929 lines (13 removed) | Also: status: supported; sources:",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2525,7 +2525,7 @@
       "error_message": "Significant refactor of ",
       "file": ".github/workflows/scorecard.yml",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→4 lines (3 removed)",
+      "fix": "Rewrote 7\u21924 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2541,7 +2541,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/gemini-cli.yaml",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 3→5 lines (2 removed)",
+      "fix": "Rewrote 3\u21925 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2557,7 +2557,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/cursor.yaml",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 12→9 lines (7 removed) | Also: supported: false; supported: false",
+      "fix": "Rewrote 12\u21929 lines (7 removed) | Also: supported: false; supported: false",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2573,7 +2573,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/windsurf.yaml",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 14→16 lines (5 removed)",
+      "fix": "Rewrote 14\u219216 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2589,7 +2589,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/zed.yaml",
       "root_cause": "24 lines replaced/restructured",
-      "fix": "Rewrote 30→8 lines (24 removed)",
+      "fix": "Rewrote 30\u21928 lines (24 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2605,7 +2605,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/opencode.yaml",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 4→6 lines (3 removed)",
+      "fix": "Rewrote 4\u21926 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2621,7 +2621,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/provider-sources/cline.yaml",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→9 lines (3 removed)",
+      "fix": "Rewrote 7\u21929 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2637,7 +2637,7 @@
       "error_message": "Significant refactor of ",
       "file": "../moat/reference/moat-registry.yml",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 34→71 lines (2 removed)",
+      "fix": "Rewrote 34\u219271 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2653,7 +2653,7 @@
       "error_message": "Significant refactor of ",
       "file": ".claude/projects/continue-provider-coverage-reconciliation.md",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 11→11 lines (4 removed) | Also: done: false; updated: 2026-04-17T17:30:00-07:00",
+      "fix": "Rewrote 11\u219211 lines (4 removed) | Also: done: false; updated: 2026-04-17T17:30:00-07:00",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2701,7 +2701,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/hash.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 6→4 lines (2 removed)",
+      "fix": "Rewrote 6\u21924 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2716,7 +2716,7 @@
       "timestamp": "2026-04-18T07:06:13.016Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/moat/canonical_payload_test.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -2733,7 +2733,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/verify.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→12 lines (2 removed)",
+      "fix": "Rewrote 8\u219212 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2765,7 +2765,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/config/config.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 9→85 lines (4 removed) | Also: ManifestURI    string         `json:\"manifest_uri,; SigningProfile SigningProfile `json:\"signing_profi",
+      "fix": "Rewrote 9\u219285 lines (4 removed) | Also: ManifestURI    string         `json:\"manifest_uri,; SigningProfile SigningProfile `json:\"signing_profi",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2781,7 +2781,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/converter/script_security.go",
       "root_cause": "12 lines replaced/restructured",
-      "fix": "Rewrote 48→72 lines (12 removed)",
+      "fix": "Rewrote 48\u219272 lines (12 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2797,7 +2797,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/installer/hooks.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 6→26 lines (5 removed)",
+      "fix": "Rewrote 6\u219226 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2813,7 +2813,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/metadata/metadata.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 5→5 lines (2 removed)",
+      "fix": "Rewrote 5\u21925 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -2829,7 +2829,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/genproviders.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 50→98 lines (2 removed)",
+      "fix": "Rewrote 50\u219298 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3069,7 +3069,7 @@
       "error_message": "Wrong reference: local should be shared",
       "file": "cli/cmd/syllago/sync_and_export_test.go",
       "root_cause": "Used \"local\" instead of \"shared\"",
-      "fix": "Changed local → shared",
+      "fix": "Changed local \u2192 shared",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3101,7 +3101,7 @@
       "error_message": "Wrong operator: && should be ==",
       "file": "cli/cmd/syllago/sync_and_export_test.go",
       "root_cause": "Used \"&&\" instead of \"==\"",
-      "fix": "Changed operator && → ==",
+      "fix": "Changed operator && \u2192 ==",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -3133,7 +3133,7 @@
       "error_message": "Wrong operator: == should be &&",
       "file": "cli/cmd/syllago/sync_and_export_test.go",
       "root_cause": "Used \"==\" instead of \"&&\"",
-      "fix": "Changed operator == → &&",
+      "fix": "Changed operator == \u2192 &&",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -3149,7 +3149,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/doctor_cmd.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→10 lines (2 removed)",
+      "fix": "Rewrote 8\u219210 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3181,7 +3181,7 @@
       "error_message": "Wrong reference: setupLoadoutRepo should be setupLoadoutApplyRepo",
       "file": "cli/cmd/syllago/coverage_test.go",
       "root_cause": "Used \"setupLoadoutRepo\" instead of \"setupLoadoutApplyRepo\"",
-      "fix": "Changed setupLoadoutRepo → setupLoadoutApplyRepo",
+      "fix": "Changed setupLoadoutRepo \u2192 setupLoadoutApplyRepo",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3197,7 +3197,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 13→25 lines (6 removed)",
+      "fix": "Rewrote 13\u219225 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3213,7 +3213,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/manifest_verify.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 8→12 lines (7 removed)",
+      "fix": "Rewrote 8\u219212 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3229,7 +3229,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/manifest_verify.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 12→9 lines (2 removed) | Also: // v0.3 bundles and sigstore-go can parse them nat; bundle, err := sgbundle.LoadJSONFromReader(bytes.N",
+      "fix": "Rewrote 12\u21929 lines (2 removed) | Also: // v0.3 bundles and sigstore-go can parse them nat; bundle, err := sgbundle.LoadJSONFromReader(bytes.N",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3245,7 +3245,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/adr/0007-moat-g3-slice-1-scope.md",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 8→17 lines (6 removed)",
+      "fix": "Rewrote 8\u219217 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3277,7 +3277,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/manifest_verify.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→14 lines (3 removed)",
+      "fix": "Rewrote 10\u219214 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3293,7 +3293,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/manifest_verify.go",
       "root_cause": "14 lines replaced/restructured",
-      "fix": "Rewrote 23→39 lines (14 removed)",
+      "fix": "Rewrote 23\u219239 lines (14 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3309,7 +3309,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/config/config.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 22→58 lines (3 removed)",
+      "fix": "Rewrote 22\u219258 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3325,7 +3325,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/config/config_moat_test.go",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 28→82 lines (8 removed)",
+      "fix": "Rewrote 28\u219282 lines (8 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3357,7 +3357,7 @@
       "error_message": "Significant refactor of ",
       "file": "../../../.config/pai/hooks/develop-precompact.ts",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 9→5 lines (5 removed)",
+      "fix": "Rewrote 9\u21925 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3373,7 +3373,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/registry_cmd_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 5→6 lines (4 removed)",
+      "fix": "Rewrote 5\u21926 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3469,7 +3469,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/signing_identities_loader.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 15→21 lines (3 removed)",
+      "fix": "Rewrote 15\u219221 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3485,7 +3485,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/registry_cmd.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 8→15 lines (3 removed)",
+      "fix": "Rewrote 8\u219215 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3501,7 +3501,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/output/errors.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→8 lines (2 removed)",
+      "fix": "Rewrote 4\u21928 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3517,7 +3517,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/registry_verify.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 19→49 lines (5 removed) | Also: func verifyRegistryForAdd(reg *config.Registry, cl; // Staleness check: refuse to verify against an ex",
+      "fix": "Rewrote 19\u219249 lines (5 removed) | Also: func verifyRegistryForAdd(reg *config.Registry, cl; // Staleness check: refuse to verify against an ex",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3549,7 +3549,7 @@
       "error_message": "Wrong reference: error should be trustedRootOverride",
       "file": "cli/cmd/syllago/add_cmd.go",
       "root_cause": "Used \"error\" instead of \"trustedRootOverride\"",
-      "fix": "Changed error → trustedRootOverride",
+      "fix": "Changed error \u2192 trustedRootOverride",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3565,7 +3565,7 @@
       "error_message": "Wrong reference: func should be stubbedFreshBundledRoot",
       "file": "cli/cmd/syllago/registry_verify_test.go",
       "root_cause": "Used \"func\" instead of \"stubbedFreshBundledRoot\"",
-      "fix": "Changed func → stubbedFreshBundledRoot",
+      "fix": "Changed func \u2192 stubbedFreshBundledRoot",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3597,7 +3597,7 @@
       "error_message": "Significant refactor of ",
       "file": "../moat/moat-spec.md",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 5→26 lines (5 removed) | Also: clients MUST verify the Rekor certificate's OIDC i; Minimum structure:",
+      "fix": "Rewrote 5\u219226 lines (5 removed) | Also: clients MUST verify the Rekor certificate's OIDC i; Minimum structure:",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3613,7 +3613,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/item_verify.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 18→37 lines (3 removed)",
+      "fix": "Rewrote 18\u219237 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3629,7 +3629,7 @@
       "error_message": "Wrong reference: extractFixtureNumericIDs should be extractFixtureNumericIDsFromRekor",
       "file": "cli/internal/moat/item_verify_test.go",
       "root_cause": "Used \"extractFixtureNumericIDs\" instead of \"extractFixtureNumericIDsFromRekor\"",
-      "fix": "Changed extractFixtureNumericIDs → extractFixtureNumericIDsFromRekor",
+      "fix": "Changed extractFixtureNumericIDs \u2192 extractFixtureNumericIDsFromRekor",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3645,7 +3645,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/item_verify_test.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 6→9 lines (6 removed)",
+      "fix": "Rewrote 6\u21929 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3661,7 +3661,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/item_verify.go",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 24→29 lines (10 removed)",
+      "fix": "Rewrote 24\u219229 lines (10 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3677,7 +3677,7 @@
       "error_message": "Wrong operator: == should be !=",
       "file": "cli/internal/moat/item_verify.go",
       "root_cause": "Used \"==\" instead of \"!=\"",
-      "fix": "Changed operator == → !=",
+      "fix": "Changed operator == \u2192 !=",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -3693,7 +3693,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/lockfile_test.go",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 25→16 lines (8 removed) | Also: // The attestation_bundle must round-trip byte-exa; // accept it offline.",
+      "fix": "Rewrote 25\u219216 lines (8 removed) | Also: // The attestation_bundle must round-trip byte-exa; // accept it offline.",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3709,7 +3709,7 @@
       "error_message": "Wrong reference: payload should be byte",
       "file": "cli/internal/moat/lockfile_test.go",
       "root_cause": "Used \"payload\" instead of \"byte\"",
-      "fix": "Changed payload → byte",
+      "fix": "Changed payload \u2192 byte",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -3725,7 +3725,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/revocation.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→11 lines (3 removed)",
+      "fix": "Rewrote 7\u219211 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3741,7 +3741,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/install_conflict_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 5→9 lines (2 removed)",
+      "fix": "Rewrote 5\u21929 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3757,7 +3757,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-12-moat-conformance-gap-analysis.md",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 10→16 lines (7 removed)",
+      "fix": "Rewrote 10\u219216 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3773,7 +3773,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/verify.go",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 14→75 lines (10 removed)",
+      "fix": "Rewrote 14\u219275 lines (10 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3789,7 +3789,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/item_verify.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 5→24 lines (5 removed)",
+      "fix": "Rewrote 5\u219224 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3804,7 +3804,7 @@
       "timestamp": "2026-04-20T19:47:15.059Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/moat/canonical_payload_test.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -3821,7 +3821,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/lockfile.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→49 lines (3 removed)",
+      "fix": "Rewrote 10\u219249 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3837,7 +3837,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/sync_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→15 lines (2 removed)",
+      "fix": "Rewrote 4\u219215 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3853,7 +3853,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/registry_cmd.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 43→109 lines (5 removed)",
+      "fix": "Rewrote 43\u2192109 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3869,7 +3869,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/registry_sync_moat_test.go",
       "root_cause": "57 lines replaced/restructured",
-      "fix": "Rewrote 81→54 lines (57 removed)",
+      "fix": "Rewrote 81\u219254 lines (57 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3885,7 +3885,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/install_moat.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 24→136 lines (7 removed) | Also: fmt.Fprintf(w, \"  revocations_added=%d staleness=%; fmt.Fprintf(w, \"  next: re-run without --dry-run o | Also: // printRegistryItemSummary renders the resolved C; // human-readable block. Output is intentionally d",
+      "fix": "Rewrote 24\u2192136 lines (7 removed) | Also: fmt.Fprintf(w, \"  revocations_added=%d staleness=%; fmt.Fprintf(w, \"  next: re-run without --dry-run o | Also: // printRegistryItemSummary renders the resolved C; // human-readable block. Output is intentionally d",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3917,7 +3917,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/install_moat_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 3→5 lines (2 removed)",
+      "fix": "Rewrote 3\u21925 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3933,7 +3933,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/install_moat_test.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 40→79 lines (7 removed)",
+      "fix": "Rewrote 40\u219279 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3949,7 +3949,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-20-moat-tui-trust-surfacing-spec.md",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 17→24 lines (5 removed)",
+      "fix": "Rewrote 17\u219224 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3981,7 +3981,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/catalog/types.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 10→22 lines (3 removed)",
+      "fix": "Rewrote 10\u219222 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -3997,7 +3997,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/catalog/trust.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 12→19 lines (3 removed)",
+      "fix": "Rewrote 12\u219219 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4013,7 +4013,7 @@
       "error_message": "Wrong reference: u2717 should be R",
       "file": "cli/internal/catalog/trust_test.go",
       "root_cause": "Used \"u2717\" instead of \"R\"",
-      "fix": "Changed u2717 → R",
+      "fix": "Changed u2717 \u2192 R",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4029,7 +4029,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/sanitize_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 18→20 lines (4 removed)",
+      "fix": "Rewrote 18\u219220 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4045,7 +4045,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/enrich.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 55→98 lines (7 removed)",
+      "fix": "Rewrote 55\u219298 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4077,7 +4077,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/metapanel.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→33 lines (2 removed)",
+      "fix": "Rewrote 7\u219233 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4093,7 +4093,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/library.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 10→21 lines (6 removed)",
+      "fix": "Rewrote 10\u219221 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4109,7 +4109,7 @@
       "error_message": "Wrong reference: metaBarLines should be metaBarLinesBase",
       "file": "cli/internal/tui/gallery.go",
       "root_cause": "Used \"metaBarLines\" instead of \"metaBarLinesBase\"",
-      "fix": "Changed metaBarLines → metaBarLinesBase",
+      "fix": "Changed metaBarLines \u2192 metaBarLinesBase",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4125,7 +4125,7 @@
       "error_message": "Wrong reference: metaBarTotal should be l",
       "file": "cli/internal/tui/library.go",
       "root_cause": "Used \"metaBarTotal\" instead of \"l\"",
-      "fix": "Changed metaBarTotal → l",
+      "fix": "Changed metaBarTotal \u2192 l",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4141,7 +4141,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/explorer.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 5→27 lines (2 removed)",
+      "fix": "Rewrote 5\u219227 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4157,7 +4157,7 @@
       "error_message": "Wrong reference: metaBarTotal should be e",
       "file": "cli/internal/tui/explorer.go",
       "root_cause": "Used \"metaBarTotal\" instead of \"e\"",
-      "fix": "Changed metaBarTotal → e",
+      "fix": "Changed metaBarTotal \u2192 e",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4173,7 +4173,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/metapanel.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 12→62 lines (6 removed)",
+      "fix": "Rewrote 12\u219262 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4205,7 +4205,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/golden_moat_test.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 11→15 lines (5 removed)",
+      "fix": "Rewrote 11\u219215 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4221,7 +4221,7 @@
       "error_message": "Wrong reference: Selected should be currentMetaItem",
       "file": "cli/internal/tui/golden_moat_test.go",
       "root_cause": "Used \"Selected\" instead of \"currentMetaItem\"",
-      "fix": "Changed Selected → currentMetaItem",
+      "fix": "Changed Selected \u2192 currentMetaItem",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4236,7 +4236,7 @@
       "timestamp": "2026-04-21T05:02:31.064Z",
       "error_message": "Incorrect value in code",
       "file": "docs/plans/2026-04-20-test-quality-audit.md",
-      "root_cause": "Had 's a distinct class of risk — atomicity under file",
+      "root_cause": "Had 's a distinct class of risk \u2014 atomicity under file",
       "fix": "Changed to `cli/internal/snapshot/snapshot_test.go:TestCreate",
       "tags": [
         "auto-detected",
@@ -4252,7 +4252,7 @@
       "timestamp": "2026-04-21T05:04:29.802Z",
       "error_message": "Missing error handling in selects",
       "file": "docs/plans/2026-04-20-test-quality-audit.md",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4268,7 +4268,7 @@
       "timestamp": "2026-04-21T05:21:07.810Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/loadout/apply.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4285,7 +4285,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/loadout/integration_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 12→9 lines (2 removed)",
+      "fix": "Rewrote 12\u21929 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4301,7 +4301,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/loadout/apply.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→14 lines (3 removed)",
+      "fix": "Rewrote 7\u219214 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4316,7 +4316,7 @@
       "timestamp": "2026-04-21T05:33:18.311Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/moat/enrich.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4332,7 +4332,7 @@
       "timestamp": "2026-04-21T05:36:25.053Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/converter/rules.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4349,7 +4349,7 @@
       "error_message": "Wrong reference: configData should be byte",
       "file": "cli/internal/installer/mcp.go",
       "root_cause": "Used \"configData\" instead of \"byte\"",
-      "fix": "Changed configData → byte",
+      "fix": "Changed configData \u2192 byte",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4365,7 +4365,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/converter/skills.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 11→8 lines (4 removed) | Also: // SABOTAGE: drop prose notes for amp entirely; _ = buildSkillProseNotes(meta)",
+      "fix": "Rewrote 11\u21928 lines (4 removed) | Also: // SABOTAGE: drop prose notes for amp entirely; _ = buildSkillProseNotes(meta)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4380,7 +4380,7 @@
       "timestamp": "2026-04-21T05:57:55.338Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/tui/golden_triage_test.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4413,7 +4413,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/extract_typescript/extract_typescript_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 13→40 lines (4 removed)",
+      "fix": "Rewrote 13\u219240 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4428,7 +4428,7 @@
       "timestamp": "2026-04-21T06:01:52.447Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/capmon/extract_yaml/extract_yaml.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4445,7 +4445,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/capmon/extract_typescript/extract_typescript.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→3 lines (2 removed)",
+      "fix": "Rewrote 4\u21923 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4461,7 +4461,7 @@
       "error_message": "Wrong operator: != should be ==",
       "file": "cli/internal/updater/updater_test.go",
       "root_cause": "Used \"!=\" instead of \"==\"",
-      "fix": "Changed operator != → ==",
+      "fix": "Changed operator != \u2192 ==",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -4525,7 +4525,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/loadout/apply.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 13→5 lines (5 removed)",
+      "fix": "Rewrote 13\u21925 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4541,7 +4541,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provider/cline.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 23→31 lines (3 removed)",
+      "fix": "Rewrote 23\u219231 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4556,8 +4556,8 @@
       "timestamp": "2026-04-21T14:29:13.545Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/telemetry/telemetry.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
-      "fix": "Added try/catch block | Also: // SABOTAGE: make ResetEnrichment a no-op — verify ClearsPen",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
+      "fix": "Added try/catch block | Also: // SABOTAGE: make ResetEnrichment a no-op \u2014 verify ClearsPen",
       "tags": [
         "auto-detected",
         "error-handling",
@@ -4572,7 +4572,7 @@
       "timestamp": "2026-04-21T14:33:09.530Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/installer/mcp.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4589,7 +4589,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/snapshot/snapshot.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→3 lines (2 removed) | Also: Source        string          `json:\"source\"`; LoadoutName   string          `json:\"loadoutName\"`",
+      "fix": "Rewrote 4\u21923 lines (2 removed) | Also: Source        string          `json:\"source\"`; LoadoutName   string          `json:\"loadoutName\"`",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4604,7 +4604,7 @@
       "timestamp": "2026-04-21T14:37:56.927Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/snapshot/snapshot.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4620,7 +4620,7 @@
       "timestamp": "2026-04-21T14:43:40.102Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/moat/sigstore_verify_test.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4637,7 +4637,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provmon/checker.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 6→14 lines (3 removed) | Also: case \"content-hash\", \"github-commits\":; return nil, fmt.Errorf(\"%w: %s\", ErrUnimplementedD | Also: case \"content-hash\", \"github-commits\":; return nil, nil",
+      "fix": "Rewrote 6\u219214 lines (3 removed) | Also: case \"content-hash\", \"github-commits\":; return nil, fmt.Errorf(\"%w: %s\", ErrUnimplementedD | Also: case \"content-hash\", \"github-commits\":; return nil, nil",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4653,7 +4653,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/provmon/checker_test.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 21→63 lines (7 removed)",
+      "fix": "Rewrote 21\u219263 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4701,7 +4701,7 @@
       "error_message": "Wrong reference: fmt should be err",
       "file": "cli/internal/audit/audit.go",
       "root_cause": "Used \"fmt\" instead of \"err\"",
-      "fix": "Changed fmt → err",
+      "fix": "Changed fmt \u2192 err",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -4732,7 +4732,7 @@
       "timestamp": "2026-04-21T15:16:09.955Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/analyzer/detector_content_signal_test.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block | Also: \"math\"; // floatsEqual is a test-only near-equality predicate for pi",
       "tags": [
         "auto-detected",
@@ -4749,7 +4749,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/responsive_test.go",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 34→49 lines (9 removed)",
+      "fix": "Rewrote 34\u219249 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4764,7 +4764,7 @@
       "timestamp": "2026-04-21T15:54:26.306Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/tui/app.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block | Also: _ = items; _ = mixed",
       "tags": [
         "auto-detected",
@@ -4781,7 +4781,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/app.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→6 lines (2 removed) | Also: _ = items; _ = mixed",
+      "fix": "Rewrote 7\u21926 lines (2 removed) | Also: _ = items; _ = mixed",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4796,7 +4796,7 @@
       "timestamp": "2026-04-21T15:54:48.036Z",
       "error_message": "Missing error handling in unknown",
       "file": "cli/internal/tui/app_update.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4829,7 +4829,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/install_mouse_test.go",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 11→3 lines (9 removed)",
+      "fix": "Rewrote 11\u21923 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4845,7 +4845,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/install_update.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 4→7 lines (2 removed)",
+      "fix": "Rewrote 4\u21927 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4861,7 +4861,7 @@
       "error_message": "Wrong operator: == should be !=",
       "file": "cli/internal/tui/add_wizard_mouse_test.go",
       "root_cause": "Used \"==\" instead of \"!=\"",
-      "fix": "Changed operator == → !=",
+      "fix": "Changed operator == \u2192 !=",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -4877,7 +4877,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_update.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 9→6 lines (5 removed) | Also: case 0: // Provider — SABOTAGE; _ = m",
+      "fix": "Rewrote 9\u21926 lines (5 removed) | Also: case 0: // Provider \u2014 SABOTAGE; _ = m",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4909,7 +4909,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/gallery.go",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 16→6 lines (10 removed) | Also: _ = i // SABOTAGE — consume click but don't select; return g, nil",
+      "fix": "Rewrote 16\u21926 lines (10 removed) | Also: _ = i // SABOTAGE \u2014 consume click but don't select; return g, nil",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4940,7 +4940,7 @@
       "timestamp": "2026-04-21T16:37:44.158Z",
       "error_message": "Missing error handling in unknown",
       "file": ".claude/rules/tui-testing.md",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -4957,7 +4957,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/explorer.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 8→4 lines (6 removed)",
+      "fix": "Rewrote 8\u21924 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -4989,7 +4989,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→7 lines (3 removed)",
+      "fix": "Rewrote 7\u21927 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5004,7 +5004,7 @@
       "timestamp": "2026-04-21T21:28:26.753Z",
       "error_message": "Missing error handling in unknown",
       "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -5021,7 +5021,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 5→98 lines (2 removed) | Also: Continue brainstorm through Decisions 4-5 before h; - **Decision 4:** Error propagation for unreachabl",
+      "fix": "Rewrote 5\u219298 lines (2 removed) | Also: Continue brainstorm through Decisions 4-5 before h; - **Decision 4:** Error propagation for unreachabl",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5037,7 +5037,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-21-provmon-drift-detection-design.md",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 7→8 lines (4 removed) | Also: ### New capmon helper (to be added in this bead); ```go | Also: For provmon to read baselines, the five affected p; - Verify `docs/provider-capabilities/<slug>.yaml`  | Also: ## Decision 5 — Baseline seeding for the 5 affecte; _(pending)_ | Also: 1. **Schema migration (commit 1):** Rename and rel; 2. **Detection implementation (commit 2):** Add `c | Also: | What happens when a source's `content_hash` is e; | How does CI widen the fail set? | `--fail-on=<li | Also: One decision remaining before handoff to the Plan ; - **Decision 5:** Baseline seeding strategy — whic",
+      "fix": "Rewrote 7\u21928 lines (4 removed) | Also: ### New capmon helper (to be added in this bead); ```go | Also: For provmon to read baselines, the five affected p; - Verify `docs/provider-capabilities/<slug>.yaml`  | Also: ## Decision 5 \u2014 Baseline seeding for the 5 affecte; _(pending)_ | Also: 1. **Schema migration (commit 1):** Rename and rel; 2. **Detection implementation (commit 2):** Add `c | Also: | What happens when a source's `content_hash` is e; | How does CI widen the fail set? | `--fail-on=<li | Also: One decision remaining before handoff to the Plan ; - **Decision 5:** Baseline seeding strategy \u2014 whic",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5053,7 +5053,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/main.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 22→30 lines (2 removed)",
+      "fix": "Rewrote 22\u219230 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5069,7 +5069,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/table.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 29→38 lines (5 removed) | Also: // The prefix is emitted by both the library table; // list so MOAT trust surfacing is consistent acro",
+      "fix": "Rewrote 29\u219238 lines (5 removed) | Also: // The prefix is emitted by both the library table; // list so MOAT trust surfacing is consistent acro",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5085,7 +5085,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/metapanel_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 25→35 lines (3 removed) | Also: // TestRenderMetaPanel_RevocationBanner verifies t; // preserves all four source/reason/issuer/details",
+      "fix": "Rewrote 25\u219235 lines (3 removed) | Also: // TestRenderMetaPanel_RevocationBanner verifies t; // preserves all four source/reason/issuer/details",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5101,7 +5101,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/golden_moat_test.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 12→37 lines (2 removed)",
+      "fix": "Rewrote 12\u219237 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5117,7 +5117,7 @@
       "error_message": "Significant refactor of ",
       "file": "docs/plans/2026-04-21-provmon-drift-detection-implementation.md",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 23→10 lines (10 removed) | Also: ### Step 2: Run — must fail; Expected: FAIL (or compile error). | Also: id = replaceAll(id, ch, \"_\"); func replaceAll(s, old, new string) string {",
+      "fix": "Rewrote 23\u219210 lines (10 removed) | Also: ### Step 2: Run \u2014 must fail; Expected: FAIL (or compile error). | Also: id = replaceAll(id, ch, \"_\"); func replaceAll(s, old, new string) string {",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5149,7 +5149,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/cards.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 10→22 lines (2 removed)",
+      "fix": "Rewrote 10\u219222 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5165,7 +5165,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/contents.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 26→35 lines (4 removed)",
+      "fix": "Rewrote 26\u219235 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5196,7 +5196,7 @@
       "timestamp": "2026-04-22T16:40:11.862Z",
       "error_message": "Missing error handling in install",
       "file": "cli/internal/tui/actions.go",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -5213,7 +5213,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/actions.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 28→66 lines (5 removed) | Also: // Publisher-warn install stash has priority: if t; // a recalled-item install, re-dispatch that insta",
+      "fix": "Rewrote 28\u219266 lines (5 removed) | Also: // Publisher-warn install stash has priority: if t; // a recalled-item install, re-dispatch that insta",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5229,7 +5229,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/actions_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 11→14 lines (3 removed) | Also: _, cmd := app.handleUninstallDone(uninstallDoneMsg; if cmd == nil {",
+      "fix": "Rewrote 11\u219214 lines (3 removed) | Also: _, cmd := app.handleUninstallDone(uninstallDoneMsg; if cmd == nil {",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5261,7 +5261,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/app_update.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 9→15 lines (3 removed)",
+      "fix": "Rewrote 9\u219215 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5277,7 +5277,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/list.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 6→8 lines (3 removed)",
+      "fix": "Rewrote 6\u21928 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5293,7 +5293,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/inspect.go",
       "root_cause": "14 lines replaced/restructured",
-      "fix": "Rewrote 17→25 lines (14 removed) | Also: Name:        item.Name,; Type:        item.Type.Label(),",
+      "fix": "Rewrote 17\u219225 lines (14 removed) | Also: Name:        item.Name,; Type:        item.Type.Label(),",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5309,7 +5309,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/load_scan_test.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 13→17 lines (4 removed) | Also: // Write a project config that references the regi; cfgYAML := \"registries:\\n  - name: fixtures\\n    u",
+      "fix": "Rewrote 13\u219217 lines (4 removed) | Also: // Write a project config that references the regi; cfgYAML := \"registries:\\n  - name: fixtures\\n    u",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5325,7 +5325,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/publisher_warn.go",
       "root_cause": "25 lines replaced/restructured",
-      "fix": "Rewrote 49→15 lines (25 removed)",
+      "fix": "Rewrote 49\u219215 lines (25 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5341,7 +5341,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/actions.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 13→6 lines (7 removed) | Also: <<<<<<< HEAD; =======",
+      "fix": "Rewrote 13\u21926 lines (7 removed) | Also: <<<<<<< HEAD; =======",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5373,7 +5373,7 @@
       "error_message": "Wrong reference: Issued should be Revoked",
       "file": "cli/internal/tui/publisher_warn.go",
       "root_cause": "Used \"Issued\" instead of \"Revoked\"",
-      "fix": "Changed Issued → Revoked",
+      "fix": "Changed Issued \u2192 Revoked",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5389,7 +5389,7 @@
       "error_message": "Wrong reference: resolveSigningProfile should be resolveSigningProfileForSign",
       "file": "cli/cmd/syllago/moat_sign_cmd.go",
       "root_cause": "Used \"resolveSigningProfile\" instead of \"resolveSigningProfileForSign\"",
-      "fix": "Changed resolveSigningProfile → resolveSigningProfileForSign",
+      "fix": "Changed resolveSigningProfile \u2192 resolveSigningProfileForSign",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5405,7 +5405,7 @@
       "error_message": "Wrong reference: protorekorv1 should be protorekor",
       "file": "cli/internal/moat/dev_signer.go",
       "root_cause": "Used \"protorekorv1\" instead of \"protorekor\"",
-      "fix": "Changed protorekorv1 → protorekor",
+      "fix": "Changed protorekorv1 \u2192 protorekor",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5421,7 +5421,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/dev_signer.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 11→23 lines (5 removed)",
+      "fix": "Rewrote 11\u219223 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5437,7 +5437,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/moat/dev_signer.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→23 lines (2 removed)",
+      "fix": "Rewrote 7\u219223 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5453,7 +5453,7 @@
       "error_message": "Significant refactor of ",
       "file": "tests/smoke/moat-trust-surfacing.sh",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 18→20 lines (4 removed)",
+      "fix": "Rewrote 18\u219220 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5469,7 +5469,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/loadout/manifest.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 14→28 lines (3 removed)",
+      "fix": "Rewrote 14\u219228 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5485,7 +5485,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/loadout_apply.go",
       "root_cause": "9 lines replaced/restructured",
-      "fix": "Rewrote 84→130 lines (9 removed)",
+      "fix": "Rewrote 84\u2192130 lines (9 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5520,7 +5520,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/syllago/doctor_cmd.go",
       "root_cause": "26 lines replaced/restructured",
-      "fix": "Rewrote 39→9 lines (26 removed)",
+      "fix": "Rewrote 39\u21929 lines (26 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5536,7 +5536,7 @@
       "error_message": "Wrong reference: AnonID should be AnonymousID",
       "file": "cli/internal/tui/config_settings.go",
       "root_cause": "Used \"AnonID\" instead of \"AnonymousID\"",
-      "fix": "Changed AnonID → AnonymousID",
+      "fix": "Changed AnonID \u2192 AnonymousID",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5568,7 +5568,7 @@
       "error_message": "Wrong reference: renderPlaceholder should be renderConfigContent",
       "file": "cli/internal/tui/app_view.go",
       "root_cause": "Used \"renderPlaceholder\" instead of \"renderConfigContent\"",
-      "fix": "Changed renderPlaceholder → renderConfigContent",
+      "fix": "Changed renderPlaceholder \u2192 renderConfigContent",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5581,10 +5581,10 @@
     {
       "id": "bug-349",
       "timestamp": "2026-04-22T22:53:33.000Z",
-      "error_message": "Hooks silently fail to fire after syllago install — Claude Code reads hooks.PreToolUse but syllago injects hooks.before_tool_execute",
+      "error_message": "Hooks silently fail to fire after syllago install \u2014 Claude Code reads hooks.PreToolUse but syllago injects hooks.before_tool_execute",
       "file": "cli/internal/installer/hooks.go",
       "root_cause": "installHook, uninstallHook, and checkHookStatus used parseHookFile's returned event directly as an sjson key. hook.json stores the canonical event name (before_tool_execute) but provider settings.json uses provider-native keys (PreToolUse for Claude Code). No translation happened, so the hook landed under a key the provider never reads. IsValidHookEvent accepted both canonical and native names, so validation didn't catch it.",
-      "fix": "Added converter.TranslateHookEvent(event, prov.Slug) after validation in all three functions. If translation succeeds (canonical → native), use the translated key; otherwise leave as-is (event was already native or provider-specific).",
+      "fix": "Added converter.TranslateHookEvent(event, prov.Slug) after validation in all three functions. If translation succeeds (canonical \u2192 native), use the translated key; otherwise leave as-is (event was already native or provider-specific).",
       "tags": [
         "hooks",
         "installer",
@@ -5603,8 +5603,8 @@
       "timestamp": "2026-04-22T22:53:33.000Z",
       "error_message": "TUI 'Add from provider' for hooks wrote entire settings.json into library as hook.json; later install failed with 'hook file missing event field'",
       "file": "cli/internal/tui/add_wizard.go",
-      "root_cause": "discoverHooksFromProvider set addDiscoveryItem.path = loc.Path (the settings.json path). addSingleItem routed through add.AddItems → add.writeItem which os.ReadFile's item.Path and writes it as hook.json. The whole settings.json ({\"hooks\": {\"PreToolUse\": [...]}}) ended up as the library hook.json, which has no top-level event field.",
-      "fix": "Added hookData (*converter.HookData) and hookSourceDir (directory of settings.json) fields to addDiscoveryItem. Populated in discoverHooksFromProvider from the already-parsed HookData. addSingleItem now branches on itemType==Hooks && hookData!=nil and calls a new writeHookToLibrary helper that json.MarshalIndents HookData → hook.json, bundles scripts via converter.BundleHookScripts, and writes .syllago.yaml metadata. Mirrors cli/cmd/syllago/add_cmd.go addHooksFromLocation.",
+      "root_cause": "discoverHooksFromProvider set addDiscoveryItem.path = loc.Path (the settings.json path). addSingleItem routed through add.AddItems \u2192 add.writeItem which os.ReadFile's item.Path and writes it as hook.json. The whole settings.json ({\"hooks\": {\"PreToolUse\": [...]}}) ended up as the library hook.json, which has no top-level event field.",
+      "fix": "Added hookData (*converter.HookData) and hookSourceDir (directory of settings.json) fields to addDiscoveryItem. Populated in discoverHooksFromProvider from the already-parsed HookData. addSingleItem now branches on itemType==Hooks && hookData!=nil and calls a new writeHookToLibrary helper that json.MarshalIndents HookData \u2192 hook.json, bundles scripts via converter.BundleHookScripts, and writes .syllago.yaml metadata. Mirrors cli/cmd/syllago/add_cmd.go addHooksFromLocation.",
       "tags": [
         "tui",
         "add-wizard",
@@ -5622,7 +5622,7 @@
       "timestamp": "2026-04-23T06:02:47.321Z",
       "error_message": "Missing error handling in unknown",
       "file": "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
-      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "root_cause": "Code path had no error handling \u2014 exceptions would propagate uncaught",
       "fix": "Added try/catch block",
       "tags": [
         "auto-detected",
@@ -5639,7 +5639,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→14 lines (2 removed) | Also: // mergeConfirmIntoDiscovery appends user-selected; // list before entering Review. Safe to call multi",
+      "fix": "Rewrote 8\u219214 lines (2 removed) | Also: // mergeConfirmIntoDiscovery appends user-selected; // list before entering Review. Safe to call multi",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5654,8 +5654,8 @@
       "timestamp": "2026-04-23T14:45:00.000Z",
       "error_message": "panic: runtime error: index out of range [86] with length 85 at cli/internal/tui/add_wizard.go:714 in mergeConfirmIntoDiscovery",
       "file": "cli/internal/tui/add_wizard.go",
-      "root_cause": "mergeConfirmIntoDiscovery appended user-selected confirm items to the END of discoveredItems (after the installed block), breaking the [actionable][installed] layout invariant. When showInstalled=false and installedCount>0, visibleDiscoveryItems() returns discoveredItems[:actionableCount] and buildDiscoveryList builds a checkboxList sized to visible items only (actionableCount). The subsequent explicit selection loop indexed selected[] from actionableCount+installedCount up to len(discoveredItems), which is out of range when installedCount>0. Also: the explicit selection loop was redundant — buildDiscoveryList already pre-selects StatusNew items (which merged items are).",
-      "fix": "Added preMergeActionableCount/preMergeInstalledCount fields captured once in handleDiscoveryDone. Restructured mergeConfirmIntoDiscovery to (a) split current slice back to origActionable/origInstalled using the pre-merge baselines, (b) rebuild as [origActionable + merged, origInstalled] so merged items live in the actionable block, (c) update actionableCount = baseActionable + len(merged), (d) remove redundant explicit selection loop — let buildDiscoveryList's StatusNew pre-selection cover merged items. Added regression test TestAddWizard_MergePreservesLayoutWithInstalled.",
+      "root_cause": "mergeConfirmIntoDiscovery appended user-selected confirm items to the END of discoveredItems (after the installed block), breaking the [actionable][installed] layout invariant. When showInstalled=false and installedCount>0, visibleDiscoveryItems() returns discoveredItems[:actionableCount] and buildDiscoveryList builds a checkboxList sized to visible items only (actionableCount). The subsequent explicit selection loop indexed selected[] from actionableCount+installedCount up to len(discoveredItems), which is out of range when installedCount>0. Also: the explicit selection loop was redundant \u2014 buildDiscoveryList already pre-selects StatusNew items (which merged items are).",
+      "fix": "Added preMergeActionableCount/preMergeInstalledCount fields captured once in handleDiscoveryDone. Restructured mergeConfirmIntoDiscovery to (a) split current slice back to origActionable/origInstalled using the pre-merge baselines, (b) rebuild as [origActionable + merged, origInstalled] so merged items live in the actionable block, (c) update actionableCount = baseActionable + len(merged), (d) remove redundant explicit selection loop \u2014 let buildDiscoveryList's StatusNew pre-selection cover merged items. Added regression test TestAddWizard_MergePreservesLayoutWithInstalled.",
       "tags": [
         "tui",
         "add-wizard",
@@ -5675,7 +5675,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/cmd/migrate_hooks/main.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 3→3 lines (2 removed)",
+      "fix": "Rewrote 3\u21923 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5691,7 +5691,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 41→70 lines (7 removed)",
+      "fix": "Rewrote 41\u219270 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5707,7 +5707,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 34→59 lines (8 removed)",
+      "fix": "Rewrote 34\u219259 lines (8 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5723,7 +5723,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "49 lines replaced/restructured",
-      "fix": "Rewrote 53→3 lines (49 removed)",
+      "fix": "Rewrote 53\u21923 lines (49 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5739,7 +5739,7 @@
       "error_message": "Wrong reference: self should be update",
       "file": "cli/internal/moat/trusted_root_loader.go",
       "root_cause": "Used \"self\" instead of \"update\"",
-      "fix": "Changed self → update",
+      "fix": "Changed self \u2192 update",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -5819,7 +5819,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/converter/split.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 30→68 lines (7 removed)",
+      "fix": "Rewrote 30\u219268 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5835,7 +5835,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/installer/hooks.go",
       "root_cause": "11 lines replaced/restructured",
-      "fix": "Rewrote 31→50 lines (11 removed) | Also: // DetectHookFormat returns \"flat\" if content has ; // or \"nested\" if it has a top-level \"hooks\" objec | Also: if DetectHookFormat(data) == \"flat\" {; // Nested: return first group",
+      "fix": "Rewrote 31\u219250 lines (11 removed) | Also: // DetectHookFormat returns \"flat\" if content has ; // or \"nested\" if it has a top-level \"hooks\" objec | Also: if DetectHookFormat(data) == \"flat\" {; // Nested: return first group",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5851,7 +5851,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/catalog/scanner.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 27→42 lines (4 removed) | Also: // Try nested format: hooks.Event[0].command; // Try flat format | Also: // hookEventName builds a display name from event+; // Nested format",
+      "fix": "Rewrote 27\u219242 lines (4 removed) | Also: // Try nested format: hooks.Event[0].command; // Try flat format | Also: // hookEventName builds a display name from event+; // Nested format",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5867,7 +5867,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/loadout/apply.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 19→37 lines (7 removed)",
+      "fix": "Rewrote 19\u219237 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5931,7 +5931,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/converter/hook_security.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 16→27 lines (3 removed)",
+      "fix": "Rewrote 16\u219227 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5947,7 +5947,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/converter/split_test.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 7→8 lines (5 removed)",
+      "fix": "Rewrote 7\u21928 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -5963,7 +5963,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "10 lines replaced/restructured",
-      "fix": "Rewrote 29→18 lines (10 removed) | Also: if m.reviewDrillPreview.fileName != \"\" && len(m.dr; highlights := make(map[int]bool) | Also: // Check if this file has any risk lines and set h; // Scroll to center on the first highlighted line",
+      "fix": "Rewrote 29\u219218 lines (10 removed) | Also: if m.reviewDrillPreview.fileName != \"\" && len(m.dr; highlights := make(map[int]bool) | Also: // Check if this file has any risk lines and set h; // Scroll to center on the first highlighted line",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6027,7 +6027,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 7→9 lines (2 removed) | Also: // Always show the file tree pane for consistent d; treeW := max(18, innerW*30/100) | Also: for len(treeContent) < paneH {; tl = treeContent[i]",
+      "fix": "Rewrote 7\u21929 lines (2 removed) | Also: // Always show the file tree pane for consistent d; treeW := max(18, innerW*30/100) | Also: for len(treeContent) < paneH {; tl = treeContent[i]",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6043,7 +6043,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/modal.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 12→12 lines (4 removed)",
+      "fix": "Rewrote 12\u219212 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6059,7 +6059,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 7→10 lines (3 removed)",
+      "fix": "Rewrote 7\u219210 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6075,7 +6075,7 @@
       "error_message": "Wrong reference: renderTitleRow should be renderDrillInTitleRow",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "Used \"renderTitleRow\" instead of \"renderDrillInTitleRow\"",
-      "fix": "Changed renderTitleRow → renderDrillInTitleRow",
+      "fix": "Changed renderTitleRow \u2192 renderDrillInTitleRow",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -6091,7 +6091,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_test.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 27→37 lines (7 removed) | Also: // Tab from items to buttons, then navigate to Add; m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft}) //  | Also: m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   //; m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  //",
+      "fix": "Rewrote 27\u219237 lines (7 removed) | Also: // Tab from items to buttons, then navigate to Add; m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft}) //  | Also: m, _ = m.Update(tea.KeyMsg{Type: tea.KeyTab})   //; m, _ = m.Update(tea.KeyMsg{Type: tea.KeyLeft})  //",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6107,7 +6107,7 @@
       "error_message": "Wrong reference: name should be url",
       "file": "cli/internal/errordocs/docs/registry-002.md",
       "root_cause": "Used \"name\" instead of \"url\"",
-      "fix": "Changed name → url",
+      "fix": "Changed name \u2192 url",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -6267,7 +6267,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_rename_test.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 24→85 lines (3 removed)",
+      "fix": "Rewrote 24\u219285 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6283,7 +6283,7 @@
       "error_message": "Wrong operator: && should be >=",
       "file": "cli/internal/tui/add_wizard_rename_test.go",
       "root_cause": "Used \"&&\" instead of \">=\"",
-      "fix": "Changed operator && → >=",
+      "fix": "Changed operator && \u2192 >=",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -6299,7 +6299,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 22→84 lines (6 removed)",
+      "fix": "Rewrote 22\u219284 lines (6 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6315,7 +6315,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 9→46 lines (2 removed) | Also: var rows []string; // Tier dot + label (responsive)",
+      "fix": "Rewrote 9\u219246 lines (2 removed) | Also: var rows []string; // Tier dot + label (responsive)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6331,7 +6331,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "5 lines replaced/restructured",
-      "fix": "Rewrote 22→34 lines (5 removed)",
+      "fix": "Rewrote 22\u219234 lines (5 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6347,7 +6347,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "4 lines replaced/restructured",
-      "fix": "Rewrote 13→7 lines (4 removed)",
+      "fix": "Rewrote 13\u21927 lines (4 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6363,7 +6363,7 @@
       "error_message": "Wrong operator: && should be !=",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "Used \"&&\" instead of \"!=\"",
-      "fix": "Changed operator && → !=",
+      "fix": "Changed operator && \u2192 !=",
       "tags": [
         "auto-detected",
         "operator-fix",
@@ -6379,7 +6379,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_update.go",
       "root_cause": "8 lines replaced/restructured",
-      "fix": "Rewrote 29→17 lines (8 removed) | Also: case addStepTriage:; return m.updateKeyTriage(msg) | Also: // Normal results; switch { | Also: if m.hasTriageStep {; m.step = addStepTriage | Also: // Sort items: actionable (New/Outdated) first, in; var actionable, installed []addDiscoveryItem | Also: // Go back to Triage (if active) or Discovery; if m.hasTriageStep { | Also: // Installed items toggle; if zone.Get(\"add-installed-toggle\").InBounds(msg) ",
+      "fix": "Rewrote 29\u219217 lines (8 removed) | Also: case addStepTriage:; return m.updateKeyTriage(msg) | Also: // Normal results; switch { | Also: if m.hasTriageStep {; m.step = addStepTriage | Also: // Sort items: actionable (New/Outdated) first, in; var actionable, installed []addDiscoveryItem | Also: // Go back to Triage (if active) or Discovery; if m.hasTriageStep { | Also: // Installed items toggle; if zone.Get(\"add-installed-toggle\").InBounds(msg) ",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6395,7 +6395,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "19 lines replaced/restructured",
-      "fix": "Rewrote 41→15 lines (19 removed)",
+      "fix": "Rewrote 41\u219215 lines (19 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6427,7 +6427,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/golden_triage_test.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 15→10 lines (7 removed)",
+      "fix": "Rewrote 15\u219210 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6459,7 +6459,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/wizard_invariant_test.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 18→13 lines (7 removed) | Also: // TestAddWizard_StepForShellIndex covers all 4 pe; hasTriageStep bool",
+      "fix": "Rewrote 18\u219213 lines (7 removed) | Also: // TestAddWizard_StepForShellIndex covers all 4 pe; hasTriageStep bool",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6475,7 +6475,7 @@
       "error_message": "Wrong reference: enterTriage should be handleDiscoveryDone",
       "file": "cli/internal/tui/add_wizard_view.go",
       "root_cause": "Used \"enterTriage\" instead of \"handleDiscoveryDone\"",
-      "fix": "Changed enterTriage → handleDiscoveryDone",
+      "fix": "Changed enterTriage \u2192 handleDiscoveryDone",
       "tags": [
         "auto-detected",
         "wrong-reference",
@@ -6491,7 +6491,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→10 lines (2 removed)",
+      "fix": "Rewrote 8\u219210 lines (2 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6507,7 +6507,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_test.go",
       "root_cause": "6 lines replaced/restructured",
-      "fix": "Rewrote 9→17 lines (6 removed) | Also: assertContains(t, view, \"Found 2 new items\"); assertContains(t, view, \"2 selected\")",
+      "fix": "Rewrote 9\u219217 lines (6 removed) | Also: assertContains(t, view, \"Found 2 new items\"); assertContains(t, view, \"2 selected\")",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6523,7 +6523,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard_update.go",
       "root_cause": "7 lines replaced/restructured",
-      "fix": "Rewrote 17→33 lines (7 removed)",
+      "fix": "Rewrote 17\u219233 lines (7 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6539,7 +6539,7 @@
       "error_message": "Significant refactor of ",
       "file": "cli/internal/tui/add_wizard.go",
       "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 12→17 lines (3 removed)",
+      "fix": "Rewrote 12\u219217 lines (3 removed)",
       "tags": [
         "auto-detected",
         "refactor",
@@ -6587,263 +6587,65 @@
     },
     {
       "id": "bug-411",
-      "timestamp": "2026-04-23T21:28:52.330Z",
-      "error_message": "Significant refactor of ",
-      "file": "cli/cmd/syllago/deprecated_cmds.go",
-      "root_cause": "11 lines replaced/restructured",
-      "fix": "Rewrote 16→4 lines (11 removed)",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "MCP drill-in shows entire settings file (~10,000 lines) instead of just the relevant server snippet",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "enterReviewDrillIn checked item.catalogItem != nil before the MCP extractJSONSection branch. mergeConfirmIntoDiscovery always synthesizes a catalogItem, so the MCP branch was unreachable.",
+      "fix": "Moved MCP extractJSONSection check BEFORE catalogItem check in enterReviewDrillIn.",
       "tags": [
-        "auto-detected",
-        "refactor",
-        "go"
+        "mcp",
+        "drill-in",
+        "review",
+        "extractJSONSection",
+        "catalogItem"
       ],
-      "related_bugs": [],
+      "related_bugs": [
+        "bug-410"
+      ],
       "occurrences": 1,
-      "last_seen": "2026-04-23T21:28:52.330Z"
+      "last_seen": "2026-04-23T23:30:00.000Z"
     },
     {
       "id": "bug-412",
-      "timestamp": "2026-04-23T21:31:07.547Z",
-      "error_message": "Significant refactor of ",
-      "file": "cli/cmd/syllago/loadout_apply.go",
-      "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 8→10 lines (2 removed)",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "Skills/agents drill-in shows No previewable file found and left pane shows only a dot",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "scanDrillInFiles used filepath.WalkDir on a symlinked root. WalkDir uses Lstat internally so symlinked dir appears as non-directory entry; filepath.Rel returns . producing files=[.], which PrimaryFileName cannot match.",
+      "fix": "Resolve root path via filepath.EvalSymlinks before filepath.WalkDir.",
       "tags": [
-        "auto-detected",
-        "refactor",
-        "go"
+        "symlink",
+        "scanDrillInFiles",
+        "WalkDir",
+        "skills",
+        "agents"
       ],
-      "related_bugs": [],
+      "related_bugs": [
+        "bug-410"
+      ],
       "occurrences": 1,
-      "last_seen": "2026-04-23T21:31:07.547Z"
+      "last_seen": "2026-04-23T23:30:00.000Z"
     },
     {
       "id": "bug-413",
-      "timestamp": "2026-04-23T21:33:33.735Z",
-      "error_message": "Wrong reference: syncAndExportCmd should be syncInstallCmd",
-      "file": "cli/cmd/syllago/sync_and_export.go",
-      "root_cause": "Used \"syncAndExportCmd\" instead of \"syncInstallCmd\"",
-      "fix": "Changed syncAndExportCmd → syncInstallCmd",
-      "tags": [
-        "auto-detected",
-        "wrong-reference",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 9,
-      "last_seen": "2026-04-23T21:34:43.740Z"
-    },
-    {
-      "id": "bug-414",
-      "timestamp": "2026-04-23T21:34:41.621Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/sync_and_export.go",
-      "root_cause": "Had \"Exported %s to %s (converted, merge manually)\\n\"",
-      "fix": "Changed to \"Installed %s to %s (converted, merge manually)\\n\"",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 6,
-      "last_seen": "2026-04-23T21:34:44.205Z"
-    },
-    {
-      "id": "bug-415",
-      "timestamp": "2026-04-23T21:35:03.652Z",
-      "error_message": "Wrong reference: syncAndExportCmd should be syncInstallCmd",
-      "file": "cli/cmd/syllago/sync_and_export_test.go",
-      "root_cause": "Used \"syncAndExportCmd\" instead of \"syncInstallCmd\"",
-      "fix": "Changed syncAndExportCmd → syncInstallCmd",
-      "tags": [
-        "auto-detected",
-        "wrong-reference",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 7,
-      "last_seen": "2026-04-23T21:35:18.649Z"
-    },
-    {
-      "id": "bug-416",
-      "timestamp": "2026-04-23T21:35:18.267Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/sync_and_export_test.go",
-      "root_cause": "Had \"exported\"",
-      "fix": "Changed to \"installed\"",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T21:35:18.267Z"
-    },
-    {
-      "id": "bug-417",
-      "timestamp": "2026-04-23T21:35:27.549Z",
-      "error_message": "Wrong reference: syncAndExportCmd should be syncInstallCmd",
-      "file": "cli/cmd/syllago/resolver_integration_test.go",
-      "root_cause": "Used \"syncAndExportCmd\" instead of \"syncInstallCmd\"",
-      "fix": "Changed syncAndExportCmd → syncInstallCmd",
-      "tags": [
-        "auto-detected",
-        "wrong-reference",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 2,
-      "last_seen": "2026-04-23T21:35:27.954Z"
-    },
-    {
-      "id": "bug-418",
-      "timestamp": "2026-04-23T21:36:12.855Z",
-      "error_message": "Significant refactor of ",
-      "file": "cli/cmd/syllago/info.go",
-      "root_cause": "2 lines replaced/restructured",
-      "fix": "Rewrote 11→11 lines (2 removed)",
-      "tags": [
-        "auto-detected",
-        "refactor",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T21:36:12.855Z"
-    },
-    {
-      "id": "bug-419",
-      "timestamp": "2026-04-23T21:36:22.267Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/info.go",
-      "root_cause": "Had `  syllago info formats`",
-      "fix": "Changed to `  syllago formats`",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T21:36:22.267Z"
-    },
-    {
-      "id": "bug-420",
-      "timestamp": "2026-04-23T21:36:39.006Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/add_cmd.go",
-      "root_cause": "Had 'syllago info providers'",
-      "fix": "Changed to 'syllago providers'",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T21:36:39.006Z"
-    },
-    {
-      "id": "bug-421",
-      "timestamp": "2026-04-23T21:52:05.231Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/sign_cmd.go",
-      "root_cause": "Had \"[Coming Soon] Sign hook content for provenance ve",
-      "fix": "Changed to \"Sign hook content for provenance verification\"",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 2,
-      "last_seen": "2026-04-23T21:52:08.199Z"
-    },
-    {
-      "id": "bug-422",
-      "timestamp": "2026-04-23T21:52:11.416Z",
-      "error_message": "Incorrect value in code",
-      "file": "cli/cmd/syllago/export_cmd.go",
-      "root_cause": "Had \"[Coming Soon] Export content with optional dual-f",
-      "fix": "Changed to \"Export content with optional dual-format (canonic",
-      "tags": [
-        "auto-detected",
-        "wrong-value",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T21:52:11.416Z"
-    },
-    {
-      "id": "bug-423",
-      "timestamp": "2026-04-23T22:06:04.955Z",
-      "error_message": "Wrong reference: KeyRight should be KeyEnter",
-      "file": ".claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go",
-      "root_cause": "Used \"KeyRight\" instead of \"KeyEnter\"",
-      "fix": "Changed KeyRight → KeyEnter",
-      "tags": [
-        "auto-detected",
-        "wrong-reference",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 2,
-      "last_seen": "2026-04-23T22:06:10.918Z"
-    },
-    {
-      "id": "bug-424",
-      "timestamp": "2026-04-23T22:06:41.788Z",
-      "error_message": "Significant refactor of ",
-      "file": ".claude/worktrees/fix-discovery-triage-bugs/cli/internal/tui/add_wizard_test.go",
-      "root_cause": "3 lines replaced/restructured",
-      "fix": "Rewrote 15→24 lines (3 removed)",
-      "tags": [
-        "auto-detected",
-        "refactor",
-        "go"
-      ],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T22:06:41.788Z"
-    },
-    {
-      "id": "bug-425",
-      "timestamp": "2026-04-23T23:09:00.000Z",
-      "error_message": "Right arrow key in discovery/triage step jumps to Review step instead of focusing the preview pane",
-      "file": "cli/internal/tui/add_wizard_update.go",
-      "root_cause": "case tea.KeyRight, tea.KeyEnter: combined both keys into the same action (advance to Review). KeyRight should only focus the preview pane.",
-      "fix": "Split into separate cases: KeyRight sets confirmFocus=triageZonePreview, KeyEnter calls mergeConfirmIntoDiscovery and enterReview. Added KeyLeft to return to items pane, KeyPgUp/KeyPgDown for preview scrolling.",
-      "tags": ["tui", "discovery", "triage", "keyboard", "navigation"],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T23:09:00.000Z"
-    },
-    {
-      "id": "bug-426",
-      "timestamp": "2026-04-23T23:09:00.000Z",
-      "error_message": "Hook risk indicators not showing in Review step; only MCP risks shown",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "Zero previews on triage/discovery step for symlinked content types",
       "file": "cli/internal/tui/add_wizard.go",
-      "root_cause": "addConfirmItem was missing a risks field. Risks were re-derived from catalogItem in mergeConfirmIntoDiscovery using catalog.RiskIndicators() which only analyzes file content, missing hook command/URL risks computed during discovery.",
-      "fix": "Added risks []catalog.RiskIndicator to addConfirmItem. Propagated di.risks in handleDiscoveryDone. In mergeConfirmIntoDiscovery, prefer pre-computed item.risks over re-deriving from catalogItem.",
-      "tags": ["tui", "discovery", "hooks", "risks", "review"],
-      "related_bugs": [],
+      "root_cause": "loadTriagePreview called catalog.SafeResolve which rejects symlinks (EvalSymlinks + containment check). For symlinked skills, resolved path escapes baseDir so preview returns empty.",
+      "fix": "Removed SafeResolve from loadTriagePreview; ReadFileContent string-prefix guard is symlink-safe. Added MCP extraction via extractJSONSection.",
+      "tags": [
+        "symlink",
+        "SafeResolve",
+        "loadTriagePreview",
+        "preview",
+        "triage",
+        "mcp"
+      ],
+      "related_bugs": [
+        "bug-411",
+        "bug-412"
+      ],
       "occurrences": 1,
-      "last_seen": "2026-04-23T23:09:00.000Z"
-    },
-    {
-      "id": "bug-427",
-      "timestamp": "2026-04-23T23:09:00.000Z",
-      "error_message": "Agents not discoverable in add wizard when running syllago from project directory (not home directory)",
-      "file": "cli/internal/tui/add_wizard.go",
-      "root_cause": "discoverFromProvider only called add.DiscoverFromProvider(prov, projectRoot, ...) using project-local paths. Global provider installs (e.g. ~/.claude/agents/) are at homeDir, not projectRoot.",
-      "fix": "Added second discovery pass using os.UserHomeDir() when homeDir != projectRoot. Results merged with name+type deduplication; project-local items take precedence.",
-      "tags": ["tui", "discovery", "agents", "provider", "global-paths"],
-      "related_bugs": [],
-      "occurrences": 1,
-      "last_seen": "2026-04-23T23:09:00.000Z"
+      "last_seen": "2026-04-23T23:30:00.000Z"
     }
   ]
 }
