@@ -66,7 +66,7 @@ func newTopBar() topBarModel {
 			{
 				label:  "Config",
 				hotkey: "3",
-				tabs:   []string{"Settings", "Sandbox"},
+				tabs:   []string{"Settings", "Sandbox", "System"},
 			},
 		},
 		activeGroup: 0, // Collections

@@ -1,0 +1,27 @@
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Settings     Sandbox     System                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ bwrap [err]  socat [err]
+   Domains     Ports     Env
+  No domains configured (defaults apply)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  [a] Add domain   [d] Remove
+1/2/3 groups · tab items · R refresh · ? help · q quit      syllago v0.0.0-test

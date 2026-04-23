@@ -33,6 +33,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.registryAdd.width = msg.Width
 		a.registryAdd.height = ch
 		a.trustInspector.SetSize(msg.Width, ch)
+		a.configSettings.SetSize(msg.Width, ch)
+		a.configSystem.SetSize(msg.Width, ch)
+		a.configSandbox.SetSize(msg.Width, ch)
 		if a.installWizard != nil {
 			a.installWizard.width = msg.Width
 			a.installWizard.height = a.contentHeight()
@@ -301,6 +304,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Action button hotkeys
 		case msg.String() == keyAdd:
+			if a.topBar.ActiveGroupLabel() == "Config" {
+				return a.routeKey(msg)
+			}
 			if a.isRegistriesTab() && !a.galleryDrillIn {
 				if a.registryOpInProgress {
 					cmd := a.toast.Push("Registry operation in progress", toastWarning)
@@ -320,6 +326,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Remove item from library
 		case msg.String() == keyRemove:
+			if a.topBar.ActiveGroupLabel() == "Config" {
+				return a.routeKey(msg)
+			}
 			return a.handleRemove()
 
 		// Uninstall item from provider
@@ -466,6 +475,39 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.galleryDrillIn = false
 		a.refreshContent()
 		a.updateNavState()
+		if msg.group == 2 {
+			a.configSystem.loading = true
+			return a, tea.Batch(
+				a.configSystem.loadCmd(),
+				a.configSettings.loadTelemetryCmd(),
+				a.configSandbox.loadCheckCmd(),
+			)
+		}
+		return a, nil
+
+	case systemLoadedMsg:
+		updated, _ := a.configSystem.Update(msg)
+		a.configSystem = updated.(systemModel)
+		return a, nil
+
+	case settingsTelemetryStatusMsg:
+		updated, _ := a.configSettings.Update(msg)
+		a.configSettings = updated.(settingsModel)
+		return a, nil
+
+	case settingsUpdateCheckedMsg:
+		updated, _ := a.configSettings.Update(msg)
+		a.configSettings = updated.(settingsModel)
+		return a, nil
+
+	case sandboxCheckLoadedMsg:
+		updated, _ := a.configSandbox.Update(msg)
+		a.configSandbox = updated.(sandboxConfigModel)
+		return a, nil
+
+	case sandboxSavedMsg:
+		updated, _ := a.configSandbox.Update(msg)
+		a.configSandbox = updated.(sandboxConfigModel)
 		return a, nil
 
 	case libraryEditMsg:
@@ -634,6 +676,9 @@ func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
 
 // routeKey sends key messages to the active content model.
 func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if a.topBar.ActiveGroupLabel() == "Config" {
+		return a.routeKeyConfig(msg)
+	}
 	if a.isLibraryTab() {
 		var cmd tea.Cmd
 		a.library, cmd = a.library.Update(msg)
@@ -654,13 +699,34 @@ func (a App) routeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return a, cmd
 }
 
+// routeKeyConfig dispatches key messages to the active Config sub-model.
+func (a App) routeKeyConfig(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch a.topBar.ActiveTabLabel() {
+	case "Settings":
+		updated, cmd := a.configSettings.Update(msg)
+		a.configSettings = updated.(settingsModel)
+		return a, cmd
+	case "Sandbox":
+		updated, cmd := a.configSandbox.Update(msg)
+		a.configSandbox = updated.(sandboxConfigModel)
+		return a, cmd
+	case "System":
+		updated, cmd := a.configSystem.Update(msg)
+		a.configSystem = updated.(systemModel)
+		return a, cmd
+	}
+	return a, nil
+}
+
 // routeMouse sends mouse messages to topbar + active content model.
 func (a App) routeMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 	var topCmd tea.Cmd
 	a.topBar, topCmd = a.topBar.Update(msg)
 
 	var contentCmd tea.Cmd
-	if a.isLibraryTab() {
+	if a.topBar.ActiveGroupLabel() == "Config" {
+		// Config sub-models don't yet have mouse handlers; topCmd is enough.
+	} else if a.isLibraryTab() {
 		a.library, contentCmd = a.library.Update(msg)
 	} else if a.isGalleryTab() && a.galleryDrillIn {
 		a.library, contentCmd = a.library.Update(msg)
