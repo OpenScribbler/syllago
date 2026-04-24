@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // tierBadge returns a colored "● Label" string for a confidence tier.
@@ -379,8 +380,16 @@ func (m *installWizardModel) viewReview() string {
 		locLabel := locLabels[m.locationCursor]
 		locPath := m.resolvedInstallPath(m.locationCursor)
 		methodLabel := "Symlink"
-		if m.methodCursor == 1 {
+		switch m.methodCursor {
+		case 1:
 			methodLabel = "Copy"
+		case 2:
+			// D5: the append flow's "target" is the monolithic file, not the
+			// location-based rules directory. Use the filename for display.
+			if appendName := m.appendFilename(); appendName != "" {
+				methodLabel = "Append"
+				locPath = appendName
+			}
 		}
 		summaryLines = append(summaryLines, pad+mutedStyle.Render("Target:   ")+
 			lipgloss.NewStyle().Foreground(primaryText).Render(locPath))
@@ -415,6 +424,16 @@ func (m *installWizardModel) viewReview() string {
 		summaryLines = append(summaryLines, pad+mutedStyle.Render("Trust:     ")+
 			glyphStyle.Render(trustBadge.Glyph())+" "+
 			lipgloss.NewStyle().Foreground(primaryText).Render(trustText))
+	}
+
+	// D10 non-blocking hint — shown only when method=append and the provider
+	// has a MonolithicHint. Uses muted text with a plain "Note:" prefix so it
+	// reads as advisory rather than a warning or error.
+	if m.methodCursor == 2 {
+		if hint := provider.MonolithicHint(prov.Slug); hint != "" {
+			summaryLines = append(summaryLines, pad+mutedStyle.Render("Note:     ")+
+				mutedStyle.Render(hint))
+		}
 	}
 
 	// Buttons on the last line of the summary area
