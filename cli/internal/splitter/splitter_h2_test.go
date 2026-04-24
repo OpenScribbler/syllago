@@ -244,3 +244,23 @@ func TestSplit_H2MustShouldMay(t *testing.T) {
 		}
 	}
 }
+
+func TestSplit_H2TableHeavy(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "table-heavy.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	// 4 H2 sections in the fixture, each containing a markdown table.
+	if len(cands) != 4 {
+		t.Fatalf("expected 4 candidates, got %d", len(cands))
+	}
+	// Every candidate body must contain a markdown table separator (|---|---|...).
+	const tableSep = "|---|"
+	for i, c := range cands {
+		if !strings.Contains(c.Body, tableSep) {
+			t.Errorf("cand %d body missing markdown table separator %q", i, tableSep)
+		}
+	}
+}
