@@ -1,6 +1,7 @@
 package installcheck
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -56,5 +57,40 @@ func TestScan_Clean(t *testing.T) {
 	targets := result.MatchSet["lib-id-scan"]
 	if len(targets) != 1 || targets[0] != target {
 		t.Errorf("MatchSet[lib-id-scan] = %v, want [%q]", targets, target)
+	}
+}
+
+func TestScan_ModifiedEdited(t *testing.T) {
+	t.Parallel()
+	body := []byte("# Scan me\n\nSome body.\n")
+	inst, library, target := seedRuleAndInstall(t, body)
+
+	// Mutate target: edit a byte inside the appended block so normalization
+	// can't undo the change (stripping the final \n would be canonicalized back).
+	raw, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	mutated := []byte(string(raw))
+	// Find "Some body" and replace one char so the pattern diverges.
+	for i := 0; i < len(mutated)-1; i++ {
+		if mutated[i] == 'S' && mutated[i+1] == 'o' {
+			mutated[i] = 'X'
+			break
+		}
+	}
+	if err := os.WriteFile(target, mutated, 0644); err != nil {
+		t.Fatalf("write mutated target: %v", err)
+	}
+	InvalidateCache(target) // install path normally invalidates; we bypassed that here
+
+	result := Scan(inst, library)
+	key := RecordKey{LibraryID: "lib-id-scan", TargetFile: target}
+	got := result.PerRecord[key]
+	if got.State != StateModified || got.Reason != ReasonEdited {
+		t.Errorf("PerRecord[%v] = %+v, want {StateModified, ReasonEdited}", key, got)
+	}
+	if targets := result.MatchSet["lib-id-scan"]; len(targets) != 0 {
+		t.Errorf("MatchSet[lib-id-scan] = %v, want empty", targets)
 	}
 }
