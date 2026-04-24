@@ -85,3 +85,37 @@ func TestSplit_H2WithPreamble(t *testing.T) {
 		t.Errorf("first candidate does not start with promoted H1 %q; got:\n%s", wantFirstLine, cands[0].Body)
 	}
 }
+
+func TestSplit_H2NumberedPrefix(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "h2-numbered-prefix.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	if len(cands) != 5 {
+		t.Fatalf("expected 5 candidates, got %d", len(cands))
+	}
+	wantSlugs := []string{
+		"coding-style",
+		"error-handling",
+		"testing-conventions",
+		"documentation",
+		"logging",
+	}
+	wantDescriptions := []string{
+		"1. Coding Style",
+		"2. Error Handling",
+		"3. Testing Conventions",
+		"4. Documentation",
+		"5. Logging",
+	}
+	for i, c := range cands {
+		if c.Name != wantSlugs[i] {
+			t.Errorf("cand %d slug: want %q, got %q", i, wantSlugs[i], c.Name)
+		}
+		if c.Description != wantDescriptions[i] {
+			t.Errorf("cand %d description: want %q, got %q", i, wantDescriptions[i], c.Description)
+		}
+	}
+}
