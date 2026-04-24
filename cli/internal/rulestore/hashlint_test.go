@@ -24,7 +24,9 @@ func TestNoRawHashFormatting(t *testing.T) {
 		filepath.Join(root, "internal/rulestore/hash.go"): true,
 	}
 	allowedConcat := map[string]bool{
-		filepath.Join(root, "internal/rulestore/loader.go"): true,
+		// hash.go owns HashBody — the single sanctioned library-rule entry
+		// point that constructs the canonical "sha256:<hex>" form.
+		filepath.Join(root, "internal/rulestore/hash.go"): true,
 		// Pre-existing unrelated hash constructions outside the library-rule
 		// storage domain. The D11 lint intent is to funnel library-rule hash
 		// construction through rulestore; these callers hash MOAT artifacts
