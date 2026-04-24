@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -2188,5 +2189,210 @@ func TestApp_InstallAllResultMsg(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Error("expected non-nil cmd (async install batch)")
+	}
+}
+
+// --- Coverage boost: pure helpers + review zone handlers ---
+
+func TestInstallView_TierBadge(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		tier     analyzer.ConfidenceTier
+		wantText string
+	}{
+		{"low", analyzer.TierLow, "Low confidence"},
+		{"medium", analyzer.TierMedium, "Medium confidence"},
+		{"high", analyzer.TierHigh, "High confidence"},
+		{"user", analyzer.TierUser, "User-asserted"},
+		{"unknown", analyzer.ConfidenceTier("bogus"), ""},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := tierBadge(tc.tier)
+			if tc.wantText == "" {
+				if got != "" {
+					t.Errorf("expected empty for unknown tier, got %q", got)
+				}
+				return
+			}
+			if !strings.Contains(got, tc.wantText) {
+				t.Errorf("tierBadge(%v) = %q, want to contain %q", tc.tier, got, tc.wantText)
+			}
+		})
+	}
+}
+
+func TestInstallWizard_Init_ReturnsNil(t *testing.T) {
+	t.Parallel()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-rule", catalog.Rules, "/fake/rules/my-rule")
+	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	if cmd := w.Init(); cmd != nil {
+		t.Errorf("expected nil cmd from Init, got %v", cmd)
+	}
+}
+
+// reviewWizardWithHook builds a wizard advanced to the review step with risks
+// populated (hook item triggers the risk analyzer).
+func reviewWizardWithHook(t *testing.T) *installWizardModel {
+	t.Helper()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	hookDir := t.TempDir()
+	hookJSON := `{"hooks":{"PostToolUse":[{"command":"echo hello"}]}}`
+	hookPath := filepath.Join(hookDir, "my-hook")
+	if err := os.MkdirAll(hookPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(hookPath, "hooks.json"), []byte(hookJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{
+		Name:    "my-hook",
+		Type:    catalog.Hooks,
+		Path:    hookPath,
+		Files:   []string{"hooks.json"},
+		Library: true,
+	}
+	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	w.width = 80
+	w.height = 30
+	return w
+}
+
+func TestInstallWizard_UpdateKeyReviewRisks_JKNavigates(t *testing.T) {
+	t.Parallel()
+	w := reviewWizardWithHook(t)
+	if w.reviewZone != reviewZoneRisks {
+		t.Fatalf("expected reviewZone=reviewZoneRisks, got %d", w.reviewZone)
+	}
+	// Inject a synthetic second risk so j/k navigation has somewhere to go.
+	w.risks = append(w.risks, catalog.RiskIndicator{
+		Label:       "synthetic",
+		Description: "extra",
+		Level:       catalog.RiskMedium,
+	})
+	w.riskBanner = newRiskBanner(w.risks, 60)
+
+	// 'j' advances cursor
+	start := w.riskBanner.cursor
+	w.updateKeyReviewRisks(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if w.riskBanner.cursor != start+1 {
+		t.Errorf("expected cursor=%d after 'j', got %d", start+1, w.riskBanner.cursor)
+	}
+	// 'k' retreats
+	w.updateKeyReviewRisks(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if w.riskBanner.cursor != start {
+		t.Errorf("expected cursor=%d after 'k', got %d", start, w.riskBanner.cursor)
+	}
+	// KeyDown and KeyUp also work
+	w.updateKeyReviewRisks(tea.KeyMsg{Type: tea.KeyDown})
+	if w.riskBanner.cursor != start+1 {
+		t.Errorf("expected cursor=%d after Down, got %d", start+1, w.riskBanner.cursor)
+	}
+	w.updateKeyReviewRisks(tea.KeyMsg{Type: tea.KeyUp})
+	if w.riskBanner.cursor != start {
+		t.Errorf("expected cursor=%d after Up, got %d", start, w.riskBanner.cursor)
+	}
+}
+
+// reviewWizardMultiFile returns a wizard advanced to review step with a 2-file
+// item so the tree zone is active.
+func reviewWizardMultiFile(t *testing.T) *installWizardModel {
+	t.Helper()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	itemDir := filepath.Join(t.TempDir(), "rules", "my-rule")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# A"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "extra.md"), []byte("# B"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{
+		Name:    "my-rule",
+		Type:    catalog.Rules,
+		Path:    itemDir,
+		Files:   []string{"rule.md", "extra.md"},
+		Library: true,
+	}
+	w := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	w.width = 80
+	w.height = 30
+	// Advance single-provider auto-skip: location -> method -> review
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	w, _ = w.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if w.step != installStepReview {
+		t.Fatalf("expected installStepReview, got %d", w.step)
+	}
+	return w
+}
+
+func TestInstallWizard_UpdateKeyReviewTree_JKNavigates(t *testing.T) {
+	t.Parallel()
+	w := reviewWizardMultiFile(t)
+	// Move focus to tree (multi-file: zones should be [tree, preview, buttons])
+	w.setReviewZone(reviewZoneTree)
+	startCursor := w.reviewTree.cursor
+	w.updateKeyReviewTree(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if w.reviewTree.cursor == startCursor {
+		t.Error("expected cursor to advance after 'j'")
+	}
+	w.updateKeyReviewTree(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if w.reviewTree.cursor != startCursor {
+		t.Errorf("expected cursor=%d after 'k', got %d", startCursor, w.reviewTree.cursor)
+	}
+	w.updateKeyReviewTree(tea.KeyMsg{Type: tea.KeyDown})
+	w.updateKeyReviewTree(tea.KeyMsg{Type: tea.KeyUp})
+}
+
+func TestInstallWizard_UpdateKeyReviewTree_EnterOnFileLoadsPreview(t *testing.T) {
+	t.Parallel()
+	w := reviewWizardMultiFile(t)
+	w.setReviewZone(reviewZoneTree)
+	// Cursor defaults to 0; first node should be a file (flat tree, 2 files).
+	w.updateKeyReviewTree(tea.KeyMsg{Type: tea.KeyEnter})
+	if len(w.reviewPreview.lines) == 0 {
+		t.Error("expected preview to be loaded after Enter on file")
+	}
+}
+
+func TestInstallWizard_UpdateKeyReviewPreview_Scrolls(t *testing.T) {
+	t.Parallel()
+	w := reviewWizardMultiFile(t)
+	// Give preview some content so scroll has effect.
+	w.reviewPreview.lines = make([]string, 200)
+	for i := range w.reviewPreview.lines {
+		w.reviewPreview.lines[i] = fmt.Sprintf("line %d", i)
+	}
+	w.reviewPreview.height = 10
+
+	w.setReviewZone(reviewZonePreview)
+	beforeOff := w.reviewPreview.offset
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyPgDown})
+	if w.reviewPreview.offset <= beforeOff {
+		t.Errorf("expected offset to advance after PgDown, got %d -> %d", beforeOff, w.reviewPreview.offset)
+	}
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyPgUp})
+	// j/k scrolling
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyDown})
+	w.updateKeyReviewPreview(tea.KeyMsg{Type: tea.KeyUp})
+}
+
+func TestInstallWizard_LoadReviewTreeFile_EmptySelectionNoop(t *testing.T) {
+	t.Parallel()
+	w := reviewWizardMultiFile(t)
+	w.reviewPreview.lines = nil
+	// Force SelectedPath() to return "".
+	w.reviewTree.cursor = -1
+	w.loadReviewTreeFile()
+	if len(w.reviewPreview.lines) != 0 {
+		t.Errorf("expected preview unchanged on empty selection, got %d lines", len(w.reviewPreview.lines))
 	}
 }
