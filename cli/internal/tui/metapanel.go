@@ -311,9 +311,10 @@ func renderRuleRecords(records []ruleTargetStatus, width int) []string {
 	for _, r := range records {
 		status := ruleStatusString(r.State)
 		style := mutedStyle
-		if r.State.State == installcheck.StateClean {
+		switch r.State.State {
+		case installcheck.StateClean:
 			style = trustVerifiedStyle
-		} else if r.State.State == installcheck.StateModified {
+		case installcheck.StateModified:
 			style = trustRevokedStyle
 		}
 		name := filepath.Base(r.TargetFile)
