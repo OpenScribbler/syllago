@@ -97,6 +97,33 @@ func TestLoadRule_MissingHistoryFile(t *testing.T) {
 	}
 }
 
+func TestLoadRule_OrphanHistoryFile(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	body := []byte("# Coding style\n\nUse tabs.\n")
+	meta := newTestMeta(t)
+	if err := WriteRule(tmp, "claude-code", "coding-style", meta, body); err != nil {
+		t.Fatalf("WriteRule: %v", err)
+	}
+	dir := filepath.Join(tmp, "claude-code", "coding-style")
+
+	// Write an extra history file with a hash not in versions[].
+	otherHex := strings.Repeat("f", 64)
+	orphanName := "sha256-" + otherHex + ".md"
+	orphanPath := filepath.Join(dir, ".history", orphanName)
+	if err := os.WriteFile(orphanPath, []byte("some content\n"), 0644); err != nil {
+		t.Fatalf("writing orphan: %v", err)
+	}
+
+	_, err := LoadRule(dir)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "orphan history file") {
+		t.Errorf("error %q does not contain %q", err.Error(), "orphan history file")
+	}
+}
+
 func keysOf(m map[string][]byte) []string {
 	ks := make([]string, 0, len(m))
 	for k := range m {
