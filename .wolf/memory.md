@@ -3880,3 +3880,57 @@
 | 15:45 | Discovered binary PATH issue: which syllago resolves to /home/hhewett/.local/src/syllago/cli/syllago (main repo, stale) not ~/.local/bin/syllago. Replaced both. User must restart TUI to pick up new binary. | cli/syllago | workaround | ~500 || 15:59 | Added type-boundary section headers to review step item list | add_wizard_view.go | build+tests pass | ~300 |
 | 22:24 | Fixed registry removal bug: doRegistryRemoveCmd now removes from all config sources | actions.go, actions_test.go | build+tests pass | ~500 |
 | 09:21 | Edited cli/internal/tui/actions_test.go | modified TestActions_HandleRemove_OpensRemoveModal() | ~795 |
+| 09:24 | Edited cli/internal/tui/add_wizard_test.go | 5→5 lines | ~38 |
+| 09:24 | Edited cli/internal/tui/metapanel.go | 7→8 lines | ~58 |
+| 09:24 | Edited cli/internal/tui/add_wizard.go | 3→2 lines | ~20 |
+| 09:26 | Created .develop/rules-splitter.json | — | ~552 |
+| 09:26 | Session end: 5 writes across 5 files (actions_test.go, add_wizard_test.go, metapanel.go, add_wizard.go, rules-splitter.json) | 9 reads | ~41369 tok |
+| 09:27 | Session end: 5 writes across 5 files (actions_test.go, add_wizard_test.go, metapanel.go, add_wizard.go, rules-splitter.json) | 9 reads | ~41369 tok |
+| 09:30 | Session end: 5 writes across 5 files (actions_test.go, add_wizard_test.go, metapanel.go, add_wizard.go, rules-splitter.json) | 10 reads | ~41369 tok |
+| 09:53 | Edited cli/internal/metadata/metadata.go | modified Load() | ~565 |
+| 09:54 | Edited cli/internal/metadata/metadata_test.go | modified TestLoad_AcceptsRuleMetadataShape() | ~671 |
+
+## Session: 2026-04-24 09:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 09:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 09:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 10:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:03 | Created docs/plans/2026-04-24-provider-auto-split-design.md | — | ~841 |
+| 10:04 | Edited cli/internal/tui/add_wizard_view.go | 7→6 lines | ~77 |
+| 10:04 | Edited cli/internal/tui/add_wizard_update.go | reduced (-9 lines) | ~156 |
+| 10:04 | Edited cli/internal/tui/add_wizard_update.go | 6→6 lines | ~29 |
+| 10:05 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~222 |
+| 10:05 | Edited cli/internal/tui/add_wizard_test.go | 14→13 lines | ~108 |
+| 10:08 | Edited cli/internal/tui/add_wizard_monolithic_update.go | removed 13 lines | ~21 |
+| 10:11 | Created cli/internal/add/split_detect.go | — | ~363 |
+| 10:11 | Created cli/internal/add/split_detect_test.go | — | ~706 |
+| 10:11 | Edited cli/internal/tui/add_wizard.go | expanded (+8 lines) | ~133 |
+| 10:11 | Edited cli/internal/tui/add_wizard_update.go | expanded (+8 lines) | ~181 |
+| 10:11 | Edited cli/internal/tui/add_wizard_update.go | 3→4 lines | ~46 |
+| 10:12 | Edited cli/internal/tui/add_wizard_view.go | expanded (+20 lines) | ~226 |
+| 10:13 | Created cli/internal/tui/add_wizard_split_detect_test.go | — | ~938 |
+
+## Session: 2026-04-24 10:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:15 | Edited cli/internal/tui/add_wizard_split_detect_test.go | inline fix | ~10 |
+| 10:17 | Edited cli/internal/tui/add_wizard.go | 5→10 lines | ~108 |
+| 10:17 | Edited cli/internal/tui/add_wizard_update.go | 13→15 lines | ~195 |
+| 10:17 | Edited cli/internal/tui/add_wizard.go | 5→9 lines | ~90 |
+| 10:18 | Edited cli/internal/tui/add_wizard_split_detect_test.go | 43→46 lines | ~411 |
+| 10:18 | Edited cli/internal/tui/add_wizard_split_detect_test.go | expanded (+9 lines) | ~194 |
