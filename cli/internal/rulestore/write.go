@@ -46,3 +46,43 @@ func WriteRule(contentRoot, sourceProvider, slug string, meta metadata.RuleMetad
 	}
 	return os.WriteFile(filepath.Join(dir, metadata.FileName), data, 0644)
 }
+
+// AppendVersion adds a new canonical version of an existing rule (D13). If
+// the new body hashes to a value already in versions[], it reuses that entry
+// (dedup by hash per D11) and only updates CurrentVersion + rule.md.
+func AppendVersion(dir string, newBody []byte) error {
+	meta, err := metadata.LoadRuleMetadata(filepath.Join(dir, metadata.FileName))
+	if err != nil {
+		return err
+	}
+	canon := canonical.Normalize(newBody)
+	hash := HashBody(canon)
+	// Write/overwrite rule.md so it reflects the new current version.
+	if err := os.WriteFile(filepath.Join(dir, "rule.md"), canon, 0644); err != nil {
+		return err
+	}
+	// Write .history entry if new.
+	historyPath := filepath.Join(dir, ".history", hashToFilename(hash))
+	if _, err := os.Stat(historyPath); os.IsNotExist(err) {
+		if err := os.WriteFile(historyPath, canon, 0644); err != nil {
+			return err
+		}
+	}
+	// Append versions[] entry if new (dedup by hash).
+	have := false
+	for _, v := range meta.Versions {
+		if v.Hash == hash {
+			have = true
+			break
+		}
+	}
+	if !have {
+		meta.Versions = append(meta.Versions, metadata.RuleVersionEntry{Hash: hash, WrittenAt: time.Now().UTC()})
+	}
+	meta.CurrentVersion = hash
+	data, err := yaml.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, metadata.FileName), data, 0644)
+}
