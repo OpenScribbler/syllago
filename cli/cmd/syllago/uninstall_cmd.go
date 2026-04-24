@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -65,6 +67,14 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
+	// D7 routing: if installed.json has a matching RuleAppend record, the
+	// rule was installed via --method=append and the uninstall must route
+	// through UninstallRuleAppend (exact-match byte search). The generic
+	// scan-and-symlink-remove path below cannot handle monolithic appends.
+	if handled, err := tryUninstallMonolithicRule(name, fromSlug, typeFilter, dryRun, globalDir); err != nil || handled {
+		return err
 	}
 
 	// Use an empty temp dir as contentRoot to avoid scan shadowing.
@@ -187,4 +197,98 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("content_type", typeFilter)
 	telemetry.Enrich("dry_run", dryRun)
 	return nil
+}
+
+// tryUninstallMonolithicRule handles D7 uninstall for rules installed via
+// --method=append. Returns (handled=true, err) when the name matches at least
+// one RuleAppend record in installed.json; the caller then short-circuits.
+// Returns (handled=false, nil) when no matching record exists — the normal
+// catalog-driven uninstall path takes over.
+//
+// typeFilter restricts matching to --type=rules when set; when empty, any
+// RuleAppend record with matching Name qualifies (names are namespaced under
+// the "rules" type by construction in install_cmd_append.go).
+func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, globalDir string) (bool, error) {
+	if typeFilter != "" && typeFilter != string(catalog.Rules) {
+		return false, nil
+	}
+	projectRoot, err := findProjectRoot()
+	if err != nil {
+		return false, nil // let generic path surface the error in context
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		return false, nil // same — defer to generic path
+	}
+	// Match all records whose Name == name, optionally filtered by provider.
+	var matches []installer.InstalledRuleAppend
+	for _, r := range inst.RuleAppends {
+		if r.Name != name {
+			continue
+		}
+		if fromSlug != "" && r.Provider != fromSlug {
+			continue
+		}
+		matches = append(matches, r)
+	}
+	if len(matches) == 0 {
+		return false, nil
+	}
+	if dryRun {
+		for _, r := range matches {
+			fmt.Fprintf(output.Writer, "[dry-run] Would remove %s from %s\n", r.Name, r.TargetFile)
+		}
+		telemetry.Enrich("provider", fromSlug)
+		telemetry.Enrich("content_type", string(catalog.Rules))
+		telemetry.Enrich("dry_run", true)
+		return true, nil
+	}
+	// Load the library rule once (it's the same libID for all matches because
+	// D14 uniqueness is per (LibraryID, TargetFile) — one rule, many targets).
+	library := map[string]*rulestore.Loaded{}
+	rulesRoot := filepath.Join(globalDir, string(catalog.Rules))
+	for _, r := range matches {
+		if _, ok := library[r.LibraryID]; ok {
+			continue
+		}
+		dir, derr := findLibraryRuleDir(rulesRoot, name)
+		if derr != nil {
+			return true, output.NewStructuredErrorDetail(
+				output.ErrInstallItemNotFound,
+				fmt.Sprintf("library rule %q not found for uninstall", name),
+				"Library rules required for D7 exact-match uninstall live under ~/.syllago/content/rules/<source>/<name>/",
+				derr.Error(),
+			)
+		}
+		loaded, lerr := rulestore.LoadRule(dir)
+		if lerr != nil {
+			return true, output.NewStructuredErrorDetail(
+				output.ErrCatalogScanFailed,
+				"loading library rule for uninstall",
+				"Check .syllago.yaml and .history/ in the library rule dir.",
+				lerr.Error(),
+			)
+		}
+		library[r.LibraryID] = loaded
+	}
+	var uninstalledFrom []string
+	for _, r := range matches {
+		if uerr := installer.UninstallRuleAppend(projectRoot, r.LibraryID, r.TargetFile, library); uerr != nil {
+			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", r.Provider, uerr)
+			continue
+		}
+		uninstalledFrom = append(uninstalledFrom, r.Provider)
+		if !output.JSON && !output.Quiet {
+			fmt.Fprintf(output.Writer, "Removed %s from %s\n", r.Name, r.TargetFile)
+		}
+	}
+	if output.JSON {
+		output.Print(uninstallResult{Name: name, UninstalledFrom: uninstalledFrom})
+	} else if len(uninstalledFrom) > 0 && !output.Quiet {
+		fmt.Fprintf(output.Writer, "\n  %q is still in your library.\n", name)
+	}
+	telemetry.Enrich("provider", fromSlug)
+	telemetry.Enrich("content_type", string(catalog.Rules))
+	telemetry.Enrich("dry_run", dryRun)
+	return true, nil
 }
