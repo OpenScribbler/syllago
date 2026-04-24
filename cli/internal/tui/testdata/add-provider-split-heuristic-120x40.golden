@@ -1,0 +1,39 @@
+╭───Add ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  [1 Source]  [2 Type]  [3 Discovery]  [4 Heuristic]  [5 Review]  [6 Execute]                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Split monolithic rule files?                                                                      Back      Next
+
+  Detected monolithic rule files. Choose per rule:
+
+  > ◉ CLAUDE  —  split into 5 sections (H2)
+    ◯ AGENTS  —  import as single rule
+
+  [↑/↓] navigate  [space] toggle  [enter] next  [esc] back
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
