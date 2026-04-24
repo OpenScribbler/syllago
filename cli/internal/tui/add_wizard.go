@@ -2394,6 +2394,14 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug)
 	}
 
+	// Auto-split branch (P4 of syllago-50wq4): a rule item whose source file
+	// is a recognized monolithic format and whose user-chosen Heuristic is
+	// "split" gets written via the splitter + rulestore instead of the
+	// generic add.AddItems copy flow.
+	if item.itemType == catalog.Rules && item.splittable && item.splitChosen {
+		return addSplitRuleItem(item, contentRoot, provSlug)
+	}
+
 	opts := add.AddOptions{
 		Force:            item.overwrite,
 		Provider:         provSlug,

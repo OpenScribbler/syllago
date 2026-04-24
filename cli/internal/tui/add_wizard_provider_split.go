@@ -2,12 +2,105 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
+
+	"github.com/OpenScribbler/syllago/cli/internal/converter/canonical"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
+	"github.com/OpenScribbler/syllago/cli/internal/splitter"
 )
+
+// addSplitRuleItem writes a splittable rule by running the splitter and
+// persisting each section through rulestore. Called from addSingleItem when
+// item.splittable && item.splitChosen are both true.
+//
+// The returned addExecResult summarizes the whole operation: status "added"
+// with name "<base> (N sections)" on success; "error" with the first error
+// otherwise. Sections that fail to write are counted in the error text; no
+// rollback is performed (partial installs surface naturally in the library).
+func addSplitRuleItem(item addDiscoveryItem, contentRoot, provSlug string) addExecResult {
+	if item.path == "" {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("split rule has empty path")}
+	}
+	raw, err := os.ReadFile(item.path)
+	if err != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("read %s: %w", item.path, err)}
+	}
+	canonBody := canonical.Normalize(raw)
+	candidates, skip := splitter.Split(canonBody, splitter.Options{Heuristic: splitter.HeuristicH2})
+	if skip != nil {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("splitter skipped: %s", skip.Reason)}
+	}
+	if len(candidates) == 0 {
+		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("splitter produced no candidates")}
+	}
+
+	filename := filepath.Base(item.path)
+	hash := rulestore.HashBody(canonBody)
+	sourceProvider := provSlug
+	if sourceProvider == "" {
+		sourceProvider = "local"
+	}
+	format := filenameToFormat(filename)
+
+	written := 0
+	var firstErr error
+	for _, c := range candidates {
+		slug := c.Name
+		if slug == "" {
+			slug = fallbackSlugFromFilename(filename)
+		}
+		meta := metadata.RuleMetadata{
+			FormatVersion: metadata.CurrentFormatVersion,
+			Name:          slug,
+			Description:   c.Description,
+			Type:          "rule",
+			Source: metadata.RuleSource{
+				Provider:         sourceProvider,
+				Scope:            "project",
+				Path:             item.path,
+				Format:           format,
+				Filename:         filename,
+				Hash:             hash,
+				SplitMethod:      "h2",
+				SplitFromSection: c.Description,
+			},
+		}
+		if werr := rulestore.WriteRuleWithSource(
+			contentRoot,
+			sourceProvider,
+			slug,
+			meta,
+			[]byte(c.Body),
+			filename,
+			canonBody,
+		); werr != nil {
+			if firstErr == nil {
+				firstErr = fmt.Errorf("writing %s: %w", slug, werr)
+			}
+			continue
+		}
+		written++
+	}
+
+	if firstErr != nil {
+		return addExecResult{
+			name:   fmt.Sprintf("%s (%d/%d sections)", filename, written, len(candidates)),
+			status: "error",
+			err:    firstErr,
+		}
+	}
+	return addExecResult{
+		name:   fmt.Sprintf("%s (%d sections)", filename, written),
+		status: "added",
+	}
+}
 
 // splittableSelectionIndices returns the indices (into selectedItems()) of
 // items flagged splittable=true, preserving selection order.
