@@ -33,7 +33,11 @@ func (m *addWizardModel) View() string {
 			content = m.viewDiscovery()
 		}
 	case addStepHeuristic:
-		content = m.viewHeuristic()
+		if m.source == addSourceMonolithic {
+			content = m.viewHeuristic()
+		} else {
+			content = m.viewProviderHeuristic()
+		}
 	case addStepReview:
 		if m.source == addSourceMonolithic {
 			content = m.viewMonolithicReview()
