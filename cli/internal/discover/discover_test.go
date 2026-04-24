@@ -83,3 +83,25 @@ func TestDiscoverMonolithicRules_GitBoundary(t *testing.T) {
 		t.Errorf("got %q, want %q", got[0].AbsPath, wantAbs)
 	}
 }
+
+func TestDiscoverMonolithicRules_HomeScope(t *testing.T) {
+	fakeHome := t.TempDir()
+	path := filepath.Join(fakeHome, "CLAUDE.md")
+	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := DiscoverMonolithicRules("", fakeHome, []string{"CLAUDE.md"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 candidate, got %d: %+v", len(got), got)
+	}
+	if got[0].Scope != "global" {
+		t.Errorf("scope = %q, want global", got[0].Scope)
+	}
+	wantAbs, _ := filepath.Abs(path)
+	if got[0].AbsPath != wantAbs {
+		t.Errorf("got %q, want %q", got[0].AbsPath, wantAbs)
+	}
+}
