@@ -113,7 +113,7 @@ func init() {
 	// is enforced at runtime in RunE.
 	installCmd.Flags().Bool("to-all", false, "Install to all detected providers")
 	installCmd.Flags().String("type", "", "Filter to a specific content type")
-	installCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
+	installCmd.Flags().String("method", "symlink", "Install method: symlink (default), copy, or append (monolithic-file rules)")
 	installCmd.Flags().Bool("all", false, "Install all library content (cannot combine with a positional name)")
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would happen without making changes")
 	installCmd.Flags().String("base-dir", "", "Override base directory for content installation")
@@ -159,6 +159,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	method := installer.MethodSymlink
 	if methodStr == "copy" {
 		method = installer.MethodCopy
+	}
+
+	// --method=append routes to the monolithic-file install path (D5, D10, D14).
+	// Only rules are supported at this scope; providers without a monolithic
+	// filename are rejected. Per D14, records live in project-scoped
+	// installed.json; the default target file is <projectRoot>/<filename>.
+	if methodStr == "append" {
+		return runInstallAppend(cmd, args, toSlug, typeFilter)
 	}
 
 	// --to-all path: detect providers and delegate.
