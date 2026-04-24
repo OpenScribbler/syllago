@@ -10,6 +10,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -55,6 +56,15 @@ type tableModel struct {
 	// Provider data for Installed column
 	providers []provider.Provider
 	repoRoot  string
+
+	// Verification state for D16 rules-append Installed column (binary).
+	// When set, rules rows consult MatchSet by library ID to render a ✓
+	// (installed cleanly into at least one target file) or a blank / "--"
+	// (no InstalledRuleAppend record, or every record is Modified).
+	// Nil means "no rescan has attached verification state yet" — rows fall
+	// back to the provider-abbreviation rendering used by every other content
+	// type.
+	verification *installcheck.VerificationResult
 }
 
 // tableRow holds pre-computed display strings for a single item.
@@ -103,6 +113,19 @@ func (t *tableModel) SetItems(items []catalog.ContentItem) {
 	t.setSourceItems(items)
 	t.cursor = 0
 	t.offset = 0
+}
+
+// SetVerification stores the D16 rule-append verification result and
+// recomputes row display strings so the Installed column reflects the latest
+// MatchSet. The rescan hook in app.rescanCatalog() calls this every time the
+// catalog is rebuilt (per D16 "column is binary" — each rescan re-resolves
+// Installed/Not-Installed directly from MatchSet, not cached state).
+func (t *tableModel) SetVerification(v *installcheck.VerificationResult) {
+	t.verification = v
+	// Recompute rows with the new verification so the Installed column
+	// refreshes without needing a full SetItems call.
+	t.allRows = t.computeRows(t.allItems)
+	t.applyFilterAndSort()
 }
 
 // Selected returns the currently selected item, or nil if empty.
@@ -742,8 +765,24 @@ func computeLoadoutDetail(item catalog.ContentItem) string {
 	return strings.Join(parts, " · ")
 }
 
-// installedTools returns abbreviated provider names where this item is installed.
+// installedTools returns the Installed column value for an item.
+//
+// For rules, the column is D16-binary: when verification state is attached
+// (set by the rescan hook) and MatchSet has at least one clean target file
+// for this rule's library ID, the cell renders a ✓ glyph in successColor;
+// otherwise it renders "--". Rules intentionally do not surface provider
+// abbreviations because a rule-append install doesn't target a specific
+// provider slug in the same way filesystem installs do — the column is about
+// whether the rule's canonical bytes are present in at least one monolithic
+// target file.
+//
+// For every other content type, the cell lists the abbreviated provider
+// slugs where the item is currently installed ("CC,GC" etc.), matching the
+// hooks + MCP rendering behavior.
 func (t tableModel) installedTools(item catalog.ContentItem) string {
+	if item.Type == catalog.Rules {
+		return t.rulesInstalledCell(item)
+	}
 	var abbrevs []string
 	for _, prov := range t.providers {
 		if installer.CheckStatus(item, prov, t.repoRoot) == installer.StatusInstalled {
@@ -754,6 +793,21 @@ func (t tableModel) installedTools(item catalog.ContentItem) string {
 		return "--"
 	}
 	return strings.Join(abbrevs, ",")
+}
+
+// rulesInstalledCell returns the binary Installed cell for a rule: ✓ in
+// successColor when MatchSet has a non-empty target list for the library ID,
+// otherwise "--". Returns "--" when verification is nil or the rule has no
+// library ID (e.g. a rule without .syllago.yaml metadata — treated as
+// not-installed rather than querying an absent MatchSet).
+func (t tableModel) rulesInstalledCell(item catalog.ContentItem) string {
+	if t.verification == nil || item.Meta == nil || item.Meta.ID == "" {
+		return "--"
+	}
+	if targets := t.verification.MatchSet[item.Meta.ID]; len(targets) > 0 {
+		return trustVerifiedStyle.Render("✓")
+	}
+	return "--"
 }
 
 // providerAbbrev returns a short abbreviation for a provider slug.

@@ -10,6 +10,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -118,6 +119,17 @@ func (l *libraryModel) SetItems(items []catalog.ContentItem) {
 	l.table.SetItems(items)
 	l.mode = libraryBrowse
 	l.detailItem = nil
+}
+
+// SetVerification stores the D16 rule-append verification result on the
+// underlying table so the Installed column can render binary Installed/Not-
+// Installed for rules based on MatchSet lookups by library ID.
+//
+// Passing nil clears the verification state — the table falls back to the
+// pre-D16 provider-abbreviation rendering for rules (e.g. "CC,GC"). The
+// non-rule rows are unaffected regardless of whether verification is set.
+func (l *libraryModel) SetVerification(v *installcheck.VerificationResult) {
+	l.table.SetVerification(v)
 }
 
 // Update handles input for the current mode.
