@@ -4,7 +4,11 @@
 // LLM path is a parallel producer (D9) that returns the same type.
 package splitter
 
-import "bytes"
+import (
+	"bytes"
+	"regexp"
+	"strings"
+)
 
 // SplitCandidate is one atomic rule produced by the splitter.
 // Downstream pipeline (library write, install) is indifferent to which
@@ -73,6 +77,99 @@ func Split(source []byte, opts Options) ([]SplitCandidate, *SkipSplitSignal) {
 			return nil, &SkipSplitSignal{Reason: "too_few_h2"}
 		}
 	}
-	// Real split logic lives in follow-up tasks; stub returns empty success.
-	return nil, nil
+	return splitByHeadingPrefix(lines, []byte("## ")), nil
+}
+
+type section struct {
+	headingLine int
+	headingText string
+	bodyStart   int
+	bodyEnd     int
+}
+
+// splitByHeadingPrefix walks lines looking for exact heading-level matches
+// (e.g. "## " for H2), collects each section, and emits SplitCandidates with
+// header promotion (heading becomes H1) and slug/description handling per D4.
+func splitByHeadingPrefix(lines [][]byte, prefix []byte) []SplitCandidate {
+	var sections []section
+	for i, ln := range lines {
+		if !isExactHeading(ln, prefix) {
+			continue
+		}
+		if len(sections) > 0 {
+			sections[len(sections)-1].bodyEnd = i
+		}
+		sections = append(sections, section{
+			headingLine: i,
+			headingText: string(bytes.TrimPrefix(ln, prefix)),
+			bodyStart:   i,
+		})
+	}
+	if len(sections) == 0 {
+		return nil
+	}
+	sections[len(sections)-1].bodyEnd = len(lines)
+
+	out := make([]SplitCandidate, 0, len(sections))
+	for _, s := range sections {
+		body := rebuildBody(lines[s.bodyStart:s.bodyEnd], s.headingText)
+		out = append(out, SplitCandidate{
+			Name:          slugify(s.headingText),
+			Description:   s.headingText,
+			Body:          body,
+			OriginalRange: [2]int{s.headingLine, s.bodyEnd},
+		})
+	}
+	return out
+}
+
+// isExactHeading returns true iff ln starts with prefix and the next char
+// after the prefix is NOT '#' (so "## Foo" matches for H2 prefix but "### Foo"
+// does not). prefix must end with a single space per markdown convention.
+func isExactHeading(ln, prefix []byte) bool {
+	if !bytes.HasPrefix(ln, prefix) {
+		return false
+	}
+	// Reject deeper headings: if the char before the final space was '#' and
+	// there's another '#' after the prefix... actually prefix already ends in
+	// ' ', so check: if the char after the prefix is '#', this is a deeper
+	// heading. Ex: prefix="## ", ln="### Foo" → HasPrefix("## ", "### Foo")?
+	// No — "## " is not a prefix of "### Foo" because char[2]=='#', not ' '.
+	// So HasPrefix already filters deeper headings correctly.
+	return true
+}
+
+var numberedPrefixRe = regexp.MustCompile(`^\d+\.\s*`)
+var nonSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
+
+// slugify lowercases, strips numbered prefixes ("1. " -> ""), and replaces
+// runs of non [a-z0-9] with "-". Called on the heading text only.
+func slugify(heading string) string {
+	h := strings.TrimSpace(heading)
+	// Strip leading "N. " or "N." numbered prefix (D4).
+	if m := numberedPrefixRe.FindString(h); m != "" {
+		h = h[len(m):]
+	}
+	h = strings.ToLower(h)
+	h = nonSlugRe.ReplaceAllString(h, "-")
+	h = strings.Trim(h, "-")
+	return h
+}
+
+// rebuildBody promotes the section heading from ## to # and returns the body
+// as a single string (D4 header promotion).
+func rebuildBody(sectionLines [][]byte, headingText string) string {
+	if len(sectionLines) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("# ")
+	sb.WriteString(strings.TrimSpace(headingText))
+	sb.WriteByte('\n')
+	// Append body lines after the heading.
+	for _, ln := range sectionLines[1:] {
+		sb.Write(ln)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
 }
