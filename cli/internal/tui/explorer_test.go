@@ -622,6 +622,224 @@ func TestExplorer_UpdateDetailMouse_WheelInPanePreviewScrollsPreview(t *testing.
 	}
 }
 
+// TestExplorer_UpdateSearch_EscClearsSearch pins the Esc branch at
+// explorer.go:259.
+func TestExplorer_UpdateSearch_EscClearsSearch(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.searching = true
+	e.searchQuery = "foo"
+
+	e, _ = e.updateSearch(tea.KeyMsg{Type: tea.KeyEsc})
+	if e.searching {
+		t.Error("Esc in search should clear searching")
+	}
+	if e.searchQuery != "" {
+		t.Errorf("searchQuery = %q, want empty", e.searchQuery)
+	}
+}
+
+func TestExplorer_UpdateSearch_EnterCommitsQuery(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.searching = true
+	e.searchQuery = "rule"
+
+	e, _ = e.updateSearch(tea.KeyMsg{Type: tea.KeyEnter})
+	if e.searching {
+		t.Error("Enter should end searching mode")
+	}
+	if e.searchQuery != "rule" {
+		t.Errorf("searchQuery should persist: got %q", e.searchQuery)
+	}
+}
+
+func TestExplorer_UpdateSearch_BackspaceShrinksQuery(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.searching = true
+	e.searchQuery = "abc"
+
+	e, _ = e.updateSearch(tea.KeyMsg{Type: tea.KeyBackspace})
+	if e.searchQuery != "ab" {
+		t.Errorf("backspace: searchQuery = %q, want %q", e.searchQuery, "ab")
+	}
+}
+
+func TestExplorer_UpdateSearch_RunesAppend(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.searching = true
+	e.searchQuery = "ru"
+
+	e, _ = e.updateSearch(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
+	if e.searchQuery != "rul" {
+		t.Errorf("runes append: searchQuery = %q, want %q", e.searchQuery, "rul")
+	}
+}
+
+func TestExplorer_UpdateSearch_BackspaceOnEmptyIsNoop(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.searching = true
+	e.searchQuery = ""
+
+	e, cmd := e.updateSearch(tea.KeyMsg{Type: tea.KeyBackspace})
+	if e.searchQuery != "" {
+		t.Error("backspace on empty should remain empty")
+	}
+	if cmd != nil {
+		t.Error("backspace on empty should not emit cmd")
+	}
+}
+
+// TestExplorer_UpdateItems_PageUpDown pins the pgup/pgdown branches at
+// explorer.go:539-545.
+func TestExplorer_UpdateItems_PageUpDown(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.items.cursor = 0
+
+	// PageDown
+	e, _ = e.updateItems(tea.KeyMsg{Type: tea.KeyPgDown})
+	if e.items.cursor == 0 && len(e.items.items) > 1 {
+		t.Error("PageDown should advance cursor")
+	}
+	// PageUp
+	e, _ = e.updateItems(tea.KeyMsg{Type: tea.KeyPgUp})
+	if e.items.cursor != 0 {
+		t.Errorf("PageUp to top: cursor = %d, want 0", e.items.cursor)
+	}
+}
+
+func TestExplorer_UpdateItems_HomeAndEnd(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.items.cursor = 1
+
+	// G (end)
+	e, _ = e.updateItems(keyRune('G'))
+	if e.items.cursor != len(e.items.items)-1 {
+		t.Errorf("G should move to last: cursor = %d, want %d", e.items.cursor, len(e.items.items)-1)
+	}
+	// g (home)
+	e, _ = e.updateItems(keyRune('g'))
+	if e.items.cursor != 0 {
+		t.Errorf("g should move to first: cursor = %d, want 0", e.items.cursor)
+	}
+}
+
+func TestExplorer_UpdateItems_EnterDrillsIn(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.items.cursor = 0
+
+	e2, cmd := e.updateItems(tea.KeyMsg{Type: tea.KeyEnter})
+	if e2.mode != explorerDetail {
+		t.Errorf("Enter should drill in: mode = %d, want explorerDetail", e2.mode)
+	}
+	if cmd == nil {
+		t.Fatal("Enter should emit explorerDrillMsg")
+	}
+	if _, ok := cmd().(explorerDrillMsg); !ok {
+		t.Errorf("expected explorerDrillMsg, got %T", cmd())
+	}
+}
+
+// TestExplorer_UpdateBrowseMouse_MetaInstallEmits pins the meta-install zone
+// at explorer.go:378.
+func TestExplorer_UpdateBrowseMouse_MetaInstallEmits(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	scanZones(e.View())
+	z := zone.Get("meta-install")
+	if z.IsZero() {
+		t.Skip("zone meta-install not registered")
+	}
+	_, cmd := e.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("meta-install click should emit libraryInstallMsg")
+	}
+	if _, ok := cmd().(libraryInstallMsg); !ok {
+		t.Errorf("expected libraryInstallMsg, got %T", cmd())
+	}
+}
+
+func TestExplorer_UpdateBrowseMouse_MetaEditEmits(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	scanZones(e.View())
+	z := zone.Get("meta-edit")
+	if z.IsZero() {
+		t.Skip("zone meta-edit not registered")
+	}
+	_, cmd := e.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("meta-edit click should emit libraryEditMsg")
+	}
+	if _, ok := cmd().(libraryEditMsg); !ok {
+		t.Errorf("expected libraryEditMsg, got %T", cmd())
+	}
+}
+
+func TestExplorer_UpdateBrowseMouse_MetaRemoveEmits(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	scanZones(e.View())
+	z := zone.Get("meta-remove")
+	if z.IsZero() {
+		t.Skip("zone meta-remove not registered")
+	}
+	_, cmd := e.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("meta-remove click should emit libraryRemoveMsg")
+	}
+	if _, ok := cmd().(libraryRemoveMsg); !ok {
+		t.Errorf("expected libraryRemoveMsg, got %T", cmd())
+	}
+}
+
+func TestExplorer_UpdateBrowseMouse_PaneItemsFocusClick(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.setFocus(panePreview) // start focused elsewhere
+	scanZones(e.View())
+	z := zone.Get("pane-items")
+	if z.IsZero() {
+		t.Skip("zone pane-items not registered")
+	}
+	// Click on pane but not on an item row (far below items)
+	e, _ = e.Update(mouseClick(z.StartX+1, z.EndY))
+	if e.focus != paneItems {
+		t.Errorf("pane-items click should focus items, got focused=%d", e.focus)
+	}
+}
+
+func TestExplorer_UpdateBrowseMouse_PanePreviewFocusClick(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.setFocus(paneItems)
+	scanZones(e.View())
+	z := zone.Get("pane-preview")
+	if z.IsZero() {
+		t.Skip("zone pane-preview not registered")
+	}
+	e, _ = e.Update(mouseClick(z.StartX+1, z.StartY+1))
+	if e.focus != panePreview {
+		t.Errorf("pane-preview click should focus preview, got focused=%d", e.focus)
+	}
+}
+
+func TestExplorer_UpdateBrowseMouse_WheelOverPreviewScrolls(t *testing.T) {
+	e, _ := newExplorerWithDiskItems(t, 120, 30)
+	e.preview.lines = make([]string, 50)
+	for i := range e.preview.lines {
+		e.preview.lines[i] = "L"
+	}
+	e.preview.SetSize(40, 10)
+	scanZones(e.View())
+	z := zone.Get("pane-preview")
+	if z.IsZero() {
+		t.Skip("zone pane-preview not registered")
+	}
+	origOffset := e.preview.offset
+	e, _ = e.Update(tea.MouseMsg{
+		X: z.StartX + 1, Y: z.StartY + 1,
+		Action: tea.MouseActionPress,
+		Button: tea.MouseButtonWheelDown,
+	})
+	if e.preview.offset == origOffset {
+		t.Error("wheel-down over preview pane should advance preview offset")
+	}
+}
+
 // TestExplorer_UpdateMouse_RoutesByMode pins the top-level Update router at
 // explorer.go:180-181 and updateMouse at explorer.go:342-347. Same MouseMsg
 // must take different branches depending on e.mode.

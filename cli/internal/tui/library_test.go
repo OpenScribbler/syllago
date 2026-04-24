@@ -8,6 +8,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
@@ -241,5 +242,160 @@ func TestLibrary_UpdateMouse_IgnoresNonLeftNonWheel(t *testing.T) {
 	}
 	if l.table.cursor != startCursor {
 		t.Errorf("motion mouse changed cursor %d -> %d", startCursor, l.table.cursor)
+	}
+}
+
+// --- Browse-mode mouse tests: meta bar buttons emit routed messages ---
+// These are sequential because bubblezone uses a global singleton.
+
+func TestLibrary_UpdateMouse_BrowseMetaInstallEmitsMsg(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 120, 30)
+	// Render to register zones
+	scanZones(l.View())
+	z := zone.Get("meta-install")
+	if z.IsZero() {
+		t.Skip("zone meta-install not registered")
+	}
+	_, cmd := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("click on meta-install should emit cmd")
+	}
+	if _, ok := cmd().(libraryInstallMsg); !ok {
+		t.Errorf("expected libraryInstallMsg, got %T", cmd())
+	}
+}
+
+func TestLibrary_UpdateMouse_BrowseMetaEditEmitsMsg(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 120, 30)
+	scanZones(l.View())
+	z := zone.Get("meta-edit")
+	if z.IsZero() {
+		t.Skip("zone meta-edit not registered")
+	}
+	_, cmd := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("click on meta-edit should emit cmd")
+	}
+	if _, ok := cmd().(libraryEditMsg); !ok {
+		t.Errorf("expected libraryEditMsg, got %T", cmd())
+	}
+}
+
+func TestLibrary_UpdateMouse_BrowseMetaRemoveEmitsMsg(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 120, 30)
+	scanZones(l.View())
+	z := zone.Get("meta-remove")
+	if z.IsZero() {
+		t.Skip("zone meta-remove not registered")
+	}
+	_, cmd := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("click on meta-remove should emit cmd")
+	}
+	if _, ok := cmd().(libraryRemoveMsg); !ok {
+		t.Errorf("expected libraryRemoveMsg, got %T", cmd())
+	}
+}
+
+func TestLibrary_UpdateMouse_BrowseColumnHeaderSortsTable(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	scanZones(l.View())
+	z := zone.Get("col-type")
+	if z.IsZero() {
+		t.Skip("zone col-type not registered")
+	}
+	before := l.table.sortCol
+	updated, _ := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	l = updated
+	if l.table.sortCol == before && before != sortByType {
+		t.Errorf("click on col-type should set sortCol to sortByType, got %v", l.table.sortCol)
+	}
+}
+
+func TestLibrary_UpdateMouse_BrowseRowClickMovesCursor(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	scanZones(l.View())
+	z := zone.Get("tbl-1")
+	if z.IsZero() {
+		t.Skip("zone tbl-1 not registered")
+	}
+	l.table.cursor = 0
+	updated, _ := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	l = updated
+	if l.table.cursor != 1 {
+		t.Errorf("click on tbl-1 should move cursor to 1, got %d", l.table.cursor)
+	}
+}
+
+func TestLibrary_UpdateMouse_BrowseRowDoubleClickDrillsIn(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	scanZones(l.View())
+	z := zone.Get("tbl-0")
+	if z.IsZero() {
+		t.Skip("zone tbl-0 not registered")
+	}
+	// Cursor already at 0 — clicking again should drill in.
+	l.table.cursor = 0
+	updated, cmd := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	l = updated
+	if l.mode != libraryDetail {
+		t.Errorf("double-click should switch to libraryDetail, got mode=%v", l.mode)
+	}
+	if cmd == nil {
+		t.Fatal("double-click should emit libraryDrillMsg")
+	}
+	if _, ok := cmd().(libraryDrillMsg); !ok {
+		t.Errorf("expected libraryDrillMsg, got %T", cmd())
+	}
+}
+
+func TestLibrary_UpdateMouse_DetailFileTreeNodeClickLoadsFile(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	l.drillIn(&l.table.items[0])
+	scanZones(l.View())
+	// Click a non-first tree node — ftnode-0 is already selected, go for ftnode-1.
+	z := zone.Get("ftnode-1")
+	if z.IsZero() {
+		t.Skip("zone ftnode-1 not registered")
+	}
+	l.tree.cursor = 0
+	updated, _ := l.updateMouse(mouseClick(z.StartX, z.StartY))
+	l = updated
+	if l.tree.cursor != 1 {
+		t.Errorf("click on ftnode-1 should move tree cursor to 1, got %d", l.tree.cursor)
+	}
+}
+
+func TestLibrary_UpdateMouse_DetailTreePaneFocusesItems(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	l.drillIn(&l.table.items[0])
+	l.setDetailFocus(panePreview)
+	scanZones(l.View())
+	z := zone.Get("lib-tree")
+	if z.IsZero() {
+		t.Skip("zone lib-tree not registered")
+	}
+	// Click away from any file-tree node by targeting the bottom-right of the pane.
+	// Use end-of-zone coords so we miss individual ftnode entries.
+	updated, _ := l.updateMouse(mouseClick(z.EndX, z.EndY))
+	l = updated
+	if l.focus != paneItems {
+		t.Errorf("click on lib-tree pane should focus items, got %v", l.focus)
+	}
+}
+
+func TestLibrary_UpdateMouse_DetailPreviewPaneFocusesPreview(t *testing.T) {
+	l, _ := newLibraryWithDiskItems(t, 140, 30)
+	l.drillIn(&l.table.items[0])
+	l.setDetailFocus(paneItems)
+	scanZones(l.View())
+	z := zone.Get("lib-preview")
+	if z.IsZero() {
+		t.Skip("zone lib-preview not registered")
+	}
+	updated, _ := l.updateMouse(mouseClick(z.EndX, z.EndY))
+	l = updated
+	if l.focus != panePreview {
+		t.Errorf("click on lib-preview pane should focus preview, got %v", l.focus)
 	}
 }
