@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 )
@@ -164,5 +165,163 @@ func TestSettingsModel_SetSize(t *testing.T) {
 	m.SetSize(120, 40)
 	if m.width != 120 || m.height != 40 {
 		t.Errorf("SetSize(120, 40) → width=%d height=%d", m.width, m.height)
+	}
+}
+
+func TestSettingsModel_Init_ReturnsTelemetryLoadCmd(t *testing.T) {
+	t.Parallel()
+	m := newTestSettingsModel()
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd from Init")
+	}
+	msg := cmd()
+	if _, ok := msg.(settingsTelemetryStatusMsg); !ok {
+		t.Errorf("expected settingsTelemetryStatusMsg, got %T", msg)
+	}
+}
+
+func TestSettingsModel_MouseClickTelemetryTab(t *testing.T) {
+	m := newTestSettingsModel()
+	scanZones(m.View())
+	z := zone.Get("cfg-settings-tab-1")
+	if z.IsZero() {
+		t.Fatal("zone cfg-settings-tab-1 not registered")
+	}
+	updated, _ := m.Update(mouseClick(z.StartX+1, z.StartY))
+	m = updated.(settingsModel)
+	if m.panel != settingsPanelTelemetry {
+		t.Errorf("click on telemetry tab → panel=%v, want settingsPanelTelemetry", m.panel)
+	}
+}
+
+func TestSettingsModel_MouseClickAboutTab(t *testing.T) {
+	m := newTestSettingsModel()
+	scanZones(m.View())
+	z := zone.Get("cfg-settings-tab-2")
+	if z.IsZero() {
+		t.Fatal("zone cfg-settings-tab-2 not registered")
+	}
+	updated, _ := m.Update(mouseClick(z.StartX+1, z.StartY))
+	m = updated.(settingsModel)
+	if m.panel != settingsPanelAbout {
+		t.Errorf("click on about tab → panel=%v, want settingsPanelAbout", m.panel)
+	}
+}
+
+func TestSettingsModel_MouseClickTelemetryToggle(t *testing.T) {
+	m := newTestSettingsModel()
+	m.panel = settingsPanelTelemetry
+	m.telemetryEnabled = true
+	scanZones(m.View())
+	z := zone.Get("cfg-settings-telemetry-toggle")
+	if z.IsZero() {
+		t.Fatal("zone cfg-settings-telemetry-toggle not registered")
+	}
+	updated, cmd := m.Update(mouseClick(z.StartX+1, z.StartY))
+	m = updated.(settingsModel)
+	if m.telemetryEnabled {
+		t.Error("telemetryEnabled should flip to false")
+	}
+	if cmd == nil {
+		t.Error("expected save cmd from toggle click")
+	}
+}
+
+func TestSettingsModel_MouseClickTelemetryReset(t *testing.T) {
+	m := newTestSettingsModel()
+	m.panel = settingsPanelTelemetry
+	scanZones(m.View())
+	z := zone.Get("cfg-settings-telemetry-reset")
+	if z.IsZero() {
+		t.Fatal("zone cfg-settings-telemetry-reset not registered")
+	}
+	_, cmd := m.Update(mouseClick(z.StartX+1, z.StartY))
+	if cmd == nil {
+		t.Error("expected reset cmd from reset-id click")
+	}
+}
+
+func TestSettingsModel_MouseClickUpdateCheck(t *testing.T) {
+	m := newTestSettingsModel()
+	m.panel = settingsPanelAbout
+	scanZones(m.View())
+	z := zone.Get("cfg-settings-update-check")
+	if z.IsZero() {
+		t.Fatal("zone cfg-settings-update-check not registered")
+	}
+	updated, cmd := m.Update(mouseClick(z.StartX+1, z.StartY))
+	m = updated.(settingsModel)
+	if !m.checkingUpdate {
+		t.Error("checkingUpdate should be true after click")
+	}
+	if cmd == nil {
+		t.Error("expected update-check cmd")
+	}
+}
+
+func TestSettingsModel_MouseNonLeftIgnored(t *testing.T) {
+	m := newTestSettingsModel()
+	scanZones(m.View())
+	nonLeft := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonRight}
+	updated, cmd := m.Update(nonLeft)
+	m = updated.(settingsModel)
+	if m.panel != settingsPanelConfig {
+		t.Error("non-left click should not change panel")
+	}
+	if cmd != nil {
+		t.Error("non-left click should not emit cmd")
+	}
+}
+
+func TestSettingsModel_MouseClickOutsideZonesIsNoop(t *testing.T) {
+	m := newTestSettingsModel()
+	scanZones(m.View())
+	updated, cmd := m.Update(mouseClick(999, 999))
+	m = updated.(settingsModel)
+	if m.panel != settingsPanelConfig {
+		t.Error("click outside zones should not change panel")
+	}
+	if cmd != nil {
+		t.Error("click outside zones should not emit cmd")
+	}
+}
+
+func TestSettingsModel_SaveTelemetryCmd_ReturnsStatusMsg(t *testing.T) {
+	t.Parallel()
+	m := newTestSettingsModel()
+	cmd := m.saveTelemetryCmd(true)
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	if _, ok := msg.(settingsTelemetryStatusMsg); !ok {
+		t.Errorf("expected settingsTelemetryStatusMsg, got %T", msg)
+	}
+}
+
+func TestSettingsModel_ResetAnonIDCmd_ReturnsStatusMsg(t *testing.T) {
+	t.Parallel()
+	m := newTestSettingsModel()
+	cmd := m.resetAnonIDCmd()
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	if _, ok := msg.(settingsTelemetryStatusMsg); !ok {
+		t.Errorf("expected settingsTelemetryStatusMsg, got %T", msg)
+	}
+}
+
+func TestSettingsModel_CheckUpdateCmd_ReturnsUpdateMsg(t *testing.T) {
+	t.Parallel()
+	m := newTestSettingsModel()
+	cmd := m.checkUpdateCmd()
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	if _, ok := msg.(settingsUpdateCheckedMsg); !ok {
+		t.Errorf("expected settingsUpdateCheckedMsg, got %T", msg)
 	}
 }
