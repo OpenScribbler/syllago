@@ -3971,3 +3971,135 @@
 | 10:42 | Edited cli/internal/tui/add_wizard_provider_split_mouse_test.go | 13→17 lines | ~147 |
 | 10:43 | Created cli/internal/tui/golden_add_wizard_provider_split_test.go | — | ~584 |
 | 10:45 | Session end: 6 writes across 3 files (wizard_invariant_test.go, add_wizard_provider_split_mouse_test.go, golden_add_wizard_provider_split_test.go) | 8 reads | ~35971 tok |
+| 10:50 | Session end: 6 writes across 3 files (wizard_invariant_test.go, add_wizard_provider_split_mouse_test.go, golden_add_wizard_provider_split_test.go) | 9 reads | ~36147 tok |
+
+## Session: 2026-04-24 11:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 11:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:04 | Edited .github/workflows/pr-policy.yml | inline fix | ~13 |
+| 11:05 | Session end: 1 writes across 1 files (pr-policy.yml) | 3 reads | ~11030 tok |
+| 11:06 | Session end: 1 writes across 1 files (pr-policy.yml) | 4 reads | ~11030 tok |
+
+## Session: 2026-04-24 11:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 11:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:13 | Edited cli/internal/tui/add_wizard.go | 9→11 lines | ~79 |
+| 11:13 | Edited cli/internal/tui/add_wizard.go | modified goBackFromDiscovery() | ~59 |
+| 11:15 | Edited cli/internal/tui/add_wizard_test.go | modified TestAddWizard_GoBackFromDiscovery_ResetsCounters() | ~626 |
+| 11:16 | Session end: 3 writes across 2 files (add_wizard.go, add_wizard_test.go) | 5 reads | ~50858 tok |
+| 11:29 | Created cli/internal/tui/local_dir_probe_test.go | — | ~610 |
+| 11:32 | Session end: 4 writes across 3 files (add_wizard.go, add_wizard_test.go, local_dir_probe_test.go) | 6 reads | ~57549 tok |
+
+## Session: 2026-04-24 11:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:55 | Created cli/internal/tui/add_probe_tmp_test.go | — | ~285 |
+| 11:56 | Edited cli/internal/tui/add_probe_tmp_test.go | inline fix | ~34 |
+| 11:59 | Edited cli/internal/tui/add_wizard.go | 13→18 lines | ~205 |
+| 12:00 | Edited cli/internal/tui/add_wizard.go | modified analyzerItemToDiscovery() | ~962 |
+| 12:00 | Edited cli/internal/tui/add_wizard.go | reduced (-16 lines) | ~226 |
+| 12:00 | Edited cli/internal/tui/add_wizard.go | modified catalogItemsToDiscovery() | ~512 |
+| 12:00 | Edited cli/internal/tui/add_wizard.go | 21→21 lines | ~192 |
+| 12:01 | Edited cli/internal/tui/add_wizard.go | 10→11 lines | ~86 |
+| 12:01 | Edited cli/internal/tui/add_wizard.go | 15→18 lines | ~110 |
+| 12:02 | Edited cli/internal/tui/add_wizard.go | modified relPathOrEmpty() | ~282 |
+| 12:02 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~128 |
+| 12:02 | Edited cli/internal/tui/add_wizard.go | expanded (+7 lines) | ~314 |
+| 12:02 | Edited cli/internal/add/add.go | modified copySupportingFiles() | ~449 |
+| 12:02 | Edited cli/internal/tui/add_wizard.go | 10→7 lines | ~81 |
+| 12:02 | Edited cli/internal/tui/add_wizard.go | modified discoveryItemLabel() | ~181 |
+| 12:03 | Edited cli/internal/tui/add_wizard.go | modified visibleDiscoveryItems() | ~98 |
+| 12:03 | Edited cli/internal/tui/add_wizard_test.go | 16→20 lines | ~189 |
+| 12:04 | Edited cli/internal/tui/add_wizard_test.go | modified TestDiscoverFromLocalPath_RootLevelRule_NoSourceDir() | ~1150 |
+| 12:04 | Edited cli/internal/add/add_test.go | modified TestCopySupportingFiles_SkipsSymlinkToDirectory() | ~836 |
+
+## Session: 2026-04-24 12:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:08 | Edited cli/internal/tui/add_wizard.go | 13→11 lines | ~129 |
+| 12:08 | Edited cli/internal/tui/add_wizard.go | 11→6 lines | ~49 |
+| 12:11 | Removed Confirm-side (type,name) dedup from discoverFromLocalPath + discoverFromRegistry | add_wizard.go | hooks/MCP stay in Confirm triage; ConfirmItemsReturned test passes | ~200 |
+| 12:12 | make fmt, go vet clean, make build, copied binary to ~/.local/bin/syllago | cli/ | all 4 bug regressions green | ~60 |
+| 12:12 | Logged 4 Do-Not-Repeat entries for Bugs A/B/C/D | .wolf/cerebrum.md | prevent regressions in future sessions | ~1200 |
+| 12:12 | Session end: 2 writes across 1 files (add_wizard.go) | 3 reads | ~40260 tok |
+
+## Session: 2026-04-24 12:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 12:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 12:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:00 | Edited cli/internal/tui/add_wizard_provider_split.go | modified renderSplitPill() | ~834 |
+| 13:00 | Edited cli/internal/tui/add_wizard_provider_split.go | expanded (+10 lines) | ~173 |
+| 13:00 | Edited cli/internal/tui/add_wizard_provider_split.go | modified InBounds() | ~680 |
+| 13:01 | Edited cli/internal/tui/add_wizard.go | 5→6 lines | ~70 |
+| 13:02 | Edited cli/internal/tui/add_wizard_monolithic_view.go | modified padRowTo() | ~1867 |
+| 13:03 | Edited cli/internal/tui/add_wizard_review_test.go | modified Contains() | ~140 |
+| 13:03 | Edited cli/internal/tui/add_wizard_provider_split_mouse_test.go | modified TestAddWizardMouse_ProviderSplitPillClicks_SetExplicitChoice() | ~402 |
+
+## Session: 2026-04-24 13:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 13:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:24 | Edited ../syllago-moat-autodetect/cli/internal/moat/signing_identities.json | inline fix | ~50 |
+| 14:25 | Session end: 1 writes across 1 files (signing_identities.json) | 3 reads | ~341 tok |
+| 15:06 | Session end: 1 writes across 1 files (signing_identities.json) | 3 reads | ~341 tok |
+
+## Session: 2026-04-24 15:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-24 15:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:30 | Edited ../syllago-meta-registry/.github/workflows/moat-registry.yml | 7→10 lines | ~103 |
+| 15:30 | Edited ../syllago-meta-registry/.github/workflows/moat-registry.yml | 3→4 lines | ~43 |
+| 15:30 | Edited ../syllago-meta-registry/.github/workflows/moat-registry.yml | ".github/workflows/moat.ym" → ".github/workflows/moat-pu" | ~16 |
+
+## Session: 2026-04-24 15:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:31 | Edited cli/internal/tui/add_wizard_provider_split.go | 5→6 lines | ~81 |
+| 15:31 | Edited cli/internal/tui/add_wizard_provider_split.go | 9→9 lines | ~54 |
+| 15:31 | Edited cli/internal/tui/add_wizard_provider_split_exec_test.go | 2→2 lines | ~41 |
+| 15:31 | Edited cli/internal/tui/add_wizard_provider_split_exec_test.go | 3→3 lines | ~45 |
+| 15:35 | Edited cli/internal/tui/add_wizard.go | 3→4 lines | ~118 |
+| 15:35 | Edited cli/internal/tui/add_wizard.go | 9→10 lines | ~70 |
+| 15:35 | Edited cli/internal/tui/add_wizard.go | 10→11 lines | ~87 |
+| 15:36 | Edited cli/internal/tui/add_wizard.go | 4→5 lines | ~167 |
+| 15:36 | Edited cli/internal/tui/add_wizard.go | expanded (+9 lines) | ~355 |
+| 15:36 | Edited cli/internal/tui/add_wizard.go | expanded (+9 lines) | ~280 |
+| 15:36 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
+| 15:39 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
+| 15:40 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
+| 15:55 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |

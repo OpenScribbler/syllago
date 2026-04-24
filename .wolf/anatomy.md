@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T17:43:56.532Z
-> Files: 1172 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T22:36:23.834Z
+> Files: 1180 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -127,6 +127,14 @@
 ## ../syllago-meta-registry-phase0-wt/.github/workflows/
 
 - `moat.yml` — '  # belt-and-suspenders guard; see branch note above (~5029 tok)
+
+## ../syllago-meta-registry/.github/workflows/
+
+- `moat-registry.yml` — CI: MOAT Registry Action (~10163 tok)
+
+## ../syllago-moat-autodetect/cli/internal/moat/
+
+- `signing_identities.json` (~333 tok)
 
 ## ../syllago-ztejd/cli/internal/catalog/
 
@@ -1570,6 +1578,7 @@
 - `ci.yml` — CI: CI (~848 tok)
 - `codeql.yml` — CI: CodeQL (~264 tok)
 - `moat-trusted-root-check.yml` — CI: MOAT Trusted Root Staleness Check (~1072 tok)
+- `pr-policy.yml` — CI: "Vouch: Check PR" (~182 tok)
 - `release.yml` — CI: Release (~2227 tok)
 - `scorecard.yml` — CI: Scorecard (~319 tok)
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
@@ -1676,7 +1685,8 @@
 
 ## cli/internal/add/
 
-- `add.go` — provides the core logic for "syllago add": discovery from a (~6014 tok)
+- `add_test.go` — TestBuildLibraryIndex_EmptyDir, TestBuildLibraryIndex_UniversalItem, TestBuildLibraryIndex_ProviderS (~7510 tok)
+- `add.go` — provides the core logic for "syllago add": discovery from a (~6139 tok)
 - `helpers_test.go` — TestContentFilename, TestComputeItemStatus_New, TestComputeItemStatus_InLibrary, TestComputeItemStat (~4605 tok)
 - `split_detect_test.go` — TestDetectSplittable_UnrecognizedFilename, TestDetectSplittable_MissingFile, TestDetectSplittable_To (~706 tok)
 - `split_detect.go` — DetectSplittable (~363 tok)
@@ -2027,20 +2037,23 @@
 
 - `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~2718 tok)
 - `actions.go` — Struct: removeDoneMsg (~6454 tok)
+- `add_probe_tmp_test.go` — TestProbe_DiscoverPai (~280 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
 - `add_wizard_monolithic_update.go` — Struct: addMonolithicDiscoveryDoneMsg (~3150 tok)
+- `add_wizard_monolithic_view.go` — Struct: heurOption (~3216 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
-- `add_wizard_provider_split_exec_test.go` — TestAddSplitRuleItem_WritesSections, TestAddSplitRuleItem_EmptyPath, TestAddSplitRuleItem_LocalFallb (~992 tok)
-- `add_wizard_provider_split_mouse_test.go` — TestAddWizardMouse_ProviderSplitRowClick_MovesCursor, TestAddWizardMouse_ProviderSplitRowClick_Toggl (~857 tok)
+- `add_wizard_provider_split_exec_test.go` — TestAddSplitRuleItem_WritesSections, TestAddSplitRuleItem_EmptyPath, TestAddSplitRuleItem_LocalFallb (~1008 tok)
+- `add_wizard_provider_split_mouse_test.go` — TestAddWizardMouse_ProviderSplitRowClick_MovesCursor, TestAddWizardMouse_ProviderSplitPillClicks_Set (~1026 tok)
 - `add_wizard_provider_split_test.go` — TestProviderHeuristic_EntersOnSplittableSelection, TestProviderHeuristic_ShellIncludesHeuristicLabel (~1116 tok)
-- `add_wizard_provider_split.go` (~2342 tok)
+- `add_wizard_provider_split.go` (~3042 tok)
 - `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~6129 tok)
+- `add_wizard_review_test.go` — TestAddWizard_ReviewRendersCandidatesPerSource (~891 tok)
 - `add_wizard_split_detect_test.go` — TestAddWizard_DiscoveryFlagsSplittableRules, TestAddWizard_ReviewShowsSplittableHint (~1064 tok)
-- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~14811 tok)
+- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~16535 tok)
 - `add_wizard_update.go` (~9467 tok)
 - `add_wizard_view.go` — Struct: sourceOption (~10176 tok)
-- `add_wizard.go` — Struct: addConfirmItem (~22376 tok)
+- `add_wizard.go` — Struct: addConfirmItem (~23862 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
 - `app_update.go` — Declares checkbox (~5744 tok)
 - `app_view.go` (~1041 tok)
@@ -2079,6 +2092,7 @@
 - `keys.go` (~190 tok)
 - `library_test.go` — TestLibrary_SetDetailFocus_TogglesFocusFields, TestLibrary_UpdateTree_KeysMoveCursor, TestLibrary_Up (~2146 tok)
 - `library.go` — Struct: libraryDrillMsg (~5703 tok)
+- `local_dir_probe_test.go` — TestProbe_LocalDirDiscovery (~610 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: ruleTargetStatus (~3407 tok)
 - `modal.go` — Struct: editSavedMsg (~2807 tok)

@@ -6762,6 +6762,166 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-04-24T17:31:37.292Z"
+    },
+    {
+      "id": "bug-421",
+      "timestamp": "2026-04-24T18:59:45.360Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 13→18 lines (6 removed) | Also: // Build dedup set from pattern-detected paths; patternPaths := make(map[string]bool, len(items)) | Also: patternPaths := make(map[string]bool, len(items)); patternPaths[filepath.ToSlash(filepath.Clean(it.pa | Also: name:        ci.Name,; displayName: ci.DisplayName, | Also: name:       d.Name,; itemType:   d.Type,",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-04-24T19:01:55.973Z"
+    },
+    {
+      "id": "bug-422",
+      "timestamp": "2026-04-24T19:03:50.282Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "cli/internal/tui/add_wizard_test.go",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T19:03:50.282Z"
+    },
+    {
+      "id": "bug-423",
+      "timestamp": "2026-04-24T19:08:43.799Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 11→6 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T19:08:43.799Z"
+    },
+    {
+      "id": "bug-424",
+      "timestamp": "2026-04-24T20:00:03.150Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_provider_split.go",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 51→85 lines (8 removed) | Also: // updateMouseProviderHeuristic routes clicks on p; // moves the cursor AND toggles its split choice (",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-24T20:00:35.748Z"
+    },
+    {
+      "id": "bug-425",
+      "timestamp": "2026-04-24T20:02:21.550Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_monolithic_view.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 84→215 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T20:02:21.550Z"
+    },
+    {
+      "id": "bug-426",
+      "timestamp": "2026-04-24T20:03:45.815Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 27→41 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T20:03:45.815Z"
+    },
+    {
+      "id": "bug-427",
+      "timestamp": "2026-04-24T21:24:24.424Z",
+      "error_message": "Incorrect value in code",
+      "file": "../syllago-moat-autodetect/cli/internal/moat/signing_identities.json",
+      "root_cause": "Had \"^https://github\\\\.com/OpenScribbler/syllago-meta-",
+      "fix": "Changed to \"^https://github\\\\.com/OpenScribbler/syllago-meta-",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "json"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T21:24:24.424Z"
+    },
+    {
+      "id": "bug-428",
+      "timestamp": "2026-04-24T22:30:29.871Z",
+      "error_message": "Incorrect value in code",
+      "file": "../syllago-meta-registry/.github/workflows/moat-registry.yml",
+      "root_cause": "Had \".github/workflows/moat.yml@refs/heads/main\"",
+      "fix": "Changed to \".github/workflows/moat-publisher.yml@refs/heads/m",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "yml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T22:30:29.871Z"
+    },
+    {
+      "id": "bug-429",
+      "timestamp": "2026-04-24T22:31:59.454Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/tui/add_wizard_provider_split_exec_test.go",
+      "root_cause": "Had \"expected local/ dir when provSlug empty: %v\"",
+      "fix": "Changed to \"expected rules/local/ dir when provSlug empty: %v",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T22:31:59.454Z"
+    },
+    {
+      "id": "bug-430",
+      "timestamp": "2026-04-24T22:36:13.337Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 28→37 lines (3 removed) | Also: path:            filepath.Join(item.sourceDir, ite; Path:      filepath.Join(item.sourceDir, item.path",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-24T22:36:23.847Z"
     }
   ]
 }
