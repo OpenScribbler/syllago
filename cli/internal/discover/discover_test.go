@@ -52,3 +52,34 @@ func TestDiscoverMonolithicRules_NestedDirs(t *testing.T) {
 		}
 	}
 }
+
+func TestDiscoverMonolithicRules_GitBoundary(t *testing.T) {
+	tmp := t.TempDir()
+	mustMkdir := func(p string) {
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mustWrite := func(p string) {
+		if err := os.WriteFile(p, []byte("content"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Top-level CLAUDE.md — should be found.
+	mustWrite(filepath.Join(tmp, "CLAUDE.md"))
+	// Nested git repo — CLAUDE.md inside should be skipped.
+	mustMkdir(filepath.Join(tmp, "vendor", "sub", ".git"))
+	mustWrite(filepath.Join(tmp, "vendor", "sub", "CLAUDE.md"))
+
+	got, err := DiscoverMonolithicRules(tmp, "", []string{"CLAUDE.md"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 candidate, got %d: %+v", len(got), got)
+	}
+	wantAbs, _ := filepath.Abs(filepath.Join(tmp, "CLAUDE.md"))
+	if got[0].AbsPath != wantAbs {
+		t.Errorf("got %q, want %q", got[0].AbsPath, wantAbs)
+	}
+}
