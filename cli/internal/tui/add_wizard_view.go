@@ -27,11 +27,25 @@ func (m *addWizardModel) View() string {
 	case addStepType:
 		content = m.viewType()
 	case addStepDiscovery:
-		content = m.viewDiscovery()
+		if m.source == addSourceMonolithic {
+			content = m.viewMonolithicDiscovery()
+		} else {
+			content = m.viewDiscovery()
+		}
+	case addStepHeuristic:
+		content = m.viewHeuristic()
 	case addStepReview:
-		content = m.viewReview()
+		if m.source == addSourceMonolithic {
+			content = m.viewMonolithicReview()
+		} else {
+			content = m.viewReview()
+		}
 	case addStepExecute:
-		content = m.viewExecute()
+		if m.source == addSourceMonolithic {
+			content = m.viewMonolithicExecute()
+		} else {
+			content = m.viewExecute()
+		}
 	}
 
 	output := header + "\n" + content
@@ -140,6 +154,7 @@ func (m *addWizardModel) viewSource() string {
 		{"Registry", "Import from a configured registry", len(m.registries) == 0},
 		{"Local Path", "Import from a local directory", false},
 		{"Git URL", "Clone a git repository", false},
+		{"Monolithic rule files", "CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules, .clinerules, .windsurfrules", false},
 	}
 
 	for i, opt := range options {
