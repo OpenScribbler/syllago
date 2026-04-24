@@ -268,7 +268,6 @@ type addWizardModel struct {
 	chosenHeuristic         int // splitter.Heuristic value; kept untyped here to avoid an import-cycle footprint
 	heuristicCursor         int
 	markerLiteral           string
-	markerInput             bool
 	reviewCandidates        []reviewCandidate
 	reviewAccepted          []bool
 	reviewRenames           []string
