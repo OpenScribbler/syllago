@@ -1111,6 +1111,698 @@ func TestDiscoverFromLocalPath_ConfirmItemsReturned(t *testing.T) {
 	}
 }
 
+// --- updateKeyDiscovery branch coverage ---
+
+// discoveryKeyWizard builds a wizard at addStepDiscovery with confirm items
+// loaded so the full triage-navigation branch is reachable.
+func discoveryKeyWizard(t *testing.T) *addWizardModel {
+	t.Helper()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.confirmItems = []addConfirmItem{
+		{displayName: "rule-a", itemType: catalog.Rules, path: "/tmp/a.md", sourceDir: "/tmp"},
+		{displayName: "rule-b", itemType: catalog.Rules, path: "/tmp/b.md", sourceDir: "/tmp"},
+	}
+	m.confirmSelected = map[int]bool{}
+	return m
+}
+
+func TestAddWizard_UpdateKeyDiscovery_DiscoveringEscCancels(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.discovering = true
+	seq := m.seq
+
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.discovering {
+		t.Error("Esc during discovering should clear discovering flag")
+	}
+	if m.seq == seq {
+		t.Error("Esc during discovering should bump seq to cancel pending cmd")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_DiscoveringOtherKeysIgnored(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.discovering = true
+
+	m, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("Enter during discovering should return nil cmd")
+	}
+	if !m.discovering {
+		t.Error("Enter during discovering should not cancel")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_ErrorRetry(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.discoveryErr = "boom"
+
+	m, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	if m.discoveryErr != "" {
+		t.Error("'r' on error state should clear discoveryErr")
+	}
+	if !m.discovering {
+		t.Error("'r' should set discovering=true")
+	}
+	if cmd == nil {
+		t.Error("'r' should return startDiscoveryCmd")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_ErrorEsc(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.discoveryErr = "boom"
+
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.step == addStepDiscovery {
+		t.Error("Esc on error state should navigate back")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_ErrorOtherKeyNoop(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	m.discoveryErr = "boom"
+
+	m, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("Enter on error state should be no-op")
+	}
+	if m.discoveryErr != "boom" {
+		t.Error("Enter on error state should not clear err")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_EmptyEsc(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+	// no confirmItems — empty discovery state
+
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.step == addStepDiscovery {
+		t.Error("Esc on empty state should navigate back")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_EmptyOtherKeyNoop(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.step = addStepDiscovery
+	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+
+	m, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("Enter on empty state should return nil cmd")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageRightFocusesPreview(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyRight})
+	if m.confirmFocus != triageZonePreview {
+		t.Errorf("Right should focus preview, got focus=%v", m.confirmFocus)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageLeftFocusesItems(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZonePreview
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.confirmFocus != triageZoneItems {
+		t.Errorf("Left should focus items, got focus=%v", m.confirmFocus)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageTabCyclesFocus(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	start := m.confirmFocus
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyTab})
+	if m.confirmFocus == start {
+		t.Error("Tab should advance focus")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageShiftTabCyclesBack(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyShiftTab})
+	// Should move backward (wrapping)
+	if m.confirmFocus == triageZoneItems {
+		t.Error("Shift+Tab should change focus (wrap backward)")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageDownMovesItemsCursor(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m.confirmCursor = 0
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyDown})
+	if m.confirmCursor != 1 {
+		t.Errorf("Down should increment cursor, got %d", m.confirmCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageUpMovesItemsCursor(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m.confirmCursor = 1
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyUp})
+	if m.confirmCursor != 0 {
+		t.Errorf("Up should decrement cursor, got %d", m.confirmCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageDownClampsAtEnd(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m.confirmCursor = len(m.confirmItems) - 1
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyDown})
+	if m.confirmCursor != len(m.confirmItems)-1 {
+		t.Errorf("Down at end should clamp, got %d", m.confirmCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageUpClampsAtZero(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m.confirmCursor = 0
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyUp})
+	if m.confirmCursor != 0 {
+		t.Errorf("Up at 0 should clamp, got %d", m.confirmCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriagePreviewDownScrolls(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZonePreview
+	m.confirmPreview.lines = []string{"a", "b", "c"}
+	m.confirmPreview.offset = 0
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyDown})
+	if m.confirmPreview.offset != 1 {
+		t.Errorf("Preview Down should scroll offset, got %d", m.confirmPreview.offset)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriagePreviewUpScrolls(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZonePreview
+	m.confirmPreview.lines = []string{"a", "b", "c"}
+	m.confirmPreview.offset = 2
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyUp})
+	if m.confirmPreview.offset != 1 {
+		t.Errorf("Preview Up should decrement offset, got %d", m.confirmPreview.offset)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriagePreviewPgDn(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZonePreview
+	lines := make([]string, 30)
+	for i := range lines {
+		lines[i] = "line"
+	}
+	m.confirmPreview.lines = lines
+	m.confirmPreview.offset = 0
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyPgDown})
+	if m.confirmPreview.offset != 10 {
+		t.Errorf("PgDown should advance 10 lines, got %d", m.confirmPreview.offset)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriagePreviewPgUp(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZonePreview
+	m.confirmPreview.lines = make([]string, 30)
+	m.confirmPreview.offset = 15
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyPgUp})
+	if m.confirmPreview.offset != 5 {
+		t.Errorf("PgUp should reduce 10 lines, got %d", m.confirmPreview.offset)
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageSpaceTogglesSelection(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmFocus = triageZoneItems
+	m.confirmCursor = 0
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeySpace})
+	if !m.confirmSelected[0] {
+		t.Error("Space should select current item")
+	}
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeySpace})
+	if m.confirmSelected[0] {
+		t.Error("Space again should deselect")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageASelectsAll(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	for i := range m.confirmItems {
+		if !m.confirmSelected[i] {
+			t.Errorf("'a' should select all, item %d not selected", i)
+		}
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageNDeselectsAll(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmSelected = map[int]bool{0: true, 1: true}
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}})
+	for i := range m.confirmItems {
+		if m.confirmSelected[i] {
+			t.Errorf("'n' should deselect all, item %d still selected", i)
+		}
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageEscGoesBack(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.step == addStepDiscovery {
+		t.Error("Esc in triage should navigate back")
+	}
+}
+
+func TestAddWizard_UpdateKeyDiscovery_TriageUnhandledRuneNoop(t *testing.T) {
+	t.Parallel()
+	m := discoveryKeyWizard(t)
+	m.confirmSelected = map[int]bool{0: true}
+	m, _ = m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'z'}})
+	if !m.confirmSelected[0] {
+		t.Error("unrelated rune should not mutate selection")
+	}
+}
+
+// --- updateKeyReviewItems / updateKeyReviewButtons coverage ---
+
+// reviewKeyWizard builds a wizard on Review with 3 selected items so cursor
+// motion is testable end-to-end.
+func reviewKeyWizard(t *testing.T) *addWizardModel {
+	t.Helper()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "a", displayName: "a", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "a", Type: catalog.Rules}},
+		{name: "b", displayName: "b", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "b", Type: catalog.Rules}},
+		{name: "c", displayName: "c", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "c", Type: catalog.Rules}},
+	}
+	m.actionableCount = 3
+	m.discoveryList = m.buildDiscoveryList()
+	m.enterReview()
+	return m
+}
+
+func TestAddWizard_UpdateKeyReviewItems_EmptySelectionNoop(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	// No discoveredItems → no selection → early return.
+	m.step = addStepReview
+	m.shell.SetActive(m.shellIndexForStep(addStepReview))
+
+	m, cmd := m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd != nil {
+		t.Errorf("expected nil cmd for empty selection, got %v", cmd)
+	}
+	if m.reviewItemCursor != 0 {
+		t.Errorf("cursor should stay at 0, got %d", m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_DownMovesCursor(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyDown})
+	if m.reviewItemCursor != 1 {
+		t.Errorf("Down should advance cursor, got %d", m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_UpMovesCursor(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewItemCursor = 2
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyUp})
+	if m.reviewItemCursor != 1 {
+		t.Errorf("Up should decrement cursor, got %d", m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_JKVimKeys(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	if m.reviewItemCursor != 1 {
+		t.Errorf("j should advance cursor, got %d", m.reviewItemCursor)
+	}
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+	if m.reviewItemCursor != 0 {
+		t.Errorf("k should decrement cursor, got %d", m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_RightSwitchesToButtons(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyRight})
+	if m.reviewZone != addReviewZoneButtons {
+		t.Errorf("Right should switch to buttons zone, got %v", m.reviewZone)
+	}
+	if m.buttonCursor != 0 {
+		t.Errorf("buttonCursor should land on Add (0), got %d", m.buttonCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_PgDnJumps(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.height = 30
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyPgDown})
+	// Should move toward end
+	if m.reviewItemCursor == 0 {
+		t.Error("PgDn should advance cursor at least one step")
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_PgUpReverses(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewItemCursor = 2
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyPgUp})
+	if m.reviewItemCursor > 2 {
+		t.Errorf("PgUp shouldn't move forward, got %d", m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_HomeAndEnd(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewItemCursor = 1
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyHome})
+	if m.reviewItemCursor != 0 {
+		t.Errorf("Home should jump to 0, got %d", m.reviewItemCursor)
+	}
+	m, _ = m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyEnd})
+	last := len(m.selectedItems()) - 1
+	if m.reviewItemCursor != last {
+		t.Errorf("End should jump to %d, got %d", last, m.reviewItemCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewItems_EOpensRenameModal(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m, cmd := m.updateKeyReviewItems(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	_ = cmd
+	if !m.renameModal.active {
+		t.Error("'e' should open the rename modal")
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_LeftBacksToItems(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 0 // leftmost button
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.reviewZone != addReviewZoneItems {
+		t.Errorf("Left at leftmost button should cross back to items, got %v", m.reviewZone)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_LeftDecrementsCursor(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 2
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyLeft})
+	if m.buttonCursor != 1 {
+		t.Errorf("Left should decrement cursor, got %d", m.buttonCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_RightAdvances(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 0
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyRight})
+	if m.buttonCursor != 1 {
+		t.Errorf("Right should advance cursor, got %d", m.buttonCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_RightClampsAt3(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 3
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyRight})
+	if m.buttonCursor != 3 {
+		t.Errorf("Right at 3 should clamp, got %d", m.buttonCursor)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_EnterAddAdvances(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 0
+	m, cmd := m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.reviewAcknowledged {
+		t.Error("Enter on Add should acknowledge")
+	}
+	if m.step != addStepExecute {
+		t.Errorf("Enter on Add should advance to Execute, got %v", m.step)
+	}
+	if cmd == nil {
+		t.Error("expected addItemCmd")
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_EnterBackReturns(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 2
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.step != addStepDiscovery {
+		t.Errorf("Enter on Back should return to Discovery, got %v", m.step)
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_EnterCancelReturnsCloseCmd(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 3
+	_, cmd := m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("expected close cmd")
+	}
+	if _, ok := cmd().(addCloseMsg); !ok {
+		t.Errorf("expected addCloseMsg, got %T", cmd())
+	}
+}
+
+func TestAddWizard_UpdateKeyReviewButtons_EnterRenameOpensModal(t *testing.T) {
+	t.Parallel()
+	m := reviewKeyWizard(t)
+	m.reviewZone = addReviewZoneButtons
+	m.buttonCursor = 1
+	m, _ = m.updateKeyReviewButtons(tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.renameModal.active {
+		t.Error("Enter on Rename should open rename modal")
+	}
+}
+
+// --- updateKeyExecute coverage ---
+
+// executeDoneWizard builds a wizard on Execute with executeDone=true and 6
+// selected items at height=8 so executeOffset scrolling actually engages
+// (execH = max(3, height-8) = 3, maxOff = len-execH = 3).
+func executeDoneWizard(t *testing.T) *addWizardModel {
+	t.Helper()
+	m := testOpenAddWizard(t)
+	m.source = addSourceLocal
+	m.typeChecks = m.buildTypeCheckList()
+	m.discoveredItems = []addDiscoveryItem{
+		{name: "a", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "a", Type: catalog.Rules}},
+		{name: "b", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "b", Type: catalog.Rules}},
+		{name: "c", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "c", Type: catalog.Rules}},
+		{name: "d", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "d", Type: catalog.Rules}},
+		{name: "e", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "e", Type: catalog.Rules}},
+		{name: "f", itemType: catalog.Rules, status: add.StatusNew,
+			underlying: &add.DiscoveryItem{Name: "f", Type: catalog.Rules}},
+	}
+	m.actionableCount = len(m.discoveredItems)
+	m.discoveryList = m.buildDiscoveryList()
+	m.reviewAcknowledged = true
+	m.step = addStepExecute
+	m.shell.SetActive(m.shellIndexForStep(addStepExecute))
+	m.executeDone = true
+	m.height = 8
+	return m
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneAddMoreEmitsRestart(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	_, cmd := m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	if cmd == nil {
+		t.Fatal("expected cmd from 'a' (Add More)")
+	}
+	if _, ok := cmd().(addRestartMsg); !ok {
+		t.Errorf("expected addRestartMsg, got %T", cmd())
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneEnterCloses(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	_, cmd := m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("expected cmd from Enter")
+	}
+	if _, ok := cmd().(addCloseMsg); !ok {
+		t.Errorf("expected addCloseMsg, got %T", cmd())
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneEscCloses(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	_, cmd := m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyEsc})
+	if cmd == nil {
+		t.Fatal("expected cmd from Esc")
+	}
+	if _, ok := cmd().(addCloseMsg); !ok {
+		t.Errorf("expected addCloseMsg, got %T", cmd())
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneDownScrolls(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m, _ = m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyDown})
+	if m.executeOffset == 0 {
+		t.Error("Down should scroll offset when room available")
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneUpScrolls(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m.executeOffset = 2
+	m, _ = m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyUp})
+	if m.executeOffset != 1 {
+		t.Errorf("Up should decrement offset, got %d", m.executeOffset)
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneHomeResets(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m.executeOffset = 5
+	m, _ = m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyHome})
+	if m.executeOffset != 0 {
+		t.Errorf("Home should reset offset to 0, got %d", m.executeOffset)
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_DoneEndMoves(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m.executeOffset = 0
+	m, _ = m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyEnd})
+	// With 3 selected items and height=8, executeOffset should stay at 0
+	// or move toward the maximum. Just ensure no crash.
+	_ = m
+}
+
+func TestAddWizard_UpdateKeyExecute_RunningEscCancels(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m.executeDone = false
+	m, _ = m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyEsc})
+	if !m.executeCancelled {
+		t.Error("Esc while running should set executeCancelled=true")
+	}
+}
+
+func TestAddWizard_UpdateKeyExecute_RunningOtherKeyNoop(t *testing.T) {
+	t.Parallel()
+	m := executeDoneWizard(t)
+	m.executeDone = false
+	m, cmd := m.updateKeyExecute(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Error("non-Esc key while running should be no-op")
+	}
+	if m.executeCancelled {
+		t.Error("non-Esc key should not cancel")
+	}
+}
+
 // --- Helper ---
 
 type testError struct {
