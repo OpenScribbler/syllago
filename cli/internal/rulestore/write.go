@@ -47,6 +47,19 @@ func WriteRule(contentRoot, sourceProvider, slug string, meta metadata.RuleMetad
 	return os.WriteFile(filepath.Join(dir, metadata.FileName), data, 0644)
 }
 
+// WriteRuleWithSource is WriteRule plus captures the original source file
+// bytes under .source/<filename> per D11.
+func WriteRuleWithSource(contentRoot, sourceProvider, slug string, meta metadata.RuleMetadata, body []byte, sourceFilename string, sourceBytes []byte) error {
+	if err := WriteRule(contentRoot, sourceProvider, slug, meta, body); err != nil {
+		return err
+	}
+	dir := filepath.Join(contentRoot, sourceProvider, slug)
+	if err := os.MkdirAll(filepath.Join(dir, ".source"), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, ".source", sourceFilename), sourceBytes, 0644)
+}
+
 // AppendVersion adds a new canonical version of an existing rule (D13). If
 // the new body hashes to a value already in versions[], it reuses that entry
 // (dedup by hash per D11) and only updates CurrentVersion + rule.md.
