@@ -94,3 +94,24 @@ func TestScan_ModifiedEdited(t *testing.T) {
 		t.Errorf("MatchSet[lib-id-scan] = %v, want empty", targets)
 	}
 }
+
+func TestScan_ModifiedMissing(t *testing.T) {
+	t.Parallel()
+	body := []byte("# Missing\n\nBody.\n")
+	inst, library, target := seedRuleAndInstall(t, body)
+
+	if err := os.Remove(target); err != nil {
+		t.Fatalf("remove target: %v", err)
+	}
+
+	result := Scan(inst, library)
+	key := RecordKey{LibraryID: "lib-id-scan", TargetFile: target}
+	got := result.PerRecord[key]
+	if got.State != StateModified || got.Reason != ReasonMissing {
+		t.Errorf("PerRecord[%v] = %+v, want {StateModified, ReasonMissing}", key, got)
+	}
+	// D16: ENOENT is an expected state — no warning.
+	if len(result.Warnings) != 0 {
+		t.Errorf("Warnings = %v, want empty (ENOENT should not warn)", result.Warnings)
+	}
+}
