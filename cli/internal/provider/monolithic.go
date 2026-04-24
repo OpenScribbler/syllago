@@ -27,3 +27,16 @@ func MonolithicFilenames(slug string) []string {
 func AllMonolithicFilenames() []string {
 	return []string{"CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules", ".clinerules", ".windsurfrules"}
 }
+
+// MonolithicHint returns a one-line, non-blocking hint for providers with
+// strong conventions around monolithic-file install (D10). Empty string
+// means the provider has no special guidance.
+func MonolithicHint(slug string) string {
+	switch slug {
+	case "codex":
+		return "Codex prefers per-directory AGENTS.md files; consider installing per directory rather than as a single root file."
+	case "windsurf":
+		return "Windsurf has a 6KB limit on this file; the file rules format (.windsurf/rules/) is recommended for non-trivial content."
+	}
+	return ""
+}
