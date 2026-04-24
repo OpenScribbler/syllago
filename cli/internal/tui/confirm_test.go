@@ -379,8 +379,7 @@ func TestConfirmModal_MouseClickCancel(t *testing.T) {
 	m.width = 80
 	m.height = 30
 
-	// Render and scan to register zones
-	zone.Scan(m.View())
+	scanZones(m.View())
 
 	z := zone.Get("confirm-cancel")
 	if z.IsZero() {
@@ -403,7 +402,7 @@ func TestConfirmModal_MouseClickConfirm(t *testing.T) {
 	m.width = 80
 	m.height = 30
 
-	zone.Scan(m.View())
+	scanZones(m.View())
 
 	z := zone.Get("confirm-ok")
 	if z.IsZero() {
@@ -427,7 +426,7 @@ func TestConfirmModal_MouseClickCheckbox(t *testing.T) {
 	m.width = 80
 	m.height = 30
 
-	zone.Scan(m.View())
+	scanZones(m.View())
 
 	z := zone.Get("confirm-check-0")
 	if z.IsZero() {

@@ -289,6 +289,60 @@ func TestToast_PushErrorNoTickCmd(t *testing.T) {
 	}
 }
 
+func TestToast_PushDropsOldestNonError_WhenOverLimit(t *testing.T) {
+	tm := newToastModel()
+	// Push 3 successes (fills queue)
+	tm.Push("a", toastSuccess)
+	tm.Push("b", toastSuccess)
+	tm.Push("c", toastSuccess)
+	// 4th should drop "a" (oldest non-error)
+	tm.Push("d", toastSuccess)
+
+	if len(tm.queue) != maxVisibleToasts {
+		t.Fatalf("queue len = %d, want %d", len(tm.queue), maxVisibleToasts)
+	}
+	for _, e := range tm.queue {
+		if e.message == "a" {
+			t.Error("oldest non-error toast should have been dropped")
+		}
+	}
+}
+
+func TestToast_PushKeepsAllErrorsWhenOverLimit(t *testing.T) {
+	tm := newToastModel()
+	tm.Push("e1", toastError)
+	tm.Push("e2", toastError)
+	tm.Push("e3", toastError)
+	// 4th error — all errors, none can be dropped, queue grows
+	tm.Push("e4", toastError)
+
+	if len(tm.queue) != 4 {
+		t.Fatalf("queue len = %d, want 4 (all errors kept)", len(tm.queue))
+	}
+}
+
+func TestToast_PushDropsSuccess_PrefersErrors(t *testing.T) {
+	tm := newToastModel()
+	tm.Push("err1", toastError)
+	tm.Push("succ1", toastSuccess)
+	tm.Push("err2", toastError)
+	// 4th push overflows, should drop succ1 (the only non-error)
+	tm.Push("succ2", toastSuccess)
+
+	found := false
+	for _, e := range tm.queue {
+		if e.message == "succ1" {
+			found = true
+		}
+	}
+	if found {
+		t.Error("succ1 should have been dropped when queue overflows")
+	}
+	if len(tm.queue) != maxVisibleToasts {
+		t.Errorf("queue len = %d, want %d", len(tm.queue), maxVisibleToasts)
+	}
+}
+
 func TestToast_QueuedPushNoCmd(t *testing.T) {
 	tm := newToastModel()
 	tm.Push("first", toastSuccess)

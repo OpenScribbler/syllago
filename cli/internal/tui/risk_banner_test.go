@@ -232,3 +232,72 @@ func TestRiskBanner_Truncate(t *testing.T) {
 		t.Error("expected truncated description to contain \"...\"")
 	}
 }
+
+// --- Coverage boost ---
+
+func TestRiskBanner_SetHighlighted(t *testing.T) {
+	t.Parallel()
+	b := newRiskBanner([]catalog.RiskIndicator{
+		{Label: "A", Level: catalog.RiskMedium},
+		{Label: "B", Level: catalog.RiskHigh},
+		{Label: "C", Level: catalog.RiskMedium},
+	}, 60)
+
+	// Initial: no highlighting
+	if b.highlighted != nil {
+		t.Errorf("expected nil highlighted, got %v", b.highlighted)
+	}
+
+	b.SetHighlighted([]int{0, 2})
+	if !b.highlighted[0] || !b.highlighted[2] {
+		t.Errorf("expected indices 0 and 2 highlighted, got %v", b.highlighted)
+	}
+	if b.highlighted[1] {
+		t.Error("expected index 1 not highlighted")
+	}
+
+	// Setting nil clears
+	b.SetHighlighted(nil)
+	if b.highlighted != nil {
+		t.Errorf("expected highlighted cleared to nil, got %v", b.highlighted)
+	}
+
+	// Empty slice also clears
+	b.SetHighlighted([]int{0})
+	b.SetHighlighted([]int{})
+	if b.highlighted != nil {
+		t.Errorf("expected highlighted cleared by empty slice, got %v", b.highlighted)
+	}
+}
+
+func TestRiskBanner_ViewInline_DimsUnfocused(t *testing.T) {
+	t.Parallel()
+	b := newRiskBanner([]catalog.RiskIndicator{
+		{Label: "A", Level: catalog.RiskMedium},
+		{Label: "B", Level: catalog.RiskHigh},
+	}, 60)
+	b.cursor = 0
+
+	// Unfocused view should still render both risks (exercising renderRiskLineDim)
+	out := ansi.Strip(b.ViewInline(60, false))
+	if !strings.Contains(out, "A") {
+		t.Error("expected 'A' in unfocused inline view")
+	}
+	if !strings.Contains(out, "B") {
+		t.Error("expected 'B' in unfocused inline view")
+	}
+
+	// Focused view uses regular (non-dim) renderer
+	out2 := ansi.Strip(b.ViewInline(60, true))
+	if !strings.Contains(out2, "A") {
+		t.Error("expected 'A' in focused inline view")
+	}
+}
+
+func TestRiskBanner_ViewInline_EmptyReturnsEmpty(t *testing.T) {
+	t.Parallel()
+	b := newRiskBanner(nil, 60)
+	if out := b.ViewInline(60, true); out != "" {
+		t.Errorf("expected empty string for empty banner, got %q", out)
+	}
+}
