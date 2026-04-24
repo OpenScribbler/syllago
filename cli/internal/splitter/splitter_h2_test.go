@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+// preambleSnippet appears verbatim in h2-with-preamble.md's preamble region
+// (lines before the first H2). Use it to assert preamble prepend behavior.
+const preambleSnippet = "This document collects the working agreements for the repository"
+
 func TestSplit_H2Clean(t *testing.T) {
 	t.Parallel()
 	body := loadFixture(t, "h2-clean.md")
@@ -52,5 +56,32 @@ func TestSplit_H2Clean(t *testing.T) {
 		if c.OriginalRange != wantRanges[i] {
 			t.Errorf("cand %d range: want %v, got %v", i, wantRanges[i], c.OriginalRange)
 		}
+	}
+}
+
+func TestSplit_H2WithPreamble(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "h2-with-preamble.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	if len(cands) < 2 {
+		t.Fatalf("expected >=2 candidates, got %d", len(cands))
+	}
+	// First candidate must contain preamble text below the promoted H1.
+	if !strings.Contains(cands[0].Body, preambleSnippet) {
+		t.Errorf("first candidate body missing preamble snippet %q; body:\n%s", preambleSnippet, cands[0].Body)
+	}
+	// Subsequent candidates must NOT contain the preamble snippet.
+	for i := 1; i < len(cands); i++ {
+		if strings.Contains(cands[i].Body, preambleSnippet) {
+			t.Errorf("candidate %d unexpectedly contains preamble snippet", i)
+		}
+	}
+	// The promoted H1 must still be first in the first candidate's body.
+	wantFirstLine := "# " + cands[0].Description + "\n"
+	if !strings.HasPrefix(cands[0].Body, wantFirstLine) {
+		t.Errorf("first candidate does not start with promoted H1 %q; got:\n%s", wantFirstLine, cands[0].Body)
 	}
 }
