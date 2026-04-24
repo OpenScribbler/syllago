@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Install record is stale                                                      │
+│                                                                              │
+│ This rule was installed at:                                                  │
+│   /home/user/CLAUDE.md                                                       │
+│ ...but that file no longer exists. It may have been deleted, renamed, or     │
+│ the project may have been moved.                                             │
+│                                                                              │
+│ > Drop stale install record (no file change)  [Enter]                        │
+│   Append current version as a fresh copy  [a]                                │
+│   Keep (leave record + file unchanged)  [Esc]                                │
+╰──────────────────────────────────────────────────────────────────────────────╯

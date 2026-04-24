@@ -1,0 +1,10 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Already installed                                                                                                    │
+│                                                                                                                      │
+│ This rule is already installed at:                                                                                   │
+│   /home/user/CLAUDE.md (version sha256:abc123de)                                                                     │
+│ Current library version is sha256:fff11122.                                                                          │
+│                                                                                                                      │
+│ > Replace with current version  [Enter]                                                                              │
+│   Skip (leave file unchanged)  [Esc]                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
