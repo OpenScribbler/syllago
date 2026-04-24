@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 6103191,
-    "total_reads": 2521,
-    "total_writes": 2217,
+    "total_tokens_estimated": 6132182,
+    "total_reads": 2526,
+    "total_writes": 2227,
     "total_sessions": 299,
-    "anatomy_hits": 1003,
-    "anatomy_misses": 1135,
-    "repeated_reads_blocked": 985,
-    "estimated_savings_vs_bare_cli": 6488504
+    "anatomy_hits": 1007,
+    "anatomy_misses": 1136,
+    "repeated_reads_blocked": 988,
+    "estimated_savings_vs_bare_cli": 6560080
   },
   "sessions": [
     {
@@ -31563,6 +31563,103 @@
       "id": "session-2026-04-24-1531",
       "started": "2026-04-24T22:31:25.217Z",
       "ended": "2026-04-24T23:23:23.613Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split.go",
+          "tokens_estimated": 3017,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_probe_tmp_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_exec_test.go",
+          "tokens_estimated": 992,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 23592,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/moat/reference/moat-registry.yml",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split.go",
+          "tokens_estimated": 87,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split.go",
+          "tokens_estimated": 57,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_exec_test.go",
+          "tokens_estimated": 44,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_exec_test.go",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 127,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 75,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 93,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 179,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 380,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 300,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 27601,
+        "output_tokens_estimated": 1390,
+        "reads_count": 5,
+        "writes_count": 10,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-24-1531",
+      "started": "2026-04-24T22:31:25.217Z",
+      "ended": "2026-04-24T23:27:40.291Z",
       "reads": [
         {
           "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split.go",

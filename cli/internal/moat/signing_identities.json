@@ -5,9 +5,10 @@
     {
       "registry_url": "https://github.com/OpenScribbler/syllago-meta-registry",
       "description": "syllago official meta-registry (OpenScribbler/syllago-meta-registry)",
+      "manifest_uri": "https://raw.githubusercontent.com/OpenScribbler/syllago-meta-registry/moat-registry/registry.json",
       "profile": {
         "issuer": "https://token.actions.githubusercontent.com",
-        "subject_regex": "^https://github\\.com/OpenScribbler/syllago-meta-registry/\\.github/workflows/(moat|moat-registry)\\.yml@refs/heads/master$",
+        "subject_regex": "^https://github\\.com/OpenScribbler/syllago-meta-registry/\\.github/workflows/(moat|moat-publisher|moat-registry)\\.yml@refs/heads/(main|master)$",
         "profile_version": 1,
         "repository_id": "1193220959",
         "repository_owner_id": "263775997"

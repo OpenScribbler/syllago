@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -13,11 +14,18 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
+
+// cloneFn is a package-level seam so tests can stub git clone without network
+// access. Override in tests to pre-create the clone dir at registry.CloneDir(name).
+var cloneFn = func(url, name, ref string) error {
+	return registry.Clone(url, name, ref)
+}
 
 var registryCmd = &cobra.Command{
 	Use:   "registry",
@@ -138,7 +146,7 @@ var registryAddCmd = &cobra.Command{
 
 		// Clone the registry
 		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, name)
-		if err := registry.Clone(gitURL, name, refFlag); err != nil {
+		if err := cloneFn(gitURL, name, refFlag); err != nil {
 			return err
 		}
 
@@ -211,6 +219,17 @@ var registryAddCmd = &cobra.Command{
 		if signing != nil && signing.Profile != nil {
 			newRegistry.Type = config.RegistryTypeMOAT
 			newRegistry.SigningProfile = signing.Profile
+			newRegistry.ManifestURI = signing.ManifestURI // from allowlist; empty for flag-sourced profiles
+		}
+		// MOAT self-declaration: if registry.yaml declares manifest_uri and the
+		// allowlist didn't already provide a signing profile, mark as MOAT.
+		// First sync will require --yes (TOFU — per spec §Registry Trust).
+		if signing == nil || signing.Profile == nil {
+			if selfDeclManifest, _ := registry.LoadManifestFromDir(dir); selfDeclManifest != nil && selfDeclManifest.ManifestURI != "" {
+				newRegistry.Type = config.RegistryTypeMOAT
+				newRegistry.ManifestURI = selfDeclManifest.ManifestURI
+				fmt.Fprintf(output.Writer, "MOAT compliance detected via registry.yaml. Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", name)
+			}
 		}
 		cfg.Registries = append(cfg.Registries, newRegistry)
 		if err := config.Save(root, cfg); err != nil {
@@ -299,11 +318,13 @@ var registryRemoveCmd = &cobra.Command{
 }
 
 type registryListItem struct {
-	Name     string             `json:"name"`
-	Status   string             `json:"status"`
-	URL      string             `json:"url"`
-	Ref      string             `json:"ref"`
-	Manifest *registry.Manifest `json:"manifest,omitempty"`
+	Name      string             `json:"name"`
+	Status    string             `json:"status"`
+	URL       string             `json:"url"`
+	Ref       string             `json:"ref"`
+	Manifest  *registry.Manifest `json:"manifest,omitempty"`
+	IsMOAT    bool               `json:"is_moat"`
+	TrustTier string             `json:"trust_tier,omitempty"` // "moat", "pending", or "" for git registries
 }
 
 var registryListCmd = &cobra.Command{
@@ -340,12 +361,22 @@ var registryListCmd = &cobra.Command{
 				ref = "default"
 			}
 			manifest, _ := registry.LoadManifest(r.Name) // ignore error; manifest is optional
+			tier := ""
+			if r.IsMOAT() {
+				if r.LastFetchedAt != nil {
+					tier = "moat"
+				} else {
+					tier = "pending"
+				}
+			}
 			items = append(items, registryListItem{
-				Name:     r.Name,
-				Status:   status,
-				URL:      r.URL,
-				Ref:      ref,
-				Manifest: manifest,
+				Name:      r.Name,
+				Status:    status,
+				URL:       r.URL,
+				Ref:       ref,
+				Manifest:  manifest,
+				IsMOAT:    r.IsMOAT(),
+				TrustTier: tier,
 			})
 		}
 
@@ -354,17 +385,21 @@ var registryListCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n", "NAME", "STATUS", "VERSION", "URL / DESCRIPTION")
-		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n",
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n", "NAME", "STATUS", "VERSION", "TRUST", "URL / DESCRIPTION")
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n",
 			strings.Repeat("─", 20), strings.Repeat("─", 8),
-			strings.Repeat("─", 8), strings.Repeat("─", 40))
+			strings.Repeat("─", 8), strings.Repeat("─", 9), strings.Repeat("─", 40))
 		for _, item := range items {
 			version := "─"
 			if item.Manifest != nil && item.Manifest.Version != "" {
 				version = item.Manifest.Version
 			}
-			fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %s\n",
-				truncateStr(item.Name, 20), item.Status, version, item.URL)
+			trust := "─"
+			if item.TrustTier != "" {
+				trust = item.TrustTier
+			}
+			fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n",
+				truncateStr(item.Name, 20), item.Status, version, trust, item.URL)
 			if item.Manifest != nil && item.Manifest.Description != "" {
 				fmt.Fprintf(output.Writer, "  %s\n", item.Manifest.Description)
 			}
@@ -413,6 +448,11 @@ and "syllago install" to activate updated content.`,
 			if reg == nil {
 				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
+			if reg.IsGit() {
+				if _, err := tryUpgradeToMOAT(reg, cfg, root, output.Writer); err != nil {
+					return err
+				}
+			}
 			if reg.IsMOAT() {
 				fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", name)
 				code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, reg, root, time.Now(), yes)
@@ -447,6 +487,19 @@ and "syllago install" to activate updated content.`,
 		// the existing SyncAll fan-out. A MOAT gate on any single registry
 		// trips the exit code for the whole command — if operators need to
 		// isolate which one, they sync by name.
+
+		// Pre-scan: auto-upgrade git registries to MOAT before dispatching.
+		// Runs before the MOAT/git split so newly-upgraded registries flow
+		// into the MOAT loop on the same sync invocation.
+		for i := range cfg.Registries {
+			r := &cfg.Registries[i]
+			if r.IsGit() {
+				if _, err := tryUpgradeToMOAT(r, cfg, root, output.Writer); err != nil {
+					return err
+				}
+			}
+		}
+
 		var moatGateExit int
 		for i := range cfg.Registries {
 			r := &cfg.Registries[i]
@@ -750,6 +803,44 @@ func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
 		_ = config.Save(root, cfg) // best-effort save
 		return
 	}
+}
+
+// tryUpgradeToMOAT checks if a git-type registry should be upgraded to MOAT.
+// Precedence: bundled allowlist (pre-trusted, no TOFU) > registry.yaml self-declaration (TOFU on first sync).
+// Mutates r in place and saves cfg when an upgrade occurs. Returns true if upgraded.
+//
+// Precondition: r.IsGit() must be true before calling.
+// CloneDir may return an error if the registry is configured but not cloned yet —
+// in that case registry.yaml self-declaration is skipped (can't read from a non-existent clone).
+func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, cfgRoot string, out io.Writer) (bool, error) {
+	// 1. Allowlist check — pre-trusted, no TOFU on first sync.
+	if entry, ok := moat.LookupSigningIdentity(r.URL); ok && entry.ManifestURI != "" {
+		r.Type = config.RegistryTypeMOAT
+		r.ManifestURI = entry.ManifestURI
+		if r.SigningProfile == nil {
+			r.SigningProfile = entry.Profile
+		}
+		fmt.Fprintf(out, "Auto-upgraded %s to MOAT (allowlist match).\n", r.Name)
+		if err := config.Save(cfgRoot, cfg); err != nil {
+			return false, fmt.Errorf("saving upgraded registry config: %w", err)
+		}
+		return true, nil
+	}
+	// 2. registry.yaml self-declaration — TOFU, requires --yes on first sync.
+	cloneDir, err := registry.CloneDir(r.Name)
+	if err != nil || !registry.IsCloned(r.Name) {
+		return false, nil
+	}
+	if manifest, _ := registry.LoadManifestFromDir(cloneDir); manifest != nil && manifest.ManifestURI != "" {
+		r.Type = config.RegistryTypeMOAT
+		r.ManifestURI = manifest.ManifestURI
+		fmt.Fprintf(out, "Auto-upgraded %s to MOAT (registry.yaml manifest_uri). Run `syllago registry sync --yes %s` to pin the signing identity.\n", r.Name, r.Name)
+		if err := config.Save(cfgRoot, cfg); err != nil {
+			return false, fmt.Errorf("saving upgraded registry config: %w", err)
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func init() {
