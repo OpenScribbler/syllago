@@ -1,6 +1,37 @@
 package metadata
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"regexp"
+	"time"
+
+	"gopkg.in/yaml.v3"
+)
+
+var canonicalHashRe = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+
+// LoadRuleMetadata reads and validates a .syllago.yaml file as a RuleMetadata.
+func LoadRuleMetadata(path string) (*RuleMetadata, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", path, err)
+	}
+	var m RuleMetadata
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("parsing %s: %w", path, err)
+	}
+	// Hash format invariant (D11).
+	for i, v := range m.Versions {
+		if !canonicalHashRe.MatchString(v.Hash) {
+			return nil, fmt.Errorf("%s: invalid hash format in versions[%d]: %q (want sha256:<64-hex>)", path, i, v.Hash)
+		}
+	}
+	if !canonicalHashRe.MatchString(m.CurrentVersion) {
+		return nil, fmt.Errorf("%s: invalid hash format in current_version: %q (want sha256:<64-hex>)", path, m.CurrentVersion)
+	}
+	return &m, nil
+}
 
 // RuleSource is the provenance block for a library rule (D1, D13).
 type RuleSource struct {
