@@ -154,7 +154,6 @@ func (m *addWizardModel) viewSource() string {
 		{"Registry", "Import from a configured registry", len(m.registries) == 0},
 		{"Local Path", "Import from a local directory", false},
 		{"Git URL", "Clone a git repository", false},
-		{"Monolithic rule files", "CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules, .clinerules, .windsurfrules", false},
 	}
 
 	for i, opt := range options {
