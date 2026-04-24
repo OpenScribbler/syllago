@@ -67,13 +67,20 @@ func filenameToProviderSlug(filename string) string {
 	return ""
 }
 
+// monolithicHomeDirOverride lets tests pin the home directory scanned by
+// discoverMonolithicCandidates. Empty means "use os.UserHomeDir()".
+var monolithicHomeDirOverride string
+
 // discoverMonolithicCandidates builds the full list of monolithic rule
 // files under projectRoot + homeDir, reads each file's bytes, computes
 // line/H2 counts, and tags "in library" rows whose bytes hash matches a
 // rule's source.hash (D11). Errors reading individual files populate
 // SizeErr and do not abort discovery.
 func discoverMonolithicCandidates(projectRoot, contentRoot string) ([]monolithicCandidate, error) {
-	homeDir, _ := os.UserHomeDir()
+	homeDir := monolithicHomeDirOverride
+	if homeDir == "" {
+		homeDir, _ = os.UserHomeDir()
+	}
 	cands, err := discover.DiscoverMonolithicRules(projectRoot, homeDir, provider.AllMonolithicFilenames())
 	if err != nil {
 		return nil, err
