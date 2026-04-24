@@ -139,3 +139,19 @@ func (inst *Installed) RemoveHook(idx int) {
 func (inst *Installed) RemoveMCP(idx int) {
 	inst.MCP = append(inst.MCP[:idx], inst.MCP[idx+1:]...)
 }
+
+// FindRuleAppend returns the index of a rule append entry matching libraryID
+// and targetFile, or -1. The (LibraryID, TargetFile) pair is unique per D14.
+func (inst *Installed) FindRuleAppend(libraryID, targetFile string) int {
+	for i, r := range inst.RuleAppends {
+		if r.LibraryID == libraryID && r.TargetFile == targetFile {
+			return i
+		}
+	}
+	return -1
+}
+
+// RemoveRuleAppend removes the rule append entry at idx.
+func (inst *Installed) RemoveRuleAppend(idx int) {
+	inst.RuleAppends = append(inst.RuleAppends[:idx], inst.RuleAppends[idx+1:]...)
+}
