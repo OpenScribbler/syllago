@@ -86,6 +86,48 @@ func TestSplit_H2WithPreamble(t *testing.T) {
 	}
 }
 
+func TestSplit_H2EmojiPrefix(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "h2-emoji-prefix.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	if len(cands) != 6 {
+		t.Fatalf("expected 6 candidates, got %d", len(cands))
+	}
+	// Slugs must not contain emojis; emoji bytes fall outside [a-z0-9] and
+	// should be replaced by the non-slug regex.
+	wantSlugs := []string{
+		"getting-started",
+		"configuration",
+		"building",
+		"testing",
+		"debugging",
+		"documentation",
+	}
+	wantDescriptions := []string{
+		"🚀 Getting Started",
+		"🔧 Configuration",
+		"📦 Building",
+		"🧪 Testing",
+		"🐛 Debugging",
+		"📚 Documentation",
+	}
+	for i, c := range cands {
+		if c.Name != wantSlugs[i] {
+			t.Errorf("cand %d slug: want %q, got %q", i, wantSlugs[i], c.Name)
+		}
+		if c.Description != wantDescriptions[i] {
+			t.Errorf("cand %d description: want %q, got %q", i, wantDescriptions[i], c.Description)
+		}
+		// Verify the emoji is preserved in the promoted H1 body prefix.
+		if !strings.HasPrefix(c.Body, "# "+wantDescriptions[i]+"\n") {
+			t.Errorf("cand %d body missing emoji-prefixed H1; got: %q", i, c.Body[:40])
+		}
+	}
+}
+
 func TestSplit_H2NumberedPrefix(t *testing.T) {
 	t.Parallel()
 	body := loadFixture(t, "h2-numbered-prefix.md")
