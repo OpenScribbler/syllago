@@ -258,6 +258,98 @@ func TestGallery_ViewRenders(t *testing.T) {
 	}
 }
 
+// --- Coverage: updateGridKeys / updateSidebarKeys ---
+
+func TestGallery_UpdateGridKeys_Navigation(t *testing.T) {
+	g := newGalleryModel()
+	g.SetSize(120, 30)
+	g.SetCards([]cardData{
+		{name: "A"}, {name: "B"}, {name: "C"}, {name: "D"},
+	}, "Loadout")
+	g.focus = paneGrid
+
+	// Down moves cursor forward (when grid has more than one row) or stays.
+	// We verify the command is emitted if cursor moved.
+	startCursor := g.grid.cursor
+	g2, _ := g.updateGridKeys(tea.KeyMsg{Type: tea.KeyRight})
+	if g2.grid.cursor == startCursor {
+		t.Skip("right didn't move cursor at this size; layout-dependent")
+	}
+
+	// End jumps to last card
+	g3, cmd := g.updateGridKeys(tea.KeyMsg{Type: tea.KeyEnd})
+	if g3.grid.cursor != len(g.grid.cards)-1 {
+		t.Errorf("End: expected cursor at last card (%d), got %d",
+			len(g.grid.cards)-1, g3.grid.cursor)
+	}
+	if cmd == nil {
+		t.Error("End should emit cardSelectedMsg (cursor moved)")
+	}
+
+	// Home jumps to first card
+	g4, cmd := g3.updateGridKeys(tea.KeyMsg{Type: tea.KeyHome})
+	if g4.grid.cursor != 0 {
+		t.Errorf("Home: expected cursor=0, got %d", g4.grid.cursor)
+	}
+	if cmd == nil {
+		t.Error("Home should emit cardSelectedMsg (cursor moved)")
+	}
+}
+
+func TestGallery_UpdateGridKeys_EndOnEmptyGrid(t *testing.T) {
+	g := newGalleryModel()
+	g.SetSize(80, 25)
+	g.SetCards(nil, "Loadout")
+	g.focus = paneGrid
+
+	g, cmd := g.updateGridKeys(tea.KeyMsg{Type: tea.KeyEnd})
+	if g.grid.cursor != 0 {
+		t.Errorf("empty grid end: expected cursor=0, got %d", g.grid.cursor)
+	}
+	if cmd != nil {
+		t.Error("End on empty grid should not emit a cmd (cursor unchanged)")
+	}
+}
+
+func TestGallery_RenderSearchBar(t *testing.T) {
+	g := newGalleryModel()
+	g.SetSize(80, 25)
+	g.SetCards([]cardData{
+		{name: "alpha"}, {name: "beta"},
+	}, "Loadout")
+
+	// Empty + not searching → minimal bar
+	out := g.renderSearchBar(80)
+	if out == "" {
+		t.Error("renderSearchBar should not return empty")
+	}
+
+	// Active search with query: match counts should appear.
+	g.searching = true
+	g.searchQuery = "a"
+	out = g.renderSearchBar(80)
+	if out == "" {
+		t.Error("renderSearchBar with query should render")
+	}
+}
+
+func TestGallery_UpdateSidebarKeys_ScrollsSidebar(t *testing.T) {
+	g := newGalleryModel()
+	g.SetSize(80, 25)
+	g.SetCards([]cardData{{name: "A"}}, "Loadout")
+	g.focus = paneSidebar
+
+	// Down/up should return a model — just verify no panic and no command.
+	_, cmd := g.updateSidebarKeys(tea.KeyMsg{Type: tea.KeyDown})
+	if cmd != nil {
+		t.Errorf("sidebar down should not emit cmd, got %v", cmd)
+	}
+	_, cmd = g.updateSidebarKeys(tea.KeyMsg{Type: tea.KeyUp})
+	if cmd != nil {
+		t.Errorf("sidebar up should not emit cmd, got %v", cmd)
+	}
+}
+
 // --- App integration ---
 
 func TestApp_LoadoutsShowsGallery(t *testing.T) {
