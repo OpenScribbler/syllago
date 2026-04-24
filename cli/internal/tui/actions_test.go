@@ -255,3 +255,38 @@ func TestActions_HandleRemove_NoItem(t *testing.T) {
 		t.Errorf("expected nil cmd with no selected item, got %v", cmd)
 	}
 }
+
+func TestActions_HandleRemove_OpensRemoveModal(t *testing.T) {
+	app, _, _ := testAppWithInstalledRule(t)
+	m, cmd := app.handleRemove()
+	_ = cmd
+	a := m.(App)
+	if !a.remove.active {
+		t.Error("remove modal should be open after handleRemove")
+	}
+}
+
+func TestActions_HandleRemove_SkipsRegistryOnlyItems(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.catalog.Items = []catalog.ContentItem{{
+		Name: "external", Type: catalog.Rules, Library: false, Registry: "remote",
+	}}
+	app.refreshContent()
+	_, cmd := app.handleRemove()
+	if cmd != nil {
+		t.Errorf("registry-only item should not trigger remove cmd, got %v", cmd)
+	}
+}
+
+func TestActions_HandleUninstall_SingleProviderOpensConfirm(t *testing.T) {
+	app, _, _ := testAppWithInstalledRule(t)
+	m, _ := app.handleUninstall()
+	a := m.(App)
+	if !a.confirm.active {
+		t.Error("confirm modal should be active after handleUninstall with a single installed provider")
+	}
+	if len(a.confirm.uninstallProviders) != 1 {
+		t.Errorf("expected 1 uninstall provider, got %d", len(a.confirm.uninstallProviders))
+	}
+}
