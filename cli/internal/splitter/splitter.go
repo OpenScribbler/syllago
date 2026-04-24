@@ -77,7 +77,27 @@ func Split(source []byte, opts Options) ([]SplitCandidate, *SkipSplitSignal) {
 			return nil, &SkipSplitSignal{Reason: "too_few_h2"}
 		}
 	}
-	return splitByHeadingPrefix(lines, []byte("## ")), nil
+	prefix := headingPrefix(opts.Heuristic)
+	if prefix == nil {
+		// Unknown / unsupported heuristic — treat as no-op.
+		return nil, nil
+	}
+	return splitByHeadingPrefix(lines, prefix), nil
+}
+
+// headingPrefix returns the byte prefix (including trailing space) that
+// identifies a heading line at the given heuristic's level. Returns nil for
+// non-heading heuristics (Marker, Single, or unknown values).
+func headingPrefix(h Heuristic) []byte {
+	switch h {
+	case HeuristicH2:
+		return []byte("## ")
+	case HeuristicH3:
+		return []byte("### ")
+	case HeuristicH4:
+		return []byte("#### ")
+	}
+	return nil
 }
 
 type section struct {
