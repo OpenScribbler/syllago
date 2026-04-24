@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // --- Unit tests ---
@@ -2134,5 +2135,313 @@ func TestApp_AddWizardWindowResize(t *testing.T) {
 
 	if a.addWizard.width != 120 {
 		t.Fatalf("expected wizard width 120 after resize, got %d", a.addWizard.width)
+	}
+}
+
+// --- Coverage boost: pure helpers + Init ---
+
+func TestApp_Init_NoTelemetryNotice_ReturnsNil(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.telemetryNotice = false
+	if cmd := app.Init(); cmd != nil {
+		t.Errorf("expected nil cmd when telemetryNotice=false, got %v", cmd)
+	}
+}
+
+func TestApp_Init_WithTelemetryNotice_ReturnsCmd(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.telemetryNotice = true
+	cmd := app.Init()
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd when telemetryNotice=true")
+	}
+	msg := cmd()
+	if _, ok := msg.(telemetryNoticeMsg); !ok {
+		t.Errorf("expected telemetryNoticeMsg, got %T", msg)
+	}
+}
+
+func TestApp_TabToContentType(t *testing.T) {
+	t.Parallel()
+	cases := map[string]catalog.ContentType{
+		"Skills":   catalog.Skills,
+		"Agents":   catalog.Agents,
+		"MCP":      catalog.MCP,
+		"Rules":    catalog.Rules,
+		"Hooks":    catalog.Hooks,
+		"Commands": catalog.Commands,
+		"Unknown":  catalog.ContentType(""),
+	}
+	for tab, want := range cases {
+		if got := tabToContentType(tab); got != want {
+			t.Errorf("tabToContentType(%q) = %q, want %q", tab, got, want)
+		}
+	}
+}
+
+func TestApp_RenderPlaceholder(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	out := ansi.Strip(app.renderPlaceholder("Hello"))
+	if !strings.Contains(out, "Hello") {
+		t.Errorf("expected 'Hello' in placeholder, got %q", out)
+	}
+}
+
+func TestApp_HandleBreadcrumbClick_NoOpOnLandingPage(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	// On Library browse mode with index=0, breadcrumb click should be a no-op.
+	m, cmd := app.handleBreadcrumbClick(breadcrumbClickMsg{index: 0})
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App return, got %T", m)
+	}
+	if cmd != nil {
+		t.Errorf("expected nil cmd on landing page, got %v", cmd)
+	}
+}
+
+func TestApp_HandleBreadcrumbClick_LibraryDetail_IndexZero_NoOp(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.library.mode = libraryDetail
+	_, cmd := app.handleBreadcrumbClick(breadcrumbClickMsg{index: 0})
+	if cmd != nil {
+		t.Errorf("expected nil cmd (already at that depth), got %v", cmd)
+	}
+}
+
+func TestApp_HandleBreadcrumbClick_GalleryDrillIn_IndexZero_ExitsDetail(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	// Set up Registries tab (gallery) with drill-in + library in detail mode
+	m, _ := app.Update(keyTab)
+	a := m.(App)
+	a.galleryDrillIn = true
+	a.library.mode = libraryDetail
+	m, cmd := a.handleBreadcrumbClick(breadcrumbClickMsg{index: 0})
+	_ = cmd
+	a = m.(App)
+	// Clicking card-name breadcrumb (index=0) while in detail should revert to browse.
+	if a.library.mode != libraryBrowse {
+		t.Errorf("expected libraryBrowse after breadcrumb index=0 click, got %v", a.library.mode)
+	}
+}
+
+func TestApp_HandleBreadcrumbClick_GalleryDrillIn_IndexNonZero_NoOp(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	m, _ := app.Update(keyTab)
+	a := m.(App)
+	a.galleryDrillIn = true
+	_, cmd := a.handleBreadcrumbClick(breadcrumbClickMsg{index: 1})
+	if cmd != nil {
+		t.Errorf("expected nil cmd when index>=1 in drill-in, got %v", cmd)
+	}
+}
+
+func TestApp_HandleBreadcrumbClick_ExplorerDetail_NoOp(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	// Switch to Content group (explorer) and set explorer mode to detail.
+	m, _ := app.Update(keyRune('2'))
+	a := m.(App)
+	a.explorer.mode = explorerDetail
+	_, cmd := a.handleBreadcrumbClick(breadcrumbClickMsg{index: 0})
+	if cmd != nil {
+		t.Errorf("expected nil cmd on explorer detail breadcrumb index=0, got %v", cmd)
+	}
+}
+
+func TestApp_IsFilePath(t *testing.T) {
+	t.Parallel()
+	// Path with extension on nonexistent file → treated as file.
+	if !isFilePath("/nonexistent/foo.md") {
+		t.Error("expected true for path with extension")
+	}
+	// Path with no extension on nonexistent path → false.
+	if isFilePath("/nonexistent/foobar") {
+		t.Error("expected false for path without extension")
+	}
+}
+
+func TestApp_HandleCatalogReady_Error_QueuesErrorToast(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	// Reset toast state so Push returns a non-nil show cmd deterministically.
+	app.toast.visible = false
+	app.toast.queue = nil
+	m, _ := app.handleCatalogReady(catalogReadyMsg{err: fmt.Errorf("boom")})
+	updated := m.(App)
+	// Error toasts don't auto-dismiss, so cmd is intentionally nil — verify via queue.
+	if len(updated.toast.queue) != 1 {
+		t.Fatalf("expected 1 queued toast, got %d", len(updated.toast.queue))
+	}
+	if updated.toast.queue[0].level != toastError {
+		t.Errorf("expected toastError level, got %v", updated.toast.queue[0].level)
+	}
+	if !strings.Contains(updated.toast.queue[0].message, "boom") {
+		t.Errorf("expected error message to contain 'boom', got %q", updated.toast.queue[0].message)
+	}
+}
+
+func TestApp_HandleCatalogReady_Success_RefreshesAndToasts(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.toast.visible = false
+	app.toast.queue = nil
+
+	newCatalog := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "post-rescan", Type: catalog.Skills, Source: "library", Files: []string{"SKILL.md"}},
+		},
+	}
+	result := &moat.ScanResult{
+		Catalog: newCatalog,
+		Config:  &config.Config{},
+	}
+	m, cmd := app.handleCatalogReady(catalogReadyMsg{result: result})
+	updated := m.(App)
+	if updated.catalog == nil || len(updated.catalog.Items) != 1 {
+		t.Fatalf("expected catalog swapped in with 1 item, got %+v", updated.catalog)
+	}
+	if updated.catalog.Items[0].Name != "post-rescan" {
+		t.Errorf("expected post-rescan item, got %q", updated.catalog.Items[0].Name)
+	}
+	if updated.galleryDrillIn {
+		t.Error("handleCatalogReady should clear galleryDrillIn")
+	}
+	if cmd == nil {
+		t.Error("expected toast cmd on success")
+	}
+	if len(updated.toast.queue) == 0 {
+		t.Error("expected success toast queued")
+	}
+}
+
+// --- routeKeyConfig / routeMouse coverage ---
+
+func TestApp_RouteKeyConfig_Sandbox(t *testing.T) {
+	app := testApp(t)
+	// Navigate to Config > Sandbox (group 3 -> Right once)
+	m, _ := app.Update(keyRune('3'))
+	a := m.(App)
+	m, _ = a.Update(keyPress(tea.KeyRight))
+	a = m.(App)
+	if a.topBar.ActiveTabLabel() != "Sandbox" {
+		t.Fatalf("expected Sandbox tab, got %q", a.topBar.ActiveTabLabel())
+	}
+	// Send a key that sandbox will consume (covers the switch case)
+	m, _ = a.Update(keyRune('x'))
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteKeyConfig_System(t *testing.T) {
+	app := testApp(t)
+	// Navigate to Config > System (group 3 -> Right twice)
+	m, _ := app.Update(keyRune('3'))
+	a := m.(App)
+	m, _ = a.Update(keyPress(tea.KeyRight))
+	a = m.(App)
+	m, _ = a.Update(keyPress(tea.KeyRight))
+	a = m.(App)
+	if a.topBar.ActiveTabLabel() != "System" {
+		t.Fatalf("expected System tab, got %q", a.topBar.ActiveTabLabel())
+	}
+	// Send a key — System should consume it without crashing
+	m, _ = a.Update(keyRune('x'))
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_ConfigSettings(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyRune('3'))
+	a := m.(App)
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_ConfigSandbox(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyRune('3'))
+	a := m.(App)
+	m, _ = a.Update(keyTab)
+	a = m.(App)
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_ConfigSystem(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyRune('3'))
+	a := m.(App)
+	m, _ = a.Update(keyTab)
+	a = m.(App)
+	m, _ = a.Update(keyTab)
+	a = m.(App)
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_LibraryTab(t *testing.T) {
+	app := testAppWithItems(t)
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ := app.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_GalleryTab(t *testing.T) {
+	app := testApp(t)
+	// Move to Registries (gallery)
+	m, _ := app.Update(keyTab)
+	a := m.(App)
+	if !a.isGalleryTab() {
+		t.Fatal("expected isGalleryTab after tab")
+	}
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_ExplorerTab(t *testing.T) {
+	app := testApp(t)
+	// Group 2 is Content → first tab is Skills (explorer)
+	m, _ := app.Update(keyRune('2'))
+	a := m.(App)
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
+	}
+}
+
+func TestApp_RouteMouse_GalleryDrillIn(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(keyTab)
+	a := m.(App)
+	a.galleryDrillIn = true
+	click := tea.MouseMsg{X: 0, Y: 0, Action: tea.MouseActionPress, Button: tea.MouseButtonLeft}
+	m, _ = a.Update(click)
+	if _, ok := m.(App); !ok {
+		t.Fatalf("expected App, got %T", m)
 	}
 }
