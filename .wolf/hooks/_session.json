@@ -1,38 +1,94 @@
 {
-  "session_id": "session-2026-04-23-1245",
-  "started": "2026-04-23T19:45:04.285Z",
+  "session_id": "session-2026-04-24-1038",
+  "started": "2026-04-24T17:38:59.068Z",
   "files_read": {
-    "/home/hhewett/.local/src/syllago/cli/internal/converter/manifest.go": {
-      "count": 1,
-      "tokens": 1334,
-      "first_read": "2026-04-23T19:45:05.841Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/app_view.go": {
-      "count": 1,
-      "tokens": 1041,
-      "first_read": "2026-04-23T19:45:21.769Z"
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/wizard_invariant_test.go": {
+      "count": 2,
+      "tokens": 7696,
+      "first_read": "2026-04-24T17:40:39.893Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go": {
-      "count": 1,
-      "tokens": 20426,
-      "first_read": "2026-04-23T19:45:44.640Z"
+      "count": 3,
+      "tokens": 22376,
+      "first_read": "2026-04-24T17:40:46.938Z"
     },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_write_test.go": {
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_mono_mouse_test.go": {
       "count": 1,
-      "tokens": 942,
-      "first_read": "2026-04-23T19:45:47.184Z"
+      "tokens": 0,
+      "first_read": "2026-04-24T17:41:18.827Z"
     },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_preview_test.go": {
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/checkbox_list.go": {
       "count": 1,
-      "tokens": 3131,
-      "first_read": "2026-04-23T19:45:49.602Z"
+      "tokens": 1893,
+      "first_read": "2026-04-24T17:42:06.589Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go": {
+      "count": 1,
+      "tokens": 1064,
+      "first_read": "2026-04-24T17:42:45.251Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_add_wizard_mono_test.go": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-24T17:43:18.531Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/add-provider-split-heuristic-80x30.golden": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-24T17:44:11.632Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/add-provider-split-heuristic-60x20.golden": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-24T17:44:29.571Z"
     }
   },
-  "files_written": [],
-  "edit_counts": {},
-  "anatomy_hits": 5,
-  "anatomy_misses": 0,
-  "repeated_reads_warned": 0,
+  "files_written": [
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/wizard_invariant_test.go",
+      "action": "edit",
+      "tokens": 289,
+      "at": "2026-04-24T17:40:56.979Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+      "action": "create",
+      "tokens": 932,
+      "at": "2026-04-24T17:41:54.142Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+      "action": "create",
+      "tokens": 881,
+      "at": "2026-04-24T17:42:36.202Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+      "action": "edit",
+      "tokens": 56,
+      "at": "2026-04-24T17:42:51.700Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+      "action": "edit",
+      "tokens": 158,
+      "at": "2026-04-24T17:42:59.095Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_add_wizard_provider_split_test.go",
+      "action": "create",
+      "tokens": 626,
+      "at": "2026-04-24T17:43:56.543Z"
+    }
+  ],
+  "edit_counts": {
+    "cli/internal/tui/wizard_invariant_test.go": 1,
+    "cli/internal/tui/add_wizard_provider_split_mouse_test.go": 4,
+    "cli/internal/tui/golden_add_wizard_provider_split_test.go": 1
+  },
+  "anatomy_hits": 4,
+  "anatomy_misses": 4,
+  "repeated_reads_warned": 3,
   "cerebrum_warnings": 0,
-  "stop_count": 0
+  "stop_count": 1
 }

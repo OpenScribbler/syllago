@@ -6688,10 +6688,80 @@
       "file": "cli/internal/metadata/metadata.go",
       "root_cause": "Schema collision: rulestore (D11/D13) writes nested `source:` map with provider/scope/path/format/filename/hash/split_method/captured_at, but the Meta struct used by catalog scanning declares `Source string` (legacy flat shape). yaml.Unmarshal into Meta fails type-check on the map, so any rulestore-written rule fails catalog load — breaking TUI rescan and any subsequent `syllago add`.",
       "fix": "Made Load() dual-shape: on Meta unmarshal failure, retry as RuleMetadata; if Type==\"rule\" succeeds, project into Meta via new ruleMetadataToMeta() helper. Non-rule parse errors pass through unchanged. Added TestLoad_AcceptsRuleMetadataShape regression test.",
-      "tags": ["metadata", "catalog", "schema-collision", "rules-splitter", "yaml"],
+      "tags": [
+        "metadata",
+        "catalog",
+        "schema-collision",
+        "rules-splitter",
+        "yaml"
+      ],
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-24T17:00:00Z"
+    },
+    {
+      "id": "bug-417",
+      "timestamp": "2026-04-24T17:04:30.247Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_update.go",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 36→27 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T17:04:30.247Z"
+    },
+    {
+      "id": "bug-418",
+      "timestamp": "2026-04-24T17:15:48.542Z",
+      "error_message": "Wrong reference: checks should be selected",
+      "file": "cli/internal/tui/add_wizard_split_detect_test.go",
+      "root_cause": "Used \"checks\" instead of \"selected\"",
+      "fix": "Changed checks → selected",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T17:15:48.542Z"
+    },
+    {
+      "id": "bug-419",
+      "timestamp": "2026-04-24T17:18:36.320Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_split_detect_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 14→23 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T17:18:36.320Z"
+    },
+    {
+      "id": "bug-420",
+      "timestamp": "2026-04-24T17:31:33.302Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/add_wizard_update.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 7→4 lines (3 removed) | Also: m.mergeConfirmIntoDiscovery(); if len(m.selectedItems()) > 0 {",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-24T17:31:37.292Z"
     }
   ]
 }
