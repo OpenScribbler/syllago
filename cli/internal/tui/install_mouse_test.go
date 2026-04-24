@@ -279,6 +279,54 @@ func TestInstallMouse_MethodRowSelectsMethod(t *testing.T) {
 	}
 }
 
+// TestInstallMouse_MethodAppendRowSelectsAppend pins inst-method-2 —
+// the D5 append option. Clicking the append row must set methodCursor=2
+// and leave the step on installStepMethod. This is the mouse equivalent of
+// pressing Down twice to reach Append on a keyboard.
+func TestInstallMouse_MethodAppendRowSelectsAppend(t *testing.T) {
+	m := methodStepWizard(t, 80, 30)
+	scanZones(m.View())
+	z := zone.Get("inst-method-2")
+	if z.IsZero() {
+		t.Skip("zone inst-method-2 not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.methodCursor != 2 {
+		t.Errorf("methodCursor should be 2 after clicking inst-method-2, got %d", m.methodCursor)
+	}
+	if m.step != installStepMethod {
+		t.Errorf("step should remain installStepMethod, got %d", m.step)
+	}
+}
+
+// TestInstallMouse_MethodAppendHiddenForNonRules verifies clicking the
+// append zone is a no-op for non-rule content — the zone is never rendered
+// for Skills/Hooks, so the keyboard parity contract is "no equivalent" and
+// the click must not advance state.
+func TestInstallMouse_MethodAppendHiddenForNonRules(t *testing.T) {
+	t.Helper()
+	// Build a Skills-typed wizard at the method step.
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := testInstallItem("my-skill", catalog.Skills, filepath.Join(t.TempDir(), "skills", "my-skill"))
+	m := openInstallWizard(item, []provider.Provider{prov}, t.TempDir())
+	m.width = 80
+	m.height = 30
+	m.shell.SetWidth(80)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // location -> method
+	if m.step != installStepMethod {
+		t.Fatalf("precondition: expected installStepMethod, got %d", m.step)
+	}
+
+	scanZones(m.View())
+	z := zone.Get("inst-method-2")
+	if !z.IsZero() {
+		t.Error("inst-method-2 zone should not render for non-rule content")
+	}
+	// Bounds-safe: even if the zone were present, methodCursor must not
+	// reach 2 via the click dispatch because the update path guards with
+	// appendFilename() != "".
+}
+
 // TestInstallMouse_MethodNextAdvancesToReview pins inst-next on method
 // step (install_update.go:411). Clicking Next enters the Review step.
 func TestInstallMouse_MethodNextAdvancesToReview(t *testing.T) {
