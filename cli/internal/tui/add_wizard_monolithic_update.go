@@ -32,18 +32,6 @@ type addCompletedMsg struct {
 	count int
 }
 
-// startMonolithicDiscoveryCmd scans projectRoot + homeDir for monolithic
-// rule files and returns the list as addMonolithicDiscoveryDoneMsg.
-func (m *addWizardModel) startMonolithicDiscoveryCmd() tea.Cmd {
-	seq := m.seq
-	projectRoot := m.projectRoot
-	contentRoot := m.contentRoot
-	return func() tea.Msg {
-		cands, err := discoverMonolithicCandidates(projectRoot, contentRoot)
-		return addMonolithicDiscoveryDoneMsg{seq: seq, candidates: cands, err: err}
-	}
-}
-
 // updateKeyMonolithicDiscovery handles keyboard input on the monolithic-rule
 // discovery step (D2, D18). Up/Down moves the cursor, space toggles the
 // focused row into selectedCandidates, Enter advances to the Heuristic step

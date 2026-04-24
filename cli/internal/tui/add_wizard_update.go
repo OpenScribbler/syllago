@@ -203,7 +203,7 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 
 func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
 	// Top-level source option clicks
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 4; i++ {
 		if zone.Get("add-src-" + itoa(i)).InBounds(msg) {
 			if m.sourceExpanded || m.inputActive {
 				// Already in a sub-mode — clicking a source option resets to top-level
@@ -230,15 +230,6 @@ func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, t
 			case 3: // Git
 				m.inputActive = true
 				m.sourceErr = ""
-			case 4: // Monolithic rule files
-				m.source = addSourceMonolithic
-				m.shell.SetSteps(m.buildShellLabels())
-				m.step = addStepDiscovery
-				m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-				m.discovering = true
-				m.seq++
-				m.updateMaxStep()
-				return m, m.startMonolithicDiscoveryCmd()
 			}
 			return m, nil
 		}
@@ -532,7 +523,7 @@ func (m *addWizardModel) updateKeySourceRadio(msg tea.KeyMsg) (*addWizardModel, 
 		}
 
 	case msg.Type == tea.KeyDown || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		if m.sourceCursor < 4 {
+		if m.sourceCursor < 3 {
 			m.sourceCursor++
 		}
 
@@ -554,15 +545,6 @@ func (m *addWizardModel) updateKeySourceRadio(msg tea.KeyMsg) (*addWizardModel, 
 		case 3: // Git
 			m.inputActive = true
 			m.sourceErr = ""
-		case 4: // Monolithic rule files
-			m.source = addSourceMonolithic
-			m.shell.SetSteps(m.buildShellLabels())
-			m.step = addStepDiscovery
-			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
-			m.discovering = true
-			m.seq++
-			m.updateMaxStep()
-			return m, m.startMonolithicDiscoveryCmd()
 		}
 	}
 	return m, nil
@@ -631,7 +613,7 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 
 	case tea.KeyDown:
 		m.inputActive = false
-		if m.sourceCursor < 4 {
+		if m.sourceCursor < 3 {
 			m.sourceCursor++
 		}
 		return m, nil
