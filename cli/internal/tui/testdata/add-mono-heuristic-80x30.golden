@@ -1,0 +1,29 @@
+╭───Add ───────────────────────────────────────────────────────────────────────╮
+│  [1 Source]  [2 Discovery]  [3 Heuristic]  [4 Review]  [5 Execute]           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  How should we split these files?                          Back      Next
+
+  > ◉ By H2 (default)
+    ◯ By H3
+    ◯ By H4
+    ◯ By literal marker
+    ◯ Import as single rule
+
+  [↑/↓] navigate  [enter] next  [esc] back
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
