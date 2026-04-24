@@ -76,5 +76,26 @@ func TestUninstallRuleAppend_ExactMatch(t *testing.T) {
 	}
 }
 
-// Placeholder for strings import so goimports doesn't kill it.
+func TestUninstallRuleAppend_MissingTargetFileSucceeds(t *testing.T) {
+	t.Parallel()
+	projectRoot, libID, target, library, _ := seedRuleAndInstallForUninstall(t, []byte("P\n"))
+
+	if err := os.Remove(target); err != nil {
+		t.Fatalf("remove target: %v", err)
+	}
+
+	if err := UninstallRuleAppend(projectRoot, libID, target, library); err != nil {
+		t.Fatalf("UninstallRuleAppend: %v", err)
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if inst.FindRuleAppend(libID, target) != -1 {
+		t.Errorf("record still present after ENOENT uninstall")
+	}
+}
+
+// Placeholder so linter doesn't strip strings import used in later tests.
 var _ = strings.Contains
