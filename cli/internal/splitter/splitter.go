@@ -64,6 +64,14 @@ func Split(source []byte, opts Options) ([]SplitCandidate, *SkipSplitSignal) {
 	if len(lines) < 30 {
 		return nil, &SkipSplitSignal{Reason: "too_small"}
 	}
+	// Literal-marker heuristic is a separate path — no header promotion, no
+	// slugify. Regions separated by exact-match lines become candidates.
+	if opts.Heuristic == HeuristicMarker {
+		if opts.MarkerLiteral == "" {
+			return nil, nil
+		}
+		return splitByMarker(lines, opts.MarkerLiteral), nil
+	}
 	// H2-default skip-split: if H2 heuristic selected and <3 H2 headings, skip.
 	// Opt-in H3/H4/Marker heuristics skip only on the <30 lines branch.
 	if opts.Heuristic == HeuristicH2 {
@@ -211,4 +219,52 @@ func rebuildBodyWithPreamble(sectionLines [][]byte, headingText string, preamble
 		sb.WriteByte('\n')
 	}
 	return sb.String()
+}
+
+// splitByMarker walks lines and emits one SplitCandidate per region separated
+// by lines whose entire content is exactly markerLiteral. No header promotion
+// (there's no heading), no slugification — Name and Description are empty and
+// the caller is expected to prompt the user for slugs at review time.
+// The region before the first marker is emitted as a candidate if non-empty.
+// Empty regions (two adjacent markers, or leading/trailing marker with no
+// content) are skipped.
+func splitByMarker(lines [][]byte, markerLiteral string) []SplitCandidate {
+	marker := []byte(markerLiteral)
+	var out []SplitCandidate
+	regionStart := 0
+	emit := func(start, end int) {
+		if start >= end {
+			return
+		}
+		// Trim purely-empty regions (end-of-file trailing lines, etc.).
+		hasContent := false
+		for _, ln := range lines[start:end] {
+			if len(bytes.TrimSpace(ln)) > 0 {
+				hasContent = true
+				break
+			}
+		}
+		if !hasContent {
+			return
+		}
+		var sb strings.Builder
+		for _, ln := range lines[start:end] {
+			sb.Write(ln)
+			sb.WriteByte('\n')
+		}
+		out = append(out, SplitCandidate{
+			Name:          "",
+			Description:   "",
+			Body:          sb.String(),
+			OriginalRange: [2]int{start, end},
+		})
+	}
+	for i, ln := range lines {
+		if bytes.Equal(ln, marker) {
+			emit(regionStart, i)
+			regionStart = i + 1
+		}
+	}
+	emit(regionStart, len(lines))
+	return out
 }
