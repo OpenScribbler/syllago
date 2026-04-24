@@ -17,9 +17,11 @@ type Candidate struct {
 }
 
 // DiscoverMonolithicRules walks projectRoot for any filename in filenames,
-// stopping at nested .git boundaries, plus checks homeDir for the same set
-// at its root. Each match becomes one Candidate. Symlinks are followed.
-// homeDir may be "" to skip the global scan.
+// stopping at nested .git boundaries (directories that contain a .git entry
+// other than projectRoot itself are treated as separate repos and skipped
+// in full), plus checks homeDir for the same set at its root. Each match
+// becomes one Candidate. Symlinks are followed. homeDir may be "" to skip
+// the global scan.
 func DiscoverMonolithicRules(projectRoot, homeDir string, filenames []string) ([]Candidate, error) {
 	set := make(map[string]struct{}, len(filenames))
 	for _, f := range filenames {
@@ -27,13 +29,29 @@ func DiscoverMonolithicRules(projectRoot, homeDir string, filenames []string) ([
 	}
 	var out []Candidate
 	if projectRoot != "" {
+		absRoot, err := filepath.Abs(projectRoot)
+		if err != nil {
+			absRoot = projectRoot
+		}
 		if err := filepath.WalkDir(projectRoot, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil // skip unreadable subtree
 			}
 			if d.IsDir() {
-				// Stop at nested .git boundaries (but not at projectRoot/.git — same dir).
-				if p != projectRoot && d.Name() == ".git" {
+				absP, aerr := filepath.Abs(p)
+				if aerr != nil {
+					absP = p
+				}
+				// Stop at nested .git boundaries. A directory is a nested
+				// repo boundary when it is not the project root itself but
+				// contains a .git entry — skip the whole directory.
+				if absP != absRoot {
+					if _, err := os.Stat(filepath.Join(p, ".git")); err == nil {
+						return fs.SkipDir
+					}
+				}
+				// Also skip .git directories themselves defensively.
+				if d.Name() == ".git" && absP != absRoot {
 					return fs.SkipDir
 				}
 				return nil
