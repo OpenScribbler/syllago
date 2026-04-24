@@ -1229,7 +1229,20 @@ func (m *addWizardModel) openRenameModal(cursor int) {
 // discoveredItem. Nothing is written to disk — the new display name and
 // description are persisted into .syllago.yaml at execute time by
 // writeHookToLibrary / add.AddItems.
+//
+// For the monolithic-rule path (addSourceMonolithic), the rename targets
+// reviewRenames[reviewCandidateCursor] instead of discoveredItems, since the
+// monolithic flow works off buildReviewCandidates output rather than
+// discoveredItems.
 func (m *addWizardModel) handleRenameSaved(msg editSavedMsg) {
+	if m.source == addSourceMonolithic {
+		idx := m.reviewCandidateCursor
+		if idx < 0 || idx >= len(m.reviewRenames) {
+			return
+		}
+		m.reviewRenames[idx] = strings.TrimSpace(msg.name)
+		return
+	}
 	if m.renameDiscoveryIdx < 0 || m.renameDiscoveryIdx >= len(m.discoveredItems) {
 		return
 	}
