@@ -98,9 +98,17 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 		return m.updateMouseType(msg)
 	case addStepDiscovery:
 		return m.updateMouseDiscovery(msg)
+	case addStepHeuristic:
+		return m.updateMouseHeuristic(msg)
 	case addStepReview:
+		if m.source == addSourceMonolithic {
+			return m.updateMouseMonolithicReview(msg)
+		}
 		return m.updateMouseReview(msg)
 	case addStepExecute:
+		if m.source == addSourceMonolithic {
+			return m.updateMouseMonolithicExecute(msg)
+		}
 		return m.updateMouseExecute(msg)
 	}
 
@@ -479,9 +487,17 @@ func (m *addWizardModel) updateKey(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 		return m.updateKeyType(msg)
 	case addStepDiscovery:
 		return m.updateKeyDiscovery(msg)
+	case addStepHeuristic:
+		return m.updateKeyHeuristic(msg)
 	case addStepReview:
+		if m.source == addSourceMonolithic {
+			return m.updateKeyMonolithicReview(msg)
+		}
 		return m.updateKeyReview(msg)
 	case addStepExecute:
+		if m.source == addSourceMonolithic {
+			return m.updateKeyMonolithicExecute(msg)
+		}
 		return m.updateKeyExecute(msg)
 	}
 	return m, nil

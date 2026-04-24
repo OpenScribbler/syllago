@@ -188,3 +188,223 @@ func (m *addWizardModel) handleMonolithicExecDone(msg addMonolithicExecDoneMsg) 
 	}
 	return m, func() tea.Msg { return addCompletedMsg{count: count} }
 }
+
+// updateKeyHeuristic handles keyboard input on the Heuristic step. Up/Down
+// moves the cursor, Enter advances to Review (building candidates from the
+// chosen heuristic), Esc returns to Discovery. When the Marker option is
+// highlighted, printable runes edit the marker literal in place.
+func (m *addWizardModel) updateKeyHeuristic(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	const maxCursor = 4
+
+	// Marker-input mode: while on the marker row, printable runes type into
+	// the marker literal. Backspace deletes. Other keys fall through.
+	if m.heuristicCursor == 3 {
+		switch msg.Type {
+		case tea.KeyRunes:
+			m.markerLiteral += string(msg.Runes)
+			return m, nil
+		case tea.KeyBackspace, tea.KeyDelete:
+			if len(m.markerLiteral) > 0 {
+				m.markerLiteral = m.markerLiteral[:len(m.markerLiteral)-1]
+			}
+			return m, nil
+		}
+	}
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.step = addStepDiscovery
+		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		return m, nil
+
+	case tea.KeyUp:
+		if m.heuristicCursor > 0 {
+			m.heuristicCursor--
+		}
+		return m, nil
+
+	case tea.KeyDown:
+		if m.heuristicCursor < maxCursor {
+			m.heuristicCursor++
+		}
+		return m, nil
+
+	case tea.KeyEnter:
+		m.chosenHeuristic = heuristicForCursor(m.heuristicCursor)
+		m.reviewCandidates = buildReviewCandidates(m.discoveryCandidates, m.selectedCandidates, m.chosenHeuristic, m.markerLiteral)
+		m.reviewAccepted = make([]bool, len(m.reviewCandidates))
+		m.reviewRenames = make([]string, len(m.reviewCandidates))
+		for i, rc := range m.reviewCandidates {
+			m.reviewAccepted[i] = rc.Accept
+		}
+		m.reviewCandidateCursor = 0
+		m.step = addStepReview
+		m.shell.SetActive(m.shellIndexForStep(addStepReview))
+		m.updateMaxStep()
+		return m, nil
+	}
+	return m, nil
+}
+
+// heuristicForCursor maps the Heuristic step's cursor position to the
+// splitter heuristic int value.
+func heuristicForCursor(cursor int) int {
+	switch cursor {
+	case 0:
+		return int(splitter.HeuristicH2)
+	case 1:
+		return int(splitter.HeuristicH3)
+	case 2:
+		return int(splitter.HeuristicH4)
+	case 3:
+		return int(splitter.HeuristicMarker)
+	case 4:
+		return int(splitter.HeuristicSingle)
+	}
+	return int(splitter.HeuristicH2)
+}
+
+// updateMouseHeuristic routes clicks on heuristic radio options + the
+// marker-input row. Clicking an option moves the cursor and selects it.
+// Clicking the marker row sets the cursor to the marker option.
+func (m *addWizardModel) updateMouseHeuristic(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	optIDs := []string{"add-heur-opt-h2", "add-heur-opt-h3", "add-heur-opt-h4", "add-heur-opt-marker", "add-heur-opt-single"}
+	for i, id := range optIDs {
+		if zone.Get(id).InBounds(msg) {
+			m.heuristicCursor = i
+			return m, nil
+		}
+	}
+	if zone.Get("add-heur-marker-input").InBounds(msg) {
+		m.heuristicCursor = 3
+		return m, nil
+	}
+	return m, nil
+}
+
+// updateKeyMonolithicReview handles the Review step in the monolithic path.
+// Up/Down moves the cursor, space toggles accept, r opens the rename modal,
+// Enter advances to Execute (blocked if no accepted candidates), Esc returns
+// to Heuristic.
+func (m *addWizardModel) updateKeyMonolithicReview(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	if m.renameModal.active {
+		// Rename modal handled in the top-level Update before reaching here.
+		return m, nil
+	}
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.step = addStepHeuristic
+		m.shell.SetActive(m.shellIndexForStep(addStepHeuristic))
+		return m, nil
+
+	case tea.KeyUp:
+		if m.reviewCandidateCursor > 0 {
+			m.reviewCandidateCursor--
+		}
+		return m, nil
+
+	case tea.KeyDown:
+		if m.reviewCandidateCursor < len(m.reviewCandidates)-1 {
+			m.reviewCandidateCursor++
+		}
+		return m, nil
+
+	case tea.KeySpace:
+		if m.reviewCandidateCursor < len(m.reviewAccepted) {
+			m.reviewAccepted[m.reviewCandidateCursor] = !m.reviewAccepted[m.reviewCandidateCursor]
+		}
+		return m, nil
+
+	case tea.KeyEnter:
+		any := false
+		for _, acc := range m.reviewAccepted {
+			if acc {
+				any = true
+				break
+			}
+		}
+		if !any {
+			return m, nil
+		}
+		m.step = addStepExecute
+		m.shell.SetActive(m.shellIndexForStep(addStepExecute))
+		m.updateMaxStep()
+		m.executing = true
+		m.executeDone = false
+		return m, m.startMonolithicExecuteCmd()
+
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 && msg.Runes[0] == 'r' {
+			return m.openMonolithicRenameModal()
+		}
+	}
+	return m, nil
+}
+
+// updateMouseMonolithicReview routes clicks on review candidate rows.
+// Clicking a row moves the cursor and toggles the accept state.
+func (m *addWizardModel) updateMouseMonolithicReview(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	for i := range m.reviewCandidates {
+		if zone.Get(fmt.Sprintf("add-mono-review-cand-%d", i)).InBounds(msg) {
+			if m.reviewCandidateCursor == i {
+				if i < len(m.reviewAccepted) {
+					m.reviewAccepted[i] = !m.reviewAccepted[i]
+				}
+			} else {
+				m.reviewCandidateCursor = i
+			}
+			return m, nil
+		}
+	}
+	return m, nil
+}
+
+// openMonolithicRenameModal pops a one-field edit modal pre-populated with
+// the focused candidate's current slug. On save, the new value overrides
+// the candidate's Name via reviewRenames.
+func (m *addWizardModel) openMonolithicRenameModal() (*addWizardModel, tea.Cmd) {
+	if m.reviewCandidateCursor < 0 || m.reviewCandidateCursor >= len(m.reviewCandidates) {
+		return m, nil
+	}
+	cur := m.reviewCandidates[m.reviewCandidateCursor].Candidate.Name
+	if m.reviewCandidateCursor < len(m.reviewRenames) && m.reviewRenames[m.reviewCandidateCursor] != "" {
+		cur = m.reviewRenames[m.reviewCandidateCursor]
+	}
+	m.renameModal = newEditModal()
+	m.renameModal.SetWidth(m.width)
+	m.renameModal.OpenWithContext("Rename rule", cur, "", "", "wizard_rename")
+	m.renameDiscoveryIdx = m.reviewCandidateCursor
+	return m, nil
+}
+
+// updateKeyMonolithicExecute handles the Execute step keyboard input. Enter
+// closes the wizard once execution is done; before completion, only Esc is
+// accepted to cancel.
+func (m *addWizardModel) updateKeyMonolithicExecute(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	if m.executeDone {
+		if msg.Type == tea.KeyEnter {
+			return m, func() tea.Msg { return addCloseMsg{} }
+		}
+	}
+	return m, nil
+}
+
+// updateMouseMonolithicExecute handles clicks on the Execute step nav row.
+func (m *addWizardModel) updateMouseMonolithicExecute(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	if m.executeDone {
+		if zone.Get("add-nav-next").InBounds(msg) {
+			return m, func() tea.Msg { return addCloseMsg{} }
+		}
+	}
+	return m, nil
+}
+
+// startMonolithicExecuteCmd writes accepted review candidates via rulestore
+// and returns an addMonolithicExecDoneMsg with the per-candidate results.
+func (m *addWizardModel) startMonolithicExecuteCmd() tea.Cmd {
+	seq := m.seq
+	results := m.writeAcceptedCandidates()
+	return func() tea.Msg {
+		return addMonolithicExecDoneMsg{seq: seq, results: results}
+	}
+}
