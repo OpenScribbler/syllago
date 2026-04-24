@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,6 +23,12 @@ import (
 )
 
 func main() {
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// run parses args, loads manifests, runs checks, and returns the would-be exit code.
+// Extracted from main() so tests can drive the full pipeline without os.Exit / global flag state.
+func run(args []string, stdout, stderr io.Writer) int {
 	var (
 		manifestDir string
 		provider    string
@@ -31,25 +38,28 @@ func main() {
 		failOnRaw   string
 	)
 
-	// Default manifest dir: relative to the repo root.
 	defaultDir := findManifestDir()
 
-	flag.StringVar(&manifestDir, "dir", defaultDir, "path to provider-sources directory")
-	flag.StringVar(&provider, "provider", "", "check only this provider slug (default: all)")
-	flag.BoolVar(&jsonOutput, "json", false, "output results as JSON")
-	flag.IntVar(&concurrency, "concurrency", 10, "max concurrent HTTP requests")
-	flag.DurationVar(&timeout, "timeout", 60*time.Second, "overall timeout")
-	flag.StringVar(&failOnRaw, "fail-on", "drifted",
+	fs := flag.NewFlagSet("provider-monitor", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.StringVar(&manifestDir, "dir", defaultDir, "path to provider-sources directory")
+	fs.StringVar(&provider, "provider", "", "check only this provider slug (default: all)")
+	fs.BoolVar(&jsonOutput, "json", false, "output results as JSON")
+	fs.IntVar(&concurrency, "concurrency", 10, "max concurrent HTTP requests")
+	fs.DurationVar(&timeout, "timeout", 60*time.Second, "overall timeout")
+	fs.StringVar(&failOnRaw, "fail-on", "drifted",
 		"comma-separated statuses that cause non-zero exit: drifted,fetch_failed,content_invalid,skipped")
-	flag.Parse()
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	manifests, err := provmon.LoadAllManifests(manifestDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		return 1
 	}
 
 	if provider != "" {
@@ -60,8 +70,8 @@ func main() {
 			}
 		}
 		if len(filtered) == 0 {
-			fmt.Fprintf(os.Stderr, "error: no manifest found for provider %q\n", provider)
-			os.Exit(1)
+			fmt.Fprintf(stderr, "error: no manifest found for provider %q\n", provider)
+			return 1
 		}
 		manifests = filtered
 	}
@@ -73,21 +83,21 @@ func main() {
 	}
 
 	if jsonOutput {
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(reports); err != nil {
-			fmt.Fprintf(os.Stderr, "error encoding JSON: %v\n", err)
-			os.Exit(1)
+			fmt.Fprintf(stderr, "error encoding JSON: %v\n", err)
+			return 1
 		}
 	} else {
-		printReports(reports)
+		printReportsTo(stdout, reports)
 	}
 
 	failOn := strings.Split(failOnRaw, ",")
 	for i := range failOn {
 		failOn[i] = strings.TrimSpace(failOn[i])
 	}
-	os.Exit(computeExitCode(reports, failOn))
+	return computeExitCode(reports, failOn)
 }
 
 // computeExitCode returns 1 if any report has:
@@ -124,21 +134,25 @@ func computeExitCode(reports []*provmon.CheckReport, failOn []string) int {
 }
 
 func printReports(reports []*provmon.CheckReport) {
+	printReportsTo(os.Stdout, reports)
+}
+
+func printReportsTo(w io.Writer, reports []*provmon.CheckReport) {
 	for _, r := range reports {
 		status := "OK"
 		if r.FailedURLs > 0 {
 			status = fmt.Sprintf("FAIL (%d/%d URLs broken)", r.FailedURLs, r.TotalURLs)
 		}
 
-		fmt.Printf("%-15s %-10s %s\n", r.Slug, r.FetchTier, status)
+		fmt.Fprintf(w, "%-15s %-10s %s\n", r.Slug, r.FetchTier, status)
 
 		// Show failed URLs.
 		for _, ur := range r.URLResults {
 			if !ur.OK() {
 				if ur.Error != nil {
-					fmt.Printf("  BROKEN  %s  (%v)\n", ur.URL, ur.Error)
+					fmt.Fprintf(w, "  BROKEN  %s  (%v)\n", ur.URL, ur.Error)
 				} else {
-					fmt.Printf("  HTTP %d  %s\n", ur.StatusCode, ur.URL)
+					fmt.Fprintf(w, "  HTTP %d  %s\n", ur.StatusCode, ur.URL)
 				}
 			}
 		}
@@ -148,7 +162,7 @@ func printReports(reports []*provmon.CheckReport) {
 			switch r.VersionDrift.Method {
 			case "github-releases":
 				if r.VersionDrift.Drifted {
-					fmt.Printf("  DRIFT   baseline=%s  latest=%s\n",
+					fmt.Fprintf(w, "  DRIFT   baseline=%s  latest=%s\n",
 						r.VersionDrift.Baseline, r.VersionDrift.LatestVersion)
 				}
 			case "source-hash":
@@ -157,10 +171,10 @@ func printReports(reports []*provmon.CheckReport) {
 					case provmon.StatusStable:
 						// Keep stable sources silent to keep the report terse.
 					case provmon.StatusDrifted:
-						fmt.Printf("  DRIFT   %-8s %s\n    baseline=%s\n    current =%s\n",
+						fmt.Fprintf(w, "  DRIFT   %-8s %s\n    baseline=%s\n    current =%s\n",
 							s.ContentType, s.URI, s.Baseline, s.CurrentHash)
 					default:
-						fmt.Printf("  %-7s %-8s %s  (%s)\n",
+						fmt.Fprintf(w, "  %-7s %-8s %s  (%s)\n",
 							strings.ToUpper(string(s.Status)), s.ContentType, s.URI, s.ErrorMessage)
 					}
 				}
@@ -169,12 +183,12 @@ func printReports(reports []*provmon.CheckReport) {
 
 		// Surface setup-level CheckVersion errors (e.g., GH API rate limit, FormatDoc parse).
 		if r.CheckVersionError != "" {
-			fmt.Printf("  CHECK   version check error: %s\n", r.CheckVersionError)
+			fmt.Fprintf(w, "  CHECK   version check error: %s\n", r.CheckVersionError)
 		}
 
 		// Show stale verification.
 		if daysSince := daysSinceVerified(r.LastVerified); daysSince > 7 {
-			fmt.Printf("  STALE   last verified %s (%d days ago)\n", r.LastVerified, daysSince)
+			fmt.Fprintf(w, "  STALE   last verified %s (%d days ago)\n", r.LastVerified, daysSince)
 		}
 	}
 
@@ -201,7 +215,7 @@ func printReports(reports []*provmon.CheckReport) {
 			}
 		}
 	}
-	fmt.Printf("\n%d providers, %d URLs checked, %d broken, %d drifted, %d fetch_failed, %d content_invalid, %d skipped\n",
+	fmt.Fprintf(w, "\n%d providers, %d URLs checked, %d broken, %d drifted, %d fetch_failed, %d content_invalid, %d skipped\n",
 		len(reports), totalURLs, failedURLs, drifted, fetchFailed, contentInvalid, skipped)
 }
 
