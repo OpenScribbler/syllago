@@ -62,6 +62,13 @@ type libraryModel struct {
 
 	// The item currently being viewed in detail
 	detailItem *catalog.ContentItem
+
+	// D16 verification state — used to render the per-target breakdown in
+	// the rule metapanel. verification.PerRecord is keyed by
+	// (LibraryID, TargetFile); installed.RuleAppends enumerates which
+	// records to show (filtered by LibraryID for the selected rule).
+	verification *installcheck.VerificationResult
+	installed    *installer.Installed
 }
 
 func newLibraryModel(items []catalog.ContentItem, provs []provider.Provider, repoRoot string) libraryModel {
@@ -87,8 +94,13 @@ func (l libraryModel) currentMetaItem() *catalog.ContentItem {
 // metaBarLines returns the dynamic number of metadata content lines for
 // the currently-selected item (varies with TrustTier/Revoked/PrivateRepo).
 // Non-MOAT items return metaBarLinesBase (3) so existing layouts are stable.
+// For rule items with active installs, the D16 per-target breakdown adds
+// extra lines beyond the base via metaPanelExtraLines.
 func (l libraryModel) metaBarLines() int {
-	return metaBarLinesFor(l.currentMetaItem())
+	item := l.currentMetaItem()
+	base := metaBarLinesFor(item)
+	extra := metaPanelExtraLines(metaPanelData{ruleRecords: l.ruleRecordsFor(item)})
+	return base + extra
 }
 
 // metaBarTotal returns metaBarLines + 1 for the shared separator line
@@ -130,6 +142,16 @@ func (l *libraryModel) SetItems(items []catalog.ContentItem) {
 // non-rule rows are unaffected regardless of whether verification is set.
 func (l *libraryModel) SetVerification(v *installcheck.VerificationResult) {
 	l.table.SetVerification(v)
+	l.verification = v
+}
+
+// SetInstalled stores the installed.json snapshot so the metapanel can
+// enumerate per-target records (InstalledRuleAppend entries filtered by
+// LibraryID) when rendering the D16 breakdown for a rule item. Nil is a
+// valid value — metapanel falls back to the base 4 lines without the
+// breakdown section.
+func (l *libraryModel) SetInstalled(inst *installer.Installed) {
+	l.installed = inst
 }
 
 // Update handles input for the current mode.
@@ -673,10 +695,38 @@ func (l libraryModel) renderMetadataContent(width int) string {
 		}
 	}
 	return renderMetaPanel(item, metaPanelData{
-		installed:  row.installed,
-		typeDetail: row.typeDetail,
-		canInstall: canInstall,
+		installed:   row.installed,
+		typeDetail:  row.typeDetail,
+		canInstall:  canInstall,
+		ruleRecords: l.ruleRecordsFor(item),
 	}, width)
+}
+
+// ruleRecordsFor builds the D16 per-target breakdown for a rule item by
+// filtering installed.RuleAppends to records matching the item's LibraryID
+// and looking up each record's PerTargetState in verification.PerRecord.
+// Returns nil for non-rule items, nil installed, or items with an empty ID
+// (metapanel renders the base 4 lines with no breakdown section).
+func (l libraryModel) ruleRecordsFor(item *catalog.ContentItem) []ruleTargetStatus {
+	if item == nil || item.Type != catalog.Rules || l.installed == nil {
+		return nil
+	}
+	if item.Meta == nil || item.Meta.ID == "" {
+		return nil
+	}
+	libID := item.Meta.ID
+	var out []ruleTargetStatus
+	for _, r := range l.installed.RuleAppends {
+		if r.LibraryID != libID {
+			continue
+		}
+		var state installcheck.PerTargetState
+		if l.verification != nil {
+			state = l.verification.PerRecord[installcheck.RecordKey{LibraryID: libID, TargetFile: r.TargetFile}]
+		}
+		out = append(out, ruleTargetStatus{TargetFile: r.TargetFile, State: state})
+	}
+	return out
 }
 
 // truncateMiddle keeps the first 2 path segments and last 3 segments,
