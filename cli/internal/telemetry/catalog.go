@@ -165,6 +165,20 @@ func EventCatalog() []EventDef {
 					Example:     "proceed",
 					Commands:    []string{"install"},
 				},
+				{
+					Name:        "verification_state",
+					Type:        "string",
+					Description: "D16 verification state for rule-append installs (fresh, clean, modified)",
+					Example:     "clean",
+					Commands:    []string{"install"},
+				},
+				{
+					Name:        "decision_action",
+					Type:        "string",
+					Description: "D17 decision action taken during re-install (proceed, replace, skip, drop_record, append_fresh, keep)",
+					Example:     "replace",
+					Commands:    []string{"install"},
+				},
 			},
 		},
 		{
