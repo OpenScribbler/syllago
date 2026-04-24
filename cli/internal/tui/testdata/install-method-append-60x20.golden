@@ -1,0 +1,19 @@
+╭───Install ───────────────────────────────────────────────╮
+│  [1 Provider]  [2 Location]  [3 Method]  [4 Review]      │
+╰──────────────────────────────────────────────────────────╯
+  Install method:
+
+    Symlink   (recommended — stays in sync with library)
+    Copy      (standalone copy, won't auto-update)
+  > Append to CLAUDE.md   (add to the provider's monolithic rule file)
+
+                                          Back      Next
+
+
+
+
+
+
+
+
+
