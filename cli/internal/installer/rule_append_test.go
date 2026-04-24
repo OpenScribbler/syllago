@@ -26,6 +26,34 @@ func TestAppendToTarget_EmptyFileCreates(t *testing.T) {
 	}
 }
 
+func TestAppendToTarget_SequentialThreeRules(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	target := filepath.Join(tmpDir, "CLAUDE.md")
+
+	if err := os.WriteFile(target, []byte("P\n"), 0644); err != nil {
+		t.Fatalf("seed write: %v", err)
+	}
+	for _, body := range [][]byte{
+		[]byte("r1\n"),
+		[]byte("r2\n"),
+		[]byte("r3\n"),
+	} {
+		if err := AppendRuleToTarget(target, body); err != nil {
+			t.Fatalf("append %q: %v", body, err)
+		}
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	want := "P\n\nr1\n\nr2\n\nr3\n"
+	if string(got) != want {
+		t.Errorf("file bytes mismatch\n got %q\nwant %q", got, want)
+	}
+}
+
 func TestAppendToTarget_NonEmptyMissingNewline(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
