@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Install record is stale                                                      │
+│                                                                              │
+│ This rule was installed at:                                                  │
+│   /home/user/CLAUDE.md                                                       │
+│ ...but we couldn't read the file: permission denied                          │
+│ Check permissions and whether the path is still accessible, then re-run.     │
+│                                                                              │
+│   Drop stale install record (no file change)  [d]                            │
+│   Append current version as a fresh copy  [a]                                │
+│ > Keep (leave record + file unchanged)  [Enter]                              │
+╰──────────────────────────────────────────────────────────────────────────────╯

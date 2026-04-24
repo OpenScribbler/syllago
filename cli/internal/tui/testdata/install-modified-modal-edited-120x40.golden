@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Install record is stale                                                                                              │
+│                                                                                                                      │
+│ This rule was installed at:                                                                                          │
+│   /home/user/CLAUDE.md                                                                                               │
+│ ...but the file no longer contains the version we recorded.                                                          │
+│ Either the appended block was edited, or the file was rolled back.                                                   │
+│                                                                                                                      │
+│ > Drop stale install record (no file change)  [Enter]                                                                │
+│   Append current version as a fresh copy  [a]                                                                        │
+│   Keep (leave record + file unchanged)  [Esc]                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
