@@ -129,8 +129,10 @@ func (m *addWizardModel) viewHeuristic() string {
 }
 
 // viewMonolithicReview renders the Review step when addSourceMonolithic
-// is active (Task 4.5). Groups by source file; within each group, one row
-// per review candidate.
+// is active. Two-pane split: left pane groups candidates by source file with
+// a selection checkbox per row; right pane previews the cursored candidate's
+// body (frontmatter + markdown content) so the reviewer can verify exactly
+// what will land in the library before execute.
 func (m *addWizardModel) viewMonolithicReview() string {
 	pad := "  "
 	var lines []string
@@ -142,13 +144,101 @@ func (m *addWizardModel) viewMonolithicReview() string {
 		return strings.Join(lines, "\n")
 	}
 
+	// Build the full list of rendered rows (one string per line) along with a
+	// parallel index slice so we can map a line position back to a candidate
+	// index for windowing/scroll.
+	listLines, listCandIdx := m.buildMonolithicReviewList()
+
+	// Pane dimensions mirror viewReviewDrillIn's layout: innerW for content
+	// inside the border, paneH for rows minus title + helpbar + border chars.
+	innerW := m.width - borderSize
+	if innerW < 20 {
+		innerW = 20
+	}
+	paneH := max(5, m.height-7)
+	listW := max(24, innerW*45/100)
+	previewW := innerW - listW - 1
+	if previewW < 20 {
+		previewW = 20
+	}
+
+	// Keep cursor visible by adjusting reviewListOffset.
+	cursorLine := -1
+	for i, idx := range listCandIdx {
+		if idx == m.reviewCandidateCursor {
+			cursorLine = i
+			break
+		}
+	}
+	if cursorLine >= 0 {
+		if cursorLine < m.reviewListOffset {
+			m.reviewListOffset = cursorLine
+		} else if cursorLine >= m.reviewListOffset+paneH {
+			m.reviewListOffset = cursorLine - paneH + 1
+		}
+	}
+	if m.reviewListOffset < 0 {
+		m.reviewListOffset = 0
+	}
+	if m.reviewListOffset > len(listLines)-paneH && len(listLines) > paneH {
+		m.reviewListOffset = len(listLines) - paneH
+	}
+	if len(listLines) <= paneH {
+		m.reviewListOffset = 0
+	}
+
+	// Window the list to paneH rows starting from reviewListOffset.
+	listWindow := make([]string, 0, paneH)
+	for i := 0; i < paneH; i++ {
+		row := ""
+		if idx := m.reviewListOffset + i; idx < len(listLines) {
+			row = listLines[idx]
+		}
+		listWindow = append(listWindow, padRowTo(row, listW))
+	}
+
+	// Preview pane: render the cursored candidate's body.
+	previewLines := m.buildMonolithicReviewPreview(previewW, paneH)
+
+	// Borders — simple muted frame, no focus-swapping since navigation stays
+	// on the list pane. ╭──┬──╮ / │  │  │ / ╰──┴──╯.
+	border := mutedStyle.Render
+	top := border("╭") + border(strings.Repeat("─", listW)) +
+		border("┬") +
+		border(strings.Repeat("─", previewW)) + border("╮")
+	bot := border("╰") + border(strings.Repeat("─", listW)) +
+		border("┴") +
+		border(strings.Repeat("─", previewW)) + border("╯")
+
+	lines = append(lines, top)
+	for i := 0; i < paneH; i++ {
+		left := listWindow[i]
+		right := ""
+		if i < len(previewLines) {
+			right = previewLines[i]
+		}
+		right = padRowTo(right, previewW)
+		lines = append(lines, border("│")+left+border("│")+right+border("│"))
+	}
+	lines = append(lines, bot)
+
+	lines = append(lines, pad+mutedStyle.Render("[↑/↓] navigate  [space] toggle  [r] rename  [enter] next  [esc] back"))
+	return strings.Join(lines, "\n")
+}
+
+// buildMonolithicReviewList renders the candidate list pane and returns
+// parallel slices: the rendered lines and the candidate index each line maps
+// to (-1 for header/spacer lines). Used for windowing/scroll.
+func (m *addWizardModel) buildMonolithicReviewList() ([]string, []int) {
+	pad := "  "
+
 	// Group candidates by SourceIdx while preserving order.
 	type group struct {
 		src     monolithicCandidate
 		indices []int
 	}
 	var groups []group
-	var currentIdx = -1
+	currentIdx := -1
 	for i, rc := range m.reviewCandidates {
 		if rc.SourceIdx != currentIdx {
 			if rc.SourceIdx >= 0 && rc.SourceIdx < len(m.discoveryCandidates) {
@@ -160,8 +250,9 @@ func (m *addWizardModel) viewMonolithicReview() string {
 		}
 	}
 
-	for _, g := range groups {
-		// Group header
+	var lines []string
+	var candIdx []int
+	for gi, g := range groups {
 		skipSplit := false
 		skipReason := ""
 		if len(g.indices) == 1 {
@@ -172,13 +263,13 @@ func (m *addWizardModel) viewMonolithicReview() string {
 		}
 		var header string
 		if skipSplit {
-			header = fmt.Sprintf("── %s ─── will import as single rule (%s) ──", g.src.RelPath, skipReason)
+			header = fmt.Sprintf("── %s ── single (%s) ──", g.src.RelPath, skipReason)
 		} else {
-			header = fmt.Sprintf("── %s ── %d candidates ──", g.src.RelPath, len(g.indices))
+			header = fmt.Sprintf("── %s ── %d cands ──", g.src.RelPath, len(g.indices))
 		}
 		lines = append(lines, pad+mutedStyle.Render(header))
+		candIdx = append(candIdx, -1)
 
-		// Rows
 		for _, i := range g.indices {
 			rc := m.reviewCandidates[i]
 			cursor := "  "
@@ -194,23 +285,63 @@ func (m *addWizardModel) viewMonolithicReview() string {
 			if i < len(m.reviewRenames) && m.reviewRenames[i] != "" {
 				slug = m.reviewRenames[i]
 			}
-			desc := rc.Candidate.Description
-			if desc == "" {
-				desc = "(whole file)"
-			}
-			text := fmt.Sprintf("%s%s %s  —  %s", cursor, mark, slug, desc)
+			text := fmt.Sprintf("%s%s %s", cursor, mark, slug)
 			style := lipgloss.NewStyle().Foreground(primaryText)
 			if i == m.reviewCandidateCursor {
 				style = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
 			}
 			row := pad + style.Render(text)
 			lines = append(lines, zone.Mark(fmt.Sprintf("add-mono-review-cand-%d", i), row))
+			candIdx = append(candIdx, i)
 		}
-		lines = append(lines, "")
+		if gi < len(groups)-1 {
+			lines = append(lines, "")
+			candIdx = append(candIdx, -1)
+		}
+	}
+	return lines, candIdx
+}
+
+// buildMonolithicReviewPreview renders the cursored candidate's body with a
+// section header into a []string capped at paneH rows, each truncated to w.
+func (m *addWizardModel) buildMonolithicReviewPreview(w, paneH int) []string {
+	if m.reviewCandidateCursor < 0 || m.reviewCandidateCursor >= len(m.reviewCandidates) {
+		return nil
+	}
+	rc := m.reviewCandidates[m.reviewCandidateCursor]
+	slug := rc.Candidate.Name
+	if m.reviewCandidateCursor < len(m.reviewRenames) && m.reviewRenames[m.reviewCandidateCursor] != "" {
+		slug = m.reviewRenames[m.reviewCandidateCursor]
+	}
+	desc := rc.Candidate.Description
+	if desc == "" {
+		desc = "(whole file)"
 	}
 
-	lines = append(lines, pad+mutedStyle.Render("[↑/↓] navigate  [space] toggle  [r] rename  [enter] next  [esc] back"))
-	return strings.Join(lines, "\n")
+	out := make([]string, 0, paneH)
+	headerStyle := lipgloss.NewStyle().Bold(true).Foreground(primaryText)
+	out = append(out, " "+headerStyle.Render(slug))
+	out = append(out, " "+mutedStyle.Render(desc))
+	out = append(out, " "+mutedStyle.Render(strings.Repeat("─", max(1, w-2))))
+
+	// Render body line-by-line, truncated to width.
+	body := rc.Candidate.Body
+	for _, raw := range strings.Split(body, "\n") {
+		if len(out) >= paneH {
+			break
+		}
+		out = append(out, " "+lipgloss.NewStyle().MaxWidth(w-1).Render(raw))
+	}
+	return out
+}
+
+// padRowTo pads a rendered row with trailing spaces to exactly w visible chars,
+// or truncates via MaxWidth when overlong. Used to keep pane columns aligned.
+func padRowTo(s string, w int) string {
+	if lipgloss.Width(s) >= w {
+		return lipgloss.NewStyle().MaxWidth(w).Render(s)
+	}
+	return s + strings.Repeat(" ", w-lipgloss.Width(s))
 }
 
 // viewMonolithicExecute renders the Execute step result for the monolithic

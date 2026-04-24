@@ -5,10 +5,10 @@
 
   Detected monolithic rule files. Choose per rule:
 
-  > ◉ CLAUDE  —  split into 5 sections (H2)
-    ◯ AGENTS  —  import as single rule
+  > CLAUDE  [◉ Split into 5 sections (H2)] [◯ Import as single rule]
+    AGENTS  [◯ Split into 3 sections (H2)] [◉ Import as single rule]
 
-  [↑/↓] navigate  [space] toggle  [enter] next  [esc] back
+  [↑/↓] navigate  [←/→] set choice  [space] toggle  [enter] next  [esc] back
 
 
 

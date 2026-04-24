@@ -425,6 +425,64 @@ func TestAddWizard_Discovery_ResultsPopulate(t *testing.T) {
 	}
 }
 
+// TestAddWizard_GoBackFromDiscovery_ResetsCounters ensures the invariant
+// len(discoveredItems) == actionableCount + installedCount holds after the
+// user backs out of Discovery. A prior bug left installedCount stale, so the
+// next advanceFromSource() crashed in visibleDiscoveryItems with
+// "slice bounds out of range [:N] with capacity 0".
+func TestAddWizard_GoBackFromDiscovery_ResetsCounters(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+
+	// Walk: Source -> Type -> Discovery
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	// Populate discovery with an installed item so installedCount > 0.
+	m = injectDiscoveryResults(t, m, testDiscoveryItems())
+	if m.installedCount == 0 {
+		t.Fatalf("test precondition: expected installedCount > 0, got 0")
+	}
+
+	m.goBackFromDiscovery()
+
+	if m.discoveredItems != nil {
+		t.Errorf("expected discoveredItems=nil after back, got %d items", len(m.discoveredItems))
+	}
+	if m.installedCount != 0 {
+		t.Errorf("expected installedCount=0 after back, got %d", m.installedCount)
+	}
+	if m.actionableCount != 0 {
+		t.Errorf("expected actionableCount=0 after back, got %d", m.actionableCount)
+	}
+}
+
+// TestAddWizard_AdvanceFromSource_ResetsCounters verifies advanceFromSource is
+// self-consistent even if counters are stale on entry. This is defense in
+// depth: shellIndexForStep -> hasSplittableSelection -> visibleDiscoveryItems
+// is called during the transition, and it indexes discoveredItems by
+// actionableCount. Without this reset, a nil slice + non-zero counter panics.
+func TestAddWizard_AdvanceFromSource_ResetsCounters(t *testing.T) {
+	t.Parallel()
+	m := testOpenAddWizard(t)
+
+	// Simulate stale counters from a prior discovery that weren't cleared.
+	m.installedCount = 110
+	m.actionableCount = 5
+	m.discoveredItems = nil
+
+	// Must not panic.
+	_ = m.advanceFromSource()
+
+	if m.installedCount != 0 {
+		t.Errorf("expected installedCount=0 after advanceFromSource, got %d", m.installedCount)
+	}
+	if m.actionableCount != 0 {
+		t.Errorf("expected actionableCount=0 after advanceFromSource, got %d", m.actionableCount)
+	}
+}
+
 func TestAddWizard_Discovery_ErrorRendersRetry(t *testing.T) {
 	t.Parallel()
 	m := testOpenAddWizard(t)
@@ -1016,14 +1074,18 @@ func TestDiscoverFromLocalPath_NoDuplicates(t *testing.T) {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
 
-	// Count occurrences of each path to detect duplicates.
+	// Dedup must key on (type, name), not path — pattern detection emits the
+	// item's file path (skills/dedup-skill/SKILL.md) while SyllagoDetector
+	// inside the analyzer emits the item's directory path (skills/dedup-skill).
+	// Path-based dedup misses this collision; (type, name) catches it.
 	seen := make(map[string]int)
 	for _, item := range items {
-		seen[item.path]++
+		key := string(item.itemType) + "/" + item.name
+		seen[key]++
 	}
-	for path, count := range seen {
+	for key, count := range seen {
 		if count > 1 {
-			t.Errorf("item path %q appears %d times — dedup failed", path, count)
+			t.Errorf("logical item %q appears %d times — dedup failed", key, count)
 		}
 	}
 }
@@ -1107,6 +1169,122 @@ func TestDiscoverFromLocalPath_ConfirmItemsReturned(t *testing.T) {
 	for _, ci := range confirm {
 		if ci.itemType != catalog.Hooks {
 			t.Errorf("expected Hooks confirm item, got %v", ci.itemType)
+		}
+	}
+}
+
+// Bug B regression: a loose rule file at the scan root (e.g. CLAUDE.md,
+// AGENTS.md) must not receive sourceDir == scan root. The previous bug set
+// sourceDir via filepath.Join(dir, filepath.Dir("CLAUDE.md")) == filepath.Join(dir, ".") == dir,
+// which caused add.copySupportingFiles to walk the entire source tree and
+// slurp arbitrary files into the library.
+func TestDiscoverFromLocalPath_RootLevelRule_NoSourceDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Root-level monolithic rule file (common pattern: ~/.config/pai/CLAUDE.md,
+	// repo-root AGENTS.md). Analyzer's TopLevelDetector surfaces these in
+	// Confirm (always — they require user review).
+	if err := os.WriteFile(
+		filepath.Join(dir, "CLAUDE.md"),
+		[]byte("# Claude Rules\nUse strict TypeScript.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	// Scan across both actionable and confirm — CLAUDE.md may land in either
+	// depending on the detector's confidence threshold. Invariant: sourceDir
+	// must never equal the scan root for a root-level file.
+	checkNoScanRoot := func(t *testing.T, label, sourceDir string) {
+		t.Helper()
+		if sourceDir == dir {
+			t.Errorf("%s sourceDir = %q equals scan root %q — copySupportingFiles would walk the whole tree", label, sourceDir, dir)
+		}
+	}
+	for _, it := range items {
+		checkNoScanRoot(t, "item "+it.name, it.sourceDir)
+	}
+	for _, ci := range confirm {
+		checkNoScanRoot(t, "confirm "+ci.displayName, ci.sourceDir)
+	}
+}
+
+// Bug D regression: analyzer-detected items without frontmatter must not
+// render as blank rows in the discovery list. The previous bug set
+// `name: detected.DisplayName` (empty when no frontmatter) and discarded
+// `detected.Name`. The fix preserves both and shows the relative path.
+func TestDiscoverFromLocalPath_NoFrontmatter_LabelNotBlank(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// AGENTS.md without frontmatter — DisplayName will be empty.
+	if err := os.WriteFile(
+		filepath.Join(dir, "AGENTS.md"),
+		[]byte("# Agents\nAgent rules.\n"),
+		0644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+
+	assertLabelNotBlank := func(t *testing.T, kind string, d addDiscoveryItem) {
+		t.Helper()
+		label := discoveryItemLabel(d)
+		if label == "" {
+			t.Errorf("%s row renders blank: name=%q displayName=%q relativePath=%q", kind, d.name, d.displayName, d.relativePath)
+		}
+	}
+	for _, it := range items {
+		assertLabelNotBlank(t, "actionable "+string(it.itemType), it)
+	}
+	for _, ci := range confirm {
+		di := addDiscoveryItem{name: ci.detected.Name, displayName: ci.displayName, itemType: ci.itemType}
+		assertLabelNotBlank(t, "confirm "+string(ci.itemType), di)
+	}
+}
+
+// Bug D (display) + Bug A (dedup): verify relative path is surfaced for
+// pattern-detected items so the list distinguishes multiple files with
+// identical basenames across a source tree.
+func TestDiscoverFromLocalPath_RelativePathPopulated(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	// Two skills in syllago canonical layout, different directories.
+	for _, name := range []string{"alpha", "beta"} {
+		subdir := filepath.Join(dir, "skills", name)
+		if err := os.MkdirAll(subdir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(
+			filepath.Join(subdir, "SKILL.md"),
+			[]byte("---\nname: "+name+"\n---\nBody.\n"),
+			0644,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+	if len(items) == 0 {
+		t.Fatal("expected skills items")
+	}
+	for _, it := range items {
+		if it.relativePath == "" {
+			t.Errorf("skill %q has empty relativePath; expected skills/%s/SKILL.md", it.name, it.name)
 		}
 	}
 }

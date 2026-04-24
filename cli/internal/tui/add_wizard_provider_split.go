@@ -10,6 +10,7 @@ import (
 	lipgloss "github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter/canonical"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -73,7 +74,7 @@ func addSplitRuleItem(item addDiscoveryItem, contentRoot, provSlug string) addEx
 			},
 		}
 		if werr := rulestore.WriteRuleWithSource(
-			contentRoot,
+			filepath.Join(contentRoot, string(catalog.Rules)),
 			sourceProvider,
 			slug,
 			meta,
@@ -145,7 +146,9 @@ func (m *addWizardModel) enterProviderHeuristic() {
 }
 
 // viewProviderHeuristic renders the Provider-flow Heuristic step: one row per
-// splittable selected rule with a toggleable [Split] / [Whole] choice.
+// splittable selected rule with both Split and Whole choices visible
+// side-by-side. The active choice is marked ◉; the inactive one ◯. Clicking
+// either pill sets that choice explicitly; space/left/right toggle via keyboard.
 func (m *addWizardModel) viewProviderHeuristic() string {
 	pad := "  "
 	var lines []string
@@ -166,14 +169,21 @@ func (m *addWizardModel) viewProviderHeuristic() string {
 	lines = append(lines, pad+mutedStyle.Render("Detected monolithic rule files. Choose per rule:"))
 	lines = append(lines, "")
 
+	// Align the name column so the pill pair lines up across rows.
+	nameColW := 0
+	for _, selIdx := range splitIdx {
+		it := selected[selIdx]
+		n := it.displayName
+		if n == "" {
+			n = it.name
+		}
+		if w := lipgloss.Width(n); w > nameColW {
+			nameColW = w
+		}
+	}
+
 	for rowIdx, selIdx := range splitIdx {
 		it := selected[selIdx]
-		mark := "◯"
-		action := "import as single rule"
-		if it.splitChosen {
-			mark = "◉"
-			action = fmt.Sprintf("split into %d sections (H2)", it.splitSectionCount)
-		}
 		cursor := "  "
 		if rowIdx == m.heuristicCursor {
 			cursor = "> "
@@ -182,18 +192,43 @@ func (m *addWizardModel) viewProviderHeuristic() string {
 		if name == "" {
 			name = it.name
 		}
-		rowText := fmt.Sprintf("%s%s %s  —  %s", cursor, mark, name, action)
-		style := lipgloss.NewStyle().Foreground(primaryText)
+		nameStyle := lipgloss.NewStyle().Foreground(primaryText)
 		if rowIdx == m.heuristicCursor {
-			style = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
+			nameStyle = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
 		}
-		row := pad + style.Render(rowText)
+		namePart := cursor + nameStyle.Render(padRight(name, nameColW))
+
+		splitLabel := fmt.Sprintf("Split into %d sections (H2)", it.splitSectionCount)
+		wholeLabel := "Import as single rule"
+		splitPill := renderSplitPill(splitLabel, it.splitChosen)
+		wholePill := renderSplitPill(wholeLabel, !it.splitChosen)
+
+		splitZoned := zone.Mark(fmt.Sprintf("add-psplit-row-%d-split", rowIdx), splitPill)
+		wholeZoned := zone.Mark(fmt.Sprintf("add-psplit-row-%d-whole", rowIdx), wholePill)
+
+		rowContent := namePart + "  " + splitZoned + " " + wholeZoned
+		// Row-level zone stays so full-row clicks still register (they fall
+		// through to updateMouseProviderHeuristic as a cursor-move).
+		row := pad + rowContent
 		lines = append(lines, zone.Mark(fmt.Sprintf("add-psplit-row-%d", rowIdx), row))
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, pad+mutedStyle.Render("[↑/↓] navigate  [space] toggle  [enter] next  [esc] back"))
+	lines = append(lines, pad+mutedStyle.Render("[↑/↓] navigate  [←/→] set choice  [space] toggle  [enter] next  [esc] back"))
 	return strings.Join(lines, "\n")
+}
+
+// renderSplitPill renders a single bracketed choice pill for the Provider-flow
+// Heuristic step. Active pills are bold accentColor with ◉; inactive pills are
+// muted with ◯. Callers wrap with zone.Mark so the pill is individually clickable.
+func renderSplitPill(label string, active bool) string {
+	mark := "◯"
+	style := mutedStyle
+	if active {
+		mark = "◉"
+		style = lipgloss.NewStyle().Bold(true).Foreground(accentColor)
+	}
+	return style.Render(fmt.Sprintf("[%s %s]", mark, label))
 }
 
 // updateKeyProviderHeuristic handles keyboard input on the Provider-flow
@@ -220,6 +255,16 @@ func (m *addWizardModel) updateKeyProviderHeuristic(msg tea.KeyMsg) (*addWizardM
 		}
 		return m, nil
 
+	case tea.KeyLeft:
+		// Left arrow pins the choice to Split (matches pill-order left-to-right).
+		m.setProviderSplitChoice(m.heuristicCursor, true)
+		return m, nil
+
+	case tea.KeyRight:
+		// Right arrow pins the choice to Whole.
+		m.setProviderSplitChoice(m.heuristicCursor, false)
+		return m, nil
+
 	case tea.KeySpace:
 		m.toggleProviderSplitChoice(m.heuristicCursor)
 		return m, nil
@@ -231,33 +276,39 @@ func (m *addWizardModel) updateKeyProviderHeuristic(msg tea.KeyMsg) (*addWizardM
 	return m, nil
 }
 
-// updateMouseProviderHeuristic routes clicks on per-rule rows. Clicking a row
-// moves the cursor AND toggles its split choice (single-click semantics match
-// checkbox lists elsewhere in the TUI).
+// updateMouseProviderHeuristic routes clicks on per-rule rows. The per-pill
+// zones (split/whole) set the choice explicitly; the surrounding row zone moves
+// the cursor without toggling (the user is aiming at a specific choice, so a
+// full-row click shouldn't ambiguously toggle).
 func (m *addWizardModel) updateMouseProviderHeuristic(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
 	splitIdx := m.splittableSelectionIndices()
 	for rowIdx := range splitIdx {
+		if zone.Get(fmt.Sprintf("add-psplit-row-%d-split", rowIdx)).InBounds(msg) {
+			m.heuristicCursor = rowIdx
+			m.setProviderSplitChoice(rowIdx, true)
+			return m, nil
+		}
+		if zone.Get(fmt.Sprintf("add-psplit-row-%d-whole", rowIdx)).InBounds(msg) {
+			m.heuristicCursor = rowIdx
+			m.setProviderSplitChoice(rowIdx, false)
+			return m, nil
+		}
 		if zone.Get(fmt.Sprintf("add-psplit-row-%d", rowIdx)).InBounds(msg) {
-			if m.heuristicCursor == rowIdx {
-				m.toggleProviderSplitChoice(rowIdx)
-			} else {
-				m.heuristicCursor = rowIdx
-			}
+			m.heuristicCursor = rowIdx
 			return m, nil
 		}
 	}
 	return m, nil
 }
 
-// toggleProviderSplitChoice flips splitChosen for the splittable-selection
-// slot at rowIdx. The flip has to land on the underlying discoveredItems entry,
-// since selectedItems() returns copies.
-func (m *addWizardModel) toggleProviderSplitChoice(rowIdx int) {
+// setProviderSplitChoice sets splitChosen to the explicit value for the
+// splittable-selection slot at rowIdx. The write has to land on the underlying
+// discoveredItems entry since selectedItems() returns copies.
+func (m *addWizardModel) setProviderSplitChoice(rowIdx int, split bool) {
 	splitIdx := m.splittableSelectionIndices()
 	if rowIdx < 0 || rowIdx >= len(splitIdx) {
 		return
 	}
-	// Map selectedItems index → discoveredItems index via the selection order.
 	selIdx := splitIdx[rowIdx]
 	selectedIdxs := m.discoveryList.SelectedIndices()
 	visible := m.visibleDiscoveryItems()
@@ -268,8 +319,33 @@ func (m *addWizardModel) toggleProviderSplitChoice(rowIdx int) {
 	if visibleIdx >= len(visible) {
 		return
 	}
-	// visibleDiscoveryItems returns a filtered view; find the matching entry
-	// in the backing slice by identity (name + path) to avoid mutating a copy.
+	target := visible[visibleIdx]
+	for i := range m.discoveredItems {
+		d := &m.discoveredItems[i]
+		if d.name == target.name && d.path == target.path && d.itemType == target.itemType {
+			d.splitChosen = split
+			return
+		}
+	}
+}
+
+// toggleProviderSplitChoice flips splitChosen for the splittable-selection
+// slot at rowIdx.
+func (m *addWizardModel) toggleProviderSplitChoice(rowIdx int) {
+	splitIdx := m.splittableSelectionIndices()
+	if rowIdx < 0 || rowIdx >= len(splitIdx) {
+		return
+	}
+	selIdx := splitIdx[rowIdx]
+	selectedIdxs := m.discoveryList.SelectedIndices()
+	visible := m.visibleDiscoveryItems()
+	if selIdx >= len(selectedIdxs) {
+		return
+	}
+	visibleIdx := selectedIdxs[selIdx]
+	if visibleIdx >= len(visible) {
+		return
+	}
 	target := visible[visibleIdx]
 	for i := range m.discoveredItems {
 		d := &m.discoveredItems[i]

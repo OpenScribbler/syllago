@@ -74,9 +74,10 @@ func TestAddWizardMouse_ProviderSplitRowClick_MovesCursor(t *testing.T) {
 	}
 }
 
-// TestAddWizardMouse_ProviderSplitRowClick_TogglesWhenFocused verifies that
-// clicking the focused row toggles splitChosen — matching the [space] key.
-func TestAddWizardMouse_ProviderSplitRowClick_TogglesWhenFocused(t *testing.T) {
+// TestAddWizardMouse_ProviderSplitPillClicks_SetExplicitChoice verifies that
+// clicking a per-pill zone sets splitChosen explicitly — pill-level control
+// replaces the old full-row toggle since both choices are visible.
+func TestAddWizardMouse_ProviderSplitPillClicks_SetExplicitChoice(t *testing.T) {
 	m := setupProviderHeuristicModelMulti(t, 1)
 	m.width = 100
 	m.height = 30
@@ -85,19 +86,32 @@ func TestAddWizardMouse_ProviderSplitRowClick_TogglesWhenFocused(t *testing.T) {
 		t.Fatalf("precondition: splitChosen must default to true")
 	}
 
+	// Click the Whole pill — should flip splitChosen to false.
 	scanZones(m.View())
-	z := zone.Get("add-psplit-row-0")
-	if z.IsZero() {
-		t.Fatalf("zone add-psplit-row-0 not registered")
+	zWhole := zone.Get("add-psplit-row-0-whole")
+	if zWhole.IsZero() {
+		t.Fatalf("zone add-psplit-row-0-whole not registered")
 	}
-	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	m, _ = m.Update(mouseClick(zWhole.StartX, zWhole.StartY))
 	if m.discoveredItems[0].splitChosen {
-		t.Errorf("click on focused row must toggle splitChosen off")
+		t.Errorf("click on Whole pill must set splitChosen=false")
 	}
 
+	// Click the Split pill — should flip it back.
 	scanZones(m.View())
-	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	zSplit := zone.Get("add-psplit-row-0-split")
+	if zSplit.IsZero() {
+		t.Fatalf("zone add-psplit-row-0-split not registered")
+	}
+	m, _ = m.Update(mouseClick(zSplit.StartX, zSplit.StartY))
 	if !m.discoveredItems[0].splitChosen {
-		t.Errorf("second click must toggle splitChosen back on")
+		t.Errorf("click on Split pill must set splitChosen=true")
+	}
+
+	// Click Split again (already active) — stays true, no toggle.
+	scanZones(m.View())
+	m, _ = m.Update(mouseClick(zSplit.StartX, zSplit.StartY))
+	if !m.discoveredItems[0].splitChosen {
+		t.Errorf("re-click on active Split pill must keep splitChosen=true (explicit-set, not toggle)")
 	}
 }

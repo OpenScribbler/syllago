@@ -804,6 +804,80 @@ func TestWriteItem_StripsAllAnalyzerFields(t *testing.T) {
 	}
 }
 
+// Bug C regression: copySupportingFiles must not follow symlinks. Without
+// this guard, a symlink-to-directory in the source tree caused the walk to
+// encounter an entry where d.IsDir() reports false (WalkDir doesn't follow
+// symlinks) but os.ReadFile DOES follow — which then errors with
+// "is a directory" and aborts the whole add operation.
+func TestCopySupportingFiles_SkipsSymlinkToDirectory(t *testing.T) {
+	t.Parallel()
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	// Primary file (skipped by copySupportingFiles because rel == primaryFilename).
+	primary := "SKILL.md"
+	if err := os.WriteFile(filepath.Join(srcDir, primary), []byte("body"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// A regular supporting file (should be copied).
+	if err := os.WriteFile(filepath.Join(srcDir, "notes.md"), []byte("notes"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// External directory that the symlink will point to (outside srcDir).
+	externalDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(externalDir, "external.txt"), []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Symlink from srcDir/linked-dir -> externalDir. This mimics the real-world
+	// pattern that broke ~/.config/pai/history/learnings -> /mnt/c/.../learnings.
+	if err := os.Symlink(externalDir, filepath.Join(srcDir, "linked-dir")); err != nil {
+		t.Skipf("platform doesn't support symlinks: %v", err)
+	}
+
+	if err := copySupportingFiles(srcDir, destDir, primary); err != nil {
+		t.Fatalf("copySupportingFiles: %v", err)
+	}
+
+	// Regular supporting file must have been copied.
+	if _, err := os.Stat(filepath.Join(destDir, "notes.md")); err != nil {
+		t.Errorf("notes.md should have been copied: %v", err)
+	}
+	// Symlink target content must NOT have been copied.
+	if _, err := os.Stat(filepath.Join(destDir, "linked-dir")); err == nil {
+		t.Error("symlink should not be materialized in destDir (copy must skip symlinks to avoid importing external content)")
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "linked-dir", "external.txt")); err == nil {
+		t.Error("files under a symlinked directory must not be copied")
+	}
+}
+
+// Bug C related: a symlink to a regular file must also be skipped — otherwise
+// os.ReadFile follows the link and copies content whose origin is outside the
+// item's source directory.
+func TestCopySupportingFiles_SkipsSymlinkToFile(t *testing.T) {
+	t.Parallel()
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(srcDir, "SKILL.md"), []byte("body"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	externalFile := filepath.Join(t.TempDir(), "external.md")
+	if err := os.WriteFile(externalFile, []byte("external"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(externalFile, filepath.Join(srcDir, "linked-file.md")); err != nil {
+		t.Skipf("platform doesn't support symlinks: %v", err)
+	}
+
+	if err := copySupportingFiles(srcDir, destDir, "SKILL.md"); err != nil {
+		t.Fatalf("copySupportingFiles: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "linked-file.md")); err == nil {
+		t.Error("symlink-to-file should not be copied into destDir")
+	}
+}
+
 // helpers
 
 func nowPtr() *time.Time {

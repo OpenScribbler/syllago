@@ -80,8 +80,10 @@ type addConfirmItem struct {
 	tier        analyzer.ConfidenceTier
 	displayName string
 	itemType    catalog.ContentType
-	path        string         // primary file path (relative to source root)
-	sourceDir   string         // absolute directory containing the item
+	path        string         // primary file basename (e.g. "CLAUDE.md", "SKILL.md")
+	sourceDir   string         // absolute directory containing the item (may be "" for loose file-based types to skip copySupportingFiles)
+	baseDir     string         // absolute scan root (always set); used for preview + install when sourceDir is intentionally empty
+	relPath     string         // detected.Path as-scanned (forward-slashed, relative to baseDir); preserves subdir info loose-file types lose when path is collapsed to basename
 	status      add.ItemStatus // original item status (preserves StatusOutdated for conflict detection)
 	underlying  *add.DiscoveryItem
 	catalogItem *catalog.ContentItem // original catalog item when available
@@ -136,12 +138,17 @@ type addDiscoveryItem struct {
 	itemType    catalog.ContentType
 	path        string
 	sourceDir   string
-	status      add.ItemStatus
-	scope       string
-	risks       []catalog.RiskIndicator
-	overwrite   bool
-	underlying  *add.DiscoveryItem
-	catalogItem *catalog.ContentItem // original catalog item when available (has correct Files/Path)
+	// relativePath is the item's file path relative to its discovery source
+	// root (scan dir, provider config dir, registry root). Shown in the
+	// discovery list so users can disambiguate files with identical basenames
+	// (multiple CLAUDE.md across subdirectories, etc.). Empty when unknown.
+	relativePath string
+	status       add.ItemStatus
+	scope        string
+	risks        []catalog.RiskIndicator
+	overwrite    bool
+	underlying   *add.DiscoveryItem
+	catalogItem  *catalog.ContentItem // original catalog item when available (has correct Files/Path)
 
 	// Hook-specific: populated by discoverHooksFromProvider so addSingleItem
 	// can write a proper flat hook.json instead of copying settings.json.
@@ -292,6 +299,7 @@ type addWizardModel struct {
 	reviewAccepted          []bool
 	reviewRenames           []string
 	reviewCandidateCursor   int
+	reviewListOffset        int // scroll offset for the monolithic-Review list pane
 	executeMonolithicResult []addExecResult
 
 	// Context
@@ -692,6 +700,8 @@ func (m *addWizardModel) stepForShellIndex(idx int) addStep {
 func (m *addWizardModel) advanceFromSource() tea.Cmd {
 	m.typeChecks = m.buildTypeCheckList()
 	m.discoveredItems = nil
+	m.actionableCount = 0
+	m.installedCount = 0
 	m.discoveryList = checkboxList{}
 	m.discoveryErr = ""
 	m.risks = nil
@@ -758,6 +768,8 @@ func (m *addWizardModel) buildTypeCheckList() checkboxList {
 func (m *addWizardModel) goBackFromDiscovery() {
 	m.clearTriageState()
 	m.discoveredItems = nil
+	m.actionableCount = 0
+	m.installedCount = 0
 	m.discoveryList = checkboxList{}
 	m.discoveryErr = ""
 	m.discovering = false
@@ -870,7 +882,16 @@ func (m *addWizardModel) loadTriagePreview() {
 		return
 	}
 
-	if item.sourceDir == "" || item.path == "" {
+	// Loose file-based types (Rules/Commands/Prompts/Hooks/MCP at scan root)
+	// have sourceDir="" by design (see analyzerItemSourceDir) but still need a
+	// preview. Fall back to (baseDir, relPath) when available.
+	readDir := item.sourceDir
+	readRel := item.path
+	if readDir == "" && item.baseDir != "" && item.relPath != "" {
+		readDir = item.baseDir
+		readRel = item.relPath
+	}
+	if readDir == "" || readRel == "" {
 		m.confirmPreview = newPreviewModel()
 		return
 	}
@@ -878,7 +899,7 @@ func (m *addWizardModel) loadTriagePreview() {
 	// MCPs: extract just the relevant server JSON section instead of reading
 	// the full settings file (which can be thousands of lines).
 	if item.itemType == catalog.MCP {
-		fullPath := filepath.Join(item.sourceDir, item.path)
+		fullPath := filepath.Join(readDir, readRel)
 		extracted := extractJSONSection(fullPath, item.displayName, item.itemType)
 		m.confirmPreview = newPreviewModel()
 		if extracted != "" {
@@ -890,7 +911,7 @@ func (m *addWizardModel) loadTriagePreview() {
 
 	// ReadFileContent has its own path traversal guard (string-prefix check,
 	// does not follow symlinks), so no SafeResolve needed here.
-	content, readErr := catalog.ReadFileContent(item.sourceDir, item.path, 200)
+	content, readErr := catalog.ReadFileContent(readDir, readRel, 200)
 	if readErr != nil {
 		m.confirmPreview = newPreviewModel()
 		return
@@ -926,12 +947,21 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 		if status == 0 {
 			status = add.StatusNew
 		}
+		// For loose file-based types sourceDir is intentionally empty (see
+		// analyzerItemSourceDir). Use baseDir + relPath to build the absolute
+		// path in that case so the addDiscoveryItem install code has a real
+		// file to read, not a cwd-relative basename.
+		absPath := filepath.Join(item.sourceDir, item.path)
+		if item.sourceDir == "" && item.baseDir != "" && item.relPath != "" {
+			absPath = filepath.Join(item.baseDir, item.relPath)
+		}
 		di := addDiscoveryItem{
 			name:            item.displayName,
 			displayName:     item.displayName,
 			itemType:        item.itemType,
-			path:            filepath.Join(item.sourceDir, item.path),
+			path:            absPath,
 			sourceDir:       item.sourceDir,
+			relativePath:    item.relPath,
 			status:          status,
 			detectionSource: "content-signal",
 			tier:            item.tier,
@@ -942,7 +972,7 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.underlying = &add.DiscoveryItem{
 				Name:      item.displayName,
 				Type:      item.itemType,
-				Path:      filepath.Join(item.sourceDir, item.path),
+				Path:      absPath,
 				SourceDir: item.sourceDir,
 				Status:    status,
 			}
@@ -1439,6 +1469,21 @@ type discoveryColLayout struct {
 	risk   int
 }
 
+// discoveryItemLabel returns the primary text shown in the discovery list.
+// Prefers the relative path (so users can disambiguate files with identical
+// basenames across a tree — a repo may hold multiple CLAUDE.md files, and
+// a provider's config tree may mix global + project-scoped items). Falls
+// back to the display name, then the item name.
+func discoveryItemLabel(d addDiscoveryItem) string {
+	if d.relativePath != "" {
+		return d.relativePath
+	}
+	if d.displayName != "" {
+		return d.displayName
+	}
+	return d.name
+}
+
 // discoveryColumns computes column widths for the discovery list.
 // Name column is sized to the longest item name (capped at 50% of available width).
 func (m *addWizardModel) discoveryColumns() discoveryColLayout {
@@ -1451,22 +1496,14 @@ func (m *addWizardModel) discoveryColumns() discoveryColLayout {
 	// Find longest name in visible items
 	maxName := 4 // minimum for "Name" header
 	for _, d := range m.visibleDiscoveryItems() {
-		name := d.displayName
-		if name == "" {
-			name = d.name
-		}
-		if len(name) > maxName {
-			maxName = len(name)
+		if n := len(discoveryItemLabel(d)); n > maxName {
+			maxName = n
 		}
 	}
 	// Also check selected items (for review reuse)
 	for _, d := range m.selectedItems() {
-		name := d.displayName
-		if name == "" {
-			name = d.name
-		}
-		if len(name) > maxName {
-			maxName = len(name)
+		if n := len(discoveryItemLabel(d)); n > maxName {
+			maxName = n
 		}
 	}
 
@@ -1515,10 +1552,7 @@ func (m *addWizardModel) buildDiscoveryList() checkboxList {
 	cols := m.discoveryColumns()
 	items := make([]checkboxItem, len(visible))
 	for i, d := range visible {
-		name := d.displayName
-		if name == "" {
-			name = d.name
-		}
+		name := discoveryItemLabel(d)
 
 		typeLbl := typeLabel(d.itemType)
 
@@ -1722,6 +1756,8 @@ func discoverFromProvider(
 		}
 	}
 
+	homeDir, _ := os.UserHomeDir()
+
 	var items []addDiscoveryItem
 	for _, d := range discovered {
 		if !typeSet[d.Type] {
@@ -1729,13 +1765,14 @@ func discoverFromProvider(
 		}
 
 		item := addDiscoveryItem{
-			name:       d.Name,
-			itemType:   d.Type,
-			path:       d.Path,
-			sourceDir:  d.SourceDir,
-			status:     d.Status,
-			scope:      d.Scope,
-			underlying: &d,
+			name:         d.Name,
+			itemType:     d.Type,
+			path:         d.Path,
+			sourceDir:    d.SourceDir,
+			relativePath: providerRelPath(d.Path, projectRoot, homeDir),
+			status:       d.Status,
+			scope:        d.Scope,
+			underlying:   &d,
 		}
 
 		// Build a ContentItem for risk scanning and drill-in preview.
@@ -1867,10 +1904,16 @@ func hooksFromSettingsFile(
 			}
 		}
 
+		homeDir, _ := os.UserHomeDir()
+		relPath := providerRelPath(settingsPath, "", homeDir)
+		if relPath != "" {
+			relPath = relPath + " [" + name + "]"
+		}
 		result = append(result, addDiscoveryItem{
 			name:          name,
 			itemType:      catalog.Hooks,
 			path:          settingsPath,
+			relativePath:  relPath,
 			status:        status,
 			scope:         scope,
 			risks:         hookRisks,
@@ -2044,50 +2087,36 @@ func discoverFromRegistry(
 			}
 			regDir = parent
 		}
+		// Now that regDir is known, back-fill relativePath on pattern-detected
+		// items so the list renders consistent paths alongside analyzer items.
+		for i := range items {
+			if items[i].relativePath == "" {
+				items[i].relativePath = relPathOrEmpty(regDir, items[i].path)
+			}
+		}
 		az := analyzer.New(analyzer.DefaultConfig())
 		result, azErr := az.Analyze(regDir)
 		if azErr == nil {
-			patternPaths := make(map[string]bool, len(items))
+			seenKeys := make(map[string]bool, len(items))
 			for _, it := range items {
-				patternPaths[filepath.ToSlash(filepath.Clean(it.path))] = true
+				seenKeys[string(it.itemType)+"/"+it.name] = true
 			}
 			for _, detected := range result.Auto {
 				if !typeSet[detected.Type] {
 					continue
 				}
-				canon := filepath.ToSlash(filepath.Clean(filepath.Join(regDir, detected.Path)))
-				if patternPaths[canon] {
+				key := string(detected.Type) + "/" + detected.Name
+				if seenKeys[key] {
 					continue
 				}
-				patternPaths[canon] = true
-				di := addDiscoveryItem{
-					name:            detected.DisplayName,
-					itemType:        detected.Type,
-					path:            filepath.Join(regDir, detected.Path),
-					sourceDir:       filepath.Join(regDir, filepath.Dir(detected.Path)),
-					status:          add.StatusNew,
-					detectionSource: "content-signal",
-					tier:            analyzer.TierForItem(detected),
-				}
-				items = append(items, di)
+				seenKeys[key] = true
+				items = append(items, analyzerItemToDiscovery(regDir, detected))
 			}
 			for _, detected := range result.Confirm {
 				if !typeSet[detected.Type] {
 					continue
 				}
-				name := detected.DisplayName
-				if name == "" {
-					name = detected.Name
-				}
-				ci := addConfirmItem{
-					detected:    detected,
-					tier:        analyzer.TierForItem(detected),
-					displayName: name,
-					itemType:    detected.Type,
-					path:        filepath.Base(detected.Path),
-					sourceDir:   filepath.Join(regDir, filepath.Dir(detected.Path)),
-				}
-				confirmItems = append(confirmItems, ci)
+				confirmItems = append(confirmItems, analyzerItemToConfirm(regDir, detected))
 			}
 		}
 	}
@@ -2115,7 +2144,7 @@ func discoverFromLocalPath(
 		if err != nil {
 			return nil, nil, err
 		}
-		items = catalogItemsToDiscovery(cat.Items, typeSet, idx)
+		items = catalogItemsToDiscovery(dir, cat.Items, typeSet, idx)
 	}
 
 	// If syllago scan found nothing, try provider-native patterns
@@ -2128,7 +2157,7 @@ func discoverFromLocalPath(
 	if len(items) == 0 && !nativeResult.HasSyllagoStructure {
 		cat, err := catalog.Scan(dir, dir)
 		if err == nil && len(cat.Items) > 0 {
-			items = catalogItemsToDiscovery(cat.Items, typeSet, idx)
+			items = catalogItemsToDiscovery(dir, cat.Items, typeSet, idx)
 		}
 	}
 
@@ -2140,10 +2169,14 @@ func discoverFromLocalPath(
 		return items, nil, nil
 	}
 
-	// Build dedup set from pattern-detected paths
-	patternPaths := make(map[string]bool, len(items))
+	// Dedup analyzer items against pattern items by (type, name). Analyzer
+	// detectors emit Path-shapes that don't match catalog.Scan (SyllagoDetector
+	// returns the item directory, content-signal returns the file), so string
+	// path equality misses duplicates. (type, name) mirrors DeduplicateItems
+	// inside the analyzer itself.
+	seenKeys := make(map[string]bool, len(items))
 	for _, it := range items {
-		patternPaths[filepath.ToSlash(filepath.Clean(it.path))] = true
+		seenKeys[string(it.itemType)+"/"+it.name] = true
 	}
 
 	// Merge Auto items (dedup, type-filtered)
@@ -2151,45 +2184,87 @@ func discoverFromLocalPath(
 		if !typeSet[detected.Type] {
 			continue
 		}
-		canon := filepath.ToSlash(filepath.Clean(filepath.Join(dir, detected.Path)))
-		if patternPaths[canon] {
+		key := string(detected.Type) + "/" + detected.Name
+		if seenKeys[key] {
 			continue // pattern-detected wins
 		}
-		patternPaths[canon] = true
-		di := addDiscoveryItem{
-			name:            detected.DisplayName,
-			itemType:        detected.Type,
-			path:            filepath.Join(dir, detected.Path),
-			sourceDir:       filepath.Join(dir, filepath.Dir(detected.Path)),
-			status:          add.StatusNew,
-			detectionSource: "content-signal",
-			tier:            analyzer.TierForItem(detected),
-		}
-		items = append(items, di)
+		seenKeys[key] = true
+		items = append(items, analyzerItemToDiscovery(dir, detected))
 	}
 
-	// Build Confirm items (type-filtered)
+	// Build Confirm items (type-filtered). Do NOT dedup against actionable
+	// items: hooks/MCP always land in Confirm for triage even when pattern
+	// detectors surfaced them as actionable. The analyzer's own
+	// DeduplicateItems already resolves Auto/Confirm overlap internally.
 	var confirmItems []addConfirmItem
 	for _, detected := range result.Confirm {
 		if !typeSet[detected.Type] {
 			continue
 		}
-		name := detected.DisplayName
-		if name == "" {
-			name = detected.Name
-		}
-		ci := addConfirmItem{
-			detected:    detected,
-			tier:        analyzer.TierForItem(detected),
-			displayName: name,
-			itemType:    detected.Type,
-			path:        filepath.Base(detected.Path),
-			sourceDir:   filepath.Join(dir, filepath.Dir(detected.Path)),
-		}
-		confirmItems = append(confirmItems, ci)
+		confirmItems = append(confirmItems, analyzerItemToConfirm(dir, detected))
 	}
 
 	return items, confirmItems, nil
+}
+
+// analyzerItemToDiscovery converts an analyzer.DetectedItem into an
+// addDiscoveryItem. Preserves detected.Name for list display and uses
+// type-aware sourceDir so copySupportingFiles only walks directory-based
+// items (skills, agents), never the whole scan root for a loose file.
+func analyzerItemToDiscovery(baseDir string, detected *analyzer.DetectedItem) addDiscoveryItem {
+	return addDiscoveryItem{
+		name:            detected.Name,
+		displayName:     detected.DisplayName,
+		itemType:        detected.Type,
+		path:            filepath.Join(baseDir, detected.Path),
+		sourceDir:       analyzerItemSourceDir(baseDir, detected),
+		relativePath:    filepath.ToSlash(detected.Path),
+		status:          add.StatusNew,
+		detectionSource: "content-signal",
+		tier:            analyzer.TierForItem(detected),
+	}
+}
+
+// analyzerItemToConfirm converts an analyzer.DetectedItem into an
+// addConfirmItem with correct sourceDir semantics (see analyzerItemSourceDir).
+func analyzerItemToConfirm(baseDir string, detected *analyzer.DetectedItem) addConfirmItem {
+	name := detected.DisplayName
+	if name == "" {
+		name = detected.Name
+	}
+	return addConfirmItem{
+		detected:    detected,
+		tier:        analyzer.TierForItem(detected),
+		displayName: name,
+		itemType:    detected.Type,
+		path:        filepath.Base(detected.Path),
+		sourceDir:   analyzerItemSourceDir(baseDir, detected),
+		baseDir:     baseDir,
+		relPath:     filepath.ToSlash(detected.Path),
+	}
+}
+
+// analyzerItemSourceDir returns the sourceDir to use when constructing an
+// addDiscoveryItem / addConfirmItem from an analyzer.DetectedItem.
+//
+// Directory-based types (Skills, Agents) whose item directory contains
+// supporting files (resources, templates) need sourceDir = parent directory
+// so copySupportingFiles walks and copies siblings. File-based types
+// (Rules, Commands, Prompts, Hooks, MCP) do not — a loose CLAUDE.md or
+// AGENTS.md has no companion files to copy. Returning "" skips the
+// copySupportingFiles walk entirely, preventing the "filepath.Dir(X) == '.'"
+// bug where root-level files would slurp the entire scan tree.
+func analyzerItemSourceDir(baseDir string, detected *analyzer.DetectedItem) string {
+	switch detected.Type {
+	case catalog.Skills, catalog.Agents:
+		parent := filepath.Dir(detected.Path)
+		if parent == "." || parent == "" {
+			return ""
+		}
+		return filepath.Join(baseDir, parent)
+	default:
+		return ""
+	}
 }
 
 // nativeItemsToDiscovery converts NativeScanResult provider items into addDiscoveryItems.
@@ -2274,14 +2349,15 @@ func nativeItemsToDiscovery(
 				}
 
 				item := addDiscoveryItem{
-					name:        ni.Name,
-					displayName: ni.DisplayName,
-					itemType:    ct,
-					path:        di.Path,
-					sourceDir:   di.SourceDir,
-					status:      status,
-					scope:       pc.ProviderSlug,
-					underlying:  &di,
+					name:         ni.Name,
+					displayName:  ni.DisplayName,
+					itemType:     ct,
+					path:         di.Path,
+					sourceDir:    di.SourceDir,
+					relativePath: relPathOrEmpty(baseDir, di.Path),
+					status:       status,
+					scope:        pc.ProviderSlug,
+					underlying:   &di,
 				}
 
 				// Build catalogItem for drill-in
@@ -2308,7 +2384,11 @@ func nativeItemsToDiscovery(
 }
 
 // catalogItemsToDiscovery converts catalog.ContentItems into addDiscoveryItems.
+// baseDir is the scan root used to compute a display-friendly relative path
+// (shown in the discovery list so items with identical basenames across
+// subdirectories remain distinguishable). Pass "" if no base dir is known.
 func catalogItemsToDiscovery(
+	baseDir string,
 	catItems []catalog.ContentItem,
 	typeSet map[catalog.ContentType]bool,
 	idx add.LibraryIndex,
@@ -2342,20 +2422,53 @@ func catalogItemsToDiscovery(
 		}
 		ciCopy := ci
 		item := addDiscoveryItem{
-			name:        ci.Name,
-			displayName: ci.DisplayName,
-			itemType:    ci.Type,
-			path:        contentPath,
-			sourceDir:   sourceDir,
-			status:      status,
-			risks:       catalog.RiskIndicators(ci),
-			underlying:  &di,
-			catalogItem: &ciCopy,
+			name:         ci.Name,
+			displayName:  ci.DisplayName,
+			itemType:     ci.Type,
+			path:         contentPath,
+			sourceDir:    sourceDir,
+			relativePath: relPathOrEmpty(baseDir, contentPath),
+			status:       status,
+			risks:        catalog.RiskIndicators(ci),
+			underlying:   &di,
+			catalogItem:  &ciCopy,
 		}
 		items = append(items, item)
 	}
 
 	return items
+}
+
+// relPathOrEmpty returns path relative to baseDir using forward slashes.
+// Returns "" when baseDir is empty or the paths have no common root — callers
+// fall back to item.name for display.
+func relPathOrEmpty(baseDir, path string) string {
+	if baseDir == "" || path == "" {
+		return ""
+	}
+	rel, err := filepath.Rel(baseDir, path)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return ""
+	}
+	return filepath.ToSlash(rel)
+}
+
+// providerRelPath picks the most informative relative-path rendering for a
+// provider-discovered item. Returns path relative to projectRoot when that
+// produces a non-escaping rel path; else relative to homeDir (so globally
+// installed provider content shows ".claude/rules/foo.md"). Falls back to
+// the file basename when both fail.
+func providerRelPath(absPath, projectRoot, homeDir string) string {
+	if absPath == "" {
+		return ""
+	}
+	if rel := relPathOrEmpty(projectRoot, absPath); rel != "" {
+		return rel
+	}
+	if rel := relPathOrEmpty(homeDir, absPath); rel != "" {
+		return rel
+	}
+	return filepath.Base(absPath)
 }
 
 func discoverFromGitURL(

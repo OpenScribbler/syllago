@@ -39,8 +39,8 @@ func TestAddSplitRuleItem_WritesSections(t *testing.T) {
 		t.Fatalf("expected section count in result name, got %q", res.name)
 	}
 
-	// claude-code/<slug>/ directories should exist for each section.
-	providerDir := filepath.Join(contentRoot, "claude-code")
+	// rules/claude-code/<slug>/ directories should exist for each section.
+	providerDir := filepath.Join(contentRoot, string(catalog.Rules), "claude-code")
 	entries, err := os.ReadDir(providerDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", providerDir, err)
@@ -115,7 +115,7 @@ func TestAddSplitRuleItem_LocalFallbackSlug(t *testing.T) {
 	if res.status != "added" {
 		t.Fatalf("expected status=added, got %q (err=%v)", res.status, res.err)
 	}
-	if _, err := os.Stat(filepath.Join(contentRoot, "local")); err != nil {
-		t.Fatalf("expected local/ dir when provSlug empty: %v", err)
+	if _, err := os.Stat(filepath.Join(contentRoot, string(catalog.Rules), "local")); err != nil {
+		t.Fatalf("expected rules/local/ dir when provSlug empty: %v", err)
 	}
 }

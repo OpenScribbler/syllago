@@ -73,16 +73,16 @@ func TestAddWizard_ReviewRendersCandidatesPerSource(t *testing.T) {
 	}
 
 	// AGENTS.md should show the skip-split label with the human reason.
-	if !strings.Contains(view, "will import as single rule") {
+	if !strings.Contains(view, "single") {
 		t.Errorf("expected skip-split label for AGENTS.md, got:\n%s", view)
 	}
 	if !strings.Contains(view, "too few H2 headings") {
 		t.Errorf("expected skip reason 'too few H2 headings' in view, got:\n%s", view)
 	}
 
-	// CLAUDE.md should show "3 candidates" in its group header.
-	if !strings.Contains(view, "3 candidates") {
-		t.Errorf("expected CLAUDE.md group to render '3 candidates' header, got:\n%s", view)
+	// CLAUDE.md should indicate 3 candidates in its group header (short form).
+	if !strings.Contains(view, "3 cands") {
+		t.Errorf("expected CLAUDE.md group to render '3 cands' header, got:\n%s", view)
 	}
 
 	// Count candidates produced — 3 for source 1 (split) + 1 for source 2

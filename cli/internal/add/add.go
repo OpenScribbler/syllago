@@ -406,7 +406,10 @@ func contentFilename(ct catalog.ContentType, name, ext string) string {
 
 // copySupportingFiles copies all files from srcDir to destDir, skipping
 // the primary content file (already written and possibly canonicalized)
-// and hidden entries. Directory structure is preserved.
+// and hidden entries. Directory structure is preserved. Symlinks are
+// skipped — they can point anywhere on disk (including external drives
+// or unrelated system paths), so following them would import arbitrary
+// content that isn't conceptually part of the item.
 func copySupportingFiles(srcDir, destDir, primaryFilename string) error {
 	return filepath.WalkDir(srcDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -425,6 +428,12 @@ func copySupportingFiles(srcDir, destDir, primaryFilename string) error {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		// Skip symlinks — WalkDir does not follow them, and os.ReadFile would
+		// follow the link and either import arbitrary external content or
+		// error with "is a directory" when the target is a directory.
+		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
 		// Skip the primary content file (already handled with canonicalization).
