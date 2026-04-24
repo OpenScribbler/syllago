@@ -327,6 +327,25 @@ func (m *installWizardModel) viewMethod() string {
 		lines = append(lines, zone.Mark("inst-method-1", row))
 	}
 
+	// Option 2: Append to <monolithic-filename> — only shown for rules on a
+	// provider with a monolithic filename (D5).
+	if appendName := m.appendFilename(); appendName != "" {
+		prefix := "  "
+		if m.methodCursor == 2 {
+			prefix = "> "
+		}
+		label := "Append to " + appendName
+		var row string
+		if m.methodCursor == 2 {
+			row = pad + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(prefix+label) +
+				"   " + lipgloss.NewStyle().Foreground(mutedColor).Render("(add to the provider's monolithic rule file)")
+		} else {
+			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(prefix+label) +
+				"   " + lipgloss.NewStyle().Foreground(mutedColor).Render("(add to the provider's monolithic rule file)")
+		}
+		lines = append(lines, zone.Mark("inst-method-2", row))
+	}
+
 	// Buttons: Back and Next
 	lines = append(lines, "")
 	lines = append(lines, renderModalButtons(1, usableW, pad, nil,

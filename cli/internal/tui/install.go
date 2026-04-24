@@ -382,6 +382,36 @@ func (m *installWizardModel) symlinkDisabled() bool {
 	return false
 }
 
+// appendFilename returns the monolithic filename to append into for the
+// current provider+item, or "" when the append option should not be offered
+// (D5 + D10). Append only applies to rules whose target provider has a
+// monolithic filename (e.g. claude-code → CLAUDE.md). Returns the first
+// filename when multiple are listed (first wins matches the CLI's
+// --method=append behavior).
+func (m *installWizardModel) appendFilename() string {
+	if m.item.Type != catalog.Rules {
+		return ""
+	}
+	if m.providerCursor < 0 || m.providerCursor >= len(m.providers) {
+		return ""
+	}
+	names := provider.MonolithicFilenames(m.providers[m.providerCursor].Slug)
+	if len(names) == 0 {
+		return ""
+	}
+	return names[0]
+}
+
+// methodOptionCount returns the number of visible options on the method step.
+// Always 2 (Symlink + Copy) for the baseline, plus 1 for Append when the
+// current provider+item qualifies for monolithic install.
+func (m *installWizardModel) methodOptionCount() int {
+	if m.appendFilename() != "" {
+		return 3
+	}
+	return 2
+}
+
 // defaultMethodCursor returns the initial cursor position for the method step.
 // Returns 1 (Copy) when symlinks are disabled, 0 (Symlink) otherwise.
 func (m *installWizardModel) defaultMethodCursor() int {
@@ -487,10 +517,15 @@ func (m *installWizardModel) installResult() installResultMsg {
 	}
 
 	var method installer.InstallMethod
-	if m.methodCursor == 0 {
+	switch m.methodCursor {
+	case 0:
 		method = installer.MethodSymlink
-	} else {
+	case 1:
 		method = installer.MethodCopy
+	case 2:
+		method = installer.MethodAppend
+	default:
+		method = installer.MethodSymlink
 	}
 
 	return installResultMsg{
