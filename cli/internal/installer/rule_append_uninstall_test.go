@@ -97,5 +97,31 @@ func TestUninstallRuleAppend_MissingTargetFileSucceeds(t *testing.T) {
 	}
 }
 
-// Placeholder so linter doesn't strip strings import used in later tests.
-var _ = strings.Contains
+func TestUninstallRuleAppend_UnreadableTargetPreservesRecord(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root can read 0000-mode files; skip")
+	}
+	projectRoot, libID, target, library, _ := seedRuleAndInstallForUninstall(t, []byte("P\n"))
+
+	if err := os.Chmod(target, 0000); err != nil {
+		t.Fatalf("chmod 0000: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(target, 0644) })
+
+	err := UninstallRuleAppend(projectRoot, libID, target, library)
+	if err == nil {
+		t.Fatal("UninstallRuleAppend: expected error for unreadable target, got nil")
+	}
+	if !strings.Contains(err.Error(), "reading") {
+		t.Errorf("error %q should contain 'reading'", err.Error())
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if inst.FindRuleAppend(libID, target) == -1 {
+		t.Errorf("record was removed despite unreadable target")
+	}
+}
