@@ -89,6 +89,59 @@ func InstallRuleAppend(projectRoot, homeDir, providerSlug, targetFile, source st
 	return SaveInstalled(projectRoot, inst)
 }
 
+// ReplaceRuleAppend splices the recorded version's block in-place per D20's
+// byte contract. The caller must have already verified D16 State == Clean;
+// this function re-runs the byte search at execute time (no offset caching)
+// so intervening edits by another tool are detected as a missing-match error
+// rather than silently clobbered.
+//
+// Implementation notes:
+//   - The new body must already be in the library's history (caller appends
+//     via rulestore.AppendVersion if it's novel).
+//   - On exactly-one-match success, the record's VersionHash is updated to
+//     hash(newBody) and installed.json is saved atomically.
+//   - Zero or multiple matches error out with a descriptive message; the
+//     caller surfaces this as a D17 Modified state to the user.
+func ReplaceRuleAppend(projectRoot, libraryID, targetFile string, newBody []byte, library map[string]*rulestore.Loaded) error {
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		return err
+	}
+	idx := inst.FindRuleAppend(libraryID, targetFile)
+	if idx < 0 {
+		return fmt.Errorf("no rule-append record for %s at %s", libraryID, targetFile)
+	}
+	raw, err := os.ReadFile(targetFile)
+	if err != nil {
+		return err
+	}
+	normalized := canonical.Normalize(raw)
+	rule := library[libraryID]
+	if rule == nil {
+		return fmt.Errorf("no library rule for %s", libraryID)
+	}
+	recorded := rule.History[inst.RuleAppends[idx].VersionHash]
+	if recorded == nil {
+		return fmt.Errorf("replace: no history entry for recorded version %s", inst.RuleAppends[idx].VersionHash)
+	}
+	oldPattern := append([]byte{'\n'}, canonical.Normalize(recorded)...)
+	if bytes.Count(normalized, oldPattern) != 1 {
+		return fmt.Errorf("replace: expected exactly one match for recorded version in %s", targetFile)
+	}
+	newCanon := canonical.Normalize(newBody)
+	newPattern := append([]byte{'\n'}, newCanon...)
+	cut := bytes.Index(normalized, oldPattern)
+	out := append([]byte{}, normalized[:cut]...)
+	out = append(out, newPattern...)
+	out = append(out, normalized[cut+len(oldPattern):]...)
+	if err := os.WriteFile(targetFile, out, 0644); err != nil {
+		return err
+	}
+	invalidateCache(targetFile)
+	inst.RuleAppends[idx].VersionHash = rulestore.HashBody(newCanon)
+	return SaveInstalled(projectRoot, inst)
+}
+
 // UninstallRuleAppend searches targetFile for any historical version's bytes
 // (canonical "\n<body>" pattern per D20) and removes the matched range if
 // found exactly once. Zero or multiple matches return an error that callers
