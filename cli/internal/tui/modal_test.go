@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 func TestEditModal_OpenClose(t *testing.T) {
@@ -536,6 +537,102 @@ func TestApp_EditDescriptionViaAllNavigationMethods(t *testing.T) {
 	a = m.(App)
 	if !strings.Contains(a.modal.description, "W") {
 		t.Errorf("Down then type: expected 'W' in description %q", a.modal.description)
+	}
+}
+
+// --- Mouse tests (sequential — bubblezone singleton) ---
+
+func TestEditModal_MouseClickCancel(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "/path")
+	m.SetWidth(60)
+
+	scanZones(m.View())
+	z := zone.Get("modal-cancel")
+	if z.IsZero() {
+		t.Skip("zone modal-cancel not registered")
+	}
+
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if m.active {
+		t.Error("modal should be inactive after Cancel click")
+	}
+	if cmd == nil {
+		t.Fatal("expected cmd from Cancel click")
+	}
+	if _, ok := cmd().(editCancelledMsg); !ok {
+		t.Errorf("expected editCancelledMsg, got %T", cmd())
+	}
+}
+
+func TestEditModal_MouseClickSave(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "/path")
+	m.SetWidth(60)
+
+	scanZones(m.View())
+	z := zone.Get("modal-save")
+	if z.IsZero() {
+		t.Skip("zone modal-save not registered")
+	}
+
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if m.active {
+		t.Error("modal should be inactive after Save click")
+	}
+	if cmd == nil {
+		t.Fatal("expected cmd from Save click")
+	}
+	if _, ok := cmd().(editSavedMsg); !ok {
+		t.Errorf("expected editSavedMsg, got %T", cmd())
+	}
+}
+
+func TestEditModal_MouseClickNameFocusesName(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "/path")
+	m.SetWidth(60)
+	m.focusIdx = 1 // start on description
+
+	scanZones(m.View())
+	z := zone.Get("modal-name")
+	if z.IsZero() {
+		t.Skip("zone modal-name not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.focusIdx != 0 {
+		t.Errorf("click on name should set focusIdx=0, got %d", m.focusIdx)
+	}
+}
+
+func TestEditModal_MouseClickDescFocusesDesc(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "/path")
+	m.SetWidth(60)
+	m.focusIdx = 0 // start on name
+
+	scanZones(m.View())
+	z := zone.Get("modal-desc")
+	if z.IsZero() {
+		t.Skip("zone modal-desc not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.focusIdx != 1 {
+		t.Errorf("click on desc should set focusIdx=1, got %d", m.focusIdx)
+	}
+}
+
+func TestEditModal_MouseNonLeftClickIgnored(t *testing.T) {
+	m := newEditModal()
+	m.Open("Test", "name", "desc", "/path")
+	m.SetWidth(60)
+	msg := tea.MouseMsg{X: 1, Y: 1, Action: tea.MouseActionPress, Button: tea.MouseButtonRight}
+	updated, cmd := m.Update(msg)
+	if cmd != nil {
+		t.Error("right-click should not emit cmd")
+	}
+	if !updated.active {
+		t.Error("right-click should not close modal")
 	}
 }
 

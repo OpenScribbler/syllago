@@ -1,11 +1,13 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -455,5 +457,279 @@ func TestRemoveModal_WarningRedText(t *testing.T) {
 	// the warning is present in the non-stripped view with surrounding escapes.
 	if !strings.Contains(view, "This action cannot be undone.") {
 		t.Error("warning text should be in rendered view")
+	}
+}
+
+func TestRemoveModal_Step2_RenderProviders(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepProviders
+	m.width = 80
+	m.height = 30
+
+	view := ansi.Strip(m.View())
+	if !strings.Contains(view, "Select providers to uninstall from") {
+		t.Error("should show providers prompt")
+	}
+	if !strings.Contains(view, "Claude Code") {
+		t.Error("should show first provider name")
+	}
+	if !strings.Contains(view, "Cursor") {
+		t.Error("should show second provider name")
+	}
+	if !strings.Contains(view, "[ ]") {
+		t.Error("should show unchecked checkbox")
+	}
+	if !strings.Contains(view, "Back") || !strings.Contains(view, "Next") {
+		t.Error("should show Back and Next buttons")
+	}
+}
+
+func TestRemoveModal_Step2_RenderProviders_WithChecked(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepProviders
+	m.providerChecks[0] = true
+	m.focusIdx = 1
+	m.width = 80
+	m.height = 30
+
+	view := ansi.Strip(m.View())
+	if !strings.Contains(view, "[x]") {
+		t.Error("should show a checked checkbox when providerChecks[0]=true")
+	}
+}
+
+// --- Mouse tests (sequential — bubblezone singleton) ---
+
+func TestRemoveModal_MouseCancel_NotInstalled(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), nil)
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-cancel")
+	if z.IsZero() {
+		t.Skip("zone rm-cancel not registered")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected cmd from cancel click")
+	}
+	if res, ok := cmd().(removeResultMsg); !ok || res.confirmed {
+		t.Errorf("expected removeResultMsg{confirmed=false}, got %T %+v", cmd(), res)
+	}
+	_ = m
+}
+
+func TestRemoveModal_MouseRemove_NotInstalled(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), nil)
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-remove")
+	if z.IsZero() {
+		t.Skip("zone rm-remove not registered")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected cmd from remove click")
+	}
+	if res, ok := cmd().(removeResultMsg); !ok || !res.confirmed {
+		t.Errorf("expected removeResultMsg{confirmed=true}, got %T %+v", cmd(), res)
+	}
+	_ = m
+}
+
+func TestRemoveModal_MouseYes_Installed_AdvancesToProviders(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-yes")
+	if z.IsZero() {
+		t.Skip("zone rm-yes not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepProviders {
+		t.Errorf("expected step removeStepProviders, got %d", m.step)
+	}
+}
+
+func TestRemoveModal_MouseRemoveOnly_Installed_SkipsProviders(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-remove-only")
+	if z.IsZero() {
+		t.Skip("zone rm-remove-only not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepReview {
+		t.Errorf("expected step removeStepReview, got %d", m.step)
+	}
+	if !m.skippedProviders {
+		t.Error("skippedProviders should be true after remove-only")
+	}
+}
+
+func TestRemoveModal_MouseProvidersBack(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepProviders
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-back")
+	if z.IsZero() {
+		t.Skip("zone rm-back not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepConfirm {
+		t.Errorf("expected step removeStepConfirm after Back, got %d", m.step)
+	}
+}
+
+func TestRemoveModal_MouseProvidersDone(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepProviders
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-done")
+	if z.IsZero() {
+		t.Skip("zone rm-done not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepReview {
+		t.Errorf("expected step removeStepReview after Done, got %d", m.step)
+	}
+}
+
+func TestRemoveModal_MouseProviderCheckboxToggles(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepProviders
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get(fmt.Sprintf("rm-prov-%d", 0))
+	if z.IsZero() {
+		t.Skip("zone rm-prov-0 not registered")
+	}
+	was := m.providerChecks[0]
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.providerChecks[0] == was {
+		t.Errorf("expected toggle, still %v", was)
+	}
+}
+
+func TestRemoveModal_MouseReviewCancel(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepReview
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-cancel")
+	if z.IsZero() {
+		t.Skip("zone rm-cancel not registered")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected cmd from review cancel")
+	}
+	if res, ok := cmd().(removeResultMsg); !ok || res.confirmed {
+		t.Errorf("expected removeResultMsg{confirmed=false}, got %T %+v", cmd(), res)
+	}
+	_ = m
+}
+
+func TestRemoveModal_MouseReviewBackFromProviders(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepReview
+	m.skippedProviders = false
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-back")
+	if z.IsZero() {
+		t.Skip("zone rm-back not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepProviders {
+		t.Errorf("expected step removeStepProviders (provs not skipped), got %d", m.step)
+	}
+}
+
+func TestRemoveModal_MouseReviewBackFromConfirm_WhenSkipped(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepReview
+	m.skippedProviders = true
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-back")
+	if z.IsZero() {
+		t.Skip("zone rm-back not registered")
+	}
+	m, _ = m.Update(mouseClick(z.StartX, z.StartY))
+	if m.step != removeStepConfirm {
+		t.Errorf("expected step removeStepConfirm (provs skipped), got %d", m.step)
+	}
+}
+
+func TestRemoveModal_MouseReviewRemove(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.step = removeStepReview
+	m.width = 80
+	m.height = 30
+
+	scanZones(m.View())
+	z := zone.Get("rm-remove")
+	if z.IsZero() {
+		t.Skip("zone rm-remove not registered")
+	}
+	m, cmd := m.Update(mouseClick(z.StartX, z.StartY))
+	if cmd == nil {
+		t.Fatal("expected cmd from review remove click")
+	}
+	if res, ok := cmd().(removeResultMsg); !ok || !res.confirmed {
+		t.Errorf("expected removeResultMsg{confirmed=true}, got %T %+v", cmd(), res)
+	}
+	_ = m
+}
+
+func TestRemoveModal_MouseNonLeftIgnored(t *testing.T) {
+	m := newRemoveModal()
+	m.Open(testItem(), testInstalledProviders())
+	m.width = 80
+	m.height = 30
+
+	msg := tea.MouseMsg{X: 10, Y: 10, Action: tea.MouseActionPress, Button: tea.MouseButtonRight}
+	updated, cmd := m.Update(msg)
+	if cmd != nil {
+		t.Error("right-click should not emit cmd")
+	}
+	if !updated.active {
+		t.Error("right-click should not close modal")
 	}
 }
