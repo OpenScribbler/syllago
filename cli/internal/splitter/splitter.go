@@ -110,9 +110,20 @@ func splitByHeadingPrefix(lines [][]byte, prefix []byte) []SplitCandidate {
 	}
 	sections[len(sections)-1].bodyEnd = len(lines)
 
+	// Preamble: lines before the first heading are prepended to the first
+	// candidate body (after the promoted H1) per D4.
+	var preamble [][]byte
+	if sections[0].headingLine > 0 {
+		preamble = lines[0:sections[0].headingLine]
+	}
+
 	out := make([]SplitCandidate, 0, len(sections))
-	for _, s := range sections {
-		body := rebuildBody(lines[s.bodyStart:s.bodyEnd], s.headingText)
+	for i, s := range sections {
+		var pre [][]byte
+		if i == 0 {
+			pre = preamble
+		}
+		body := rebuildBodyWithPreamble(lines[s.bodyStart:s.bodyEnd], s.headingText, pre)
 		out = append(out, SplitCandidate{
 			Name:          slugify(s.headingText),
 			Description:   s.headingText,
@@ -156,9 +167,12 @@ func slugify(heading string) string {
 	return h
 }
 
-// rebuildBody promotes the section heading from ## to # and returns the body
-// as a single string (D4 header promotion).
-func rebuildBody(sectionLines [][]byte, headingText string) string {
+// rebuildBodyWithPreamble promotes the section heading from ## to # and
+// returns the body as a single string. If preamble is non-nil, the preamble
+// lines are written immediately after the promoted H1 and before the original
+// body lines (D4 preamble handling). preamble SHOULD only be passed for the
+// first section.
+func rebuildBodyWithPreamble(sectionLines [][]byte, headingText string, preamble [][]byte) string {
 	if len(sectionLines) == 0 {
 		return ""
 	}
@@ -166,7 +180,12 @@ func rebuildBody(sectionLines [][]byte, headingText string) string {
 	sb.WriteString("# ")
 	sb.WriteString(strings.TrimSpace(headingText))
 	sb.WriteByte('\n')
-	// Append body lines after the heading.
+	// Write preamble lines (if any) immediately after the promoted heading.
+	for _, ln := range preamble {
+		sb.Write(ln)
+		sb.WriteByte('\n')
+	}
+	// Append body lines after the heading (excluding the heading line itself).
 	for _, ln := range sectionLines[1:] {
 		sb.Write(ln)
 		sb.WriteByte('\n')
