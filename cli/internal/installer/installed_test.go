@@ -111,6 +111,41 @@ func TestFindMCP(t *testing.T) {
 	}
 }
 
+func TestInstalled_FindAndRemoveRuleAppend(t *testing.T) {
+	t.Parallel()
+	inst := &Installed{
+		RuleAppends: []InstalledRuleAppend{
+			{LibraryID: "id-a", TargetFile: "/p/CLAUDE.md"},
+			{LibraryID: "id-b", TargetFile: "/p/CLAUDE.md"},
+			{LibraryID: "id-a", TargetFile: "/p/AGENTS.md"},
+		},
+	}
+
+	if idx := inst.FindRuleAppend("id-a", "/p/CLAUDE.md"); idx != 0 {
+		t.Errorf("expected 0, got %d", idx)
+	}
+	if idx := inst.FindRuleAppend("id-b", "/p/CLAUDE.md"); idx != 1 {
+		t.Errorf("expected 1, got %d", idx)
+	}
+	if idx := inst.FindRuleAppend("id-a", "/p/AGENTS.md"); idx != 2 {
+		t.Errorf("expected 2, got %d", idx)
+	}
+	if idx := inst.FindRuleAppend("missing", "/p/CLAUDE.md"); idx != -1 {
+		t.Errorf("expected -1, got %d", idx)
+	}
+
+	inst.RemoveRuleAppend(1)
+	if len(inst.RuleAppends) != 2 {
+		t.Fatalf("expected 2 after remove, got %d", len(inst.RuleAppends))
+	}
+	if inst.RuleAppends[0].LibraryID != "id-a" || inst.RuleAppends[0].TargetFile != "/p/CLAUDE.md" {
+		t.Errorf("spliced entry 0 wrong: %+v", inst.RuleAppends[0])
+	}
+	if inst.RuleAppends[1].LibraryID != "id-a" || inst.RuleAppends[1].TargetFile != "/p/AGENTS.md" {
+		t.Errorf("spliced entry 1 wrong: %+v", inst.RuleAppends[1])
+	}
+}
+
 func TestInstalled_RuleAppendsJSONRoundtrip(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
