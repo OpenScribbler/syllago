@@ -32,6 +32,7 @@ const (
 	addStepSource addStep = iota
 	addStepType
 	addStepDiscovery
+	addStepHeuristic
 	addStepReview
 	addStepExecute
 )
@@ -46,6 +47,11 @@ const (
 	addSourceRegistry
 	addSourceLocal
 	addSourceGit
+	// addSourceMonolithic discovers monolithic rule files (CLAUDE.md,
+	// AGENTS.md, GEMINI.md, .cursorrules, .clinerules, .windsurfrules)
+	// under the project root + home directory and lets the user multi-select
+	// which files to split/import as library rules (D2, D18).
+	addSourceMonolithic
 )
 
 // --- Review zones ---
@@ -247,6 +253,28 @@ type addWizardModel struct {
 	confirmPreview  previewModel
 	confirmFocus    triageFocusZone
 
+	// Monolithic rule discovery path (D2, D18). Populated when the user
+	// chooses addSourceMonolithic on the Source step. discoveryCandidates is
+	// the full list surfaced on the Discovery step (one row per discovered
+	// file); selectedCandidates holds the indices the user multi-selected
+	// with space. chosenHeuristic + markerLiteral are set on the Heuristic
+	// step; reviewCandidates is produced by splitting each selected source
+	// file and is rendered on the Review step; reviewAccepted tracks which
+	// review rows the user keeps (default include-all) and reviewRenames is
+	// a per-candidate slug override.
+	discoveryCandidates     []monolithicCandidate
+	selectedCandidates      []int
+	discoveryCandidateCurs  int
+	chosenHeuristic         int // splitter.Heuristic value; kept untyped here to avoid an import-cycle footprint
+	heuristicCursor         int
+	markerLiteral           string
+	markerInput             bool
+	reviewCandidates        []reviewCandidate
+	reviewAccepted          []bool
+	reviewRenames           []string
+	reviewCandidateCursor   int
+	executeMonolithicResult []addExecResult
+
 	// Context
 	projectRoot string
 	contentRoot string
@@ -330,7 +358,25 @@ func (m *addWizardModel) validateStep() {
 		if len(m.selectedItems()) == 0 {
 			panic("wizard invariant: addStepReview entered without selected items")
 		}
+	case addStepHeuristic:
+		if len(m.selectedCandidates) == 0 {
+			panic("wizard invariant: addStepHeuristic entered with no selected candidates")
+		}
 	case addStepExecute:
+		// Monolithic path: require at least one accepted review candidate.
+		if m.source == addSourceMonolithic {
+			any := false
+			for _, acc := range m.reviewAccepted {
+				if acc {
+					any = true
+					break
+				}
+			}
+			if !any {
+				panic("wizard invariant: addStepExecute entered with no accepted review candidates")
+			}
+			return
+		}
 		if len(m.selectedItems()) == 0 {
 			panic("wizard invariant: addStepExecute entered without selected items")
 		}
@@ -424,6 +470,9 @@ func (m *addWizardModel) selectedItems() []addDiscoveryItem {
 
 // buildShellLabels returns the correct step label slice for the current permutation.
 func (m *addWizardModel) buildShellLabels() []string {
+	if m.source == addSourceMonolithic {
+		return []string{"Source", "Discovery", "Heuristic", "Review", "Execute"}
+	}
 	if m.preFilterType != "" {
 		return []string{"Source", "Discovery", "Review", "Execute"}
 	}
@@ -444,6 +493,23 @@ func (m *addWizardModel) clearTriageState() {
 
 // shellIndexForStep maps an addStep to the wizard shell breadcrumb index.
 func (m *addWizardModel) shellIndexForStep(s addStep) int {
+	// Monolithic path: Source(0) Discovery(1) Heuristic(2) Review(3) Execute(4)
+	if m.source == addSourceMonolithic {
+		switch s {
+		case addStepSource:
+			return 0
+		case addStepDiscovery:
+			return 1
+		case addStepHeuristic:
+			return 2
+		case addStepReview:
+			return 3
+		case addStepExecute:
+			return 4
+		}
+		return 0
+	}
+
 	hasType := m.preFilterType == ""
 
 	switch s {
