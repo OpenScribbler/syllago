@@ -57,13 +57,23 @@ const (
 // --- Messages ---
 
 // installResultMsg is emitted when the user confirms the install.
+//
+// decisionAction is the D17 Case routing outcome passed down to the executor:
+//   - "proceed"        — Fresh state, no record existed (no decision required)
+//   - "replace"        — Clean state, user chose Replace in installUpdateModal
+//   - "drop-record"    — Modified state, user chose Drop in installModifiedModal
+//   - "append-fresh"   — Modified state, user chose Append-fresh
+//
+// Skip and Keep decisions cancel the wizard and do NOT emit installResultMsg
+// — they never reach the executor.
 type installResultMsg struct {
-	item        catalog.ContentItem
-	provider    provider.Provider
-	location    string // "global", "project", or custom path
-	method      installer.InstallMethod
-	isJSONMerge bool
-	projectRoot string
+	item           catalog.ContentItem
+	provider       provider.Provider
+	location       string // "global", "project", or custom path
+	method         installer.InstallMethod
+	isJSONMerge    bool
+	projectRoot    string
+	decisionAction string // D17 routing outcome; see doc above
 }
 
 // installDoneMsg is sent when the async install operation completes.
@@ -142,6 +152,14 @@ type installWizardModel struct {
 	conflicts      []installer.Conflict
 	conflictCursor int // 0=SharedOnly, 1=OwnDirsOnly, 2=All
 
+	// D17 re-install decision modals. At most one is active at a time; the
+	// active modal consumes Update traffic and, on decision, either emits
+	// installResultMsg (replace / drop-record / append-fresh) or cancels
+	// the wizard (skip / keep). Neither modal mutates the filesystem —
+	// that is the executor's job.
+	updateModal   installUpdateModal
+	modifiedModal installModifiedModal
+
 	// Context
 	projectRoot string
 }
@@ -189,6 +207,8 @@ func openInstallWizard(item catalog.ContentItem, providers []provider.Provider, 
 		isJSONMerge:       isJSONMerge,
 		projectRoot:       projectRoot,
 		buttonCursor:      -1, // no button focused initially
+		updateModal:       newInstallUpdateModal(),
+		modifiedModal:     newInstallModifiedModal(),
 	}
 
 	// Single-provider auto-skip: jump past the provider step when there's only
@@ -474,12 +494,13 @@ func (m *installWizardModel) installResult() installResultMsg {
 	}
 
 	return installResultMsg{
-		item:        m.item,
-		provider:    prov,
-		location:    location,
-		method:      method,
-		isJSONMerge: m.isJSONMerge,
-		projectRoot: m.projectRoot,
+		item:           m.item,
+		provider:       prov,
+		location:       location,
+		method:         method,
+		isJSONMerge:    m.isJSONMerge,
+		projectRoot:    m.projectRoot,
+		decisionAction: "proceed", // Fresh path default; modals override this
 	}
 }
 
