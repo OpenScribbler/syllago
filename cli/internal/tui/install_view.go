@@ -58,6 +58,14 @@ func (m *installWizardModel) View() string {
 	if outputLines < m.height {
 		output += strings.Repeat("\n", m.height-outputLines)
 	}
+
+	// D17 modal overlay. At most one modal is active (enforced by
+	// Update()); centered on the wizard content area.
+	if m.updateModal.IsActive() {
+		output = overlayModal(output, m.updateModal.View(), m.width, m.height)
+	} else if m.modifiedModal.IsActive() {
+		output = overlayModal(output, m.modifiedModal.View(), m.width, m.height)
+	}
 	return output
 }
 

@@ -11,8 +11,36 @@ import (
 )
 
 // Update handles messages for the install wizard.
+//
+// D17 modal routing: when updateModal or modifiedModal is active it consumes
+// all tea.KeyMsg / tea.MouseMsg until the user makes a decision. The
+// resulting installUpdateDecisionMsg / installModifiedDecisionMsg is handled
+// at this top-level so the wizard can emit the final installResultMsg with
+// a decisionAction stamp.
 func (m *installWizardModel) Update(msg tea.Msg) (*installWizardModel, tea.Cmd) {
 	m.validateStep()
+
+	// Route decision messages (produced asynchronously by the modals) to
+	// their handlers. These must be checked BEFORE the switch on input msg
+	// types, since decisions are custom message types.
+	switch msg := msg.(type) {
+	case installUpdateDecisionMsg:
+		return m.handleUpdateModalDecision(msg.action)
+	case installModifiedDecisionMsg:
+		return m.handleModifiedModalDecision(msg.action)
+	}
+
+	// When a modal is active, it owns input.
+	if m.updateModal.IsActive() {
+		var cmd tea.Cmd
+		m.updateModal, cmd = m.updateModal.Update(msg)
+		return m, cmd
+	}
+	if m.modifiedModal.IsActive() {
+		var cmd tea.Cmd
+		m.modifiedModal, cmd = m.modifiedModal.Update(msg)
+		return m, cmd
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -562,9 +590,15 @@ func (m *installWizardModel) updateKeyReviewButtons(msg tea.KeyMsg) (*installWiz
 			return m.reviewGoBack()
 		case 2: // Install
 			if !m.confirmed {
+				// D17 routing: scan for existing install record; if Clean
+				// or Modified, open the appropriate modal instead of
+				// emitting installResultMsg. Fresh falls through to the
+				// normal emit path with decisionAction="proceed".
+				if cmd, routed := m.maybeRouteThroughReinstallModal(); routed {
+					return m, cmd
+				}
 				m.confirmed = true
-				result := m.installResult()
-				return m, func() tea.Msg { return result }
+				return m, m.emitInstallResultWithAction("proceed")
 			}
 		}
 	}
@@ -580,9 +614,13 @@ func (m *installWizardModel) updateMouseReview(msg tea.MouseMsg) (*installWizard
 	}
 	if zone.Get("inst-install").InBounds(msg) {
 		if !m.confirmed {
+			// D17 mouse parity: route through the same scan+modal flow as
+			// the keyboard Install path.
+			if cmd, routed := m.maybeRouteThroughReinstallModal(); routed {
+				return m, cmd
+			}
 			m.confirmed = true
-			result := m.installResult()
-			return m, func() tea.Msg { return result }
+			return m, m.emitInstallResultWithAction("proceed")
 		}
 	}
 	// Risk item clicks
