@@ -6844,6 +6844,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-23T23:09:00.000Z"
+    },
+    {
+      "id": "bug-428",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "MCP drill-in shows entire settings file (~10,000 lines) instead of just the relevant server snippet",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "enterReviewDrillIn checked item.catalogItem != nil before the MCP extractJSONSection branch. mergeConfirmIntoDiscovery always synthesizes a catalogItem, so the MCP branch was unreachable.",
+      "fix": "Moved MCP extractJSONSection check BEFORE catalogItem check in enterReviewDrillIn.",
+      "tags": ["mcp", "drill-in", "review", "extractJSONSection", "catalogItem"],
+      "related_bugs": ["bug-410"],
+      "occurrences": 1,
+      "last_seen": "2026-04-23T23:30:00.000Z"
+    },
+    {
+      "id": "bug-429",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "Skills/agents drill-in shows No previewable file found and left pane shows only a dot",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "scanDrillInFiles used filepath.WalkDir on a symlinked root. WalkDir uses Lstat internally so symlinked dir appears as non-directory entry; filepath.Rel returns . producing files=[.], which PrimaryFileName cannot match.",
+      "fix": "Resolve root path via filepath.EvalSymlinks before filepath.WalkDir.",
+      "tags": ["symlink", "scanDrillInFiles", "WalkDir", "skills", "agents"],
+      "related_bugs": ["bug-410"],
+      "occurrences": 1,
+      "last_seen": "2026-04-23T23:30:00.000Z"
+    },
+    {
+      "id": "bug-430",
+      "timestamp": "2026-04-23T23:30:00.000Z",
+      "error_message": "Zero previews on triage/discovery step for symlinked content types",
+      "file": "cli/internal/tui/add_wizard.go",
+      "root_cause": "loadTriagePreview called catalog.SafeResolve which rejects symlinks (EvalSymlinks + containment check). For symlinked skills, resolved path escapes baseDir so preview returns empty.",
+      "fix": "Removed SafeResolve from loadTriagePreview; ReadFileContent string-prefix guard is symlink-safe. Added MCP extraction via extractJSONSection.",
+      "tags": ["symlink", "SafeResolve", "loadTriagePreview", "preview", "triage", "mcp"],
+      "related_bugs": ["bug-428", "bug-429"],
+      "occurrences": 1,
+      "last_seen": "2026-04-23T23:30:00.000Z"
+    },
+    {
+      "id": "bug-431",
+      "timestamp": "2026-04-23T16:30:00.000Z",
+      "error_message": "Registry removal shows success toast but registries remain visible after removal",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "doRegistryRemoveCmd always wrote to ~/.syllago/config.json (global) but LoadAndScan merges three config sources: global + contentRoot + projectRoot. When running syllago from a directory like ~/.config/pai/, registries defined in that dir's .syllago/config.json survive global-only deletion and reappear after rescanCatalog.",
+      "fix": "Capture a.contentRoot and a.projectRoot in the closure. Before writing global config, iterate all project-local config files and remove the named registry from each that contains it.",
+      "tags": ["registry", "config", "layered-config", "tui", "remove"],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-23T16:30:00.000Z"
     }
   ]
 }
