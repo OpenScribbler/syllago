@@ -125,3 +125,21 @@ func TestUninstallRuleAppend_UnreadableTargetPreservesRecord(t *testing.T) {
 		t.Errorf("record was removed despite unreadable target")
 	}
 }
+
+func TestUninstallRuleAppend_ZeroMatches(t *testing.T) {
+	t.Parallel()
+	projectRoot, libID, target, library, _ := seedRuleAndInstallForUninstall(t, []byte("P\n"))
+
+	// Replace entire target with a byte sequence that cannot match any history version.
+	if err := os.WriteFile(target, []byte("this file no longer contains the rule\n"), 0644); err != nil {
+		t.Fatalf("write mutated target: %v", err)
+	}
+
+	err := UninstallRuleAppend(projectRoot, libID, target, library)
+	if err == nil {
+		t.Fatal("UninstallRuleAppend: expected zero-match error, got nil")
+	}
+	if !strings.Contains(err.Error(), "file may have been edited") {
+		t.Errorf("error %q should contain 'file may have been edited'", err.Error())
+	}
+}
