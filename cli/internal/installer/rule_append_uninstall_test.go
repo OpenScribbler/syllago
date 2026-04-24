@@ -143,3 +143,35 @@ func TestUninstallRuleAppend_ZeroMatches(t *testing.T) {
 		t.Errorf("error %q should contain 'file may have been edited'", err.Error())
 	}
 }
+
+func TestUninstallRuleAppend_MultipleMatches(t *testing.T) {
+	t.Parallel()
+	projectRoot, libID, target, library, _ := seedRuleAndInstallForUninstall(t, []byte("P\n"))
+
+	// The current-version canonical body is what install wrote. Duplicate the
+	// canonical "\n<body>" pattern so the search finds two matches.
+	rule := library[libID]
+	body := rule.History[rule.Meta.CurrentVersion]
+	existing, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	// Append a second copy of the canonical block.
+	duplicated := append([]byte{}, existing...)
+	if len(duplicated) == 0 || duplicated[len(duplicated)-1] != '\n' {
+		duplicated = append(duplicated, '\n')
+	}
+	duplicated = append(duplicated, '\n')
+	duplicated = append(duplicated, body...)
+	if err := os.WriteFile(target, duplicated, 0644); err != nil {
+		t.Fatalf("write duplicated: %v", err)
+	}
+
+	err = UninstallRuleAppend(projectRoot, libID, target, library)
+	if err == nil {
+		t.Fatal("UninstallRuleAppend: expected multi-match error, got nil")
+	}
+	if !strings.Contains(err.Error(), "multiple matches") {
+		t.Errorf("error %q should contain 'multiple matches'", err.Error())
+	}
+}
