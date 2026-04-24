@@ -400,23 +400,28 @@ func (m *installWizardModel) methodAdvance() (*installWizardModel, tea.Cmd) {
 }
 
 func (m *installWizardModel) updateKeyMethod(msg tea.KeyMsg) (*installWizardModel, tea.Cmd) {
+	last := m.methodOptionCount() - 1
 	switch {
 	case msg.Type == tea.KeyEsc:
 		return m.methodGoBack()
 
 	case msg.Type == tea.KeyDown ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		if m.methodCursor == 0 {
-			m.methodCursor = 1
+		if m.methodCursor < last {
+			m.methodCursor++
 		}
-		// If at 1 already, stay (no wrap — only 2 options).
+		// If at last already, stay (no wrap).
 
 	case msg.Type == tea.KeyUp ||
 		(msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'k'):
-		if m.methodCursor == 1 && !m.symlinkDisabled() {
-			m.methodCursor = 0
+		if m.methodCursor > 0 {
+			// Skip over Symlink (index 0) when it is disabled for this provider.
+			if m.methodCursor == 1 && m.symlinkDisabled() {
+				// already at lowest selectable
+			} else {
+				m.methodCursor--
+			}
 		}
-		// If symlink disabled or already at 0, stay.
 
 	case msg.Type == tea.KeyEnter:
 		return m.methodAdvance()
@@ -431,6 +436,12 @@ func (m *installWizardModel) updateMouseMethod(msg tea.MouseMsg) (*installWizard
 	}
 	if zone.Get("inst-method-1").InBounds(msg) {
 		m.methodCursor = 1
+		return m, nil
+	}
+	// Append option — only reachable when appendFilename() != "" (the zone
+	// is only rendered in that case).
+	if m.appendFilename() != "" && zone.Get("inst-method-2").InBounds(msg) {
+		m.methodCursor = 2
 		return m, nil
 	}
 	if zone.Get("inst-back").InBounds(msg) {

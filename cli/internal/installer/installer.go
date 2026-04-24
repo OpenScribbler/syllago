@@ -46,6 +46,11 @@ type InstallMethod string
 const (
 	MethodSymlink InstallMethod = "symlink"
 	MethodCopy    InstallMethod = "copy"
+	// MethodAppend routes rule installs to InstallRuleAppend, which appends
+	// the rule's canonical body to a monolithic file (e.g. CLAUDE.md) rather
+	// than placing a file in a file-rules directory (D5). Only valid for
+	// catalog.Rules on providers whose slug has a MonolithicFilenames entry.
+	MethodAppend InstallMethod = "append"
 )
 
 // Status represents the install status of an item for a provider.

@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // removeDoneMsg is sent when a library item remove operation completes.
@@ -667,6 +670,15 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	method := msg.method
 	projectRoot := msg.projectRoot
 
+	// D5 append path: route to InstallRuleAppend, which writes to the
+	// provider's monolithic filename (CLAUDE.md, AGENTS.md, etc.) rather
+	// than placing a file via installer.Install. Location flag is ignored
+	// because the append scope comes from the target file's path (resolved
+	// by installer.ResolveAppendScope).
+	if method == installer.MethodAppend {
+		return a.doInstallAppendCmd(msg)
+	}
+
 	var baseDir string
 	switch msg.location {
 	case "global":
@@ -691,6 +703,41 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 			providerName: prov.Name,
 			targetPath:   desc,
 		}
+	}
+}
+
+// doInstallAppendCmd runs the D5 monolithic-append install. It loads the
+// library rule via rulestore, resolves the target monolithic filename from
+// the provider slug (D10), and calls InstallRuleAppend. Returns
+// installDoneMsg with targetPath set to the monolithic file.
+func (a App) doInstallAppendCmd(msg installResultMsg) tea.Cmd {
+	item := msg.item
+	prov := msg.provider
+	projectRoot := msg.projectRoot
+
+	return func() tea.Msg {
+		done := installDoneMsg{
+			itemName:     item.DisplayName,
+			providerName: prov.Name,
+		}
+		monoNames := provider.MonolithicFilenames(prov.Slug)
+		if len(monoNames) == 0 {
+			done.err = fmt.Errorf("provider %s does not have a monolithic rule filename", prov.Slug)
+			return done
+		}
+		loaded, err := rulestore.LoadRule(item.Path)
+		if err != nil {
+			done.err = fmt.Errorf("loading library rule: %w", err)
+			return done
+		}
+		homeDir, _ := os.UserHomeDir()
+		target := filepath.Join(projectRoot, monoNames[0])
+		if err := installer.InstallRuleAppend(projectRoot, homeDir, prov.Slug, target, "tui", loaded); err != nil {
+			done.err = err
+			return done
+		}
+		done.targetPath = target
+		return done
 	}
 }
 

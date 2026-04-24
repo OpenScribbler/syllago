@@ -585,9 +585,12 @@ func TestInstallWizard_LocationResolvedPaths(t *testing.T) {
 
 func TestInstallWizard_MethodNav(t *testing.T) {
 	t.Parallel()
+	// Use Skills here rather than Rules so the method picker stays at the
+	// baseline 2 options (Symlink + Copy). The D5 append option only shows
+	// for Rules — dedicated coverage lives in install_method_test.go.
 	provA := testInstallProvider("Claude Code", "claude-code", true)
 	provB := testInstallProvider("Cursor", "cursor", true)
-	item := testInstallItem("my-rule", catalog.Rules, "/fake/rules/my-rule")
+	item := testInstallItem("my-skill", catalog.Skills, "/fake/skills/my-skill")
 
 	w := openInstallWizard(item, []provider.Provider{provA, provB}, t.TempDir())
 	// Advance: provider -> location -> method
