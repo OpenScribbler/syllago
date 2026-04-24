@@ -41,11 +41,24 @@ type InstalledSymlink struct {
 	InstalledAt time.Time `json:"installedAt"`
 }
 
+// InstalledRuleAppend records a rule appended to a provider's monolithic file (D14).
+type InstalledRuleAppend struct {
+	Name        string    `json:"name"`
+	LibraryID   string    `json:"libraryId"`
+	Provider    string    `json:"provider"`
+	TargetFile  string    `json:"targetFile"`
+	VersionHash string    `json:"versionHash"` // canonical "<algo>:<hex>" per D11
+	Source      string    `json:"source"`
+	Scope       string    `json:"scope,omitempty"`
+	InstalledAt time.Time `json:"installedAt"`
+}
+
 // Installed is the root structure for .syllago/installed.json.
 type Installed struct {
-	Hooks    []InstalledHook    `json:"hooks,omitempty"`
-	MCP      []InstalledMCP     `json:"mcp,omitempty"`
-	Symlinks []InstalledSymlink `json:"symlinks,omitempty"`
+	Hooks       []InstalledHook       `json:"hooks,omitempty"`
+	MCP         []InstalledMCP        `json:"mcp,omitempty"`
+	Symlinks    []InstalledSymlink    `json:"symlinks,omitempty"`
+	RuleAppends []InstalledRuleAppend `json:"ruleAppends,omitempty"`
 }
 
 const installedFileName = "installed.json"

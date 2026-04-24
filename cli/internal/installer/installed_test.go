@@ -110,3 +110,48 @@ func TestFindMCP(t *testing.T) {
 		t.Errorf("expected -1, got %d", idx)
 	}
 }
+
+func TestInstalled_RuleAppendsJSONRoundtrip(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	original := &Installed{
+		RuleAppends: []InstalledRuleAppend{
+			{
+				Name:        "my-rule",
+				LibraryID:   "lib-id-123",
+				Provider:    "claude-code",
+				TargetFile:  "/project/CLAUDE.md",
+				VersionHash: "sha256:abcdef",
+				Source:      "manual",
+				Scope:       "project",
+				InstalledAt: now,
+			},
+		},
+	}
+
+	if err := SaveInstalled(tmpDir, original); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+
+	loaded, err := LoadInstalled(tmpDir)
+	if err != nil {
+		t.Fatalf("load failed: %v", err)
+	}
+	if len(loaded.RuleAppends) != 1 {
+		t.Fatalf("expected 1 rule append, got %d", len(loaded.RuleAppends))
+	}
+	got := loaded.RuleAppends[0]
+	want := original.RuleAppends[0]
+	if got.Name != want.Name ||
+		got.LibraryID != want.LibraryID ||
+		got.Provider != want.Provider ||
+		got.TargetFile != want.TargetFile ||
+		got.VersionHash != want.VersionHash ||
+		got.Source != want.Source ||
+		got.Scope != want.Scope ||
+		!got.InstalledAt.Equal(want.InstalledAt) {
+		t.Errorf("rule append mismatch:\n got %+v\nwant %+v", got, want)
+	}
+}
