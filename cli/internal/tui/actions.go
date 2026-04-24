@@ -449,16 +449,46 @@ func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea
 }
 
 // doRegistryRemoveCmd creates a tea.Cmd that removes a registry clone and updates config.
+// LoadAndScan merges three config sources (global + contentRoot + projectRoot), so the
+// registry may live in any of them. We remove it from all sources that contain it.
 func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
+	contentRoot := a.contentRoot
+	projectRoot := a.projectRoot
 	return func() tea.Msg {
 		if err := registry.Remove(name); err != nil {
 			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
 		}
+		// Remove from project-local configs (contentRoot and projectRoot).
+		seen := map[string]bool{}
+		for _, root := range []string{contentRoot, projectRoot} {
+			if root == "" || seen[root] || !config.Exists(root) {
+				continue
+			}
+			seen[root] = true
+			localCfg, err := config.Load(root)
+			if err != nil {
+				continue
+			}
+			var filtered []config.Registry
+			for _, r := range localCfg.Registries {
+				if r.Name != name {
+					filtered = append(filtered, r)
+				}
+			}
+			if len(filtered) == len(localCfg.Registries) {
+				continue // registry not in this source
+			}
+			localCfg.Registries = filtered
+			if err := config.Save(root, localCfg); err != nil {
+				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving local config: %w", err)}
+			}
+		}
+		// Remove from global config.
 		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
 		}
-		filtered := make([]config.Registry, 0, len(cfg.Registries))
+		var filtered []config.Registry
 		for _, r := range cfg.Registries {
 			if r.Name != name {
 				filtered = append(filtered, r)

@@ -6646,6 +6646,24 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-04-23T23:30:00.000Z"
+    },
+    {
+      "id": "bug-414",
+      "timestamp": "2026-04-23T16:30:00.000Z",
+      "error_message": "Registry removal shows success toast but registries remain visible after removal",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "doRegistryRemoveCmd always wrote to ~/.syllago/config.json (global) but LoadAndScan merges three config sources: global + contentRoot + projectRoot. When running syllago from a directory like ~/.config/pai/, registries defined in that dir's .syllago/config.json survive global-only deletion and reappear after rescanCatalog.",
+      "fix": "Capture a.contentRoot and a.projectRoot in the closure. Before writing global config, iterate all project-local config files and remove the named registry from each that contains it.",
+      "tags": [
+        "registry",
+        "config",
+        "layered-config",
+        "tui",
+        "remove"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-23T16:30:00.000Z"
     }
   ]
 }
