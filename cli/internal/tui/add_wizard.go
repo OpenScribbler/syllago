@@ -348,10 +348,22 @@ func (m *addWizardModel) validateStep() {
 		if m.source == addSourceNone {
 			panic("wizard invariant: addStepDiscovery entered without source")
 		}
-		if !m.discovering && len(m.selectedTypes()) == 0 {
+		// Monolithic path skips the Type step entirely — selected-types check
+		// doesn't apply. For every other source, Type step must have produced
+		// at least one selected content type.
+		if m.source != addSourceMonolithic && !m.discovering && len(m.selectedTypes()) == 0 {
 			panic("wizard invariant: addStepDiscovery entered without selected types")
 		}
 	case addStepReview:
+		// Monolithic path populates reviewCandidates from buildReviewCandidates
+		// and does not use discoveredItems/selectedItems; the Heuristic step
+		// guarantees at least one reviewCandidate.
+		if m.source == addSourceMonolithic {
+			if len(m.reviewCandidates) == 0 {
+				panic("wizard invariant: addStepReview entered with no review candidates (monolithic)")
+			}
+			return
+		}
 		if len(m.discoveredItems) == 0 {
 			panic("wizard invariant: addStepReview entered without discovered items")
 		}
