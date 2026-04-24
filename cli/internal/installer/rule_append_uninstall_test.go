@@ -1,0 +1,80 @@
+package installer
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
+)
+
+// seedRuleAndInstallForUninstall creates a library rule, installs it, and
+// returns projectRoot, libID, target, library, and the pre-install snapshot.
+func seedRuleAndInstallForUninstall(t *testing.T, preamble []byte) (projectRoot, libID, target string, library map[string]*rulestore.Loaded, preSnapshot []byte) {
+	t.Helper()
+	projectRoot = t.TempDir()
+	homeDir := t.TempDir()
+
+	libraryRoot := filepath.Join(projectRoot, "syllago-library")
+	body := []byte("# Uninstall me\n\nSome body.\n")
+	meta := metadata.RuleMetadata{ID: "lib-id-uninst", Name: "uninst-rule"}
+	if err := rulestore.WriteRule(libraryRoot, "claude-code", "uninst-rule", meta, body); err != nil {
+		t.Fatalf("WriteRule: %v", err)
+	}
+	ruleDir := filepath.Join(libraryRoot, "claude-code", "uninst-rule")
+	loaded, err := rulestore.LoadRule(ruleDir)
+	if err != nil {
+		t.Fatalf("LoadRule: %v", err)
+	}
+	library = map[string]*rulestore.Loaded{loaded.Meta.ID: loaded}
+
+	target = filepath.Join(projectRoot, "CLAUDE.md")
+	if len(preamble) > 0 {
+		if err := os.WriteFile(target, preamble, 0644); err != nil {
+			t.Fatalf("seed preamble: %v", err)
+		}
+	}
+	// Snapshot before install.
+	if preamble != nil {
+		preSnapshot = append([]byte{}, preamble...)
+	} else {
+		preSnapshot = nil
+	}
+
+	if err := InstallRuleAppend(projectRoot, homeDir, "claude-code", target, "manual", loaded); err != nil {
+		t.Fatalf("InstallRuleAppend: %v", err)
+	}
+	libID = loaded.Meta.ID
+	return
+}
+
+func TestUninstallRuleAppend_ExactMatch(t *testing.T) {
+	t.Parallel()
+	preamble := []byte("user preamble\n")
+	projectRoot, libID, target, library, preSnapshot := seedRuleAndInstallForUninstall(t, preamble)
+
+	if err := UninstallRuleAppend(projectRoot, libID, target, library); err != nil {
+		t.Fatalf("UninstallRuleAppend: %v", err)
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	if string(got) != string(preSnapshot) {
+		t.Errorf("post-uninstall bytes mismatch\n got %q\nwant %q", got, preSnapshot)
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if inst.FindRuleAppend(libID, target) != -1 {
+		t.Errorf("installed.json still has record for (%s, %s)", libID, target)
+	}
+}
+
+// Placeholder for strings import so goimports doesn't kill it.
+var _ = strings.Contains

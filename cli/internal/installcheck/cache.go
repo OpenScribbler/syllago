@@ -1,6 +1,18 @@
 package installcheck
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+)
+
+// init registers the cache-invalidation hook with the installer package so
+// installer's append/uninstall paths can signal cache invalidation without
+// creating an import cycle (installcheck depends on installer for the
+// Installed record type).
+func init() {
+	installer.SetCacheInvalidator(InvalidateCache)
+}
 
 // mtimeCacheEntry is the per-target cache shape (D16): process-local,
 // invalidated on stat change or explicit InvalidateCache.
