@@ -30,6 +30,16 @@ func LoadRuleMetadata(path string) (*RuleMetadata, error) {
 	if !canonicalHashRe.MatchString(m.CurrentVersion) {
 		return nil, fmt.Errorf("%s: invalid hash format in current_version: %q (want sha256:<64-hex>)", path, m.CurrentVersion)
 	}
+	found := false
+	for _, v := range m.Versions {
+		if v.Hash == m.CurrentVersion {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("%s: current_version references missing hash %q", path, m.CurrentVersion)
+	}
 	return &m, nil
 }
 
