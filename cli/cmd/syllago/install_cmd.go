@@ -120,7 +120,39 @@ func init() {
 	installCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
 	installCmd.Flags().StringSlice("hook-scanner", nil, "Path to external hook scanner binary (repeatable)")
 	installCmd.Flags().Bool("force", false, "Proceed past high-severity scanner findings")
+	// D17 re-install decision flags for --method=append. Values validated in
+	// runInstall so bad inputs error before any disk work. See D17 flag table.
+	installCmd.Flags().String("on-clean", "", "Action when rule is already installed cleanly: replace|skip")
+	installCmd.Flags().String("on-modified", "", "Action when install record is stale: drop-record|append-fresh|keep")
 	rootCmd.AddCommand(installCmd)
+}
+
+// validateOnCleanFlag checks that --on-clean is either empty or one of the
+// D17-sanctioned values. Returns a structured error otherwise.
+func validateOnCleanFlag(value string) error {
+	switch value {
+	case "", "replace", "skip":
+		return nil
+	}
+	return output.NewStructuredError(
+		output.ErrInputConflict,
+		"invalid --on-clean value",
+		"Allowed values: replace|skip",
+	)
+}
+
+// validateOnModifiedFlag checks that --on-modified is either empty or one of
+// the D17-sanctioned values.
+func validateOnModifiedFlag(value string) error {
+	switch value {
+	case "", "drop-record", "append-fresh", "keep":
+		return nil
+	}
+	return output.NewStructuredError(
+		output.ErrInputConflict,
+		"invalid --on-modified value",
+		"Allowed values: drop-record|append-fresh|keep",
+	)
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -166,6 +198,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// filename are rejected. Per D14, records live in project-scoped
 	// installed.json; the default target file is <projectRoot>/<filename>.
 	if methodStr == "append" {
+		onClean, _ := cmd.Flags().GetString("on-clean")
+		onModified, _ := cmd.Flags().GetString("on-modified")
+		if err := validateOnCleanFlag(onClean); err != nil {
+			return err
+		}
+		if err := validateOnModifiedFlag(onModified); err != nil {
+			return err
+		}
 		return runInstallAppend(cmd, args, toSlug, typeFilter)
 	}
 
