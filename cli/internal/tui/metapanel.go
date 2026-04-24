@@ -1,21 +1,33 @@
 package tui
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
+// ruleTargetStatus is a single row for the D16 per-target breakdown in the
+// rule metapanel: which target file an InstalledRuleAppend record points at
+// plus its looked-up PerTargetState. Callers build the slice from
+// installer.Installed.RuleAppends filtered by library ID.
+type ruleTargetStatus struct {
+	TargetFile string
+	State      installcheck.PerTargetState
+}
+
 // metaPanelData holds pre-computed display strings for the metadata panel.
 type metaPanelData struct {
-	installed  string // "CC,GC,Cu" or "--"
-	typeDetail string // type-specific detail (hooks/MCP/loadouts) or ""
-	canInstall bool   // true when item is in library and has at least one uninstalled provider
+	installed   string // "CC,GC,Cu" or "--"
+	typeDetail  string // type-specific detail (hooks/MCP/loadouts) or ""
+	canInstall  bool   // true when item is in library and has at least one uninstalled provider
+	ruleRecords []ruleTargetStatus
 }
 
 // computeMetaPanelData computes installed status and type-specific detail for an item.
@@ -49,20 +61,35 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 	}
 }
 
-// metaBarLinesFor reports how many lines renderMetaPanel will emit for the
-// given item. The count is now a constant (metaBarLinesBase = 4) across
-// every item — MOAT state no longer adds a row; trust+visibility chips
-// share Line 4 with the action buttons so the handler slot on Line 3
-// stays at a predictable position whether the content type supplies a
-// handler row or not.
+// metaBarLinesFor reports the BASE number of lines renderMetaPanel will emit
+// for the given item (metaBarLinesBase = 4 across every item). MOAT state
+// no longer adds a row; trust+visibility chips share Line 4 with the action
+// buttons so the handler slot on Line 3 stays at a predictable position
+// whether the content type supplies a handler row or not.
 //
 // The parameter is kept even though it is ignored so existing call sites
 // (gallery, explorer, library views) don't need to change signature and
 // future variants (e.g. a nil-placeholder with shorter height) can plug
 // in without churn.
+//
+// D16 per-target rule breakdown lines are EXTRA lines beyond this base —
+// callers that need the total height (library + explorer when displaying a
+// rule item) must add metaPanelExtraLines(data) to this value.
 func metaBarLinesFor(item *catalog.ContentItem) int {
 	_ = item
 	return metaBarLinesBase
+}
+
+// metaPanelExtraLines reports how many additional lines the metapanel emits
+// for data-driven extensions — currently just the D16 rule per-target
+// breakdown. Returns 0 when data has no rule records attached.
+//
+// Layout: one header line ("Installed at:") plus one line per record.
+func metaPanelExtraLines(data metaPanelData) int {
+	if len(data.ruleRecords) == 0 {
+		return 0
+	}
+	return 1 + len(data.ruleRecords)
 }
 
 // trustValueMaxW is the reserved width for the Trust chip value on Line 4.
@@ -254,5 +281,63 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	}
 	line4 := leftPortion + strings.Repeat(" ", btnGap) + btnRow
 
-	return pad(line1) + "\n" + pad(line2) + "\n" + pad(line3) + "\n" + pad(line4)
+	out := pad(line1) + "\n" + pad(line2) + "\n" + pad(line3) + "\n" + pad(line4)
+
+	// D16 per-target rule breakdown (optional). Rendered as a header line
+	// followed by one line per InstalledRuleAppend record. Each status line
+	// lists the target file (truncated by the pad() width clamp) and its
+	// PerTargetState rendered via ruleStatusString. Order mirrors the
+	// caller-supplied slice — typically the order from installer.Installed.
+	for _, extra := range renderRuleRecords(data.ruleRecords, width) {
+		out += "\n" + pad(extra)
+	}
+	return out
+}
+
+// renderRuleRecords builds the "Installed at:" section lines for a rule's
+// D16 per-target breakdown. Returns an empty slice when no records are
+// provided. Status coloring: Clean → successColor; Modified → dangerColor.
+// Target files are rendered as basenames so the section stays readable at
+// any width; the full path lives in installed.json (and the Trust Inspector
+// surfaces similar detail elsewhere). The "Installed at:" header stays
+// muted-bold so it visually groups with the other field labels.
+func renderRuleRecords(records []ruleTargetStatus, width int) []string {
+	if len(records) == 0 {
+		return nil
+	}
+	_ = width // clamping happens in the parent pad() helper
+	lines := make([]string, 0, 1+len(records))
+	lines = append(lines, " "+boldStyle.Render("Installed at:"))
+	for _, r := range records {
+		status := ruleStatusString(r.State)
+		style := mutedStyle
+		if r.State.State == installcheck.StateClean {
+			style = trustVerifiedStyle
+		} else if r.State.State == installcheck.StateModified {
+			style = trustRevokedStyle
+		}
+		name := filepath.Base(r.TargetFile)
+		lines = append(lines, "   "+mutedStyle.Render(name)+"  "+style.Render(status))
+	}
+	return lines
+}
+
+// ruleStatusString converts a D16 PerTargetState to the human-readable
+// string used in the metapanel per-target breakdown. These strings are the
+// contract surface consumed by both the UI and the acceptance test in
+// metapanel_rule_test.go — do not rename without updating both.
+func ruleStatusString(pts installcheck.PerTargetState) string {
+	if pts.State == installcheck.StateClean {
+		return "Clean"
+	}
+	switch pts.Reason {
+	case installcheck.ReasonEdited:
+		return "Modified · edited"
+	case installcheck.ReasonMissing:
+		return "Modified · missing"
+	case installcheck.ReasonUnreadable:
+		return "Modified · unreadable"
+	default:
+		return "Modified"
+	}
 }
