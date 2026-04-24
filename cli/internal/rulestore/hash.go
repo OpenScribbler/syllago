@@ -2,10 +2,23 @@
 package rulestore
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/OpenScribbler/syllago/cli/internal/converter/canonical"
 )
+
+// HashBody returns the canonical "<algo>:<hex>" hash of a rule body.
+// The body is normalized (D12) before hashing. Callers should pass the
+// body content as authored; normalization is this function's job.
+func HashBody(body []byte) string {
+	n := canonical.Normalize(body)
+	sum := sha256.Sum256(n)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
 
 var filenameHashRe = regexp.MustCompile(`^sha256-[0-9a-f]{64}\.md$`)
 
