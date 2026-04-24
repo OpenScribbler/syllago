@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -256,6 +258,111 @@ func TestTable_RenderSearchBar_Confirmed(t *testing.T) {
 	stripped := ansi.Strip(view)
 	if !strings.Contains(stripped, "esc clear") {
 		t.Errorf("expected \"esc clear\" hint for inactive-but-queried search, got:\n%s", stripped)
+	}
+}
+
+func TestMatchesInstalled(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name      string
+		installed string
+		query     string
+		want      bool
+	}{
+		{"empty installed", "", "cc", false},
+		{"dash-dash sentinel", "--", "cc", false},
+		{"direct abbrev match lowercase", "CC,GC", "cc", true},
+		{"direct abbrev multi match", "CC,GC", "gc", true},
+		{"no match empty query against installed", "CC", "xxx", false},
+		{"full name match via expansion", "CC", "claude code", true},
+		{"full name partial via expansion", "CC", "claude", true},
+		{"full name gemini via expansion", "GC", "gemini", true},
+		{"no match against unrelated name", "CC", "cursor", false},
+		{"match through comma list expansion", "CC,Cu", "cursor", true},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := matchesInstalled(tc.installed, tc.query); got != tc.want {
+				t.Errorf("matchesInstalled(%q, %q) = %v, want %v", tc.installed, tc.query, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestComputeLoadoutDetail_WithProviderAndItems(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	yaml := `kind: loadout
+version: 1
+name: my-loadout
+description: test loadout
+provider: claude-code
+skills:
+  - s1
+  - s2
+rules:
+  - r1
+hooks:
+  - h1
+agents:
+  - a1
+mcp:
+  - m1
+commands:
+  - c1
+`
+	if err := os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write loadout.yaml: %v", err)
+	}
+	item := catalog.ContentItem{Path: dir, Type: catalog.Loadouts, Name: "my-loadout"}
+	got := computeLoadoutDetail(item)
+	if !strings.Contains(got, "Target: claude-code") {
+		t.Errorf("expected target in detail, got %q", got)
+	}
+	for _, want := range []string{"2 skills", "1 rules", "1 hooks", "1 agents", "1 mcp", "1 commands"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in detail, got %q", want, got)
+		}
+	}
+}
+
+func TestComputeLoadoutDetail_MissingFileReturnsEmpty(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{Path: t.TempDir(), Type: catalog.Loadouts}
+	if got := computeLoadoutDetail(item); got != "" {
+		t.Errorf("expected empty string for missing loadout.yaml, got %q", got)
+	}
+}
+
+func TestComputeLoadoutDetail_EmptyManifest(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	yaml := `kind: loadout
+version: 1
+name: empty-loadout
+description: no items
+`
+	if err := os.WriteFile(filepath.Join(dir, "loadout.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write loadout.yaml: %v", err)
+	}
+	item := catalog.ContentItem{Path: dir, Type: catalog.Loadouts}
+	got := computeLoadoutDetail(item)
+	if got != "" {
+		t.Errorf("expected empty detail for empty manifest, got %q", got)
+	}
+}
+
+func TestComputeTypeDetail_Dispatch(t *testing.T) {
+	t.Parallel()
+	// Non-Hooks/MCP/Loadouts returns empty.
+	if got := computeTypeDetail(catalog.ContentItem{Type: catalog.Skills}); got != "" {
+		t.Errorf("expected empty for Skills, got %q", got)
+	}
+	// Loadouts dispatches to computeLoadoutDetail (missing file -> empty).
+	if got := computeTypeDetail(catalog.ContentItem{Type: catalog.Loadouts, Path: t.TempDir()}); got != "" {
+		t.Errorf("expected empty for missing loadout, got %q", got)
 	}
 }
 
