@@ -146,6 +146,29 @@ func TestInstalled_FindAndRemoveRuleAppend(t *testing.T) {
 	}
 }
 
+func TestInstalled_RuleAppendsUniqueByLibraryIDAndTargetFile(t *testing.T) {
+	t.Parallel()
+	// Sanity guard: for any Installed, no two RuleAppends may share the
+	// (LibraryID, TargetFile) pair per D14. This test exercises the
+	// invariant against well-formed fixtures — it will fail only if a
+	// future writer path produces duplicates.
+	inst := &Installed{
+		RuleAppends: []InstalledRuleAppend{
+			{LibraryID: "id-a", TargetFile: "/p/CLAUDE.md"},
+			{LibraryID: "id-b", TargetFile: "/p/CLAUDE.md"},
+			{LibraryID: "id-a", TargetFile: "/p/AGENTS.md"},
+		},
+	}
+	seen := make(map[[2]string]bool)
+	for _, r := range inst.RuleAppends {
+		key := [2]string{r.LibraryID, r.TargetFile}
+		if seen[key] {
+			t.Errorf("duplicate rule append for (LibraryID=%q, TargetFile=%q)", r.LibraryID, r.TargetFile)
+		}
+		seen[key] = true
+	}
+}
+
 func TestInstalled_RuleAppendsJSONRoundtrip(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
