@@ -1,10 +1,17 @@
 package tui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"gopkg.in/yaml.v3"
+
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // TestAddWizard_DiscoveryMultiSelect exercises the monolithic-rule discovery
@@ -65,4 +72,130 @@ func TestAddWizard_DiscoveryMultiSelect(t *testing.T) {
 	if !strings.Contains(rows[2], "[x]") {
 		t.Errorf("row 2 should show [x] mark, got %q", rows[2])
 	}
+}
+
+// TestAddWizard_DiscoveryInLibraryIndicator seeds a library with a single
+// rule whose source.hash matches the canonical-hash of a discovery candidate.
+// The rendered discovery row for that candidate must include the "✓ in library"
+// indicator; other rows must not (D11, D18).
+func TestAddWizard_DiscoveryInLibraryIndicator(t *testing.T) {
+	t.Parallel()
+	contentRoot := t.TempDir()
+
+	// Seed a library rule whose source.hash corresponds to the bytes we'll
+	// write to a CLAUDE.md file below.
+	body := []byte("# Canonical rule\n\nThis file is already in the library.\n")
+	srcBytes := []byte("# CLAUDE.md\n\nThis is the imported source file.\n")
+	hash := rulestore.HashBody(srcBytes)
+	meta := metadata.RuleMetadata{
+		FormatVersion:  metadata.CurrentFormatVersion,
+		Name:           "imported-rule",
+		Type:           "rule",
+		CurrentVersion: rulestore.HashBody(body),
+		Versions:       []metadata.RuleVersionEntry{{Hash: rulestore.HashBody(body), WrittenAt: time.Now().UTC()}},
+		Source: metadata.RuleSource{
+			Provider: "claude-code",
+			Scope:    "project",
+			Path:     "/fake/CLAUDE.md",
+			Format:   "claude-code",
+			Filename: "CLAUDE.md",
+			Hash:     hash,
+		},
+	}
+	dir := filepath.Join(contentRoot, "claude-code", "imported-rule")
+	if err := os.MkdirAll(filepath.Join(dir, ".history"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "rule.md"), body, 0644); err != nil {
+		t.Fatal(err)
+	}
+	hashFile := strings.Replace(rulestore.HashBody(body), ":", "-", 1) + ".md"
+	if err := os.WriteFile(filepath.Join(dir, ".history", hashFile), body, 0644); err != nil {
+		t.Fatal(err)
+	}
+	data, err := yaml.Marshal(&meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, metadata.FileName), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Build discovery candidates — mark one as in-library by computing
+	// the same hash against its Bytes. discoverMonolithicCandidates would
+	// do this; we seed directly for determinism.
+	inLibHashes := loadLibraryRuleSourceHashes(contentRoot)
+	if _, ok := inLibHashes[hash]; !ok {
+		t.Fatalf("expected library hash %s loaded, got %v", hash, inLibHashes)
+	}
+
+	// Actually invoke discoverMonolithicCandidates against a real project
+	// root so we exercise the hash-check logic end-to-end. Pin home dir to
+	// an empty temp so user-level CLAUDE.md etc don't leak into the result.
+	origHome := monolithicHomeDirOverride
+	monolithicHomeDirOverride = t.TempDir()
+	t.Cleanup(func() { monolithicHomeDirOverride = origHome })
+
+	projectRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectRoot, "CLAUDE.md"), srcBytes, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectRoot, "AGENTS.md"), []byte("# not in lib\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cands, derr := discoverMonolithicCandidates(projectRoot, contentRoot)
+	if derr != nil {
+		t.Fatalf("discover error: %v", derr)
+	}
+	var hitClaude bool
+	var hitAgents bool
+	for _, c := range cands {
+		if c.Filename == "CLAUDE.md" {
+			hitClaude = true
+			if !c.InLibrary {
+				t.Errorf("CLAUDE.md candidate should be marked InLibrary=true from hash match")
+			}
+		}
+		if c.Filename == "AGENTS.md" {
+			hitAgents = true
+			if c.InLibrary {
+				t.Errorf("AGENTS.md candidate should NOT be marked InLibrary")
+			}
+		}
+	}
+	if !hitClaude || !hitAgents {
+		t.Fatalf("expected both CLAUDE.md and AGENTS.md in candidates, got %+v", cands)
+	}
+
+	m := openAddWizard(nil, nil, nil, projectRoot, contentRoot, "")
+	m.source = addSourceMonolithic
+	m.step = addStepDiscovery
+	m.width = 100
+	m.height = 30
+	m.discovering = false
+	m.discoveryCandidates = cands
+
+	view := m.viewMonolithicDiscovery()
+	// The row for CLAUDE.md must contain "✓ in library"
+	lines := strings.Split(view, "\n")
+	var claudeRow string
+	var agentsRow string
+	for _, ln := range lines {
+		if strings.Contains(ln, "CLAUDE.md") {
+			claudeRow = ln
+		}
+		if strings.Contains(ln, "AGENTS.md") {
+			agentsRow = ln
+		}
+	}
+	if !strings.Contains(claudeRow, "✓ in library") {
+		t.Errorf("CLAUDE.md row should contain '✓ in library' indicator, got %q", claudeRow)
+	}
+	if strings.Contains(agentsRow, "✓ in library") {
+		t.Errorf("AGENTS.md row should NOT contain '✓ in library' indicator, got %q", agentsRow)
+	}
+
+	// Sanity: keep tea.KeyMsg import even if we didn't use it
+	_ = tea.KeyMsg{}
 }
