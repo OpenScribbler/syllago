@@ -3,6 +3,7 @@ package installcheck
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -113,5 +114,36 @@ func TestScan_ModifiedMissing(t *testing.T) {
 	// D16: ENOENT is an expected state — no warning.
 	if len(result.Warnings) != 0 {
 		t.Errorf("Warnings = %v, want empty (ENOENT should not warn)", result.Warnings)
+	}
+}
+
+func TestScan_ModifiedUnreadable(t *testing.T) {
+	t.Parallel()
+	if os.Geteuid() == 0 {
+		t.Skip("root can read 0000-mode files; skip")
+	}
+	body := []byte("# Unreadable\n\nBody.\n")
+	inst, library, target := seedRuleAndInstall(t, body)
+
+	if err := os.Chmod(target, 0000); err != nil {
+		t.Fatalf("chmod 0000: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(target, 0644) })
+
+	result := Scan(inst, library)
+	key := RecordKey{LibraryID: "lib-id-scan", TargetFile: target}
+	got := result.PerRecord[key]
+	if got.State != StateModified || got.Reason != ReasonUnreadable {
+		t.Errorf("PerRecord[%v] = %+v, want {StateModified, ReasonUnreadable}", key, got)
+	}
+	found := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, target) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Warnings %v should contain target path %q", result.Warnings, target)
 	}
 }
