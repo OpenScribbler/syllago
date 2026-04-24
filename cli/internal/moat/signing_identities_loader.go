@@ -59,7 +59,16 @@ const SigningIdentitiesVersion = 1
 type signingIdentityEntry struct {
 	RegistryURL string                `json:"registry_url"`
 	Description string                `json:"description,omitempty"`
+	ManifestURI string                `json:"manifest_uri,omitempty"` // HTTPS URL of the MOAT registry manifest; empty for pre-manifest_uri entries
 	Profile     config.SigningProfile `json:"profile"`
+}
+
+// AllowlistEntry is the result of a successful LookupSigningIdentity call.
+// ManifestURI may be empty for allowlist entries that predate the field;
+// callers must guard with entry.ManifestURI != "" before using it.
+type AllowlistEntry struct {
+	Profile     *config.SigningProfile
+	ManifestURI string
 }
 
 // signingIdentitiesDoc is the on-disk JSON shape of the full allowlist file.
@@ -70,13 +79,14 @@ type signingIdentitiesDoc struct {
 }
 
 var (
-	identityIndex     map[string]*config.SigningProfile
+	identityIndex     map[string]*AllowlistEntry
 	identityIndexOnce sync.Once
 )
 
-// LookupSigningIdentity reports the known-good signing profile for the given
-// registry URL, if one is bundled. The returned profile is a fresh copy
-// callers may mutate without affecting future lookups.
+// LookupSigningIdentity reports the known-good signing profile and manifest
+// URI for the given registry URL, if one is bundled. The returned entry is a
+// fresh copy callers may mutate without affecting future lookups.
+// ManifestURI may be empty for entries that predate the field.
 //
 // URL matching is case-insensitive on scheme+host and tolerates:
 //   - trailing ".git" (git-style remotes)
@@ -88,25 +98,25 @@ var (
 //
 // First call parses and validates the embedded JSON; malformed bundle
 // panics with a descriptive message. Subsequent calls are lock-free.
-func LookupSigningIdentity(registryURL string) (*config.SigningProfile, bool) {
+func LookupSigningIdentity(registryURL string) (*AllowlistEntry, bool) {
 	idx := loadSigningIdentityIndex()
 	key := normalizeRegistryURL(registryURL)
 	if key == "" {
 		return nil, false
 	}
-	p, ok := idx[key]
+	e, ok := idx[key]
 	if !ok {
 		return nil, false
 	}
-	clone := *p
-	return &clone, true
+	profileClone := *e.Profile
+	return &AllowlistEntry{Profile: &profileClone, ManifestURI: e.ManifestURI}, true
 }
 
 // loadSigningIdentityIndex lazily parses the embedded allowlist on first
 // call. Parse failure panics rather than returning an error — the embedded
 // bytes are a build-time asset, so a malformed value is a build bug that
 // CI and unit tests must catch, not a runtime condition callers handle.
-func loadSigningIdentityIndex() map[string]*config.SigningProfile {
+func loadSigningIdentityIndex() map[string]*AllowlistEntry {
 	identityIndexOnce.Do(func() {
 		identityIndex = mustParseSigningIdentities(bundledSigningIdentities)
 	})
@@ -116,7 +126,7 @@ func loadSigningIdentityIndex() map[string]*config.SigningProfile {
 // mustParseSigningIdentities is the panic-on-failure wrapper around
 // parseSigningIdentities. Extracted so tests can exercise the panic text
 // directly without fighting the package-level sync.Once.
-func mustParseSigningIdentities(data []byte) map[string]*config.SigningProfile {
+func mustParseSigningIdentities(data []byte) map[string]*AllowlistEntry {
 	idx, err := parseSigningIdentities(data)
 	if err != nil {
 		panic(fmt.Sprintf("moat: bundled signing identities malformed: %v", err))
@@ -127,7 +137,7 @@ func mustParseSigningIdentities(data []byte) map[string]*config.SigningProfile {
 // parseSigningIdentities converts the raw JSON bytes into a normalized-URL
 // lookup map. Exposed for tests that exercise the malformed-input paths
 // without having to swap the embedded bytes at runtime.
-func parseSigningIdentities(data []byte) (map[string]*config.SigningProfile, error) {
+func parseSigningIdentities(data []byte) (map[string]*AllowlistEntry, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty bundle")
 	}
@@ -140,7 +150,7 @@ func parseSigningIdentities(data []byte) (map[string]*config.SigningProfile, err
 		return nil, fmt.Errorf("unsupported _version: got %d want %d", doc.Version, SigningIdentitiesVersion)
 	}
 
-	idx := make(map[string]*config.SigningProfile, len(doc.Identities))
+	idx := make(map[string]*AllowlistEntry, len(doc.Identities))
 	for i, e := range doc.Identities {
 		key := normalizeRegistryURL(e.RegistryURL)
 		if key == "" {
@@ -174,7 +184,7 @@ func parseSigningIdentities(data []byte) (map[string]*config.SigningProfile, err
 			return nil, fmt.Errorf("entry %d (%s): duplicate registry_url after normalization", i, key)
 		}
 		p := e.Profile
-		idx[key] = &p
+		idx[key] = &AllowlistEntry{Profile: &p, ManifestURI: e.ManifestURI}
 	}
 	return idx, nil
 }

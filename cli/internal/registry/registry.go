@@ -238,7 +238,8 @@ type Manifest struct {
 	Version           string         `yaml:"version,omitempty"`
 	MinSyllagoVersion string         `yaml:"min_syllago_version,omitempty"`
 	Items             []ManifestItem `yaml:"items,omitempty"`
-	Visibility        string         `yaml:"visibility,omitempty"` // "public", "private" — declared by registry owner
+	Visibility        string         `yaml:"visibility,omitempty"`   // "public", "private" — declared by registry owner
+	ManifestURI       string         `yaml:"manifest_uri,omitempty"` // MOAT self-declaration; syllago extension, not spec-normative
 }
 
 // LoadManifest reads registry.yaml from the clone directory for the named registry.

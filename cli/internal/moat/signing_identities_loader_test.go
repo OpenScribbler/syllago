@@ -36,19 +36,19 @@ func TestBundledAllowlist_Parses(t *testing.T) {
 func TestBundledAllowlist_HasMetaRegistry(t *testing.T) {
 	t.Parallel()
 
-	p, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
+	entry, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
 	if !ok {
 		t.Fatal("expected meta-registry to be in the allowlist")
 	}
-	if p.Issuer != GitHubActionsIssuer {
-		t.Errorf("issuer = %q want %q", p.Issuer, GitHubActionsIssuer)
+	if entry.Profile.Issuer != GitHubActionsIssuer {
+		t.Errorf("issuer = %q want %q", entry.Profile.Issuer, GitHubActionsIssuer)
 	}
-	if p.SubjectRegex == "" {
+	if entry.Profile.SubjectRegex == "" {
 		t.Error("meta-registry profile must populate subject_regex")
 	}
-	if p.RepositoryID == "" || p.RepositoryOwnerID == "" {
+	if entry.Profile.RepositoryID == "" || entry.Profile.RepositoryOwnerID == "" {
 		t.Errorf("meta-registry profile must pin numeric IDs: repo_id=%q owner_id=%q",
-			p.RepositoryID, p.RepositoryOwnerID)
+			entry.Profile.RepositoryID, entry.Profile.RepositoryOwnerID)
 	}
 }
 
@@ -123,19 +123,19 @@ func TestLookupSigningIdentity_Miss(t *testing.T) {
 // zero or mutate fields during serialization.
 func TestLookupSigningIdentity_ResultIsCopy(t *testing.T) {
 	t.Parallel()
-	p1, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
+	e1, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
 	if !ok {
 		t.Fatal("expected meta-registry match")
 	}
-	originalIssuer := p1.Issuer
-	p1.Issuer = "https://evil.example.com/"
+	originalIssuer := e1.Profile.Issuer
+	e1.Profile.Issuer = "https://evil.example.com/"
 
-	p2, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
+	e2, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
 	if !ok {
 		t.Fatal("second lookup must also match")
 	}
-	if p2.Issuer != originalIssuer {
-		t.Errorf("mutation leaked into cached index: got %q want %q", p2.Issuer, originalIssuer)
+	if e2.Profile.Issuer != originalIssuer {
+		t.Errorf("mutation leaked into cached index: got %q want %q", e2.Profile.Issuer, originalIssuer)
 	}
 }
 
@@ -377,5 +377,58 @@ func TestBundledAllowlist_IsValidJSON(t *testing.T) {
 	var probe map[string]any
 	if err := json.Unmarshal(bundledSigningIdentities, &probe); err != nil {
 		t.Fatalf("signing_identities.json must be valid JSON: %v", err)
+	}
+}
+
+// TestLookupSigningIdentity_MetaRegistryHasManifestURI asserts the bundled
+// meta-registry entry carries a non-empty ManifestURI pointing to the
+// moat-registry branch. This is the URI syllago writes into the registry
+// config so moat.Sync can fetch and verify the signed manifest.
+func TestLookupSigningIdentity_MetaRegistryHasManifestURI(t *testing.T) {
+	t.Parallel()
+	entry, ok := LookupSigningIdentity("https://github.com/OpenScribbler/syllago-meta-registry")
+	if !ok {
+		t.Fatal("expected allowlist match for meta-registry URL")
+	}
+	if entry.ManifestURI == "" {
+		t.Error("expected non-empty ManifestURI for meta-registry allowlist entry")
+	}
+	wantPrefix := "https://raw.githubusercontent.com/OpenScribbler/syllago-meta-registry/"
+	if !strings.HasPrefix(entry.ManifestURI, wantPrefix) {
+		t.Errorf("ManifestURI %q does not start with expected prefix %q", entry.ManifestURI, wantPrefix)
+	}
+	if entry.Profile == nil {
+		t.Error("expected non-nil Profile")
+	}
+}
+
+// TestParseSigningIdentities_ManifestURIOptional asserts that entries without
+// manifest_uri parse correctly — back-compat for allowlist entries that
+// predate the field.
+func TestParseSigningIdentities_ManifestURIOptional(t *testing.T) {
+	t.Parallel()
+	data := []byte(`{
+		"_version": 1,
+		"identities": [{
+			"registry_url": "https://github.com/example/repo",
+			"profile": {
+				"issuer": "https://token.actions.githubusercontent.com",
+				"subject": "https://github.com/example/repo/.github/workflows/moat.yml@refs/heads/main",
+				"profile_version": 1,
+				"repository_id": "12345",
+				"repository_owner_id": "67890"
+			}
+		}]
+	}`)
+	idx, err := parseSigningIdentities(data)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	entry := idx[normalizeRegistryURL("https://github.com/example/repo")]
+	if entry == nil {
+		t.Fatal("expected entry in index")
+	}
+	if entry.ManifestURI != "" {
+		t.Errorf("expected empty ManifestURI for entry without manifest_uri field, got %q", entry.ManifestURI)
 	}
 }

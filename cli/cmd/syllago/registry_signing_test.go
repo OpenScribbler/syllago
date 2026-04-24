@@ -254,15 +254,15 @@ func TestDescribeProfileSource_EmptyForLegacy(t *testing.T) {
 // operators will see.
 func TestDescribeProfileSource_ProducesHumanText(t *testing.T) {
 	t.Parallel()
-	p, _ := moat.LookupSigningIdentity(metaRegistryURL)
-	if p == nil {
+	entry, _ := moat.LookupSigningIdentity(metaRegistryURL)
+	if entry == nil {
 		t.Fatal("meta-registry missing from allowlist")
 	}
-	allowlistMsg := describeProfileSource(&signingResolution{Profile: p, Source: "allowlist"}, metaRegistryURL)
+	allowlistMsg := describeProfileSource(&signingResolution{Profile: entry.Profile, Source: "allowlist"}, metaRegistryURL)
 	if !strings.Contains(allowlistMsg, "allowlist") {
 		t.Errorf("allowlist message missing 'allowlist': %q", allowlistMsg)
 	}
-	flagsMsg := describeProfileSource(&signingResolution{Profile: p, Source: "flags"}, metaRegistryURL)
+	flagsMsg := describeProfileSource(&signingResolution{Profile: entry.Profile, Source: "flags"}, metaRegistryURL)
 	if !strings.Contains(flagsMsg, "--signing-") {
 		t.Errorf("flags message missing '--signing-': %q", flagsMsg)
 	}
@@ -273,8 +273,11 @@ func TestDescribeProfileSource_ProducesHumanText(t *testing.T) {
 // than leak internal state to operators.
 func TestDescribeProfileSource_UnknownSourceIsSilent(t *testing.T) {
 	t.Parallel()
-	p, _ := moat.LookupSigningIdentity(metaRegistryURL)
-	if msg := describeProfileSource(&signingResolution{Profile: p, Source: "future-source"}, metaRegistryURL); msg != "" {
+	entry, _ := moat.LookupSigningIdentity(metaRegistryURL)
+	if entry == nil {
+		t.Fatal("meta-registry missing from allowlist")
+	}
+	if msg := describeProfileSource(&signingResolution{Profile: entry.Profile, Source: "future-source"}, metaRegistryURL); msg != "" {
 		t.Errorf("expected silence for unknown source, got %q", msg)
 	}
 }
@@ -337,5 +340,55 @@ func TestTrimAllFlagValues(t *testing.T) {
 	got := trimAllFlagValues(input)
 	if got.Identity != "subject" || got.Issuer != "issuer" || got.RepositoryID != "42" || got.RepositoryOwnerID != "7" {
 		t.Errorf("trim incomplete: %+v", got)
+	}
+}
+
+// TestResolveSigningProfile_AllowlistIncludesManifestURI asserts that an
+// allowlist match propagates ManifestURI into the resolution — the URI is
+// written to the registry config in registry add so moat.Sync can fetch
+// and verify the signed manifest.
+func TestResolveSigningProfile_AllowlistIncludesManifestURI(t *testing.T) {
+	t.Parallel()
+	res, err := resolveSigningProfile(metaRegistryURL, signingFlagSet{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res == nil {
+		t.Fatal("expected non-nil resolution")
+	}
+	if res.Source != "allowlist" {
+		t.Errorf("expected Source=allowlist, got %q", res.Source)
+	}
+	if res.ManifestURI == "" {
+		t.Error("expected non-empty ManifestURI from allowlist resolution")
+	}
+	if res.Profile == nil {
+		t.Error("expected non-nil Profile")
+	}
+}
+
+// TestResolveSigningProfile_FlagsLeaveManifestURIEmpty asserts that the
+// flags path leaves ManifestURI empty — the manifest URI is discovered on
+// first sync when it's not bundled in the allowlist.
+func TestResolveSigningProfile_FlagsLeaveManifestURIEmpty(t *testing.T) {
+	t.Parallel()
+	res, err := resolveSigningProfile(
+		"https://github.com/example/unknown-registry",
+		signingFlagSet{
+			UserRequestedMOAT: true,
+			Identity:          "https://github.com/example/unknown/.github/workflows/moat.yml@refs/heads/main",
+			Issuer:            moat.GitHubActionsIssuer,
+			RepositoryID:      "111",
+			RepositoryOwnerID: "222",
+		},
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Source != "flags" {
+		t.Errorf("expected Source=flags, got %q", res.Source)
+	}
+	if res.ManifestURI != "" {
+		t.Errorf("expected empty ManifestURI for flag-sourced profile, got %q", res.ManifestURI)
 	}
 }

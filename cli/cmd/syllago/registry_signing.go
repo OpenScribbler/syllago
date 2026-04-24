@@ -52,11 +52,12 @@ type signingFlagSet struct {
 }
 
 // signingResolution is the output of resolveSigningProfile: either a
-// populated profile + source label, or a (nil, "") pair meaning the caller
-// should continue in legacy git-mode.
+// populated profile + source label + manifest URI, or a (nil, "") pair
+// meaning the caller should continue in legacy git-mode.
 type signingResolution struct {
-	Profile *config.SigningProfile
-	Source  string // "allowlist", "flags", or "" when legacy git
+	Profile     *config.SigningProfile
+	ManifestURI string // non-empty only for "allowlist" source; empty for "flags" and legacy git
+	Source      string // "allowlist", "flags", or "" when legacy git
 }
 
 // resolveSigningProfile applies the allowlist-then-flags-then-fail policy
@@ -78,7 +79,7 @@ type signingResolution struct {
 //   - the caller passed any --signing-* flag, or
 //   - the URL matches the bundled allowlist (zero-config upgrade).
 func resolveSigningProfile(gitURL string, flags signingFlagSet) (*signingResolution, error) {
-	allowlistProfile, hasAllowlistEntry := moat.LookupSigningIdentity(gitURL)
+	allowlistEntry, hasAllowlistEntry := moat.LookupSigningIdentity(gitURL)
 
 	// Case 1: no MOAT intent anywhere → legacy git mode, no profile captured.
 	if !flags.UserRequestedMOAT && !hasAllowlistEntry {
@@ -97,7 +98,11 @@ func resolveSigningProfile(gitURL string, flags signingFlagSet) (*signingResolut
 
 	// Case 3: no --signing-identity, but allowlist has a match → auto-pin.
 	if hasAllowlistEntry {
-		return &signingResolution{Profile: allowlistProfile, Source: "allowlist"}, nil
+		return &signingResolution{
+			Profile:     allowlistEntry.Profile,
+			ManifestURI: allowlistEntry.ManifestURI, // may be empty for pre-manifest_uri entries
+			Source:      "allowlist",
+		}, nil
 	}
 
 	// Case 4: MOAT requested (--moat or partial --signing-* flags) but the
