@@ -213,3 +213,34 @@ func TestSplit_H2DecorativeHR(t *testing.T) {
 		t.Errorf("expected 4 --- lines preserved across candidate bodies, got %d", hrHits)
 	}
 }
+
+func TestSplit_H2MustShouldMay(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "must-should-may.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	if len(cands) != 4 {
+		t.Fatalf("expected 4 candidates, got %d", len(cands))
+	}
+	// Every candidate body must preserve uppercase MUST/SHOULD/MAY tokens as
+	// originally authored. Slugification lowercases headings, but body bytes
+	// are preserved verbatim.
+	for i, c := range cands {
+		if !strings.Contains(c.Body, "MUST") {
+			t.Errorf("cand %d body missing uppercase MUST", i)
+		}
+		// Not every section uses SHOULD/MAY, but every fixture section does.
+		if !strings.Contains(c.Body, "SHOULD") {
+			t.Errorf("cand %d body missing uppercase SHOULD", i)
+		}
+		if !strings.Contains(c.Body, "MAY") {
+			t.Errorf("cand %d body missing uppercase MAY", i)
+		}
+		// And no accidental lowercasing.
+		if strings.Contains(c.Body, " must ") || strings.Contains(c.Body, " should ") {
+			t.Errorf("cand %d body contains lowercase mandate token (casing must be preserved)", i)
+		}
+	}
+}
