@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-24T15:08:29Z",
+  "generatedAt": "2026-04-24T15:54:40Z",
   "syllagoVersion": "0.9.0",
   "commands": [
     {
@@ -2929,6 +2929,22 @@
           "default": null,
           "required": false,
           "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--on-clean",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Action when rule is already installed cleanly: replace|skip"
+        },
+        {
+          "name": "--on-modified",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Action when install record is stale: drop-record|append-fresh|keep"
         },
         {
           "name": "--to",

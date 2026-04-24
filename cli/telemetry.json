@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-24T15:08:29Z",
+  "generatedAt": "2026-04-24T15:54:40Z",
   "syllagoVersion": "0.9.0",
   "events": [
     {
@@ -202,6 +202,24 @@
           "type": "string",
           "description": "MOAT install-gate outcome (proceed, hard-block, publisher-warn, private-prompt, tier-below-policy)",
           "example": "proceed",
+          "commands": [
+            "install"
+          ]
+        },
+        {
+          "name": "verification_state",
+          "type": "string",
+          "description": "D16 verification state for rule-append installs (fresh, clean, modified)",
+          "example": "clean",
+          "commands": [
+            "install"
+          ]
+        },
+        {
+          "name": "decision_action",
+          "type": "string",
+          "description": "D17 decision action taken during re-install (proceed, replace, skip, drop_record, append_fresh, keep)",
+          "example": "replace",
           "commands": [
             "install"
           ]
