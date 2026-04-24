@@ -1,0 +1,39 @@
+╭───Add ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  [1 Source]  [2 Discovery]  [3 Heuristic]  [4 Review]  [5 Execute]                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Select monolithic rule files to import                                                            Back      Next
+
+  > ◯ CLAUDE.md   42L  5H2  [project]
+    ◯ AGENTS.md   30L  3H2  [project]  ✓ in library
+    ◯ GEMINI.md   50L  6H2  [global]
+
+  0 of 3 selected — [space] toggle  [a] all  [n] none  [enter] next  [esc] back
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
