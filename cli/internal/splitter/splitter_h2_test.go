@@ -187,3 +187,29 @@ func TestSplit_H2ImportLine(t *testing.T) {
 		t.Fatalf("expected @import line preserved in exactly one candidate, got %d matches", hits)
 	}
 }
+
+func TestSplit_H2DecorativeHR(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "decorative-hr.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	// Fixture has 4 H2s. Decorative --- lines must not create extra candidates.
+	if len(cands) != 4 {
+		t.Fatalf("expected 4 candidates (no splits on ---), got %d", len(cands))
+	}
+	// Every decorative --- in the source must still appear in one of the bodies.
+	hrHits := 0
+	for _, c := range cands {
+		for _, ln := range strings.Split(c.Body, "\n") {
+			if ln == "---" {
+				hrHits++
+			}
+		}
+	}
+	// Source contains 4 standalone --- lines.
+	if hrHits != 4 {
+		t.Errorf("expected 4 --- lines preserved across candidate bodies, got %d", hrHits)
+	}
+}
