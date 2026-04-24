@@ -100,7 +100,10 @@ func (m *addWizardModel) updateMouse(msg tea.MouseMsg) (*addWizardModel, tea.Cmd
 	case addStepDiscovery:
 		return m.updateMouseDiscovery(msg)
 	case addStepHeuristic:
-		return m.updateMouseHeuristic(msg)
+		if m.source == addSourceMonolithic {
+			return m.updateMouseHeuristic(msg)
+		}
+		return m.updateMouseProviderHeuristic(msg)
 	case addStepReview:
 		if m.source == addSourceMonolithic {
 			return m.updateMouseMonolithicReview(msg)
@@ -323,10 +326,7 @@ func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel
 		return m, nil
 	}
 	if zone.Get("triage-next").InBounds(msg) {
-		m.mergeConfirmIntoDiscovery()
-		if len(m.selectedItems()) > 0 {
-			m.enterReview()
-		}
+		m.advanceAfterTriage()
 		return m, nil
 	}
 
@@ -480,7 +480,10 @@ func (m *addWizardModel) updateKey(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
 	case addStepDiscovery:
 		return m.updateKeyDiscovery(msg)
 	case addStepHeuristic:
-		return m.updateKeyHeuristic(msg)
+		if m.source == addSourceMonolithic {
+			return m.updateKeyHeuristic(msg)
+		}
+		return m.updateKeyProviderHeuristic(msg)
 	case addStepReview:
 		if m.source == addSourceMonolithic {
 			return m.updateKeyMonolithicReview(msg)
@@ -809,10 +812,7 @@ func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, te
 		return m, nil
 
 	case tea.KeyEnter:
-		m.mergeConfirmIntoDiscovery()
-		if len(m.selectedItems()) > 0 {
-			m.enterReview()
-		}
+		m.advanceAfterTriage()
 		return m, nil
 
 	case tea.KeyTab:
@@ -923,6 +923,7 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			if ok, n, derr := add.DetectSplittable(item.path); derr == nil && ok {
 				item.splittable = true
 				item.splitSectionCount = n
+				item.splitChosen = true
 			}
 		}
 		if item.status == add.StatusInLibrary {
@@ -982,6 +983,7 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			catalogItem:       di.catalogItem, // original item with correct Files list
 			splittable:        di.splittable,
 			splitSectionCount: di.splitSectionCount,
+			splitChosen:       di.splitChosen,
 		}
 	}
 
@@ -1017,8 +1019,14 @@ func (m *addWizardModel) updateKeyReview(msg tea.KeyMsg) (*addWizardModel, tea.C
 
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.step = addStepDiscovery
-		m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+		// If this Review was reached via the Provider Heuristic step, back up
+		// to Heuristic so split decisions stay on the same path.
+		if m.source != addSourceMonolithic && m.hasSplittableSelection() {
+			m.step = addStepHeuristic
+		} else {
+			m.step = addStepDiscovery
+		}
+		m.shell.SetActive(m.shellIndexForStep(m.step))
 		m.reviewAcknowledged = false
 		return m, nil
 

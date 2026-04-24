@@ -99,6 +99,7 @@ type addConfirmItem struct {
 	// mergeConfirmIntoDiscovery) can still render the monolithic-rule hint.
 	splittable        bool
 	splitSectionCount int
+	splitChosen       bool
 }
 
 // --- Messages ---
@@ -158,6 +159,12 @@ type addDiscoveryItem struct {
 	// Populated in handleDiscoveryDone after provider/local discovery.
 	splittable        bool
 	splitSectionCount int
+
+	// splitChosen records the user's Heuristic-step decision for this rule:
+	// true = split into sections via H2, false = import as a single rule.
+	// Default true for splittable items, false otherwise. Only meaningful
+	// when splittable=true.
+	splitChosen bool
 }
 
 // --- Execute result ---
@@ -383,8 +390,15 @@ func (m *addWizardModel) validateStep() {
 			panic("wizard invariant: addStepReview entered without selected items")
 		}
 	case addStepHeuristic:
-		if len(m.selectedCandidates) == 0 {
-			panic("wizard invariant: addStepHeuristic entered with no selected candidates")
+		if m.source == addSourceMonolithic {
+			if len(m.selectedCandidates) == 0 {
+				panic("wizard invariant: addStepHeuristic entered with no selected candidates")
+			}
+		} else {
+			// Provider flow: must have at least one splittable selected item.
+			if !m.hasSplittableSelection() {
+				panic("wizard invariant: addStepHeuristic (provider flow) entered without splittable items")
+			}
 		}
 	case addStepExecute:
 		// Monolithic path: require at least one accepted review candidate.
@@ -492,13 +506,32 @@ func (m *addWizardModel) selectedItems() []addDiscoveryItem {
 	return result
 }
 
+// hasSplittableSelection reports whether any currently selected discovery item
+// is flagged splittable=true. Drives the decision to insert the Heuristic step
+// into the Provider flow after triage-merge.
+func (m *addWizardModel) hasSplittableSelection() bool {
+	for _, it := range m.selectedItems() {
+		if it.splittable {
+			return true
+		}
+	}
+	return false
+}
+
 // buildShellLabels returns the correct step label slice for the current permutation.
 func (m *addWizardModel) buildShellLabels() []string {
 	if m.source == addSourceMonolithic {
 		return []string{"Source", "Discovery", "Heuristic", "Review", "Execute"}
 	}
+	heur := m.hasSplittableSelection()
 	if m.preFilterType != "" {
+		if heur {
+			return []string{"Source", "Discovery", "Heuristic", "Review", "Execute"}
+		}
 		return []string{"Source", "Discovery", "Review", "Execute"}
+	}
+	if heur {
+		return []string{"Source", "Type", "Discovery", "Heuristic", "Review", "Execute"}
 	}
 	return []string{"Source", "Type", "Discovery", "Review", "Execute"}
 }
@@ -535,7 +568,13 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 	}
 
 	hasType := m.preFilterType == ""
+	heur := m.hasSplittableSelection()
 
+	// Provider-flow permutations (4 possible):
+	//   hasType=true,  heur=false: Source(0) Type(1) Discovery(2) Review(3) Execute(4)
+	//   hasType=true,  heur=true:  Source(0) Type(1) Discovery(2) Heuristic(3) Review(4) Execute(5)
+	//   hasType=false, heur=false: Source(0) Discovery(1) Review(2) Execute(3)
+	//   hasType=false, heur=true:  Source(0) Discovery(1) Heuristic(2) Review(3) Execute(4)
 	switch s {
 	case addStepSource:
 		return 0
@@ -549,12 +588,29 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 			return 2
 		}
 		return 1
+	case addStepHeuristic:
+		if hasType {
+			return 3
+		}
+		return 2
 	case addStepReview:
+		if heur {
+			if hasType {
+				return 4
+			}
+			return 3
+		}
 		if hasType {
 			return 3
 		}
 		return 2
 	case addStepExecute:
+		if heur {
+			if hasType {
+				return 5
+			}
+			return 4
+		}
 		if hasType {
 			return 4
 		}
@@ -566,16 +622,49 @@ func (m *addWizardModel) shellIndexForStep(s addStep) int {
 // stepForShellIndex is the inverse of shellIndexForStep.
 // Used by breadcrumb click handler to map shell index → step enum.
 func (m *addWizardModel) stepForShellIndex(idx int) addStep {
+	heur := m.hasSplittableSelection()
 	if m.preFilterType != "" {
-		// Source(0) Discovery(1) Review(2) Execute(3)
+		if heur {
+			// Source(0) Discovery(1) Heuristic(2) Review(3) Execute(4)
+			switch idx {
+			case 0:
+				return addStepSource
+			case 1:
+				return addStepDiscovery
+			case 2:
+				return addStepHeuristic
+			case 3:
+				return addStepReview
+			case 4:
+				return addStepExecute
+			}
+		} else {
+			// Source(0) Discovery(1) Review(2) Execute(3)
+			switch idx {
+			case 0:
+				return addStepSource
+			case 1:
+				return addStepDiscovery
+			case 2:
+				return addStepReview
+			case 3:
+				return addStepExecute
+			}
+		}
+	} else if heur {
+		// Source(0) Type(1) Discovery(2) Heuristic(3) Review(4) Execute(5)
 		switch idx {
 		case 0:
 			return addStepSource
 		case 1:
-			return addStepDiscovery
+			return addStepType
 		case 2:
-			return addStepReview
+			return addStepDiscovery
 		case 3:
+			return addStepHeuristic
+		case 4:
+			return addStepReview
+		case 5:
 			return addStepExecute
 		}
 	} else {
@@ -868,9 +957,10 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.hookSourceDir = item.hookSourceDir
 		}
 
-		// Preserve splittability so Review can render the monolithic-rule hint.
+		// Preserve splittability + Heuristic-step decision.
 		di.splittable = item.splittable
 		di.splitSectionCount = item.splitSectionCount
+		di.splitChosen = item.splitChosen
 
 		// Prefer pre-computed risks from discovery (hooks carry command/URL risks
 		// that aren't derivable from file content alone). Fall back to deriving
