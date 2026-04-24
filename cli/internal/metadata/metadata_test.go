@@ -324,3 +324,64 @@ func TestMetaHiddenField(t *testing.T) {
 		t.Error("hidden field should be omitted when false")
 	}
 }
+
+// TestLoad_AcceptsRuleMetadataShape is the regression test for bug-428: rulestore
+// writes .syllago.yaml in the D11/D13 nested-source shape, and catalog scanning
+// must accept it through the same Load() entry point every other content type
+// uses. Without this, any rulestore-written rule poisons catalog scanning with
+// CATALOG_002 ("cannot unmarshal !!map into string").
+func TestLoad_AcceptsRuleMetadataShape(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	itemDir := filepath.Join(dir, "simplicity")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// Canonical rulestore output — nested source block, versions[], current_version.
+	ruleYAML := `format_version: 1
+id: 626e773b-0e6a-4fef-8caf-57095d1a7c61
+name: simplicity
+description: Simplicity
+type: rule
+added_at: 2026-04-24T16:36:34Z
+source:
+    provider: claude-code
+    scope: global
+    path: /home/user/CLAUDE.md
+    format: md
+    filename: CLAUDE.md
+    hash: sha256:c1270baf3981dc4a17cd328e8c4f7c93032fa0a42eb7f10f1f98e1961530242f
+    split_method: h2
+    captured_at: 2026-04-24T16:36:34Z
+versions:
+    - hash: sha256:c1270baf3981dc4a17cd328e8c4f7c93032fa0a42eb7f10f1f98e1961530242f
+      written_at: 2026-04-24T16:36:34Z
+current_version: sha256:c1270baf3981dc4a17cd328e8c4f7c93032fa0a42eb7f10f1f98e1961530242f
+`
+	if err := os.WriteFile(MetaPath(itemDir), []byte(ruleYAML), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	loaded, err := Load(itemDir)
+	if err != nil {
+		t.Fatalf("Load rejected rulestore-written metadata: %v", err)
+	}
+	if loaded == nil {
+		t.Fatal("Load returned nil Meta for a present file")
+	}
+	if loaded.Name != "simplicity" {
+		t.Errorf("Name = %q, want simplicity", loaded.Name)
+	}
+	if loaded.Description != "Simplicity" {
+		t.Errorf("Description = %q, want Simplicity", loaded.Description)
+	}
+	if loaded.SourceProvider != "claude-code" {
+		t.Errorf("SourceProvider = %q, want claude-code", loaded.SourceProvider)
+	}
+	if loaded.SourceFormat != "md" {
+		t.Errorf("SourceFormat = %q, want md", loaded.SourceFormat)
+	}
+	if loaded.SourceScope != "global" {
+		t.Errorf("SourceScope = %q, want global", loaded.SourceScope)
+	}
+}
