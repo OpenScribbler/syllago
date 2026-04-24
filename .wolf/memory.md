@@ -3934,3 +3934,40 @@
 | 10:17 | Edited cli/internal/tui/add_wizard.go | 5→9 lines | ~90 |
 | 10:18 | Edited cli/internal/tui/add_wizard_split_detect_test.go | 43→46 lines | ~411 |
 | 10:18 | Edited cli/internal/tui/add_wizard_split_detect_test.go | expanded (+9 lines) | ~194 |
+| 10:20 | Session end: 6 writes across 3 files (add_wizard_split_detect_test.go, add_wizard.go, add_wizard_update.go) | 4 reads | ~47750 tok |
+
+## Session: 2026-04-24 10:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:29 | Edited cli/internal/tui/add_wizard.go | expanded (+6 lines) | ~179 |
+| 10:29 | Edited cli/internal/tui/add_wizard.go | 5→6 lines | ~60 |
+| 10:29 | Edited cli/internal/tui/add_wizard_update.go | 6→7 lines | ~60 |
+| 10:29 | Edited cli/internal/tui/add_wizard_update.go | 3→4 lines | ~33 |
+| 10:29 | Edited cli/internal/tui/add_wizard.go | 3→4 lines | ~46 |
+| 10:30 | Edited cli/internal/tui/add_wizard.go | modified selectedItems() | ~269 |
+| 10:30 | Edited cli/internal/tui/add_wizard.go | modified permutations() | ~633 |
+| 10:30 | Edited cli/internal/tui/add_wizard.go | modified hasSplittableSelection() | ~111 |
+| 10:31 | Created cli/internal/tui/add_wizard_provider_split.go | — | ~1555 |
+| 10:31 | Edited cli/internal/tui/add_wizard_view.go | 2→6 lines | ~40 |
+| 10:31 | Edited cli/internal/tui/add_wizard_update.go | 3→6 lines | ~46 |
+| 10:31 | Edited cli/internal/tui/add_wizard_update.go | 3→6 lines | ~45 |
+| 10:31 | Edited cli/internal/tui/add_wizard_update.go | modified InBounds() | ~24 |
+| 10:31 | Edited cli/internal/tui/add_wizard_update.go | 6→3 lines | ~16 |
+| 10:31 | Edited cli/internal/tui/add_wizard_update.go | modified hasSplittableSelection() | ~124 |
+| 10:33 | Created cli/internal/tui/add_wizard_provider_split_test.go | — | ~1116 |
+| 10:35 | Edited cli/internal/tui/add_wizard.go | modified branch() | ~234 |
+| 10:36 | Edited cli/internal/tui/add_wizard_provider_split.go | modified addSplitRuleItem() | ~834 |
+| 10:37 | Created cli/internal/tui/add_wizard_provider_split_exec_test.go | — | ~992 |
+
+## Session: 2026-04-24 10:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:40 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestAddWizard_HeuristicStep_InvariantProviderNoSplittable() | ~270 |
+| 10:41 | Created cli/internal/tui/add_wizard_provider_split_mouse_test.go | — | ~870 |
+| 10:42 | Created cli/internal/tui/add_wizard_provider_split_mouse_test.go | — | ~822 |
+| 10:42 | Edited cli/internal/tui/add_wizard_provider_split_mouse_test.go | 8→10 lines | ~53 |
+| 10:42 | Edited cli/internal/tui/add_wizard_provider_split_mouse_test.go | 13→17 lines | ~147 |
+| 10:43 | Created cli/internal/tui/golden_add_wizard_provider_split_test.go | — | ~584 |
+| 10:45 | Session end: 6 writes across 3 files (wizard_invariant_test.go, add_wizard_provider_split_mouse_test.go, golden_add_wizard_provider_split_test.go) | 8 reads | ~35971 tok |

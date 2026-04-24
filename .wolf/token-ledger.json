@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 5396919,
-    "total_reads": 2395,
-    "total_writes": 2091,
-    "total_sessions": 278,
-    "anatomy_hits": 913,
-    "anatomy_misses": 1099,
-    "repeated_reads_blocked": 907,
-    "estimated_savings_vs_bare_cli": 5334750
+    "total_tokens_estimated": 5604747,
+    "total_reads": 2435,
+    "total_writes": 2118,
+    "total_sessions": 285,
+    "anatomy_hits": 945,
+    "anatomy_misses": 1107,
+    "repeated_reads_blocked": 916,
+    "estimated_savings_vs_bare_cli": 5507270
   },
   "sessions": [
     {
@@ -29846,6 +29846,466 @@
         "reads_count": 8,
         "writes_count": 7,
         "repeated_reads_blocked": 8,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-23-1245",
+      "started": "2026-04-23T19:45:04.285Z",
+      "ended": "2026-04-24T16:26:19.849Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/converter/manifest.go",
+          "tokens_estimated": 1334,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_view.go",
+          "tokens_estimated": 1041,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 20426,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_write_test.go",
+          "tokens_estimated": 942,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_preview_test.go",
+          "tokens_estimated": 3131,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 1892,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 8654,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 2420,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 852,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 41,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 552,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 39840,
+        "output_tokens_estimated": 1529,
+        "reads_count": 9,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 8
+      }
+    },
+    {
+      "id": "session-2026-04-23-1245",
+      "started": "2026-04-23T19:45:04.285Z",
+      "ended": "2026-04-24T16:27:02.114Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/converter/manifest.go",
+          "tokens_estimated": 1334,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_view.go",
+          "tokens_estimated": 1041,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 20426,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_write_test.go",
+          "tokens_estimated": 942,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_preview_test.go",
+          "tokens_estimated": 3131,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 1892,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 8654,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 2420,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 852,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 41,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 552,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 39840,
+        "output_tokens_estimated": 1529,
+        "reads_count": 9,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 8
+      }
+    },
+    {
+      "id": "session-2026-04-23-1245",
+      "started": "2026-04-23T19:45:04.285Z",
+      "ended": "2026-04-24T16:30:16.114Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/converter/manifest.go",
+          "tokens_estimated": 1334,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_view.go",
+          "tokens_estimated": 1041,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 20426,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_write_test.go",
+          "tokens_estimated": 942,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_hook_preview_test.go",
+          "tokens_estimated": 3131,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 1892,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 8654,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 2420,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/splitter/splitter.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/actions_test.go",
+          "tokens_estimated": 852,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 41,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/metapanel.go",
+          "tokens_estimated": 62,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.develop/rules-splitter.json",
+          "tokens_estimated": 552,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 39840,
+        "output_tokens_estimated": 1529,
+        "reads_count": 10,
+        "writes_count": 5,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 8
+      }
+    },
+    {
+      "id": "session-2026-04-24-1015",
+      "started": "2026-04-24T17:15:40.696Z",
+      "ended": "2026-04-24T17:20:37.670Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_test.go",
+          "tokens_estimated": 14811,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_update.go",
+          "tokens_estimated": 9340,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 21527,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go",
+          "tokens_estimated": 994,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go",
+          "tokens_estimated": 10,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 116,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_update.go",
+          "tokens_estimated": 209,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 96,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go",
+          "tokens_estimated": 440,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go",
+          "tokens_estimated": 207,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 46672,
+        "output_tokens_estimated": 1078,
+        "reads_count": 4,
+        "writes_count": 6,
+        "repeated_reads_blocked": 3,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-24-1038",
+      "started": "2026-04-24T17:38:59.068Z",
+      "ended": "2026-04-24T17:45:44.456Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/wizard_invariant_test.go",
+          "tokens_estimated": 7696,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard.go",
+          "tokens_estimated": 22376,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_mono_mouse_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/checkbox_list.go",
+          "tokens_estimated": 1893,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_split_detect_test.go",
+          "tokens_estimated": 1064,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_add_wizard_mono_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/add-provider-split-heuristic-80x30.golden",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/testdata/add-provider-split-heuristic-60x20.golden",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/wizard_invariant_test.go",
+          "tokens_estimated": 289,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+          "tokens_estimated": 932,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+          "tokens_estimated": 881,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/add_wizard_provider_split_mouse_test.go",
+          "tokens_estimated": 158,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/golden_add_wizard_provider_split_test.go",
+          "tokens_estimated": 626,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 33029,
+        "output_tokens_estimated": 2942,
+        "reads_count": 8,
+        "writes_count": 6,
+        "repeated_reads_blocked": 3,
         "anatomy_lookups": 4
       }
     }

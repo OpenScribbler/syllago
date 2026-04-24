@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T17:18:36.301Z
-> Files: 1167 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T17:43:56.532Z
+> Files: 1172 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -2031,12 +2031,16 @@
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
 - `add_wizard_monolithic_update.go` — Struct: addMonolithicDiscoveryDoneMsg (~3150 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
+- `add_wizard_provider_split_exec_test.go` — TestAddSplitRuleItem_WritesSections, TestAddSplitRuleItem_EmptyPath, TestAddSplitRuleItem_LocalFallb (~992 tok)
+- `add_wizard_provider_split_mouse_test.go` — TestAddWizardMouse_ProviderSplitRowClick_MovesCursor, TestAddWizardMouse_ProviderSplitRowClick_Toggl (~857 tok)
+- `add_wizard_provider_split_test.go` — TestProviderHeuristic_EntersOnSplittableSelection, TestProviderHeuristic_ShellIncludesHeuristicLabel (~1116 tok)
+- `add_wizard_provider_split.go` (~2342 tok)
 - `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~6129 tok)
 - `add_wizard_split_detect_test.go` — TestAddWizard_DiscoveryFlagsSplittableRules, TestAddWizard_ReviewShowsSplittableHint (~1064 tok)
 - `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~14811 tok)
-- `add_wizard_update.go` (~9373 tok)
-- `add_wizard_view.go` — Struct: sourceOption (~10151 tok)
-- `add_wizard.go` — Struct: addConfirmItem (~21622 tok)
+- `add_wizard_update.go` (~9467 tok)
+- `add_wizard_view.go` — Struct: sourceOption (~10176 tok)
+- `add_wizard.go` — Struct: addConfirmItem (~22376 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
 - `app_update.go` — Declares checkbox (~5744 tok)
 - `app_view.go` (~1041 tok)
@@ -2062,6 +2066,7 @@
 - `gallery.go` — Struct: cardSelectedMsg (~3884 tok)
 - `gate_install_test.go` — Struct: gateFixture (~4131 tok)
 - `gate_install.go` — Struct: gateEvaluation (~1370 tok)
+- `golden_add_wizard_provider_split_test.go` — TestGolden_AddProviderSplitHeuristic_60x20, TestGolden_AddProviderSplitHeuristic_80x30, TestGolden_A (~584 tok)
 - `golden_config_test.go` — TestGoldenConfig_Settings_60x20, TestGoldenConfig_Settings_80x30, TestGoldenConfig_Settings_120x40, (~755 tok)
 - `golden_moat_test.go` — TestGolden_MOAT_Library_60x20, TestGolden_MOAT_Library_80x30, TestGolden_MOAT_Library_120x40, TestGo (~3450 tok)
 - `golden_triage_test.go` — TestGolden_Triage_80x30, TestGolden_Triage_120x40 (~1163 tok)
@@ -2091,7 +2096,7 @@
 - `trust_debug_test.go` — TestDebugRegistryTrustZone (~386 tok)
 - `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~3388 tok)
 - `trust_inspector.go` — Struct: RegistryTrustSummary (~2507 tok)
-- `wizard_invariant_test.go` — TestInstallWizard_ValidateStep_Forward, TestInstallWizard_ValidateStep_Esc, TestInstallWizard_Valida (~7696 tok)
+- `wizard_invariant_test.go` — TestInstallWizard_ValidateStep_Forward, TestInstallWizard_ValidateStep_Esc, TestInstallWizard_Valida (~7677 tok)
 
 ## cli/internal/updater/
 
