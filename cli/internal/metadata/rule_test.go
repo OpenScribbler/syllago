@@ -119,3 +119,65 @@ func TestLoadRuleMetadata_RejectsMalformedHash(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadRuleMetadata_CurrentVersionMustExist(t *testing.T) {
+	validHashA := "sha256:" + strings.Repeat("a", 64)
+	validHashB := "sha256:" + strings.Repeat("b", 64)
+	cases := []struct {
+		name           string
+		versions       []RuleVersionEntry
+		currentVersion string
+	}{
+		{
+			name: "missing_hash_reference",
+			versions: []RuleVersionEntry{
+				{Hash: validHashA, WrittenAt: time.Now()},
+			},
+			currentVersion: validHashB,
+		},
+		{
+			name:           "empty_versions_with_current",
+			versions:       nil,
+			currentVersion: validHashA,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			path := filepath.Join(tmp, ".syllago.yaml")
+			m := RuleMetadata{
+				FormatVersion: 1,
+				ID:            "x",
+				Name:          "x",
+				Type:          "rule",
+				AddedAt:       time.Now(),
+				Source: RuleSource{
+					Provider:    "claude-code",
+					Scope:       "project",
+					Path:        "/tmp/CLAUDE.md",
+					Format:      "claude-code-monolithic",
+					Filename:    "CLAUDE.md",
+					Hash:        validHashA,
+					SplitMethod: "h2",
+					CapturedAt:  time.Now(),
+				},
+				Versions:       tc.versions,
+				CurrentVersion: tc.currentVersion,
+			}
+			data, err := yaml.Marshal(&m)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			if err := os.WriteFile(path, data, 0o644); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			_, err = LoadRuleMetadata(path)
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			if !strings.Contains(err.Error(), "current_version references missing hash") {
+				t.Fatalf("error = %q, want substring %q", err, "current_version references missing hash")
+			}
+		})
+	}
+}
