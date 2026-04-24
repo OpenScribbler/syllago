@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-23T21:54:47Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-04-24T15:03:43Z",
+  "syllagoVersion": "0.9.0",
   "commands": [
     {
       "name": "add",
@@ -56,10 +56,10 @@
         {
           "name": "--from",
           "shorthand": null,
-          "type": "string",
+          "type": "stringArray",
           "default": null,
           "required": true,
-          "description": "Provider to add from (required)"
+          "description": "Provider to add from, or path to a monolithic rule file (repeatable for files)"
         },
         {
           "name": "--name",
@@ -100,6 +100,14 @@
           "default": null,
           "required": false,
           "description": "Source registry visibility (public, private, unknown)"
+        },
+        {
+          "name": "--split",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Splitter heuristic: h2|h3|h4|marker:\u003cliteral\u003e|single|llm (monolithic --from only)"
         },
         {
           "name": "--trusted-root",
@@ -2912,7 +2920,7 @@
           "type": "string",
           "default": "symlink",
           "required": false,
-          "description": "Install method: symlink (default) or copy"
+          "description": "Install method: symlink (default), copy, or append (monolithic-file rules)"
         },
         {
           "name": "--no-input",
