@@ -68,3 +68,19 @@ func TestSplit_SkipSplitTooFewH2(t *testing.T) {
 		t.Fatalf("expected reason too_few_h2, got %q", skip.Reason)
 	}
 }
+
+func TestSplit_DelegatingStub(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "delegating-stub.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if cands != nil {
+		t.Fatalf("expected nil candidates, got %d", len(cands))
+	}
+	if skip == nil {
+		t.Fatal("expected non-nil SkipSplitSignal")
+	}
+	// A 1-2 line stub that delegates to another file is < 30 lines.
+	if skip.Reason != "too_small" {
+		t.Fatalf("expected reason too_small, got %q", skip.Reason)
+	}
+}
