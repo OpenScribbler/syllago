@@ -3878,3 +3878,4 @@
 
 | 15:30 | Fixed 3 preview/drill-in bugs: removed SafeResolve from loadTriagePreview (symlink-incompatible), resolved symlinked root in scanDrillInFiles (WalkDir uses Lstat), moved MCP extractJSONSection before catalogItem check in enterReviewDrillIn | cli/internal/tui/add_wizard.go | bugs 411-413 | ~3k |
 | 15:45 | Discovered binary PATH issue: which syllago resolves to /home/hhewett/.local/src/syllago/cli/syllago (main repo, stale) not ~/.local/bin/syllago. Replaced both. User must restart TUI to pick up new binary. | cli/syllago | workaround | ~500 || 15:59 | Added type-boundary section headers to review step item list | add_wizard_view.go | build+tests pass | ~300 |
+| 22:24 | Fixed registry removal bug: doRegistryRemoveCmd now removes from all config sources | actions.go, actions_test.go | build+tests pass | ~500 |

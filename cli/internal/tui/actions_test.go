@@ -9,7 +9,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // testAppWithInstalledRule builds an App with one library rule already installed
@@ -253,5 +255,63 @@ func TestActions_HandleRemove_NoItem(t *testing.T) {
 	_, cmd := app.handleRemove()
 	if cmd != nil {
 		t.Errorf("expected nil cmd with no selected item, got %v", cmd)
+	}
+}
+
+// TestDoRegistryRemoveCmd_RemovesFromLocalConfig is the regression test for the
+// bug where doRegistryRemoveCmd only wrote to the global config, leaving a
+// registry that lived in a project-local config untouched after removal.
+func TestDoRegistryRemoveCmd_RemovesFromLocalConfig(t *testing.T) {
+	// Not parallel: mutates global state (registry.CacheDirOverride, config.GlobalDirOverride).
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	// Redirect global config and registry cache away from the real home.
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = globalDir
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	// Write a registry into the project-local config only (not global).
+	localCfg := &config.Config{
+		Registries: []config.Registry{{Name: "my-reg", URL: "https://example.com/repo.git"}},
+	}
+	if err := config.Save(projectRoot, localCfg); err != nil {
+		t.Fatalf("setup: config.Save: %v", err)
+	}
+
+	app := NewApp(
+		testCatalog(t), testProviders(), "0.0.0-test", false, nil,
+		testConfig(), false, projectRoot, projectRoot,
+	)
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	cmd := a.doRegistryRemoveCmd("my-reg")
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	done, ok := msg.(registryRemoveDoneMsg)
+	if !ok {
+		t.Fatalf("expected registryRemoveDoneMsg, got %T", msg)
+	}
+	if done.err != nil {
+		t.Fatalf("expected nil err, got %v", done.err)
+	}
+
+	// The registry must be gone from the project-local config.
+	result, err := config.Load(projectRoot)
+	if err != nil {
+		t.Fatalf("config.Load: %v", err)
+	}
+	for _, r := range result.Registries {
+		if r.Name == "my-reg" {
+			t.Errorf("registry still present in project-local config after removal")
+		}
 	}
 }
