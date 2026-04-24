@@ -132,17 +132,18 @@ func TestAddWizard_Source_Navigation(t *testing.T) {
 		t.Fatalf("expected cursor 1, got %d", m.sourceCursor)
 	}
 
-	// Down to 3 (max)
+	// Down to 4 (max — Monolithic is the 5th option)
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if m.sourceCursor != 3 {
-		t.Fatalf("expected cursor 3, got %d", m.sourceCursor)
+	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if m.sourceCursor != 4 {
+		t.Fatalf("expected cursor 4, got %d", m.sourceCursor)
 	}
 
-	// Down past end: stays at 3
+	// Down past end: stays at 4
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyDown})
-	if m.sourceCursor != 3 {
-		t.Fatalf("expected cursor clamped at 3, got %d", m.sourceCursor)
+	if m.sourceCursor != 4 {
+		t.Fatalf("expected cursor clamped at 4, got %d", m.sourceCursor)
 	}
 }
 

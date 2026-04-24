@@ -38,6 +38,10 @@ func (m *addWizardModel) Update(msg tea.Msg) (*addWizardModel, tea.Cmd) {
 		return m.updateMouse(msg)
 	case addDiscoveryDoneMsg:
 		return m.handleDiscoveryDone(msg)
+	case addMonolithicDiscoveryDoneMsg:
+		return m.handleMonolithicDiscoveryDone(msg)
+	case addMonolithicExecDoneMsg:
+		return m.handleMonolithicExecDone(msg)
 	case addExecItemDoneMsg:
 		return m.handleExecItemDone(msg)
 	case editCancelledMsg:
@@ -191,7 +195,7 @@ func (m *addWizardModel) updateMouseWheel(msg tea.MouseMsg) (*addWizardModel, te
 
 func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
 	// Top-level source option clicks
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		if zone.Get("add-src-" + itoa(i)).InBounds(msg) {
 			if m.sourceExpanded || m.inputActive {
 				// Already in a sub-mode — clicking a source option resets to top-level
@@ -218,6 +222,15 @@ func (m *addWizardModel) updateMouseSource(msg tea.MouseMsg) (*addWizardModel, t
 			case 3: // Git
 				m.inputActive = true
 				m.sourceErr = ""
+			case 4: // Monolithic rule files
+				m.source = addSourceMonolithic
+				m.shell.SetSteps(m.buildShellLabels())
+				m.step = addStepDiscovery
+				m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+				m.discovering = true
+				m.seq++
+				m.updateMaxStep()
+				return m, m.startMonolithicDiscoveryCmd()
 			}
 			return m, nil
 		}
@@ -274,6 +287,12 @@ func (m *addWizardModel) updateMouseType(msg tea.MouseMsg) (*addWizardModel, tea
 // --- Discovery step mouse ---
 
 func (m *addWizardModel) updateMouseDiscovery(msg tea.MouseMsg) (*addWizardModel, tea.Cmd) {
+	// Monolithic-rule discovery has a single-list layout; clicks toggle
+	// selection on the clicked row (mouse parity with the spacebar key).
+	if m.source == addSourceMonolithic {
+		return m.updateMouseMonolithicDiscovery(msg)
+	}
+
 	// Error state buttons
 	if m.discoveryErr != "" {
 		if zone.Get("add-retry").InBounds(msg) {
@@ -497,7 +516,7 @@ func (m *addWizardModel) updateKeySourceRadio(msg tea.KeyMsg) (*addWizardModel, 
 		}
 
 	case msg.Type == tea.KeyDown || (msg.Type == tea.KeyRunes && len(msg.Runes) == 1 && msg.Runes[0] == 'j'):
-		if m.sourceCursor < 3 {
+		if m.sourceCursor < 4 {
 			m.sourceCursor++
 		}
 
@@ -519,6 +538,15 @@ func (m *addWizardModel) updateKeySourceRadio(msg tea.KeyMsg) (*addWizardModel, 
 		case 3: // Git
 			m.inputActive = true
 			m.sourceErr = ""
+		case 4: // Monolithic rule files
+			m.source = addSourceMonolithic
+			m.shell.SetSteps(m.buildShellLabels())
+			m.step = addStepDiscovery
+			m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
+			m.discovering = true
+			m.seq++
+			m.updateMaxStep()
+			return m, m.startMonolithicDiscoveryCmd()
 		}
 	}
 	return m, nil
@@ -587,7 +615,7 @@ func (m *addWizardModel) updateKeySourceInput(msg tea.KeyMsg) (*addWizardModel, 
 
 	case tea.KeyDown:
 		m.inputActive = false
-		if m.sourceCursor < 3 {
+		if m.sourceCursor < 4 {
 			m.sourceCursor++
 		}
 		return m, nil
@@ -732,6 +760,12 @@ func (m *addWizardModel) updateKeyType(msg tea.KeyMsg) (*addWizardModel, tea.Cmd
 // --- Discovery step ---
 
 func (m *addWizardModel) updateKeyDiscovery(msg tea.KeyMsg) (*addWizardModel, tea.Cmd) {
+	// Monolithic-rule discovery has its own single-list layout — no split
+	// pane, no triage items. Each candidate is a row with a [space] toggle.
+	if m.source == addSourceMonolithic {
+		return m.updateKeyMonolithicDiscovery(msg)
+	}
+
 	// During scan, only Esc works
 	if m.discovering {
 		if msg.Type == tea.KeyEsc {
