@@ -161,3 +161,29 @@ func TestSplit_H2NumberedPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestSplit_H2ImportLine(t *testing.T) {
+	t.Parallel()
+	body := loadFixture(t, "import-line.md")
+	cands, skip := Split(body, Options{Heuristic: HeuristicH2})
+	if skip != nil {
+		t.Fatalf("unexpected skip-split: %+v", skip)
+	}
+	if len(cands) == 0 {
+		t.Fatalf("expected at least 1 candidate, got 0")
+	}
+	const importLine = "@import shared/rules.md"
+	// Exactly one candidate must contain the @import line byte-for-byte on its
+	// own line (the splitter must preserve the directive verbatim).
+	hits := 0
+	for _, c := range cands {
+		for _, ln := range strings.Split(c.Body, "\n") {
+			if ln == importLine {
+				hits++
+			}
+		}
+	}
+	if hits != 1 {
+		t.Fatalf("expected @import line preserved in exactly one candidate, got %d matches", hits)
+	}
+}
