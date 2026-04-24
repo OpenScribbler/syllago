@@ -28,6 +28,27 @@ func AllMonolithicFilenames() []string {
 	return []string{"CLAUDE.md", "AGENTS.md", "GEMINI.md", ".cursorrules", ".clinerules", ".windsurfrules"}
 }
 
+// SlugForMonolithicFilename returns the provider slug that owns the given
+// monolithic filename (e.g., "CLAUDE.md" → "claude-code"). Empty string
+// means the filename is not a recognized monolithic source.
+func SlugForMonolithicFilename(filename string) string {
+	switch filename {
+	case "CLAUDE.md":
+		return "claude-code"
+	case "AGENTS.md":
+		return "codex"
+	case "GEMINI.md":
+		return "gemini-cli"
+	case ".cursorrules":
+		return "cursor"
+	case ".clinerules":
+		return "cline"
+	case ".windsurfrules":
+		return "windsurf"
+	}
+	return ""
+}
+
 // MonolithicHint returns a one-line, non-blocking hint for providers with
 // strong conventions around monolithic-file install (D10). Empty string
 // means the provider has no special guidance.
