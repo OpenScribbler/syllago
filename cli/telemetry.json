@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-24T15:03:43Z",
+  "generatedAt": "2026-04-24T15:08:29Z",
   "syllagoVersion": "0.9.0",
   "events": [
     {
@@ -127,10 +127,47 @@
         {
           "name": "mode",
           "type": "string",
-          "description": "Loadout application mode",
+          "description": "Operational mode (loadout 'try', add 'monolithic')",
           "example": "try",
           "commands": [
-            "loadout_apply"
+            "loadout_apply",
+            "add"
+          ]
+        },
+        {
+          "name": "discovery_candidate_count",
+          "type": "int",
+          "description": "Number of monolithic rule files considered by add (D18)",
+          "example": 3,
+          "commands": [
+            "add"
+          ]
+        },
+        {
+          "name": "selected_count",
+          "type": "int",
+          "description": "Number of monolithic rule files actually imported (D18)",
+          "example": 2,
+          "commands": [
+            "add"
+          ]
+        },
+        {
+          "name": "split_method",
+          "type": "string",
+          "description": "Splitter heuristic used for monolithic rule imports (D3)",
+          "example": "h2",
+          "commands": [
+            "add"
+          ]
+        },
+        {
+          "name": "scope",
+          "type": "string",
+          "description": "Scope label for the imported sources (project, global, mixed)",
+          "example": "project",
+          "commands": [
+            "add"
           ]
         },
         {

@@ -151,5 +151,61 @@ func runAddFromMonolithicFiles(cmd *cobra.Command, projectRoot string, paths []s
 	telemetry.Enrich("content_type", "rules")
 	telemetry.Enrich("content_count", totalWritten)
 	telemetry.Enrich("mode", "monolithic")
+	// D18 per-run telemetry: how many files were considered, how many the user
+	// kept, which heuristic fired, and the scope label for the source files.
+	telemetry.Enrich("discovery_candidate_count", len(paths))
+	telemetry.Enrich("selected_count", len(allCandidates))
+	telemetry.Enrich("split_method", splitMethodTag(opts))
+	telemetry.Enrich("scope", scopeTagFromPaths(paths, projectRoot))
 	return nil
+}
+
+// splitMethodTag maps a splitter.Options back to the telemetry string used in
+// docs/telemetry.json. Keeping this narrow (one of h2/h3/h4/marker/single)
+// avoids leaking marker-literal content into telemetry.
+func splitMethodTag(opts splitter.Options) string {
+	switch opts.Heuristic {
+	case splitter.HeuristicH2:
+		return "h2"
+	case splitter.HeuristicH3:
+		return "h3"
+	case splitter.HeuristicH4:
+		return "h4"
+	case splitter.HeuristicMarker:
+		return "marker"
+	case splitter.HeuristicSingle:
+		return "single"
+	}
+	return "h2"
+}
+
+// scopeTagFromPaths derives a best-effort scope label from the paths being
+// imported. If every path sits under projectRoot, "project"; if every path
+// sits under the home dir, "global"; otherwise "mixed". No filenames or paths
+// are emitted — only the categorical label.
+func scopeTagFromPaths(paths []string, projectRoot string) string {
+	home, _ := os.UserHomeDir()
+	anyProject, anyGlobal, anyOther := false, false, false
+	for _, p := range paths {
+		abs, err := filepath.Abs(p)
+		if err != nil {
+			anyOther = true
+			continue
+		}
+		switch {
+		case projectRoot != "" && strings.HasPrefix(abs, filepath.Clean(projectRoot)+string(filepath.Separator)):
+			anyProject = true
+		case home != "" && strings.HasPrefix(abs, filepath.Clean(home)+string(filepath.Separator)):
+			anyGlobal = true
+		default:
+			anyOther = true
+		}
+	}
+	if anyProject && !anyGlobal && !anyOther {
+		return "project"
+	}
+	if anyGlobal && !anyProject && !anyOther {
+		return "global"
+	}
+	return "mixed"
 }
