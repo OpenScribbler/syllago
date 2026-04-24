@@ -1244,7 +1244,7 @@ func TestAddWizard_UpdateKeyDiscovery_EmptyOtherKeyNoop(t *testing.T) {
 	m.step = addStepDiscovery
 	m.shell.SetActive(m.shellIndexForStep(addStepDiscovery))
 
-	m, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEnter})
+	_, cmd := m.updateKeyDiscovery(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd != nil {
 		t.Error("Enter on empty state should return nil cmd")
 	}
