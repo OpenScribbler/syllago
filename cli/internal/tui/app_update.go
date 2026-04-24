@@ -452,6 +452,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := a.rescanCatalog()
 		return a, cmd
 
+	case addCompletedMsg:
+		// Monolithic add wizard signalled completion (Task 4.10). Rescan the
+		// catalog so the newly-written rules appear without a manual [R].
+		// refreshContent is called inside the catalogReadyMsg handler after
+		// the scan completes.
+		return a, a.rescanCatalog()
+
 	case addRestartMsg:
 		// Close current wizard, rescan catalog, then reopen a fresh one.
 		// The rescan Cmd must be batched with handleAdd's Cmd — discarding
