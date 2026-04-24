@@ -854,3 +854,26 @@ func TestAddWizard_HeuristicStep_InvariantDiscoveryNonEmpty(t *testing.T) {
 	m.step = addStepHeuristic
 	m.validateStep()
 }
+
+// TestAddWizard_HeuristicStep_InvariantProviderNoSplittable verifies that
+// entering addStepHeuristic from the Provider flow without any splittable
+// selected items panics. The Provider-flow Heuristic step is reachable only
+// when auto-detection flagged at least one monolithic rule in the selection.
+func TestAddWizard_HeuristicStep_InvariantProviderNoSplittable(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Provider Heuristic without splittable items")
+		}
+		msg, ok := r.(string)
+		if !ok || msg != "wizard invariant: addStepHeuristic (provider flow) entered without splittable items" {
+			t.Errorf("unexpected panic message: %v", r)
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceProvider
+	m.step = addStepHeuristic
+	m.validateStep()
+}
