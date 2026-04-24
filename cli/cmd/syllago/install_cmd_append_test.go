@@ -81,3 +81,41 @@ func TestInstall_MethodAppend_WritesMonolithicFile(t *testing.T) {
 		t.Errorf("targetFile: got %q, want %q", inst.RuleAppends[0].TargetFile, target)
 	}
 }
+
+// TestInstall_MethodAppend_QuietSuppressesNote verifies D10: providers with a
+// MonolithicHint (e.g., windsurf) print a "NOTE:" line to stderr after append,
+// but --quiet suppresses it. Uses windsurf because it has a non-empty hint.
+func TestInstall_MethodAppend_QuietSuppressesNote(t *testing.T) {
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+
+	seedLibraryRule(t, globalDir, "windsurf", "foo", "# foo rule body\n\nAppend me.\n")
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return projectRoot, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	_, stderr := output.SetForTest(t)
+	output.Quiet = true
+
+	installCmd.Flags().Set("to", "windsurf")
+	installCmd.Flags().Set("method", "append")
+	installCmd.Flags().Set("type", "rules")
+	t.Cleanup(func() {
+		installCmd.Flags().Set("to", "")
+		installCmd.Flags().Set("method", "symlink")
+		installCmd.Flags().Set("type", "")
+	})
+
+	if err := installCmd.RunE(installCmd, []string{"foo"}); err != nil {
+		t.Fatalf("install --method=append --quiet failed: %v", err)
+	}
+
+	if strings.Contains(stderr.String(), "NOTE:") {
+		t.Errorf("--quiet should suppress NOTE in stderr, got: %s", stderr.String())
+	}
+}
