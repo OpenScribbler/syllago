@@ -18,7 +18,7 @@ jobs:
         with:
           pr-number: ${{ github.event.pull_request.number }}
           auto-close: true
-          vouched-repo: ghostty-org/ghostty
+          vouched-repo: OpenScribbler/syllago
           template-file: .github/vouch-pr-response.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
