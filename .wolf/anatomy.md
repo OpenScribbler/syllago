@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-23T19:29:37.781Z
-> Files: 1160 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T17:18:36.301Z
+> Files: 1167 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1543,6 +1543,7 @@
 - `provmon-drift-detection-phase-b.md` — Phase B Analysis: provmon-drift-detection (~7749 tok)
 - `provmon-drift-detection-quality-report.md` — Quality Review: provmon-drift-detection implementation plan (~1040 tok)
 - `provmon-drift-detection.json` (~665 tok)
+- `rules-splitter.json` (~552 tok)
 
 ## .develop/seeder-specs/
 
@@ -1677,6 +1678,8 @@
 
 - `add.go` — provides the core logic for "syllago add": discovery from a (~6014 tok)
 - `helpers_test.go` — TestContentFilename, TestComputeItemStatus_New, TestComputeItemStatus_InLibrary, TestComputeItemStat (~4605 tok)
+- `split_detect_test.go` — TestDetectSplittable_UnrecognizedFilename, TestDetectSplittable_MissingFile, TestDetectSplittable_To (~706 tok)
+- `split_detect.go` — DetectSplittable (~363 tok)
 
 ## cli/internal/analyzer/
 
@@ -1893,7 +1896,8 @@
 
 ## cli/internal/metadata/
 
-- `metadata.go` — Struct: Dependency (~1963 tok)
+- `metadata_test.go` — TestNewID, TestSaveAndLoad, TestLoadNotFound, TestProviderMetadata, TestMetaCreatedAt (~2737 tok)
+- `metadata.go` — Struct: Dependency (~2379 tok)
 - `schemadoc_test.go` — TestBuildSchemaDoc_ParsesMeta, TestBuildSchemaDoc_NestedTypes, TestBuildSchemaDoc_AllFieldsHaveGroup (~1487 tok)
 - `schemadoc.go` — Struct: FieldDoc (~2314 tok)
 
@@ -2021,16 +2025,18 @@
 
 ## cli/internal/tui/
 
-- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~1892 tok)
+- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~2718 tok)
 - `actions.go` — Struct: removeDoneMsg (~6454 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
+- `add_wizard_monolithic_update.go` — Struct: addMonolithicDiscoveryDoneMsg (~3150 tok)
 - `add_wizard_mouse_test.go` — TestAddWizardMouse_SourceRowClickProvider, TestAddWizardMouse_SourceRowClickRegistry, TestAddWizardM (~3386 tok)
 - `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~6129 tok)
-- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~8654 tok)
-- `add_wizard_update.go` (~8832 tok)
-- `add_wizard_view.go` — Struct: sourceOption (~10020 tok)
-- `add_wizard.go` — Struct: addConfirmItem (~20426 tok)
+- `add_wizard_split_detect_test.go` — TestAddWizard_DiscoveryFlagsSplittableRules, TestAddWizard_ReviewShowsSplittableHint (~1064 tok)
+- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~14811 tok)
+- `add_wizard_update.go` (~9373 tok)
+- `add_wizard_view.go` — Struct: sourceOption (~10151 tok)
+- `add_wizard.go` — Struct: addConfirmItem (~21622 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
 - `app_update.go` — Declares checkbox (~5744 tok)
 - `app_view.go` (~1041 tok)
@@ -2069,7 +2075,7 @@
 - `library_test.go` — TestLibrary_SetDetailFocus_TogglesFocusFields, TestLibrary_UpdateTree_KeysMoveCursor, TestLibrary_Up (~2146 tok)
 - `library.go` — Struct: libraryDrillMsg (~5703 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
-- `metapanel.go` — Struct: metaPanelData (~2420 tok)
+- `metapanel.go` — Struct: ruleTargetStatus (~3407 tok)
 - `modal.go` — Struct: editSavedMsg (~2807 tok)
 - `private_prompt.go` (~635 tok)
 - `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestPrivatePromptTitle, TestP (~2960 tok)
@@ -2131,6 +2137,7 @@
 - `2026-04-20-test-quality-audit.md` — Test Quality Audit — 2026-04-20 (~5354 tok)
 - `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
 - `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17530 tok)
+- `2026-04-24-provider-auto-split-design.md` — Provider-Flow Auto-Detect Split — Design (~789 tok)
 
 ## docs/provider-capabilities/
 

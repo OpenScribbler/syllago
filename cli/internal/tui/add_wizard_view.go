@@ -702,6 +702,26 @@ func (m *addWizardModel) viewReview() string {
 	// Microcopy
 	lines = append(lines, pad+mutedStyle.Render("Enter to inspect files. Items with ! or !! contain executable code."))
 
+	// Splittable summary — show when discovery detected monolithic rule files
+	// that the H2 heuristic would split into multiple rules. D2 detection; the
+	// actual split-or-whole choice lands in a later phase of syllago-50wq4.
+	splittableCount := 0
+	totalSections := 0
+	for _, it := range selected {
+		if it.splittable {
+			splittableCount++
+			totalSections += it.splitSectionCount
+		}
+	}
+	if splittableCount > 0 {
+		noun := "rule"
+		if splittableCount != 1 {
+			noun += "s"
+		}
+		hint := fmt.Sprintf("Detected %d monolithic %s that split into %d sections via H2 headings (CLI: syllago add --from <file> --split h2).", splittableCount, noun, totalSections)
+		lines = append(lines, pad+mutedStyle.Render(hint))
+	}
+
 	// Item list with column headers
 	cols := m.reviewColumns()
 	reviewHdr := pad + "  " + // cursor space

@@ -94,6 +94,11 @@ type addConfirmItem struct {
 	// mergeConfirmIntoDiscovery can reconstruct a full hook discovery item.
 	hookData      *converter.HookData
 	hookSourceDir string
+
+	// Splittable mirrors the addDiscoveryItem field so the Review step (after
+	// mergeConfirmIntoDiscovery) can still render the monolithic-rule hint.
+	splittable        bool
+	splitSectionCount int
 }
 
 // --- Messages ---
@@ -145,6 +150,14 @@ type addDiscoveryItem struct {
 	confidence      float64
 	detectionSource string
 	tier            analyzer.ConfidenceTier
+
+	// Splittable marks a rule whose source file is a recognized monolithic
+	// format (CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules, .clinerules,
+	// .windsurfrules) and passes the H2 splitter pre-check. splitSectionCount
+	// is the number of rules the default H2 heuristic would produce.
+	// Populated in handleDiscoveryDone after provider/local discovery.
+	splittable        bool
+	splitSectionCount int
 }
 
 // --- Execute result ---
@@ -854,6 +867,10 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.hookData = item.hookData
 			di.hookSourceDir = item.hookSourceDir
 		}
+
+		// Preserve splittability so Review can render the monolithic-rule hint.
+		di.splittable = item.splittable
+		di.splitSectionCount = item.splitSectionCount
 
 		// Prefer pre-computed risks from discovery (hooks carry command/URL risks
 		// that aren't derivable from file content alone). Fall back to deriving

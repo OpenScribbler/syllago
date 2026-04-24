@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // Update handles messages for the add wizard.
@@ -912,10 +913,18 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 		return m, nil
 	}
 
-	// Separate installed items (already in library) from actionable (new/outdated)
+	// Separate installed items (already in library) from actionable (new/outdated).
+	// Also annotate rule items with splittability so the Review step (and later
+	// Execute) can offer inline split when a monolithic rule file is detected.
 	var installed []addDiscoveryItem
 	var actionable []addDiscoveryItem
 	for _, item := range msg.items {
+		if item.itemType == catalog.Rules && item.path != "" {
+			if ok, n, derr := add.DetectSplittable(item.path); derr == nil && ok {
+				item.splittable = true
+				item.splitSectionCount = n
+			}
+		}
 		if item.status == add.StatusInLibrary {
 			installed = append(installed, item)
 		} else {
@@ -960,17 +969,19 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			tier = analyzer.TierHigh
 		}
 		autoConfirm[i] = addConfirmItem{
-			displayName:   name,
-			itemType:      di.itemType,
-			path:          filepath.Base(di.path),
-			sourceDir:     sourceDir,
-			tier:          tier,
-			status:        di.status,     // preserve StatusOutdated for conflict detection
-			underlying:    di.underlying, // preserve for merge fidelity
-			risks:         di.risks,      // pre-computed risks (hooks carry command/URL risks)
-			hookData:      di.hookData,   // needed for triage preview + drill-in
-			hookSourceDir: di.hookSourceDir,
-			catalogItem:   di.catalogItem, // original item with correct Files list
+			displayName:       name,
+			itemType:          di.itemType,
+			path:              filepath.Base(di.path),
+			sourceDir:         sourceDir,
+			tier:              tier,
+			status:            di.status,     // preserve StatusOutdated for conflict detection
+			underlying:        di.underlying, // preserve for merge fidelity
+			risks:             di.risks,      // pre-computed risks (hooks carry command/URL risks)
+			hookData:          di.hookData,   // needed for triage preview + drill-in
+			hookSourceDir:     di.hookSourceDir,
+			catalogItem:       di.catalogItem, // original item with correct Files list
+			splittable:        di.splittable,
+			splitSectionCount: di.splitSectionCount,
 		}
 	}
 
