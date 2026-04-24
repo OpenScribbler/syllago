@@ -827,3 +827,30 @@ func TestAddWizard_StepForShellIndex(t *testing.T) {
 		})
 	}
 }
+
+// --- Heuristic step invariant (Task 4.1) ---
+
+// TestAddWizard_HeuristicStep_InvariantDiscoveryNonEmpty verifies that
+// entering addStepHeuristic with an empty selectedCandidates slice panics
+// with the expected invariant message. The heuristic step is only reachable
+// from the monolithic-rule discovery path after at least one candidate
+// source file has been multi-selected.
+func TestAddWizard_HeuristicStep_InvariantDiscoveryNonEmpty(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for Heuristic without selected candidates")
+		}
+		msg, ok := r.(string)
+		if !ok || msg != "wizard invariant: addStepHeuristic entered with no selected candidates" {
+			t.Errorf("unexpected panic message: %v", r)
+		}
+	}()
+
+	m := openAddWizard(nil, nil, nil, "/tmp", "/tmp", "")
+	m.source = addSourceMonolithic
+	m.selectedCandidates = nil
+	m.step = addStepHeuristic
+	m.validateStep()
+}
