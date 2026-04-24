@@ -2,7 +2,9 @@ package rulestore
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -69,6 +71,29 @@ func TestLoadRule_RoundTrip(t *testing.T) {
 
 	if loaded.Dir != dir {
 		t.Errorf("Dir: got %q, want %q", loaded.Dir, dir)
+	}
+}
+
+func TestLoadRule_MissingHistoryFile(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	body := []byte("# Coding style\n\nUse tabs.\n")
+	meta := newTestMeta(t)
+	if err := WriteRule(tmp, "claude-code", "coding-style", meta, body); err != nil {
+		t.Fatalf("WriteRule: %v", err)
+	}
+	dir := filepath.Join(tmp, "claude-code", "coding-style")
+	// Delete the single history file, keeping the versions[] entry intact.
+	historyPath := filepath.Join(dir, ".history", hashToFilename(HashBody(body)))
+	if err := os.Remove(historyPath); err != nil {
+		t.Fatalf("removing %s: %v", historyPath, err)
+	}
+	_, err := LoadRule(dir)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "missing history file") {
+		t.Errorf("error %q does not contain %q", err.Error(), "missing history file")
 	}
 }
 
