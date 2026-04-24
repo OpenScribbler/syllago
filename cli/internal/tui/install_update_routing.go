@@ -69,7 +69,7 @@ func defaultInstallWizardScan(projectRoot string, item catalog.ContentItem) wiza
 		}
 		// Populate display hashes when available. The recorded hash is the
 		// installed record's VersionHash; the "new" hash is the current
-		// head of the rule's history (rule.Meta.Head).
+		// rule's CurrentVersion (D13: must match a versions[].hash).
 		for _, r := range inst.RuleAppends {
 			if r.LibraryID == key.LibraryID && r.TargetFile == key.TargetFile {
 				out.recordedHash = r.VersionHash
