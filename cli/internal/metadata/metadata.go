@@ -92,6 +92,14 @@ func ProviderMetaPath(dir, filename string) string {
 }
 
 // Load reads .syllago.yaml from itemDir. Returns nil, nil if the file does not exist.
+//
+// Two on-disk shapes are accepted. The legacy shape (used by every content type
+// except rulestore-written rules) has `source:` as a flat string alongside
+// source_* siblings. The D11/D13 rule shape written by internal/rulestore nests
+// `source:` as a map. Catalog scanning needs the common fields (Name,
+// Description, ID) regardless of shape, so if the legacy parse fails with a
+// structural type error on the `source:` field we retry as RuleMetadata and
+// project into Meta. Any other parse error is returned as-is.
 func Load(itemDir string) (*Meta, error) {
 	data, err := os.ReadFile(MetaPath(itemDir))
 	if errors.Is(err, fs.ErrNotExist) {
@@ -101,13 +109,46 @@ func Load(itemDir string) (*Meta, error) {
 		return nil, fmt.Errorf("reading %s: %w", FileName, err)
 	}
 	var m Meta
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", FileName, err)
+	if yamlErr := yaml.Unmarshal(data, &m); yamlErr != nil {
+		// Retry as RuleMetadata (nested `source:` shape).
+		var rm RuleMetadata
+		if rmErr := yaml.Unmarshal(data, &rm); rmErr == nil && rm.Type == "rule" {
+			m = ruleMetadataToMeta(&rm)
+		} else {
+			return nil, fmt.Errorf("parsing %s: %w", FileName, yamlErr)
+		}
 	}
 	if err := validateFormatVersion(&m); err != nil {
 		return nil, fmt.Errorf("%s: %w", FileName, err)
 	}
 	return &m, nil
+}
+
+// ruleMetadataToMeta projects a RuleMetadata (D11/D13 nested-source shape) into
+// a Meta (legacy flat-source shape) so catalog scanning can read both formats
+// through a single loader. Only fields catalog scanning actually consumes are
+// populated — callers needing the full provenance block should use
+// LoadRuleMetadata directly.
+func ruleMetadataToMeta(rm *RuleMetadata) Meta {
+	m := Meta{
+		FormatVersion:  rm.FormatVersion,
+		ID:             rm.ID,
+		Name:           rm.Name,
+		Description:    rm.Description,
+		Type:           rm.Type,
+		SourceProvider: rm.Source.Provider,
+		SourceFormat:   rm.Source.Format,
+		SourceHash:     rm.Source.Hash,
+		SourceScope:    rm.Source.Scope,
+	}
+	if !rm.AddedAt.IsZero() {
+		t := rm.AddedAt
+		m.AddedAt = &t
+	}
+	if rm.AddedBy != "" {
+		m.AddedBy = rm.AddedBy
+	}
+	return m
 }
 
 // LoadProvider reads a provider-specific metadata file. Returns nil, nil if not found.
