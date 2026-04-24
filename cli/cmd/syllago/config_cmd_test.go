@@ -187,6 +187,81 @@ func TestConfigAddConfirmation(t *testing.T) {
 	}
 }
 
+func TestConfigList_EmptyPrompt(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{})
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	// configListCmd prints via fmt.Println (os.Stdout), not output.Writer.
+	r, w, _ := os.Pipe()
+	origStdout := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	if err := configListCmd.RunE(configListCmd, nil); err != nil {
+		t.Fatalf("config list: %v", err)
+	}
+	w.Close()
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+	if !strings.Contains(out, "No providers configured") {
+		t.Errorf("expected empty prompt, got: %s", out)
+	}
+}
+
+func TestConfigList_PopulatedProviders(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{"claude-code", "cursor"}})
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	r, w, _ := os.Pipe()
+	origStdout := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	if err := configListCmd.RunE(configListCmd, nil); err != nil {
+		t.Fatalf("config list: %v", err)
+	}
+	w.Close()
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+	if !strings.Contains(out, "claude-code") || !strings.Contains(out, "cursor") {
+		t.Errorf("expected provider listing, got: %s", out)
+	}
+}
+
+func TestConfigList_JSONOutput(t *testing.T) {
+	tmp := t.TempDir()
+	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	config.Save(tmp, &config.Config{Providers: []string{"claude-code"}})
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return tmp, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	t.Cleanup(func() { output.JSON = false })
+
+	if err := configListCmd.RunE(configListCmd, nil); err != nil {
+		t.Fatalf("config list --json: %v", err)
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "claude-code") || !strings.Contains(out, `"providers"`) {
+		t.Errorf("expected JSON with providers field, got: %s", out)
+	}
+}
+
 func TestConfigRemoveConfirmation(t *testing.T) {
 	tmp := t.TempDir()
 	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)

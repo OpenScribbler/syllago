@@ -126,6 +126,156 @@ func TestSandboxAllowPort_InvalidPort(t *testing.T) {
 	}
 }
 
+// TestSandboxDenyPort_RemovesFromConfig covers the deny-port mutator branch
+// (the allow path was the only one previously exercised).
+func TestSandboxDenyPort_RemovesFromConfig(t *testing.T) {
+	tmp := sandboxTestDir(t)
+	output.SetForTest(t)
+
+	sandboxAllowPortCmd.RunE(sandboxAllowPortCmd, []string{"6379"})
+	if err := sandboxDenyPortCmd.RunE(sandboxDenyPortCmd, []string{"6379"}); err != nil {
+		t.Fatalf("deny-port: %v", err)
+	}
+
+	cfg, _ := config.Load(tmp)
+	for _, p := range cfg.Sandbox.AllowedPorts {
+		if p == 6379 {
+			t.Error("6379 should have been removed by deny-port")
+		}
+	}
+}
+
+func TestSandboxDenyPort_InvalidPort(t *testing.T) {
+	sandboxTestDir(t)
+	output.SetForTest(t)
+
+	err := sandboxDenyPortCmd.RunE(sandboxDenyPortCmd, []string{"notaport"})
+	if err == nil {
+		t.Error("expected error for non-integer port on deny-port")
+	}
+}
+
+// TestSandboxDenyEnv_RemovesFromConfig covers the deny-env mutator branch.
+func TestSandboxDenyEnv_RemovesFromConfig(t *testing.T) {
+	tmp := sandboxTestDir(t)
+	output.SetForTest(t)
+
+	sandboxAllowEnvCmd.RunE(sandboxAllowEnvCmd, []string{"GOAWAY_VAR"})
+	if err := sandboxDenyEnvCmd.RunE(sandboxDenyEnvCmd, []string{"GOAWAY_VAR"}); err != nil {
+		t.Fatalf("deny-env: %v", err)
+	}
+
+	cfg, _ := config.Load(tmp)
+	for _, v := range cfg.Sandbox.AllowedEnv {
+		if v == "GOAWAY_VAR" {
+			t.Error("GOAWAY_VAR should have been removed by deny-env")
+		}
+	}
+}
+
+// TestSandboxInfo_PrintsConfig covers the no-args branch of `sandbox info`.
+// The command writes via fmt.Printf so we capture the real os.Stdout.
+func TestSandboxInfo_PrintsConfig(t *testing.T) {
+	sandboxTestDir(t)
+	output.SetForTest(t)
+	sandboxAllowDomainCmd.RunE(sandboxAllowDomainCmd, []string{"example.org"})
+	sandboxAllowEnvCmd.RunE(sandboxAllowEnvCmd, []string{"INFO_VAR"})
+
+	r, w, _ := os.Pipe()
+	origStdout := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	if err := sandboxInfoCmd.RunE(sandboxInfoCmd, nil); err != nil {
+		t.Fatalf("info: %v", err)
+	}
+	w.Close()
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+
+	for _, want := range []string{"Sandbox configuration", "example.org", "INFO_VAR"} {
+		if !contains(out, want) {
+			t.Errorf("info output missing %q\nfull output:\n%s", want, out)
+		}
+	}
+}
+
+// TestSandboxEnv_ListsConfigured exercises the env-listing command.
+func TestSandboxEnv_ListsConfigured(t *testing.T) {
+	sandboxTestDir(t)
+	output.SetForTest(t)
+
+	sandboxAllowEnvCmd.RunE(sandboxAllowEnvCmd, []string{"LIST_ME"})
+
+	r, w, _ := os.Pipe()
+	origStdout := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	if err := sandboxEnvCmd.RunE(sandboxEnvCmd, nil); err != nil {
+		t.Fatalf("env list: %v", err)
+	}
+	w.Close()
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+	if !contains(out, "LIST_ME") {
+		t.Errorf("expected 'LIST_ME' in env list, got: %s", out)
+	}
+}
+
+// TestSandboxPorts_ListsConfigured exercises the ports-listing command.
+func TestSandboxPorts_ListsConfigured(t *testing.T) {
+	sandboxTestDir(t)
+	output.SetForTest(t)
+
+	sandboxAllowPortCmd.RunE(sandboxAllowPortCmd, []string{"7777"})
+
+	r, w, _ := os.Pipe()
+	origStdout := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	if err := sandboxPortsCmd.RunE(sandboxPortsCmd, nil); err != nil {
+		t.Fatalf("ports list: %v", err)
+	}
+	w.Close()
+	buf := make([]byte, 4096)
+	n, _ := r.Read(buf)
+	out := string(buf[:n])
+	if !contains(out, "7777") {
+		t.Errorf("expected '7777' in ports list, got: %s", out)
+	}
+}
+
+// TestSandboxRun_InvalidPort covers the early port-parsing error path of
+// sandbox run, before it dispatches to sandbox.RunSession (which requires
+// bubblewrap and would fail uncontrollably in a unit test).
+func TestSandboxRun_InvalidPort(t *testing.T) {
+	sandboxTestDir(t)
+	output.SetForTest(t)
+
+	sandboxRunCmd.Flags().Set("allow-port", "notaport")
+	t.Cleanup(func() { sandboxRunCmd.Flags().Set("allow-port", "") })
+
+	err := sandboxRunCmd.RunE(sandboxRunCmd, []string{"claude-code"})
+	if err == nil || !contains(err.Error(), "invalid port") {
+		t.Errorf("got %v, want 'invalid port' error", err)
+	}
+}
+
+// contains avoids dragging strings into the test file's import block — it's
+// a tiny helper used only by these tests.
+func contains(haystack, needle string) bool {
+	for i := 0; i+len(needle) <= len(haystack); i++ {
+		if haystack[i:i+len(needle)] == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func TestRemoveIntItem(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

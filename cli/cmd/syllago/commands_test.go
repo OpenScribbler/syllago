@@ -229,6 +229,65 @@ func TestExportWarnMessage(t *testing.T) {
 	if msg := exportWarnMessage(example); !strings.Contains(msg, "example") {
 		t.Errorf("example item warning = %q, want mention of example", msg)
 	}
+
+	// Builtin item — covers the IsBuiltin branch.
+	builtin := catalog.ContentItem{Name: "syl-builtin", Type: catalog.Rules, Meta: &metadata.Meta{Tags: []string{"builtin"}}}
+	if msg := exportWarnMessage(builtin); !strings.Contains(msg, "built-in") {
+		t.Errorf("builtin item warning = %q, want mention of built-in", msg)
+	}
+}
+
+// --- findItemByPath (76.5% coverage) ---
+
+func TestFindItemByPath(t *testing.T) {
+	t.Parallel()
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Type: catalog.Rules, Provider: "claude-code", Name: "rule-a"},
+			{Type: catalog.Skills, Name: "skill-b"},
+			{Type: catalog.Hooks, Registry: "acme", Name: "hook-c"},
+		},
+	}
+
+	t.Run("two-part type/name", func(t *testing.T) {
+		t.Parallel()
+		got, err := findItemByPath(cat, "skills/skill-b")
+		if err != nil || got == nil || got.Name != "skill-b" {
+			t.Fatalf("got (%v, %v), want skill-b", got, err)
+		}
+	})
+
+	t.Run("three-part type/provider/name", func(t *testing.T) {
+		t.Parallel()
+		got, err := findItemByPath(cat, "rules/claude-code/rule-a")
+		if err != nil || got == nil || got.Name != "rule-a" {
+			t.Fatalf("got (%v, %v), want rule-a", got, err)
+		}
+	})
+
+	t.Run("three-part registry/type/name fallback", func(t *testing.T) {
+		t.Parallel()
+		got, err := findItemByPath(cat, "acme/hooks/hook-c")
+		if err != nil || got == nil || got.Name != "hook-c" {
+			t.Fatalf("got (%v, %v), want hook-c", got, err)
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		t.Parallel()
+		_, err := findItemByPath(cat, "rules/missing")
+		if err == nil || !strings.Contains(err.Error(), "not found") {
+			t.Errorf("got %v, want 'not found' error", err)
+		}
+	})
+
+	t.Run("invalid format", func(t *testing.T) {
+		t.Parallel()
+		_, err := findItemByPath(cat, "a/b/c/d")
+		if err == nil || !strings.Contains(err.Error(), "invalid path format") {
+			t.Errorf("got %v, want 'invalid path format' error", err)
+		}
+	})
 }
 
 // --- compatSymbol (50% coverage) ---
