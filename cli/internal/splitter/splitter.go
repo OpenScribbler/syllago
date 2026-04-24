@@ -4,6 +4,8 @@
 // LLM path is a parallel producer (D9) that returns the same type.
 package splitter
 
+import "bytes"
+
 // SplitCandidate is one atomic rule produced by the splitter.
 // Downstream pipeline (library write, install) is indifferent to which
 // heuristic (H2/H3/H4/marker/single/LLM) produced the candidate.
@@ -40,4 +42,37 @@ type Options struct {
 // the CLI errors out unless --split=single is passed.
 type SkipSplitSignal struct {
 	Reason string // "too_small" | "too_few_h2"
+}
+
+// Split returns atomic SplitCandidates according to opts, or a SkipSplitSignal
+// when D4's skip-split heuristic fires (fewer than 30 lines OR fewer than 3
+// H2 headings). Only one of the two returns is non-nil.
+func Split(source []byte, opts Options) ([]SplitCandidate, *SkipSplitSignal) {
+	if opts.Heuristic == HeuristicSingle {
+		return []SplitCandidate{{
+			Name:          "", // caller provides slug for whole-file import
+			Description:   "",
+			Body:          string(source),
+			OriginalRange: [2]int{0, bytes.Count(source, []byte{'\n'}) + 1},
+		}}, nil
+	}
+	lines := bytes.Split(source, []byte{'\n'})
+	if len(lines) < 30 {
+		return nil, &SkipSplitSignal{Reason: "too_small"}
+	}
+	// H2-default skip-split: if H2 heuristic selected and <3 H2 headings, skip.
+	// Opt-in H3/H4/Marker heuristics skip only on the <30 lines branch.
+	if opts.Heuristic == HeuristicH2 {
+		h2Count := 0
+		for _, ln := range lines {
+			if bytes.HasPrefix(ln, []byte("## ")) && !bytes.HasPrefix(ln, []byte("### ")) {
+				h2Count++
+			}
+		}
+		if h2Count < 3 {
+			return nil, &SkipSplitSignal{Reason: "too_few_h2"}
+		}
+	}
+	// Real split logic lives in follow-up tasks; stub returns empty success.
+	return nil, nil
 }
