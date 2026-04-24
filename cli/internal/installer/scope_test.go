@@ -298,3 +298,36 @@ func TestFindSettingsLocationsWithBase_NoneExist(t *testing.T) {
 		t.Errorf("expected 0 locations, got %d", len(locations))
 	}
 }
+
+func TestResolveAppendScope(t *testing.T) {
+	t.Parallel()
+	// Per plan spec: the classifier checks homeDir first, then projectRoot.
+	// When projectRoot is nested under homeDir (typical layout), the home
+	// check wins and callers that want "project" classification must pass
+	// disjoint homeDir/projectRoot roots — or an empty homeDir.
+	home := "/home/alice"
+	project := "/srv/projects/app"
+
+	cases := []struct {
+		name    string
+		target  string
+		home    string
+		project string
+		want    string
+	}{
+		{"under home", "/home/alice/CLAUDE.md", home, project, "global"},
+		{"under project (disjoint from home)", "/srv/projects/app/CLAUDE.md", home, project, "project"},
+		{"outside both", "/tmp/CLAUDE.md", home, project, "global"},
+		{"empty home, under project", "/srv/projects/app/CLAUDE.md", "", project, "project"},
+		{"empty project, under home", "/home/alice/CLAUDE.md", home, "", "global"},
+		{"empty home and project", "/tmp/CLAUDE.md", "", "", "global"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ResolveAppendScope(tc.target, tc.home, tc.project)
+			if got != tc.want {
+				t.Errorf("ResolveAppendScope(%q, %q, %q) = %q, want %q", tc.target, tc.home, tc.project, got, tc.want)
+			}
+		})
+	}
+}

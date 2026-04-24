@@ -8,6 +8,19 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
+// ResolveAppendScope classifies a rule-append TargetFile per D14:
+// "global" when under homeDir, "project" when under projectRoot,
+// "global" otherwise (absolute paths outside both).
+func ResolveAppendScope(targetFile, homeDir, projectRoot string) string {
+	if homeDir != "" && isUnder(targetFile, homeDir) {
+		return "global"
+	}
+	if projectRoot != "" && isUnder(targetFile, projectRoot) {
+		return "project"
+	}
+	return "global"
+}
+
 // SettingsScope represents where a settings.json lives.
 type SettingsScope int
 
