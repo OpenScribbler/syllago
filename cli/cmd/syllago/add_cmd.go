@@ -50,8 +50,9 @@ installed to any supported provider with "syllago install --to <provider>".`,
 }
 
 func init() {
-	addCmd.Flags().String("from", "", "Provider to add from (required)")
+	addCmd.Flags().StringArray("from", nil, "Provider to add from, or path to a monolithic rule file (repeatable for files)")
 	addCmd.MarkFlagRequired("from")
+	addCmd.Flags().String("split", "", "Splitter heuristic: h2|h3|h4|marker:<literal>|single|llm (monolithic --from only)")
 	addCmd.Flags().Bool("all", false, "Add all discovered content (cannot combine with positional target)")
 	addCmd.Flags().Bool("dry-run", false, "Show what would be written without actually writing")
 	addCmd.Flags().StringArray("exclude", nil, "Skip hooks by auto-derived name (hooks and MCP only)")
@@ -78,10 +79,45 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fromSlug, _ := cmd.Flags().GetString("from")
-	if fromSlug == "" {
+	fromValues, _ := cmd.Flags().GetStringArray("from")
+	// Filter empty strings — tests commonly Set("from", "") as a "reset".
+	filtered := fromValues[:0]
+	for _, v := range fromValues {
+		if v != "" {
+			filtered = append(filtered, v)
+		}
+	}
+	fromValues = filtered
+	if len(fromValues) == 0 {
 		return output.NewStructuredError(output.ErrInputMissing, "missing --from flag", "Usage: syllago add [type] --from <provider>")
 	}
+
+	// Monolithic-file mode: any --from value that resolves to an existing file
+	// is treated as a monolithic source path. Per D18, the CLI requires all
+	// --from entries to resolve consistently (either all files or all slugs).
+	monolithicPaths := []string{}
+	var nonFiles []string
+	for _, v := range fromValues {
+		if info, serr := os.Stat(v); serr == nil && !info.IsDir() {
+			monolithicPaths = append(monolithicPaths, v)
+		} else {
+			nonFiles = append(nonFiles, v)
+		}
+	}
+	if len(monolithicPaths) > 0 && len(nonFiles) > 0 {
+		return output.NewStructuredError(output.ErrInputConflict,
+			"cannot mix monolithic file paths and provider slugs in --from",
+			"Pass either all file paths or a single provider slug")
+	}
+	if len(monolithicPaths) > 0 {
+		return runAddFromMonolithicFiles(cmd, root, monolithicPaths)
+	}
+
+	// Slug mode: take the last non-empty value. Users typically pass --from once;
+	// the "last wins" rule matches how cobra treats a single-valued string flag
+	// when the same flag appears multiple times, and keeps test call sites
+	// (which call Set("from", "x") once per test) compatible across runs.
+	fromSlug := fromValues[len(fromValues)-1]
 
 	// Handle --from shared: add content from the project's shared content directory.
 	if fromSlug == "shared" {
