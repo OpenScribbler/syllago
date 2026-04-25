@@ -7021,7 +7021,9 @@
         "cache",
         "high-impact"
       ],
-      "related_bugs": ["bug-433"],
+      "related_bugs": [
+        "bug-433"
+      ],
       "occurrences": 1,
       "last_seen": "2026-04-25T01:08:00.000Z"
     },
@@ -7057,9 +7059,494 @@
         "registry-add",
         "cache-vs-clone"
       ],
-      "related_bugs": ["bug-436", "bug-433"],
+      "related_bugs": [
+        "bug-436",
+        "bug-433"
+      ],
       "occurrences": 1,
       "last_seen": "2026-04-25T01:18:00.000Z"
+    },
+    {
+      "id": "bug-439",
+      "timestamp": "2026-04-24T22:18:00.000Z",
+      "error_message": "Add failed: git clone failed: fatal: destination path '/home/hhewett/.syllago/registries/OpenScribbler/syllago-meta-registry' already exists and is not an empty directory.",
+      "file": "cli/internal/registry/registry.go",
+      "root_cause": "registry.Clone had no pre-flight check for an existing destination. When git clone failed with 'destination already exists', the cleanup branch unconditionally ran os.RemoveAll(dir) — destroying any pre-existing user content at that path. Worse, the error message gave no hint how to recover. A stale clone (e.g. left over from a previous failed registry add where config.yaml was never persisted) couldn't be reused and was silently wiped on the retry.",
+      "fix": "Stat the destination before invoking git. If it exists, return an actionable error (`syllago registry remove <name>` or delete the directory) WITHOUT touching the existing dir. The os.RemoveAll cleanup now only runs after the pre-flight stat has confirmed the dir didn't exist at function entry, so it can never destroy unrelated data. Added regression test TestIntegration_StaleClonePreserved that pre-creates a marker file in the clone dir and asserts both that Clone fails and that the marker survives.",
+      "tags": [
+        "registry",
+        "clone",
+        "data-loss",
+        "tui",
+        "registry-add",
+        "stale-clone"
+      ],
+      "related_bugs": [
+        "bug-438"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T22:18:00.000Z"
+    },
+    {
+      "id": "bug-440",
+      "timestamp": "2026-04-25T05:57:48.117Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moat/manifest_verify.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 10→16 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T05:57:48.117Z"
+    },
+    {
+      "id": "bug-441",
+      "timestamp": "2026-04-25T05:58:10.055Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/config/config.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→6 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T05:58:10.055Z"
+    },
+    {
+      "id": "bug-440",
+      "timestamp": "2026-04-24T22:35:00.000Z",
+      "error_message": "Sync failed: MOAT_IDENTITY_MISMATCH: building certificate identity matcher: when verifying a certificate identity, there must be subject alternative name criteria",
+      "file": "cli/internal/moat/manifest_verify.go,cli/internal/moat/bundle_builder.go",
+      "root_cause": "VerifyManifest and VerifyItemSigstore both called sigstore-go's verify.NewShortCertificateIdentity(issuer, issuerRegex, sanValue, sanRegex) with hardcoded empty strings for issuerRegex and sanRegex. The bundled allowlist entry for OpenScribbler/syllago-meta-registry pins via subject_regex (no literal subject) so it can cover three workflow paths (moat.yml | moat-publisher.yml | moat-registry.yml). With Subject empty and SubjectRegex ignored, sigstore-go received no SAN criteria and rejected the matcher constructor. The struct comment in config.SigningProfile reinforced the mistake by claiming subject_regex was 'reserved for slice 2+'.",
+      "fix": "Forward pinnedProfile.IssuerRegex and pinnedProfile.SubjectRegex through to NewShortCertificateIdentity at both call sites. Updated the SigningProfile godoc to reflect actual behavior. Added regression tests TestVerifyManifest_HappyPath_SubjectRegex (regex-only profile verifies the real Phase 0 fixture) and TestVerifyManifest_WrongSubjectRegex (regex that does not cover the SAN is rejected) so the regex path stays exercised end-to-end.",
+      "tags": [
+        "moat",
+        "sigstore",
+        "signing-identity",
+        "subject-regex",
+        "registry-sync",
+        "allowlist"
+      ],
+      "related_bugs": [
+        "bug-439"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-04-24T22:35:00.000Z"
+    },
+    {
+      "id": "bug-443",
+      "timestamp": "2026-04-25T06:13:46.657Z",
+      "error_message": "Significant refactor of ",
+      "file": "CLAUDE.md",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→15 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T06:13:46.657Z"
+    },
+    {
+      "id": "bug-444",
+      "timestamp": "2026-04-25T06:22:15.804Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/config/config.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 14→18 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T06:22:15.804Z"
+    },
+    {
+      "id": "bug-445",
+      "timestamp": "2026-04-25T06:30:00.000Z",
+      "error_message": "Sync rejected: signing profile changed for OpenScribbler/syllago-meta-registry. Remove and re-add the registry to re-approve.",
+      "file": "cli/internal/config/config.go",
+      "root_cause": "SigningProfile.Equal() compared literal Subject only. The bundled allowlist (signing_identities.json) pins regex form (Subject=\"\" + SubjectRegex set) to span multiple workflow paths under one trust grant; wire manifests typically declare a single literal Subject. Equal returned false → NeedsSigningProfileReapproval returned true → Sync rejected on every sync of regex-pinned registries.",
+      "fix": "Added SigningProfile.AuthorizesIdentity() — regex-aware authorization check used by NeedsSigningProfileReapproval. When pinned uses regex form, the regex matches incoming literal Subject (and IssuerRegex similarly). Numeric IDs (RepositoryID, RepositoryOwnerID) still match exactly per ADR 0007 (the cryptographic anchor against repo-transfer forgery is not relaxed). Equal kept strict for callers that need literal comparison.",
+      "tags": [
+        "moat",
+        "sigstore",
+        "regex",
+        "tofu",
+        "trust"
+      ],
+      "related_bugs": [
+        "bug-440"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T06:30:00.000Z"
+    },
+    {
+      "id": "bug-446",
+      "timestamp": "2026-04-25T06:30:08.529Z",
+      "error_message": "Wrong operator: || should be ==",
+      "file": "cli/internal/config/config.go",
+      "root_cause": "Used \"||\" instead of \"==\"",
+      "fix": "Changed operator || → ==",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T06:30:08.529Z"
+    },
+    {
+      "id": "bug-447",
+      "timestamp": "2026-04-25T06:30:23.501Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/config/config_moat_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 32→66 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T06:30:23.501Z"
+    },
+    {
+      "id": "bug-448",
+      "timestamp": "2026-04-25T07:06:54.661Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/registry_cmd.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→3 lines (4 removed) | Also: root, err := findContentRepoRoot(); cfg, err := config.Load(root)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-25T07:07:41.386Z"
+    },
+    {
+      "id": "bug-449",
+      "timestamp": "2026-04-25T07:11:51.315Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/coverage_extras_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 27→37 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T07:11:51.315Z"
+    },
+    {
+      "id": "bug-450",
+      "timestamp": "2026-04-25T07:13:02.194Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/registry_sync_moat_test.go",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 6→13 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T07:13:02.194Z"
+    },
+    {
+      "id": "bug-451",
+      "timestamp": "2026-04-25T07:29:15.372Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/registryops/ops.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 12→16 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T07:29:15.372Z"
+    },
+    {
+      "id": "bug-452",
+      "timestamp": "2026-04-25T07:31:58.697Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/registry_sync_moat_test.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 27→31 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T07:31:58.697Z"
+    },
+    {
+      "id": "bug-453",
+      "timestamp": "2026-04-25T07:52:54.161Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "45 lines replaced/restructured",
+      "fix": "Rewrote 71→17 lines (45 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T07:52:54.161Z"
+    },
+    {
+      "id": "bug-454",
+      "timestamp": "2026-04-25T18:56:15.440Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "Had \"github.com/OpenScribbler/syllago/cli/internal/con",
+      "fix": "Changed to \"github.com/OpenScribbler/syllago/cli/internal/ins",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T18:56:15.440Z"
+    },
+    {
+      "id": "bug-455",
+      "timestamp": "2026-04-25T19:00:23.906Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/registryops/add.go",
+      "root_cause": "Had \"%w: %v\"",
+      "fix": "Changed to \"%w: %w\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-25T19:00:29.041Z"
+    },
+    {
+      "id": "bug-456",
+      "timestamp": "2026-04-25T19:00:52.068Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/registryops/remove.go",
+      "root_cause": "Had \"%w: %v\"",
+      "fix": "Changed to \"%w: %w\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T19:00:52.068Z"
+    },
+    {
+      "id": "bug-457",
+      "timestamp": "2026-04-25T19:30:35Z",
+      "error_message": "TUI gallery shows '0 items' for MOAT registry after add+sync; no content visible in library/explorer either",
+      "file": "cli/internal/moat/producer.go (with helper in enrich.go)",
+      "root_cause": "MOAT registry cache dirs hold only manifest.json + signature.bundle (no skills/, rules/, etc. content tree). LoadAndScan points the catalog scanner at <cacheDir>/moat/registries/<name>/, where scanRoot finds zero content type directories and returns 0 items. EnrichCatalog only mutates pre-existing cat.Items, so it never adds the manifest entries either. Result: cat.ByRegistry(name) returns empty, gallery card reads '0 items', library/explorer never see the registry rows.",
+      "fix": "Added materializeMOATItems(cat, regName, m) in cli/internal/moat/enrich.go that synthesizes one ContentItem per manifest entry (Path empty since blob is fetched at install time, Type via FromMOATType, Source/Registry tagged). Called from EnrichFromMOATManifests BEFORE EnrichCatalog and attachRegistryTrust so trust enrichment hits the new rows and TotalItems counts include them. Idempotent on (Type,Name) so future pre-staged content won't duplicate. Skips MOAT-unknown types (hooks/mcp) per spec.",
+      "tags": [
+        "moat",
+        "tui",
+        "gallery",
+        "catalog",
+        "registry",
+        "manifest"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T19:30:35Z"
+    },
+    {
+      "id": "bug-458",
+      "timestamp": "2026-04-25T19:52:37.388Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→11 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T19:52:37.388Z"
+    },
+    {
+      "id": "bug-459",
+      "timestamp": "2026-04-25T20:10:18.777Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/help.go",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 52→67 lines (8 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T20:10:18.777Z"
+    },
+    {
+      "id": "bug-460",
+      "timestamp": "2026-04-25T20:12:15.145Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/metapanel.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 10→15 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T20:12:15.145Z"
+    },
+    {
+      "id": "bug-461",
+      "timestamp": "2026-04-25T20:12:21.966Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→10 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T20:12:21.966Z"
+    },
+    {
+      "id": "bug-462",
+      "timestamp": "2026-04-25T21:30:00.000Z",
+      "error_message": "After successful MOAT sync, registry card glyph stays orange '!' (stale) and contents-sidebar status renders 'fresh' in danger-red instead of 'Fresh' in muted color.",
+      "file": "cli/internal/moat/producer.go",
+      "root_cause": "attachRegistryTrust wrote rt.Staleness = status.String() which returns lowercase ('fresh'/'stale'/'expired'), but the catalog.RegistryTrust.Staleness contract documented in catalog/types.go is title-case ('Fresh'/'Stale'/'Expired'/'Missing'). All TUI consumers compare against capital 'Fresh' so every fresh registry was misread as stale. Producer tests didn't catch it because they only assert on warnings, never on the rt.Staleness field. TUI tests construct fixtures with capital strings so they never exercised the producer's lowercase output.",
+      "fix": "Added StalenessStatus.CatalogLabel() returning title-case strings; updated attachRegistryTrust to use CatalogLabel() for the catalog field while String() stays lowercase for diagnostic warnings. Added regression test TestAttachRegistryTrust_StalenessLabelIsCatalogContract pinning the wire label.",
+      "tags": [
+        "moat",
+        "tui",
+        "string-contract",
+        "case-sensitivity"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T21:30:00.000Z"
+    },
+    {
+      "id": "bug-463",
+      "timestamp": "2026-04-25T22:39:20.007Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 17→45 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T22:39:20.007Z"
+    },
+    {
+      "id": "bug-464",
+      "timestamp": "2026-04-25T22:49:31.536Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moat/rekor_fetch_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→13 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T22:49:31.536Z"
+    },
+    {
+      "id": "bug-465",
+      "timestamp": "2026-04-25T22:53:07.055Z",
+      "error_message": "Wrong operator: || should be ==",
+      "file": "cli/cmd/syllago/install_moat_fetch_test.go",
+      "root_cause": "Used \"||\" instead of \"==\"",
+      "fix": "Changed operator || → ==",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T22:53:07.055Z"
+    },
+    {
+      "id": "bug-466",
+      "timestamp": "2026-04-25T22:54:21.913Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/install_moat_fetch.go",
+      "root_cause": "11 lines replaced/restructured",
+      "fix": "Rewrote 40→89 lines (11 removed) | Also: // Lockfile: UNSIGNED → null bundle. Clock seam sh; // path so tests can pin pinned_at deterministical",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-25T22:54:44.532Z"
+    },
+    {
+      "id": "bug-467",
+      "timestamp": "2026-04-25T22:57:32.428Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "cli/cmd/syllago/install_moat_test.go",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T22:57:32.429Z"
     }
   ]
 }

@@ -4250,3 +4250,317 @@
 | 18:17 | Edited cli/internal/moat/load_scan_test.go | modified TestLoadAndScan_IncludesUnsynced_MOAT() | ~511 |
 | 18:18 | Edited cli/cmd/syllago/main.go | modified IsMOAT() | ~357 |
 | 18:20 | drove TUI headlessly via tmux | bug-438 confirmed: MOAT registry now appears in gallery, sync triggers (and surfaces upstream sigstore-bundle parse error from registry's legacy `rekorBundle`-format publish workflow) | bug-438 fixed |
+| 18:23 | Session end: 5 writes across 3 files (load_scan.go, load_scan_test.go, main.go) | 10 reads | ~33034 tok |
+
+## Session: 2026-04-25 18:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 18:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 21:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 21:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 22:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:19 | Edited cli/internal/registry/registry.go | modified Clone() | ~457 |
+| 22:20 | Edited cli/internal/registry/integration_test.go | modified TestIntegration_DuplicateClone() | ~506 |
+| 22:20 | Edited cli/internal/registry/integration_test.go | 9→10 lines | ~48 |
+| 22:25 | Fixed registry.Clone destructive cleanup on stale dest; pre-flight stat + actionable error | cli/internal/registry/registry.go, cli/internal/registry/integration_test.go | tests pass, build clean, logged bug-439 | ~600 |
+| 22:22 | Session end: 3 writes across 2 files (registry.go, integration_test.go) | 5 reads | ~23464 tok |
+| 22:23 | Session end: 3 writes across 2 files (registry.go, integration_test.go) | 5 reads | ~23464 tok |
+| 22:57 | Edited cli/internal/moat/manifest_verify.go | expanded (+6 lines) | ~194 |
+| 22:57 | Edited cli/internal/moat/bundle_builder.go | expanded (+7 lines) | ~99 |
+| 22:58 | Edited cli/internal/moat/manifest_verify.go | 2→4 lines | ~73 |
+| 22:58 | Edited cli/internal/config/config.go | 4→6 lines | ~108 |
+| 22:58 | Edited cli/internal/moat/manifest_verify_test.go | modified TestVerifyManifest_HappyPath_SubjectRegex() | ~634 |
+| 23:05 | Fixed MOAT verify ignoring SubjectRegex/IssuerRegex — forwarded both to sigstore-go NewShortCertificateIdentity at manifest_verify.go and bundle_builder.go; updated SigningProfile godoc; added TestVerifyManifest_HappyPath_SubjectRegex + TestVerifyManifest_WrongSubjectRegex | manifest_verify.go, bundle_builder.go, config.go, manifest_verify_test.go | full make test green; logged bug-440 | ~700 |
+
+## Session: 2026-04-25 23:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:08 | Edited ARCHITECTURE.md | expanded (+135 lines) | ~1204 |
+| 23:10 | Added mermaid container diagram to ARCHITECTURE.md (inserted after Overview, before Package Map) | ARCHITECTURE.md | done | ~1500 |
+| 23:09 | Session end: 1 writes across 1 files (ARCHITECTURE.md) | 1 reads | ~2953 tok |
+| 23:12 | Session end: 1 writes across 1 files (ARCHITECTURE.md) | 1 reads | ~2953 tok |
+| 23:13 | Edited CLAUDE.md | binary() → PATH() | ~247 |
+| 23:13 | Session end: 2 writes across 2 files (ARCHITECTURE.md, CLAUDE.md) | 2 reads | ~4253 tok |
+
+## Session: 2026-04-25 23:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:21 | Edited cli/internal/config/config.go | 11→12 lines | ~34 |
+| 23:22 | Edited cli/internal/config/config.go | modified subjectAuthorizes() | ~736 |
+| 23:22 | Edited cli/internal/config/config.go | modified IsZero() | ~251 |
+| 23:22 | Edited cli/internal/config/config_moat_test.go | modified TestSigningProfile_AuthorizesIdentity() | ~1123 |
+| 23:22 | Edited cli/internal/config/config_moat_test.go | expanded (+17 lines) | ~213 |
+| 23:24 | Fix: regex-aware AuthorizesIdentity | cli/internal/config/config.go | bug-445 — false-positive Sync rejected on regex-pinned profiles | ~250 |
+| 23:25 | Session end: 5 writes across 2 files (config.go, config_moat_test.go) | 7 reads | ~33882 tok |
+
+## Session: 2026-04-25 23:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 23:30 | Edited cli/internal/config/config.go | forgery() → numericIDsAuthorize() | ~576 |
+| 23:30 | Edited cli/internal/config/config_moat_test.go | expanded (+34 lines) | ~480 |
+| 23:30 | Edited cli/internal/config/config_moat_test.go | expanded (+17 lines) | ~403 |
+| 23:31 | Session end: 3 writes across 2 files (config.go, config_moat_test.go) | 1 reads | ~9706 tok |
+| 23:32 | Session end: 3 writes across 2 files (config.go, config_moat_test.go) | 1 reads | ~9706 tok |
+
+## Session: 2026-04-25 23:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 00:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:06 | Edited cli/cmd/syllago/registry_cmd.go | 7→3 lines | ~27 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | Load() → LoadGlobal() | ~27 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | Save() → SaveGlobal() | ~48 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | inline fix | ~16 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | 28→24 lines | ~169 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | 10→6 lines | ~42 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | Load() → LoadGlobal() | ~77 |
+| 00:07 | Edited cli/cmd/syllago/registry_cmd.go | modified IsGit() | ~32 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | 2→2 lines | ~20 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | modified IsGit() | ~39 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | inline fix | ~12 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | 17→13 lines | ~80 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | Save() → SaveGlobal() | ~228 |
+| 00:08 | Edited cli/cmd/syllago/registry_cmd.go | Save() → SaveGlobal() | ~485 |
+| 00:09 | Edited cli/cmd/syllago/registry_sync_moat.go | Save() → SaveGlobal() | ~76 |
+| 00:09 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRegistryAddRejectsDisallowedURL() | ~116 |
+| 00:09 | Edited cli/cmd/syllago/registry_cmd_test.go | modified withGlobalConfigDir() | ~137 |
+| 00:09 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRegistryAddAllowsURLWhenNoPolicy() | ~168 |
+| 00:09 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRegistryAddAllowsURLInPolicy() | ~156 |
+| 00:09 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRegistryListShowsManifest() | ~271 |
+| 00:10 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestRegistryAddExpandsAlias() | ~185 |
+| 00:10 | Edited cli/cmd/syllago/registry_cmd_test.go | modified TestReprobeRegistryVisibility_UpdatesPublic() | ~1724 |
+| 00:11 | Edited cli/cmd/syllago/coverage_extras_test.go | modified withRegistryProjectAndCache() | ~364 |
+| 00:11 | Edited cli/cmd/syllago/coverage_extras_test.go | Load() → LoadGlobal() | ~43 |
+| 00:12 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | Load() → LoadGlobal() | ~26 |
+| 00:13 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified tempProjectRoot() | ~162 |
+
+## Session: 2026-04-25 00:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:19 | Edited cli/internal/tui/moat_sync.go | manifest() → saved() | ~89 |
+| 00:21 | Session end: 1 writes across 1 files (moat_sync.go) | 2 reads | ~5489 tok |
+
+## Session: 2026-04-25 00:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 00:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:28 | Created cli/internal/registry/ops.go | — | ~2058 |
+| 00:29 | Edited cli/internal/registryops/ops.go | 12→16 lines | ~210 |
+| 00:29 | Created cli/cmd/syllago/registry_sync_moat.go | — | ~1250 |
+| 00:30 | Edited cli/cmd/syllago/registry_sync_moat.go | expanded (+9 lines) | ~199 |
+| 00:31 | Created cli/internal/tui/moat_sync.go | — | ~1146 |
+| 00:31 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified withStubbedMoatSync() | ~258 |
+
+## Session: 2026-04-25 00:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:35 | Edited cli/internal/registryops/ops.go | modified SyncOne() | ~281 |
+| 00:36 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_HappyPath_PinnedProfile() | ~620 |
+| 00:36 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_NotModified() | ~118 |
+| 00:36 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_TOFU_WithoutYes_ReturnsExit10() | ~467 |
+| 00:37 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_TOFU_WithYes_PersistsProfile() | ~422 |
+| 00:37 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_ProfileChanged_ReturnsExit11() | ~446 |
+| 00:37 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_StalenessExpired_ReturnsExit13() | ~140 |
+| 00:37 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_VerifyError_ReturnsStructuredError() | ~175 |
+| 00:37 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_TransportError_ReturnsStructuredError() | ~162 |
+| 00:38 | Edited cli/cmd/syllago/registry_sync_moat_test.go | modified TestSyncMOAT_PersistenceRoundTrip() | ~464 |
+| 00:41 | Created cli/internal/registryops/add.go | — | ~2439 |
+| 00:41 | Edited cli/internal/registryops/add.go | modified nowFunc() | ~143 |
+| 00:42 | Edited cli/cmd/syllago/registry_cmd.go | 26→28 lines | ~236 |
+| 00:43 | Edited cli/cmd/syllago/registry_cmd.go | modified classifyAddError() | ~2029 |
+| 00:44 | Edited cli/cmd/syllago/registry_cmd.go | — | ~0 |
+| 00:45 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | modified stubClone() | ~258 |
+| 00:45 | Edited cli/internal/tui/actions.go | 16→19 lines | ~142 |
+| 00:46 | Edited cli/internal/tui/actions.go | modified humaniseAddErr() | ~615 |
+| 00:46 | Edited cli/internal/tui/actions_test.go | modified stubCloneFn() | ~178 |
+| 00:46 | Edited cli/internal/tui/actions_test.go | 5→6 lines | ~78 |
+| 00:47 | Edited cli/internal/registryops/add.go | 12→13 lines | ~90 |
+
+## Session: 2026-04-25 00:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:49 | Edited cli/internal/registryops/add.go | expanded (+8 lines) | ~273 |
+| 00:52 | Created cli/internal/registryops/remove.go | — | ~852 |
+| 00:52 | Edited cli/cmd/syllago/registry_cmd.go | modified Is() | ~236 |
+| 00:52 | Edited cli/internal/tui/actions.go | reduced (-54 lines) | ~211 |
+| 11:55 | Session end: 4 writes across 4 files (add.go, remove.go, registry_cmd.go, actions.go) | 4 reads | ~22557 tok |
+| 11:56 | Edited cli/internal/tui/actions.go | 3→2 lines | ~31 |
+| 11:57 | Edited cli/internal/tui/actions_test.go | modified TestDoRegistryRemoveCmd_RemovesFromGlobalConfig() | ~522 |
+| 11:57 | Edited cli/internal/tui/actions_test.go | 31→31 lines | ~310 |
+| 11:58 | Created cli/internal/registryops/remove_test.go | — | ~824 |
+| 12:00 | Edited cli/internal/registryops/add.go | "%w: %v" → "%w: %w" | ~16 |
+| 12:00 | Edited cli/internal/registryops/add.go | "%w: %v" → "%w: %w" | ~16 |
+| 12:00 | Edited cli/internal/registryops/remove.go | "%w: %v" → "%w: %w" | ~16 |
+| 12:04 | Edited cli/cmd/syllago/registry_cmd.go | 1→2 lines | ~87 |
+| 12:05 | Edited cli/cmd/syllago/registry_cmd.go | modified IsMOAT() | ~448 |
+| 12:06 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | modified stubSyncOne() | ~327 |
+| 12:06 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | 8→9 lines | ~118 |
+| 12:06 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | 3→5 lines | ~72 |
+| 12:07 | Edited cli/cmd/syllago/registry_cmd_moat_autodetect_test.go | modified TestRegistryAdd_AllowlistChainsAutoSync() | ~743 |
+| 12:09 | Session end: 17 writes across 7 files (add.go, remove.go, registry_cmd.go, actions.go, actions_test.go) | 9 reads | ~40458 tok |
+
+## Session: 2026-04-25 12:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:26 | Edited cli/internal/moat/producer.go | expanded (+10 lines) | ~372 |
+| 12:26 | Edited cli/internal/moat/enrich.go | modified materializeMOATItems() | ~506 |
+| 12:28 | Edited cli/internal/moat/enrich_test.go | modified TestMaterializeMOATItems_NilGuards() | ~1039 |
+| 12:31 | Session end: 3 writes across 3 files (producer.go, enrich.go, enrich_test.go) | 10 reads | ~47884 tok |
+| 12:33 | Session end: 3 writes across 3 files (producer.go, enrich.go, enrich_test.go) | 10 reads | ~47884 tok |
+
+## Session: 2026-04-25 12:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 12:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 12:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 12:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:52 | Edited cli/internal/tui/actions.go | 7→11 lines | ~163 |
+| 12:52 | Edited cli/internal/tui/app_test.go | modified TestApp_ActionHandler_ConfirmRegistryItemUninstall_NotMisroutedAsRegistryRemove() | ~282 |
+| 12:53 | Edited cli/internal/tui/styles.go | 3→4 lines | ~83 |
+
+## Session: 2026-04-25 12:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:55 | Edited cli/internal/tui/cards.go | 9→9 lines | ~158 |
+| 12:56 | Edited cli/internal/tui/library.go | modified isUnstagedRegistryItem() | ~602 |
+| 12:57 | Edited cli/internal/tui/library_test.go | modified TestLibrary_DrillIn_UnstagedRegistryItem_ShowsExplanation() | ~320 |
+| 12:57 | Edited cli/internal/tui/help.go | expanded (+10 lines) | ~283 |
+| 12:58 | Edited cli/internal/tui/help_test.go | modified TestHelpOverlay_ViewContainsTrustGlyphLegend() | ~260 |
+| 13:00 | Session end: 5 writes across 5 files (cards.go, library.go, library_test.go, help.go, help_test.go) | 8 reads | ~17266 tok |
+
+## Session: 2026-04-25 13:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:10 | Edited cli/internal/tui/help.go | expanded (+15 lines) | ~592 |
+| 13:12 | Edited cli/internal/tui/metapanel.go | modified isUnstagedRegistryItem() | ~189 |
+| 13:12 | Edited cli/internal/tui/actions.go | modified isUnstagedRegistryItem() | ~160 |
+| 13:14 | Edited cli/internal/tui/metapanel.go | 15→16 lines | ~213 |
+| 13:14 | Edited cli/internal/tui/actions.go | items() → Sprintf() | ~199 |
+
+## Session: 2026-04-25 13:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:26 | Edited cli/internal/moat/freshness.go | expanded (+29 lines) | ~385 |
+| 13:26 | Edited cli/internal/moat/producer.go | 9→12 lines | ~127 |
+| 13:27 | Edited cli/internal/moat/producer_test.go | modified TestAttachRegistryTrust_StalenessLabelIsCatalogContract() | ~484 |
+| 13:30 | Session end: 3 writes across 3 files (freshness.go, producer.go, producer_test.go) | 15 reads | ~41825 tok |
+
+## Session: 2026-04-25 13:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 13:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 13:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 15:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 15:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:36 | Edited cli/internal/moat/lockfile.go | modified SetRegistryFetchedAt() | ~440 |
+| 15:37 | Edited cli/internal/moat/producer.go | modified RemoveManifestCache() | ~503 |
+| 15:38 | Created cli/internal/registryops/remove.go | — | ~2099 |
+| 15:39 | Edited cli/internal/tui/actions.go | 6→7 lines | ~109 |
+| 15:39 | Edited cli/internal/tui/actions.go | modified firstSoftRemoveErr() | ~552 |
+| 15:39 | Edited cli/cmd/syllago/registry_cmd.go | modified Is() | ~357 |
+| 15:39 | Session end: 6 writes across 5 files (lockfile.go, producer.go, remove.go, actions.go, registry_cmd.go) | 7 reads | ~38082 tok |
+| 15:41 | Edited cli/internal/moat/producer_write_test.go | modified TestRemoveManifestCache_RemovesSubtree() | ~924 |
+| 15:42 | Edited cli/internal/moat/lockfile_test.go | modified TestLockfile_PruneRegistry_RemovesMatchingURI() | ~996 |
+| 15:43 | Created cli/internal/registryops/remove_test.go | — | ~2658 |
+| 15:46 | Created cli/internal/moat/rekor_fetch_test.go | — | ~1844 |
+
+## Session: 2026-04-25 15:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:48 | Created cli/internal/moat/rekor_fetch.go | — | ~830 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified withRekorBase() | ~144 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_PutsLogIndexOnQuery() | ~22 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_SendsUserAgent() | ~20 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_NonOKIsError() | ~54 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_OversizeIsError() | ~34 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_NegativeLogIndexIsError() | ~36 |
+| 15:49 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_ContextCancelled() | ~47 |
+| 15:50 | Edited cli/internal/moat/rekor_fetch_test.go | modified TestFetchRekorEntry_BytesAreParseable() | ~33 |
+| 15:53 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified withVerifyItemStub() | ~3009 |
+| 15:53 | Edited cli/internal/moat/rekor_fetch.go | modified RekorBaseURLForTest() | ~167 |
+| 15:53 | Edited cli/cmd/syllago/install_moat_fetch.go | expanded (+7 lines) | ~199 |
+| 15:54 | Edited cli/cmd/syllago/install_moat_fetch.go | modified fetchAndRecord() | ~1034 |
+| 15:54 | Edited cli/cmd/syllago/install_moat_fetch.go | inline fix | ~18 |
+| 15:54 | Edited cli/cmd/syllago/install_moat_fetch.go | 3→6 lines | ~122 |
+| 15:54 | Edited cli/cmd/syllago/install_moat.go | 7→11 lines | ~167 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | 8→10 lines | ~65 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified Contains() | ~95 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified Contains() | ~83 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | 7→7 lines | ~106 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | 2→2 lines | ~50 |
+| 15:55 | Edited cli/cmd/syllago/install_moat_fetch_test.go | modified Contains() | ~80 |
+| 15:57 | Edited cli/cmd/syllago/install_moat_test.go | added error handling | ~694 |
+| 15:57 | Edited cli/cmd/syllago/install_moat_test.go | expanded (+7 lines) | ~230 |
+| 15:58 | Edited cli/cmd/syllago/install_moat_test.go | 13→15 lines | ~75 |
+
+## Session: 2026-04-25 16:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

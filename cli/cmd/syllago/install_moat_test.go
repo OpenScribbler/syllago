@@ -15,6 +15,8 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -343,25 +345,56 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 	}
 }
 
-func TestRunInstallFromRegistry_NonDryRunSignedTierDeferred(t *testing.T) {
+// TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch is a regression
+// guard against the now-removed "SIGNED tier deferred" refusal block. The
+// test seeds a SIGNED-tier ContentEntry via the stubbed sync, redirects
+// Rekor to a 404-returning httptest server, and asserts that the error
+// surfaces from the Rekor-fetch step rather than the old upfront refusal.
+//
+// If SIGNED tier ever gets re-deferred (e.g. by a "wait, we're not ready
+// yet" revert), this test will catch it because the error message and
+// structured code would shift back to the "per-item Rekor bundle fetching
+// is not yet wired" string.
+func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 	orig := moatSyncFn
 	hash := "sha256:" + strings.Repeat("cd", 32)
 	idx := int64(42)
+	moatSigningProfile := moat.SigningProfile{
+		Issuer:            "https://token.actions.githubusercontent.com",
+		Subject:           "repo:example/registry:ref:refs/heads/main",
+		ProfileVersion:    1,
+		RepositoryID:      "100",
+		RepositoryOwnerID: "200",
+	}
 	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
 			ManifestURL: "https://example.com/m",
-			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
-				Name:          "my-skill",
-				Type:          "skill",
-				ContentHash:   hash,
-				SourceURI:     "https://example.com/my-skill.tar.gz",
-				RekorLogIndex: &idx,
-			}}},
+			Manifest: &moat.Manifest{
+				RegistrySigningProfile: moatSigningProfile,
+				Content: []moat.ContentEntry{{
+					Name:          "my-skill",
+					Type:          "skill",
+					ContentHash:   hash,
+					SourceURI:     "https://example.com/my-skill.tar.gz",
+					RekorLogIndex: &idx,
+				}},
+			},
 			IncomingProfile: incomingProfile(),
 			Staleness:       moat.StalenessFresh,
 		}, nil
 	}
 	t.Cleanup(func() { moatSyncFn = orig })
+
+	// Redirect Rekor at a 404 server so the install fails AT the Rekor
+	// fetch step — proves the SIGNED path reached fetchAndRecord rather
+	// than the old upfront refusal.
+	rekorSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
+	}))
+	t.Cleanup(rekorSrv.Close)
+	origRekor := moat.RekorBaseURLForTest()
+	moat.SetRekorBaseURLForTest(rekorSrv.URL)
+	t.Cleanup(func() { moat.SetRekorBaseURLForTest(origRekor) })
 
 	cfg := cfgWithPinnedMOATRegistry()
 	err := runInstallFromRegistry(
@@ -377,8 +410,14 @@ func TestRunInstallFromRegistry_NonDryRunSignedTierDeferred(t *testing.T) {
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
-	if !errors.As(err, &se) || !strings.Contains(se.Message, "trust tier SIGNED") {
-		t.Errorf("expected SIGNED-tier deferred message; got %+v", err)
+	if !errors.As(err, &se) {
+		t.Fatalf("expected StructuredError, got %T: %v", err, err)
+	}
+	if strings.Contains(se.Message, "trust tier SIGNED") {
+		t.Errorf("SIGNED-tier deferral has come back: %q", se.Message)
+	}
+	if !strings.Contains(se.Message, "could not fetch Rekor entry") {
+		t.Errorf("expected Rekor-fetch failure to surface from the install path; got %q", se.Message)
 	}
 }
 

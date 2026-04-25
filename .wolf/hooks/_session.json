@@ -1,98 +1,12 @@
 {
-  "session_id": "session-2026-04-25-1812",
-  "started": "2026-04-25T01:12:11.105Z",
-  "files_read": {
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/app.go": {
-      "count": 1,
-      "tokens": 5393,
-      "first_read": "2026-04-25T01:13:26.333Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan.go": {
-      "count": 3,
-      "tokens": 973,
-      "first_read": "2026-04-25T01:13:40.381Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/tui/cards.go": {
-      "count": 1,
-      "tokens": 3539,
-      "first_read": "2026-04-25T01:14:21.351Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/sync.go": {
-      "count": 1,
-      "tokens": 4168,
-      "first_read": "2026-04-25T01:14:44.601Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/producer.go": {
-      "count": 2,
-      "tokens": 4925,
-      "first_read": "2026-04-25T01:15:06.144Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/catalog/types.go": {
-      "count": 1,
-      "tokens": 2213,
-      "first_read": "2026-04-25T01:15:21.648Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan_test.go": {
-      "count": 1,
-      "tokens": 1352,
-      "first_read": "2026-04-25T01:16:57.582Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/cmd/syllago/main.go": {
-      "count": 2,
-      "tokens": 4298,
-      "first_read": "2026-04-25T01:17:57.898Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/cmd/syllago/helpers.go": {
-      "count": 1,
-      "tokens": 1346,
-      "first_read": "2026-04-25T01:19:37.754Z"
-    },
-    "/home/hhewett/.local/src/syllago/cli/internal/moat/manifest_verify.go": {
-      "count": 1,
-      "tokens": 3590,
-      "first_read": "2026-04-25T01:20:34.408Z"
-    }
-  },
-  "files_written": [
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan.go",
-      "action": "edit",
-      "tokens": 60,
-      "at": "2026-04-25T01:16:03.999Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan.go",
-      "action": "edit",
-      "tokens": 230,
-      "at": "2026-04-25T01:16:11.268Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan.go",
-      "action": "edit",
-      "tokens": 16,
-      "at": "2026-04-25T01:16:20.977Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/load_scan_test.go",
-      "action": "edit",
-      "tokens": 548,
-      "at": "2026-04-25T01:17:11.100Z"
-    },
-    {
-      "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/main.go",
-      "action": "edit",
-      "tokens": 383,
-      "at": "2026-04-25T01:18:13.748Z"
-    }
-  ],
-  "edit_counts": {
-    "cli/internal/moat/load_scan.go": 3,
-    "cli/internal/moat/load_scan_test.go": 1,
-    "cli/cmd/syllago/main.go": 1
-  },
-  "anatomy_hits": 10,
+  "session_id": "session-2026-04-25-1601",
+  "started": "2026-04-25T23:01:54.618Z",
+  "files_read": {},
+  "files_written": [],
+  "edit_counts": {},
+  "anatomy_hits": 0,
   "anatomy_misses": 0,
-  "repeated_reads_warned": 4,
+  "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

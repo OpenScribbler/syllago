@@ -293,13 +293,17 @@ func runInstallFromRegistry(
 		return nil
 	}
 
-	// Gates cleared. Fetch the source artifact, verify sha256 matches the
-	// manifest-attested content_hash, extract into the per-item cache, and
-	// record the install in the lockfile. UNSIGNED-tier entries land with a
-	// null AttestationBundle; SIGNED/DUAL-ATTESTED tiers surface a structured
-	// error until per-item Rekor bundle fetching ships. See
-	// install_moat_fetch.go for the scope boundaries of this slice.
-	cacheDir, fetchErr := fetchAndRecord(ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf)
+	// Gates cleared. For SIGNED/DUAL-ATTESTED tiers, fetchAndRecord first
+	// fetches the per-item Rekor entry and verifies it against the pinned
+	// signing profile (per-item if present, else the manifest-level
+	// RegistrySigningProfile) before paying for the source-artifact
+	// download. UNSIGNED tiers skip the verification path and land with a
+	// null AttestationBundle. The trustedRoot bytes were already validated
+	// at sync time (rootInfo.Status check above).
+	cacheDir, fetchErr := fetchAndRecord(
+		ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf,
+		&res.Manifest.RegistrySigningProfile, rootInfo.Bytes,
+	)
 	if fetchErr != nil {
 		return fetchErr
 	}
