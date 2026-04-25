@@ -107,6 +107,7 @@ var (
 	// sites never allocate lipgloss.NewStyle() inline (per project convention).
 	trustVerifiedStyle    = lipgloss.NewStyle().Foreground(successColor).Bold(true)
 	trustRevokedStyle     = lipgloss.NewStyle().Foreground(dangerColor).Bold(true)
+	trustStaleStyle       = lipgloss.NewStyle().Foreground(warningColor).Bold(true)
 	privateIndicatorStyle = lipgloss.NewStyle().Foreground(mutedColor)
 )
 

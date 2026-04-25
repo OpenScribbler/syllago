@@ -34,12 +34,15 @@ func TestRegistryTrustGlyph_States(t *testing.T) {
 			&catalog.RegistryTrust{Staleness: "Fresh", VerifiedItems: 3}, "\u2713"},
 		{"revoked wins over verified",
 			&catalog.RegistryTrust{Staleness: "Fresh", VerifiedItems: 5, RevokedItems: 1}, "R"},
-		{"stale → clock",
-			&catalog.RegistryTrust{Staleness: "Stale", VerifiedItems: 2}, "\u23f0"},
-		{"expired → clock",
-			&catalog.RegistryTrust{Staleness: "Expired"}, "\u23f0"},
-		{"missing → clock",
-			&catalog.RegistryTrust{Staleness: "Missing"}, "\u23f0"},
+		// Stale/expired/missing collapse to "!" — single-cell ASCII so
+		// terminal cell-width can't disagree with truncate's byte-budget math
+		// (the alarm-clock variant pushed titles to a second line).
+		{"stale → bang",
+			&catalog.RegistryTrust{Staleness: "Stale", VerifiedItems: 2}, "!"},
+		{"expired → bang",
+			&catalog.RegistryTrust{Staleness: "Expired"}, "!"},
+		{"missing → bang",
+			&catalog.RegistryTrust{Staleness: "Missing"}, "!"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

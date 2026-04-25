@@ -376,27 +376,33 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 // Follows the AD-7 Panel C9 collapse rule for the library row badge, adapted
 // to registry aggregates:
 //
-//   - "R" if any item is revoked (hardest signal takes precedence).
-//   - "✓" if the registry is Fresh AND at least one item verified.
-//   - "⏰" if the registry is Stale, Expired, or Missing (user needs to sync).
-//   - ""  for non-MOAT registries or a Fresh MOAT registry with zero
-//     verified items (nothing to report).
+//   - "R" (red, bold)    — any item is revoked (hardest signal, takes precedence).
+//   - "!" (orange, bold)  — registry is Stale, Expired, or Missing (sync needed).
+//   - "✓" (green, bold)   — registry is Fresh AND at least one item verified.
+//   - ""                  — non-MOAT registries or a Fresh MOAT registry with
+//     zero verified items (nothing to report).
 //
-// Kept deliberately narrow — the card glyph is a "is anything wrong here?"
-// signal, not a tier display. Full tier/issuer detail lives in the Trust
-// Inspector.
+// Glyphs are deliberately ASCII single-cell characters with lipgloss color
+// styling. Card glyph is a "is anything wrong here?" signal, not a tier
+// display. Full tier/issuer detail lives in the Trust Inspector.
 func registryTrustGlyph(rt *catalog.RegistryTrust) string {
 	if rt == nil {
 		return ""
 	}
 	if rt.RevokedItems > 0 {
-		return "R"
+		return trustRevokedStyle.Render("R")
 	}
 	if rt.Staleness != "" && rt.Staleness != "Fresh" {
-		return "\u23f0" // clock face — stale/expired/missing
+		// "!" — orange/bold. Previous design used U+23F0 (alarm clock) which
+		// renders as 2 cells in most terminals while runewidth/lipgloss reports
+		// it as 1; the disagreement collided with truncate's byte-budget math
+		// and pushed the card title onto a second line, clipping the bottom
+		// border. Keep registry-card glyphs single-cell ASCII or fix truncate
+		// before reintroducing wide characters here.
+		return trustStaleStyle.Render("!")
 	}
 	if rt.VerifiedItems > 0 {
-		return "\u2713"
+		return trustVerifiedStyle.Render("\u2713")
 	}
 	return ""
 }
