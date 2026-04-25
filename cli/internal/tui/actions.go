@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -596,20 +597,48 @@ func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea
 
 // doRegistryRemoveCmd is a thin wrapper around registryops.RemoveRegistry.
 // Registries live in global config only (decision 2026-04-24, syllago-fhtxa);
-// the orchestrator owns load/filter/save plus best-effort clone deletion.
+// the orchestrator owns load/filter/save plus best-effort clone deletion
+// plus MOAT manifest-cache + lockfile pin-state cleanup (syllago-teat0).
+//
+// projectRoot threads through so the lockfile prune path can find
+// .syllago/moat-lockfile.json. cacheDir comes from config.GlobalDirPath()
+// to address the same MOAT cache root the producer + sync path use.
+// Both are best-effort soft errors per the orchestrator contract;
+// we collapse them into a single soft toast for the user.
 func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
+	projectRoot := a.projectRoot
+	cacheDir, _ := config.GlobalDirPath()
 	return func() tea.Msg {
-		outcome, err := registryops.RemoveRegistry(name)
+		outcome, err := registryops.RemoveRegistry(registryops.RemoveOpts{
+			Name:        name,
+			ProjectRoot: projectRoot,
+			CacheDir:    cacheDir,
+		})
 		if err != nil {
 			return registryRemoveDoneMsg{name: name, err: err}
 		}
-		if outcome.CloneRemoveErr != nil {
-			// Surface as a soft error so the toast tells the user the config
-			// was updated but the on-disk clone needs manual cleanup.
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removed from config; clone cleanup failed: %w", outcome.CloneRemoveErr)}
+		if softErr := firstSoftRemoveErr(outcome); softErr != nil {
+			return registryRemoveDoneMsg{name: name, err: softErr}
 		}
 		return registryRemoveDoneMsg{name: name}
 	}
+}
+
+// firstSoftRemoveErr returns the first non-nil best-effort error from a
+// remove outcome wrapped with a context message, or nil when all soft
+// errors are clear. We only surface one at a time because the toast UI is
+// single-line and the user's recovery action ("rerun remove" or "rm -rf
+// the cache dir") is the same regardless of which sub-step failed.
+func firstSoftRemoveErr(outcome registryops.RemoveOutcome) error {
+	switch {
+	case outcome.CloneRemoveErr != nil:
+		return fmt.Errorf("removed from config; clone cleanup failed: %w", outcome.CloneRemoveErr)
+	case outcome.ManifestCacheRemoveErr != nil:
+		return fmt.Errorf("removed from config; MOAT cache cleanup failed: %w", outcome.ManifestCacheRemoveErr)
+	case outcome.LockfilePruneErr != nil:
+		return fmt.Errorf("removed from config; lockfile pin cleanup failed: %w", outcome.LockfilePruneErr)
+	}
+	return nil
 }
 
 // handleAdd opens the add wizard for importing content into the library.

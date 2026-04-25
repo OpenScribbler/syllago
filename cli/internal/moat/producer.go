@@ -411,6 +411,56 @@ func WriteManifestCache(cacheDir, name string, manifestBytes, bundleBytes []byte
 	return nil
 }
 
+// RemoveManifestCache deletes the per-registry MOAT manifest cache subtree
+// at <cacheDir>/moat/registries/<name>/ and any contents (manifest.json,
+// signature.bundle, future siblings). Used by `registry remove` cleanup so
+// a removed registry leaves no stale cache that EnrichFromMOATManifests
+// could surface as "trust decisions disabled" warnings forever.
+//
+// Path computation reuses manifestCachePathsFor for traversal defense:
+// the registry name is re-validated and a filepath.Rel escape check
+// guarantees we never RemoveAll a path outside cacheDir, even if a future
+// validator change loosens IsValidRegistryName.
+//
+// Best-effort by design: a missing cache directory is NOT an error
+// (idempotent — repeated removes are fine). I/O errors during the
+// RemoveAll itself ARE returned so callers can decide whether to surface
+// them; the caller in registryops treats this as best-effort and only
+// logs / surfaces a warning.
+func RemoveManifestCache(cacheDir, name string) error {
+	if cacheDir == "" {
+		return fmt.Errorf("RemoveManifestCache: cacheDir is empty")
+	}
+	if name == "" {
+		return fmt.Errorf("RemoveManifestCache: registry name is empty")
+	}
+	if !catalog.IsValidRegistryName(name) {
+		return fmt.Errorf("RemoveManifestCache: registry name %q is not valid", name)
+	}
+
+	absCache, err := filepath.Abs(cacheDir)
+	if err != nil {
+		return fmt.Errorf("resolve cacheDir: %w", err)
+	}
+
+	manifestPath, _, err := manifestCachePathsFor(absCache, name)
+	if err != nil {
+		return err
+	}
+	regCacheDir := filepath.Dir(manifestPath)
+
+	if _, err := os.Stat(regCacheDir); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("stat cache dir: %w", err)
+	}
+	if err := os.RemoveAll(regCacheDir); err != nil {
+		return fmt.Errorf("remove cache dir: %w", err)
+	}
+	return nil
+}
+
 // atomicWriteFile writes data to path via a sibling temp file + rename.
 // os.Rename is atomic on the same filesystem, so a reader that observes
 // the destination path will see either the previous bytes or the new

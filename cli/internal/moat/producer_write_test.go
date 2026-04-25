@@ -156,6 +156,98 @@ func TestWriteManifestCache_ReaderCompatibility(t *testing.T) {
 	}
 }
 
+// TestRemoveManifestCache_RemovesSubtree verifies that after a write+remove
+// cycle the per-registry cache subtree is gone and a subsequent read
+// returns os.ErrNotExist. Used by `registry remove` to keep the producer
+// from warning forever about a registry the user already removed.
+func TestRemoveManifestCache_RemovesSubtree(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	name := "remove-me"
+
+	if err := WriteManifestCache(cacheDir, name, []byte("manifest"), []byte("bundle")); err != nil {
+		t.Fatalf("seed write: %v", err)
+	}
+
+	if err := RemoveManifestCache(cacheDir, name); err != nil {
+		t.Fatalf("RemoveManifestCache: %v", err)
+	}
+
+	regDir := filepath.Join(cacheDir, manifestCacheDirName, manifestCacheSubDir, name)
+	if _, err := os.Stat(regDir); !os.IsNotExist(err) {
+		t.Errorf("expected subtree gone, got err=%v", err)
+	}
+}
+
+// TestRemoveManifestCache_PreservesSiblingRegistries verifies that the
+// remove only touches the named registry's subtree — a co-resident
+// registry's cache is untouched. Bug class to guard against: a glob or
+// prefix match that would wipe sibling caches and disable trust for
+// unrelated registries.
+func TestRemoveManifestCache_PreservesSiblingRegistries(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+
+	if err := WriteManifestCache(cacheDir, "drop", []byte("m1"), []byte("b1")); err != nil {
+		t.Fatalf("seed drop: %v", err)
+	}
+	if err := WriteManifestCache(cacheDir, "keep", []byte("m2"), []byte("b2")); err != nil {
+		t.Fatalf("seed keep: %v", err)
+	}
+
+	if err := RemoveManifestCache(cacheDir, "drop"); err != nil {
+		t.Fatalf("RemoveManifestCache: %v", err)
+	}
+
+	keepManifest := filepath.Join(cacheDir, manifestCacheDirName, manifestCacheSubDir, "keep", manifestFileName)
+	if _, err := os.Stat(keepManifest); err != nil {
+		t.Errorf("sibling registry was wiped: %v", err)
+	}
+}
+
+// TestRemoveManifestCache_MissingIsNoOp verifies that removing a
+// non-existent cache returns nil — `registry remove` should be idempotent
+// and not error when nothing was cached (e.g. registry was added but
+// never synced).
+func TestRemoveManifestCache_MissingIsNoOp(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	if err := RemoveManifestCache(cacheDir, "never-cached"); err != nil {
+		t.Errorf("missing cache must be a no-op, got: %v", err)
+	}
+}
+
+// TestRemoveManifestCache_Validation rejects malformed inputs for the same
+// reasons WriteManifestCache does — same defense-in-depth posture, since
+// a path-traversal name reaching RemoveAll would be far worse than one
+// reaching Write.
+func TestRemoveManifestCache_Validation(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name        string
+		cacheDir    string
+		regName     string
+		errContains string
+	}{
+		{"empty cacheDir", "", "reg", "cacheDir is empty"},
+		{"empty registry name", t.TempDir(), "", "registry name is empty"},
+		{"invalid name dotdot", t.TempDir(), "../escape", "not valid"},
+		{"invalid name nested slashes", t.TempDir(), "a/b/c", "not valid"},
+		{"invalid name with space", t.TempDir(), "bad name", "not valid"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := RemoveManifestCache(tc.cacheDir, tc.regName)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !strings.Contains(err.Error(), tc.errContains) {
+				t.Errorf("error %q does not contain %q", err.Error(), tc.errContains)
+			}
+		})
+	}
+}
+
 // TestAtomicWriteFile_Perms verifies the destination file ends up at 0o644
 // regardless of os.CreateTemp's default perms (typically 0o600).
 func TestAtomicWriteFile_Perms(t *testing.T) {

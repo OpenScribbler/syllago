@@ -298,6 +298,31 @@ func (l *Lockfile) SetRegistryFetchedAt(registryURL string, t time.Time) {
 	l.Registries[registryURL] = RegistryLockState{FetchedAt: t.UTC()}
 }
 
+// PruneRegistry removes the per-registry pin state for manifestURI from
+// lockfile.registries. Used by `registry remove` cleanup so a removed
+// registry does not leave a stale fetched_at entry that would survive a
+// later re-add at the same URL.
+//
+// Scope is deliberately narrow: this MUST NOT touch Entries[] or
+// RevokedHashes. Both have separate semantics:
+//
+//   - Entries[] are installed-item rows. Uninstalling a registry's clone
+//     does not remove the items the user already chose to install; those
+//     stay until the user runs `syllago uninstall` per item.
+//   - RevokedHashes is append-only by spec §Revocation Archival
+//     (ADR 0007 G-15). Once a hash is hard-blocked it stays that way for
+//     the life of the project, even if the registry that contributed the
+//     revocation is later removed. Pruning would let a user "un-revoke"
+//     content by removing+re-adding the registry, defeating G-15.
+//
+// No-op on a nil receiver, nil Registries map, or unknown URI.
+func (l *Lockfile) PruneRegistry(manifestURI string) {
+	if l == nil || l.Registries == nil {
+		return
+	}
+	delete(l.Registries, manifestURI)
+}
+
 // IsRevoked reports whether a content hash is in the hard-block list.
 func (l *Lockfile) IsRevoked(contentHash string) bool {
 	for _, h := range l.RevokedHashes {

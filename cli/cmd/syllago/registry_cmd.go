@@ -264,7 +264,13 @@ var registryRemoveCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		outcome, err := registryops.RemoveRegistry(name)
+		projectRoot, _ := findProjectRoot()
+		cacheDir, _ := config.GlobalDirPath()
+		outcome, err := registryops.RemoveRegistry(registryops.RemoveOpts{
+			Name:        name,
+			ProjectRoot: projectRoot,
+			CacheDir:    cacheDir,
+		})
 		if err != nil {
 			switch {
 			case errors.Is(err, registryops.ErrRemoveNotFound):
@@ -278,6 +284,12 @@ var registryRemoveCmd = &cobra.Command{
 
 		if outcome.CloneRemoveErr != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: could not delete clone for %q: %s\n", name, outcome.CloneRemoveErr)
+		}
+		if outcome.ManifestCacheRemoveErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: could not delete MOAT manifest cache for %q: %s\n", name, outcome.ManifestCacheRemoveErr)
+		}
+		if outcome.LockfilePruneErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: could not prune MOAT lockfile pin for %q: %s\n", name, outcome.LockfilePruneErr)
 		}
 
 		fmt.Fprintf(output.Writer, "Removed registry: %s\n", name)

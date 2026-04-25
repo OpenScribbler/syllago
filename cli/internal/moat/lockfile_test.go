@@ -142,6 +142,98 @@ func TestLockfile_SetRegistryFetchedAtUTCNormalization(t *testing.T) {
 	}
 }
 
+// TestLockfile_PruneRegistry_RemovesMatchingURI verifies that a registry's
+// per-registry pin state can be deleted from lf.Registries without
+// touching neighbor entries. Used by `registry remove` cleanup so a
+// removed registry leaves no stale fetched_at entry that would survive a
+// later re-add at the same URL.
+func TestLockfile_PruneRegistry_RemovesMatchingURI(t *testing.T) {
+	lf := NewLockfile()
+	lf.SetRegistryFetchedAt("https://example.com/keep.json", time.Now())
+	lf.SetRegistryFetchedAt("https://example.com/drop.json", time.Now())
+
+	lf.PruneRegistry("https://example.com/drop.json")
+
+	if _, ok := lf.Registries["https://example.com/drop.json"]; ok {
+		t.Errorf("drop URI still present after prune")
+	}
+	if _, ok := lf.Registries["https://example.com/keep.json"]; !ok {
+		t.Errorf("keep URI was removed; prune over-reached")
+	}
+}
+
+// TestLockfile_PruneRegistry_PreservesEntries is the load-bearing
+// invariant: pruning a registry's pin state MUST NOT remove installed-item
+// rows. Entries[] are the user's installed-item ledger and have separate
+// semantics from the registry pin state — uninstalling a registry's clone
+// does not retroactively uninstall the user's items.
+func TestLockfile_PruneRegistry_PreservesEntries(t *testing.T) {
+	lf := NewLockfile()
+	lf.SetRegistryFetchedAt("https://example.com/m.json", time.Now())
+	// Seed an UNSIGNED entry directly (no AddEntry path needed since we
+	// only care that Entries[] survives the prune).
+	lf.Entries = append(lf.Entries, LockEntry{
+		Name:              "skill-A",
+		Type:              "skill",
+		Registry:          "https://example.com/m.json",
+		ContentHash:       "sha256:abc",
+		TrustTier:         LockTrustTierUnsigned,
+		AttestationBundle: NullAttestationBundle(),
+	})
+
+	lf.PruneRegistry("https://example.com/m.json")
+
+	if len(lf.Entries) != 1 || lf.Entries[0].Name != "skill-A" {
+		t.Errorf("entries[] mutated by prune: %+v", lf.Entries)
+	}
+}
+
+// TestLockfile_PruneRegistry_PreservesRevokedHashes is the spec-critical
+// invariant. RevokedHashes is append-only by spec §Revocation Archival
+// (ADR 0007 G-15). If pruning a registry removed its revocations, a user
+// could "un-revoke" malicious content by remove+re-add, defeating G-15.
+func TestLockfile_PruneRegistry_PreservesRevokedHashes(t *testing.T) {
+	lf := NewLockfile()
+	lf.SetRegistryFetchedAt("https://example.com/m.json", time.Now())
+	lf.AddRevokedHash("sha256:bad-1")
+	lf.AddRevokedHash("sha256:bad-2")
+
+	lf.PruneRegistry("https://example.com/m.json")
+
+	if len(lf.RevokedHashes) != 2 {
+		t.Errorf("revoked_hashes mutated by prune (got %d, want 2): %+v", len(lf.RevokedHashes), lf.RevokedHashes)
+	}
+	if !lf.IsRevoked("sha256:bad-1") || !lf.IsRevoked("sha256:bad-2") {
+		t.Errorf("revoked hashes lost after prune")
+	}
+}
+
+// TestLockfile_PruneRegistry_UnknownURIIsNoOp keeps the function
+// idempotent — `registry remove` should not blow up when a registry was
+// added but never synced (so it has no pin state).
+func TestLockfile_PruneRegistry_UnknownURIIsNoOp(t *testing.T) {
+	lf := NewLockfile()
+	lf.SetRegistryFetchedAt("https://example.com/keep.json", time.Now())
+
+	lf.PruneRegistry("https://example.com/never-existed.json")
+
+	if _, ok := lf.Registries["https://example.com/keep.json"]; !ok {
+		t.Errorf("keep URI dropped on no-op prune")
+	}
+}
+
+// TestLockfile_PruneRegistry_NilReceiverIsSafe lets callers thread a
+// possibly-nil pointer without a defensive check at every call site.
+func TestLockfile_PruneRegistry_NilReceiverIsSafe(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("nil-receiver prune panicked: %v", r)
+		}
+	}()
+	var lf *Lockfile
+	lf.PruneRegistry("https://example.com/m.json")
+}
+
 func TestLockfile_AddEntry_SignedValidates(t *testing.T) {
 	lf := NewLockfile()
 	payload := fixtureSignedPayload
