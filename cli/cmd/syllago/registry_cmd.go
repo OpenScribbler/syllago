@@ -151,10 +151,47 @@ var registryAddCmd = &cobra.Command{
 		}
 
 		if outcome.SelfDeclaredMOAT {
-			fmt.Fprintf(output.Writer, "MOAT compliance detected via registry.yaml. Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", outcome.Registry.Name)
+			fmt.Fprintf(output.Writer, "MOAT compliance detected via registry.yaml.\n")
 		}
 
 		fmt.Fprintf(output.Writer, "Added registry: %s\n", outcome.Registry.Name)
+
+		// Chain a sync for MOAT registries so the manifest cache is populated
+		// before the next rescan — without it, EnrichFromMOATManifests sees
+		// an empty cache, downgrades trust to Unknown, and the listing shows
+		// zero content-type counts. Pinned profiles (allowlist or flag) sync
+		// silently. Self-declared profiles need --yes to clear TOFU; without
+		// it we print the manual hint and exit cleanly.
+		if outcome.Registry.IsMOAT() {
+			yes, _ := cmd.Flags().GetBool("yes")
+			pinned := outcome.Registry.SigningProfile != nil
+			if !pinned && !yes {
+				fmt.Fprintf(output.Writer, "Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", outcome.Registry.Name)
+			} else {
+				root, rootErr := findContentRepoRoot()
+				if rootErr != nil {
+					return rootErr
+				}
+				freshCfg, cfgErr := config.LoadGlobal()
+				if cfgErr != nil {
+					return cfgErr
+				}
+				reg := findRegistryByName(freshCfg, outcome.Registry.Name)
+				if reg == nil {
+					return fmt.Errorf("registry %q vanished from config between add and auto-sync", outcome.Registry.Name)
+				}
+				cacheDir, _ := config.GlobalDirPath()
+				fmt.Fprintf(output.Writer, "Verifying signing identity for %s...\n", outcome.Registry.Name)
+				code, syncErr := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, freshCfg, reg, root, cacheDir, time.Now(), yes)
+				if syncErr != nil {
+					return syncErr
+				}
+				if code != 0 {
+					moatSyncExit(code)
+					return nil
+				}
+			}
+		}
 
 		// SAND-003: Offer to add registry domain to sandbox allowlist.
 		parsed, parseErr := url.Parse(gitURL)
@@ -778,6 +815,7 @@ func init() {
 	registryAddCmd.Flags().String("signing-repository-owner-id", "", "GitHub numeric repository-owner ID (required for GitHub Actions issuer)")
 	registryItemsCmd.Flags().String("type", "", "Filter by content type (skills, rules, hooks, etc.)")
 	registrySyncCmd.Flags().Bool("yes", false, "Auto-accept TOFU (trust-on-first-use) for MOAT registries with no pinned signing profile")
+	registryAddCmd.Flags().Bool("yes", false, "Auto-accept TOFU during the chained post-add sync (required for MOAT registries that self-declare via registry.yaml without an allowlist match)")
 
 	registryCreateCmd.Flags().String("new", "", "Scaffold an empty registry directory with this name")
 	registryCreateCmd.Flags().Bool("from-native", false, "Index provider-native content in the current repo")

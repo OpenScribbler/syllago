@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-24T15:54:40Z",
-  "syllagoVersion": "0.9.0",
+  "generatedAt": "2026-04-25T19:08:25Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -4102,6 +4102,14 @@
           "default": null,
           "required": false,
           "description": "GitHub numeric repository-owner ID (required for GitHub Actions issuer)"
+        },
+        {
+          "name": "--yes",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Auto-accept TOFU during the chained post-add sync (required for MOAT registries that self-declare via registry.yaml without an allowlist match)"
         }
       ],
       "inheritedFlags": [

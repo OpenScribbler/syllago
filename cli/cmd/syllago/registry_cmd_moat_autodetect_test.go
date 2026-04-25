@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,10 +9,30 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
+
+// stubSyncOne replaces the orchestrator's sync seam with a zero-value happy
+// path so the chained post-add sync does not try to fetch real sigstore
+// artifacts. Required for any test that adds a MOAT registry — both the
+// allowlist and self-declaration branches now auto-sync after add (S4).
+func stubSyncOne(t *testing.T) {
+	t.Helper()
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		// Return enough to satisfy SyncOne's persistence path: a non-nil
+		// manifest with a non-empty IncomingProfile so the trust state can
+		// be written without crypto verification firing.
+		return moat.SyncResult{
+			NotModified: true,
+			FetchedAt:   time.Now().UTC(),
+		}, nil
+	}
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
+}
 
 // stubClone swaps the orchestrator's clone seam (registryops.CloneFn) with a
 // stub that creates a fake clone dir at registry.CloneDir(name) containing a
@@ -42,6 +63,7 @@ func TestRegistryAutoMOAT_AllowlistURL_SetsManifestURI(t *testing.T) {
 
 	// Fake clone: minimal registry.yaml with no manifest_uri — allowlist provides it.
 	stubClone(t, "name: syllago-meta-registry\nversion: \"1.0\"\n")
+	stubSyncOne(t)
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/OpenScribbler/syllago-meta-registry"})
 	if err != nil {
@@ -81,6 +103,8 @@ func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
 	const wantManifestURI = "https://raw.githubusercontent.com/example/non-allowlisted-registry/moat-registry/registry.json"
 
 	stubClone(t, "name: non-allowlisted-registry\nversion: \"1.0\"\nmanifest_uri: "+wantManifestURI+"\n")
+	// Self-declared MOAT without --yes does not chain auto-sync, so no
+	// SyncOne stub is needed here.
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{testURL})
 	if err != nil {
@@ -101,6 +125,64 @@ func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
 	}
 	if r.ManifestURI != wantManifestURI {
 		t.Errorf("expected ManifestURI %q, got %q", wantManifestURI, r.ManifestURI)
+	}
+}
+
+// TestRegistryAdd_AllowlistChainsAutoSync is the regression for syllago-43qoo:
+// adding a MOAT registry via allowlist match must auto-chain a sync so the
+// manifest cache is populated before the next list/scan. Without this, trust
+// shows Unknown until the user runs a separate `syllago registry sync`.
+func TestRegistryAdd_AllowlistChainsAutoSync(t *testing.T) {
+	withRegistryProjectAndCache(t, nil, &config.Config{})
+	output.SetForTest(t)
+	overrideProbe(t, func(url string) (string, error) { return "public", nil })
+	stubClone(t, "name: syllago-meta-registry\nversion: \"1.0\"\n")
+
+	called := false
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		called = true
+		return moat.SyncResult{NotModified: true, FetchedAt: time.Now().UTC()}, nil
+	}
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
+
+	if err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/OpenScribbler/syllago-meta-registry"}); err != nil {
+		t.Fatalf("registry add failed: %v", err)
+	}
+	if !called {
+		t.Fatal("expected auto-chained sync after allowlist-pinned MOAT add, but SyncOneFn was not called")
+	}
+}
+
+// TestRegistryAdd_SelfDeclaredWithoutYesSkipsSync is the second leg of
+// syllago-43qoo: when a self-declared MOAT registry is added without --yes,
+// the orchestrator must NOT auto-chain sync — TOFU consent requires explicit
+// approval. The hint to run `sync --yes` appears instead.
+func TestRegistryAdd_SelfDeclaredWithoutYesSkipsSync(t *testing.T) {
+	withRegistryProjectAndCache(t, nil, &config.Config{})
+	stdout, _ := output.SetForTest(t)
+	overrideProbe(t, func(url string) (string, error) { return "public", nil })
+
+	const testURL = "https://github.com/example/self-declared-skip-sync"
+	const wantManifestURI = "https://raw.githubusercontent.com/example/self-declared-skip-sync/moat-registry/registry.json"
+	stubClone(t, "name: self-declared-skip-sync\nversion: \"1.0\"\nmanifest_uri: "+wantManifestURI+"\n")
+
+	called := false
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		called = true
+		return moat.SyncResult{}, nil
+	}
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
+
+	if err := registryAddCmd.RunE(registryAddCmd, []string{testURL}); err != nil {
+		t.Fatalf("registry add failed: %v", err)
+	}
+	if called {
+		t.Error("self-declared MOAT add without --yes must NOT auto-chain sync; SyncOneFn was called")
+	}
+	if !strings.Contains(stdout.String(), "sync --yes") {
+		t.Errorf("expected manual-sync hint in stdout, got:\n%s", stdout.String())
 	}
 }
 
