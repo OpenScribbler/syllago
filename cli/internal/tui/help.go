@@ -92,6 +92,9 @@ func (h helpOverlay) View() string {
 		}),
 	)
 
+	// Render trust glyphs through their styles so the legend matches what the
+	// user actually sees on registry cards. The styles compose with the Width
+	// padding inside section() because lipgloss preserves nested ANSI runs.
 	col2 := lipgloss.JoinVertical(lipgloss.Left,
 		section("Actions", [][2]string{
 			{"a", "Add content"},
@@ -100,6 +103,7 @@ func (h helpOverlay) View() string {
 			{"e", "Edit name/description"},
 			{"d", "Remove from library"},
 			{"x", "Uninstall from provider"},
+			{"t", "Inspect trust details"},
 			{"/", "Search"},
 			{"s / S", "Sort / reverse sort"},
 			{"R", "Refresh catalog"},
@@ -109,6 +113,12 @@ func (h helpOverlay) View() string {
 			{"arrows", "Navigate grid"},
 			{"Tab", "Grid / contents"},
 			{"Enter", "Drill into card"},
+		}),
+		"",
+		section("Trust Glyphs", [][2]string{
+			{trustVerifiedStyle.Render("✓"), "Verified — registry attested, fresh"},
+			{trustStaleStyle.Render("!"), "Stale — re-sync to refresh attestations"},
+			{trustRevokedStyle.Render("R"), "Revoked — at least one item withdrawn"},
 		}),
 	)
 

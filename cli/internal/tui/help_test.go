@@ -81,6 +81,33 @@ func TestHelpOverlay_ViewContainsSections(t *testing.T) {
 	}
 }
 
+// TestHelpOverlay_ViewContainsTrustGlyphLegend pins the legend that was added
+// after a user reported being unable to remember what the registry-card
+// glyphs meant. Each glyph + its meaning must appear in the help overlay so
+// "?" answers the question instead of forcing a code dive.
+func TestHelpOverlay_ViewContainsTrustGlyphLegend(t *testing.T) {
+	h := newHelpOverlay()
+	h.SetSize(100, 40)
+	h.active = true
+
+	view := h.View()
+	stripped := ansi.Strip(view)
+
+	if !strings.Contains(stripped, "Trust Glyphs") {
+		t.Error("help view should contain 'Trust Glyphs' section header")
+	}
+	for _, term := range []string{"Verified", "Stale", "Revoked"} {
+		if !strings.Contains(stripped, term) {
+			t.Errorf("help view should explain glyph state %q", term)
+		}
+	}
+	for _, glyph := range []string{"✓", "!", "R"} {
+		if !strings.Contains(stripped, glyph) {
+			t.Errorf("help view should display glyph %q", glyph)
+		}
+	}
+}
+
 func TestHelpOverlay_ViewContainsInstall(t *testing.T) {
 	h := newHelpOverlay()
 	h.SetSize(100, 40)
