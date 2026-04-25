@@ -89,7 +89,7 @@ func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestSyncMOAT_NotModified(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestSyncMOAT_TOFU_WithoutYes_ReturnsExit10(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestSyncMOAT_TOFU_WithYes_PersistsProfile(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), true)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestSyncMOAT_ProfileChanged_ReturnsExit11(t *testing.T) {
 	var out, errW bytes.Buffer
 	// ProfileChanged MUST gate even with --yes; re-approval requires
 	// removing and re-adding the registry interactively.
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), true)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -270,7 +270,7 @@ func TestSyncMOAT_StalenessExpired_ReturnsExit13(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestSyncMOAT_VerifyError_ReturnsStructuredError(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	_, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	_, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err == nil {
 		t.Fatal("expected error for verify failure, got nil")
 	}
@@ -319,7 +319,7 @@ func TestSyncMOAT_TransportError_ReturnsStructuredError(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	_, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	_, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err == nil {
 		t.Fatal("expected error for transport failure, got nil")
 	}
@@ -338,7 +338,7 @@ func TestSyncMOAT_TrustedRootExpired_ReturnsStructuredError(t *testing.T) {
 	// Far future now — past the 365-day cliff from the bundled issued-at
 	// constant. Exercises the pre-flight trusted-root staleness gate.
 	farFuture := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
-	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, cfg, &cfg.Registries[0], t.TempDir(), farFuture, false)
+	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, cfg, &cfg.Registries[0], t.TempDir(), "", farFuture, false)
 	if err == nil {
 		t.Fatal("expected error for expired trusted root")
 	}
@@ -370,7 +370,7 @@ func TestFindRegistryByName(t *testing.T) {
 
 func TestSyncMOAT_NilRegistry(t *testing.T) {
 	t.Parallel()
-	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, &config.Config{}, nil, t.TempDir(), time.Now(), false)
+	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, &config.Config{}, nil, t.TempDir(), "", time.Now(), false)
 	if err == nil || !strings.Contains(err.Error(), "registry is nil") {
 		t.Fatalf("expected nil-registry error, got %v", err)
 	}
@@ -380,7 +380,7 @@ func TestSyncMOAT_NonMOATRegistry(t *testing.T) {
 	t.Parallel()
 	reg := &config.Registry{Name: "git-only", Type: config.RegistryTypeGit, URL: "https://example.com/repo.git"}
 	cfg := &config.Config{Registries: []config.Registry{*reg}}
-	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, cfg, reg, t.TempDir(), time.Now(), false)
+	_, err := syncMOATRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{}, cfg, reg, t.TempDir(), "", time.Now(), false)
 	if err == nil || !strings.Contains(err.Error(), "not MOAT") {
 		t.Fatalf("expected not-MOAT error, got %v", err)
 	}
@@ -414,7 +414,7 @@ func TestSyncMOAT_PersistenceRoundTrip(t *testing.T) {
 	})
 
 	var out, errW bytes.Buffer
-	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, time.Now(), false)
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
 	if err != nil || code != 0 {
 		t.Fatalf("first sync failed: code=%d err=%v", code, err)
 	}

@@ -17,14 +17,24 @@ import (
 var borderColor = lipgloss.AdaptiveColor{Light: "#CECDC3", Dark: "#343331"}
 
 // cardData holds the display data for a single gallery card.
+//
+// IDENTITY vs DISPLAY: name is the rendered label and may be overridden by
+// registry.yaml or .syllago.yaml metadata. sourceName is the immutable
+// identity used for backend operations (registry remove, sync, etc.) — it
+// must match the config.Registry.Name so doRegistryRemoveCmd / registry.Sync
+// hit the right entry. Conflating the two caused a silent-failure bug where
+// a registry whose registry.yaml declared a different name (e.g. config has
+// "OpenScribbler/syllago-meta-registry", manifest has "syllago-meta-registry")
+// would never actually be removed despite the toast claiming success.
 type cardData struct {
-	name     string
-	subtitle string                // "Target: Claude Code" or "Source: /path"
-	desc     string                // description from manifest or registry metadata
-	counts   map[string]int        // type label -> count (e.g. "Skills": 4)
-	status   string                // "local", "registry", etc.
-	items    []catalog.ContentItem // items inside this card
-	path     string                // directory path for metadata editing
+	name       string
+	sourceName string                // immutable identity for ops (registry config name)
+	subtitle   string                // "Target: Claude Code" or "Source: /path"
+	desc       string                // description from manifest or registry metadata
+	counts     map[string]int        // type label -> count (e.g. "Skills": 4)
+	status     string                // "local", "registry", etc.
+	items      []catalog.ContentItem // items inside this card
+	path       string                // directory path for metadata editing
 
 	// Registry-scoped trust aggregate. Non-nil only for cards built from a
 	// MOAT-type registry whose manifest was parsed during enrichment. The
@@ -324,12 +334,13 @@ func buildRegistryCards(sources []catalog.RegistrySource, cat *catalog.Catalog) 
 		}
 
 		c := cardData{
-			name:     src.Name,
-			subtitle: "Source: " + src.Path,
-			counts:   ensureAllTypes(raw),
-			status:   itoa(len(items)) + " items",
-			items:    items,
-			path:     src.Path,
+			name:       src.Name,
+			sourceName: src.Name, // identity — never overridden by manifest/metadata below
+			subtitle:   "Source: " + src.Path,
+			counts:     ensureAllTypes(raw),
+			status:     itoa(len(items)) + " items",
+			items:      items,
+			path:       src.Path,
 		}
 
 		// Load description from registry.yaml manifest

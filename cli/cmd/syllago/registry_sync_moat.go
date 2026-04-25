@@ -62,7 +62,7 @@ func syncMOATRegistry(
 	out, errW io.Writer,
 	cfg *config.Config,
 	reg *config.Registry,
-	cfgRoot string,
+	cfgRoot, cacheDir string,
 	now time.Time,
 	yes bool,
 ) (int, error) {
@@ -145,6 +145,23 @@ func syncMOATRegistry(
 			"Check filesystem permissions on .syllago/moat-lockfile.json.",
 			err.Error(),
 		)
+	}
+
+	// Persist the verified manifest+bundle into the cache that
+	// EnrichFromMOATManifests reads at scan time. Without this, a
+	// successful sync produces no observable trust state — the next
+	// catalog scan finds the cache empty and warns "MOAT cache missing".
+	// Skipped on 304 (cache is already current) and on stubbed tests
+	// that return empty bytes (the gate below mirrors NotModified).
+	if !res.NotModified && len(res.ManifestBytes) > 0 && len(res.BundleBytes) > 0 && cacheDir != "" {
+		if err := moat.WriteManifestCache(cacheDir, reg.Name, res.ManifestBytes, res.BundleBytes); err != nil {
+			return 0, output.NewStructuredErrorDetail(
+				output.ErrMoatInvalid,
+				fmt.Sprintf("could not persist moat manifest cache for registry %q", reg.Name),
+				"Check filesystem permissions on the syllago cache directory.",
+				err.Error(),
+			)
+		}
 	}
 
 	// One-line human status. The NotModified branch is distinct because the

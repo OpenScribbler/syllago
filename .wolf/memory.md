@@ -4108,3 +4108,100 @@
 | 16:21 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
 | 16:23 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
 | 16:27 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
+| 16:29 | Session end: 10 writes across 3 files (add_wizard_provider_split.go, add_wizard_provider_split_exec_test.go, add_wizard.go) | 5 reads | ~28991 tok |
+
+## Session: 2026-04-24 16:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:54 | Edited ../../../.syllago/config.json | removed 6 lines | ~6 |
+| 16:54 | Session end: 1 writes across 1 files (config.json) | 8 reads | ~17963 tok |
+| 16:57 | Edited cli/internal/tui/actions.go | 7→8 lines | ~108 |
+
+## Session: 2026-04-24 16:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:58 | Edited cli/internal/tui/actions.go | expanded (+19 lines) | ~459 |
+| 16:58 | Session end: 1 writes across 1 files (actions.go) | 0 reads | ~492 tok |
+| 16:59 | Session end: 1 writes across 1 files (actions.go) | 0 reads | ~492 tok |
+
+## Session: 2026-04-24 16:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:00 | Edited cli/internal/tui/actions.go | Clone() → cloneFn() | ~242 |
+| 17:01 | Edited cli/internal/tui/actions_test.go | modified stubCloneFn() | ~1563 |
+| 17:03 | Session end: 2 writes across 2 files (actions.go, actions_test.go) | 6 reads | ~12467 tok |
+
+## Session: 2026-04-25 17:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:03 | Created ../../../.config/pai/.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json | — | ~28 |
+| 17:04 | Session end: 1 writes across 1 files (.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json) | 0 reads | ~28 tok |
+| 17:06 | Session end: 1 writes across 1 files (.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json) | 0 reads | ~28 tok |
+| 17:11 | Edited cli/internal/tui/cards.go | expanded (+10 lines) | ~329 |
+| 17:11 | Edited cli/internal/tui/cards.go | 8→9 lines | ~79 |
+| 17:11 | Edited cli/internal/tui/actions.go | expanded (+9 lines) | ~152 |
+| 17:11 | Edited cli/internal/tui/actions.go | 15→20 lines | ~165 |
+| 17:11 | Edited cli/internal/tui/actions.go | modified Exists() | ~652 |
+| 17:12 | Edited cli/internal/tui/actions_test.go | modified TestDoRegistryRemoveCmd_FailsLoudOnMismatch() | ~722 |
+| 17:12 | Edited cli/internal/tui/actions_test.go | 5→6 lines | ~17 |
+| 17:13 | Created cli/internal/tui/cards_test.go | — | ~716 |
+| 17:13 | Session end: 9 writes across 5 files (.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json, cards.go, actions.go, actions_test.go, cards_test.go) | 6 reads | ~25953 tok |
+| 17:13 | Session end: 9 writes across 5 files (.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json, cards.go, actions.go, actions_test.go, cards_test.go) | 6 reads | ~25953 tok |
+
+## Session: 2026-04-25 17:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:31 | Edited cli/internal/moat/sync.go | expanded (+7 lines) | ~198 |
+| 17:31 | Edited cli/internal/moat/sync.go | 7→8 lines | ~88 |
+| 17:31 | Edited cli/internal/moat/producer.go | modified WriteManifestCache() | ~948 |
+| 17:32 | Edited cli/cmd/syllago/registry_sync_moat.go | modified syncMOATRegistry() | ~49 |
+| 17:32 | Edited cli/cmd/syllago/registry_sync_moat.go | expanded (+17 lines) | ~304 |
+| 17:32 | Edited cli/cmd/syllago/registry_cmd.go | 1→2 lines | ~44 |
+| 17:32 | Edited cli/cmd/syllago/registry_cmd.go | modified IsMOAT() | ~93 |
+| 17:34 | Created cli/internal/tui/moat_sync.go | — | ~1798 |
+| 17:35 | Edited cli/internal/tui/moat_sync.go | GlobalDirParent() → with() | ~652 |
+| 17:35 | Edited cli/internal/tui/moat_sync.go | inline fix | ~29 |
+| 17:36 | Edited cli/internal/tui/actions.go | modified registryIsMOAT() | ~663 |
+| 17:37 | Created cli/internal/tui/tofu_modal.go | — | ~1710 |
+| 17:37 | Edited cli/internal/tui/tofu_modal.go | 10→11 lines | ~91 |
+| 17:37 | Edited cli/internal/tui/tofu_modal.go | 6→5 lines | ~37 |
+| 17:37 | Edited cli/internal/tui/tofu_modal.go | — | ~0 |
+| 17:38 | Edited cli/internal/tui/app.go | 2→3 lines | ~61 |
+| 17:38 | Edited cli/internal/tui/app.go | 2→3 lines | ~33 |
+| 17:38 | Edited cli/internal/tui/app_update.go | expanded (+10 lines) | ~97 |
+| 17:38 | Edited cli/internal/tui/app_update.go | 6→11 lines | ~66 |
+| 17:38 | Edited cli/internal/tui/app_update.go | 8→12 lines | ~98 |
+| 17:38 | Edited cli/internal/tui/actions.go | expanded (+14 lines) | ~201 |
+| 17:39 | Edited cli/internal/tui/app_view.go | 3→6 lines | ~57 |
+| 17:39 | Edited cli/internal/tui/app_update.go | 3→5 lines | ~41 |
+
+## Session: 2026-04-25 17:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:43 | Created cli/internal/moat/producer_write_test.go | — | ~1617 |
+| 17:44 | Edited cli/internal/moat/producer_write_test.go | 2→3 lines | ~76 |
+| 17:44 | Created cli/internal/tui/moat_sync_test.go | — | ~1778 |
+| 17:45 | Created cli/internal/tui/tofu_modal_test.go | — | ~1503 |
+| 17:45 | Edited cli/internal/tui/tofu_modal_test.go | — | ~0 |
+| 17:49 | Session end: 5 writes across 3 files (producer_write_test.go, moat_sync_test.go, tofu_modal_test.go) | 11 reads | ~49762 tok |
+
+## Session: 2026-04-25 17:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

@@ -6922,6 +6922,57 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-04-24T22:36:23.847Z"
+    },
+    {
+      "id": "bug-431",
+      "timestamp": "2026-04-25T00:11:04.780Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/cards.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 9→19 lines (7 removed) | Also: name:     src.Name,; subtitle: \"Source: \" + src.Path,",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-25T00:11:09.870Z"
+    },
+    {
+      "id": "bug-432",
+      "timestamp": "2026-04-25T00:35:56.790Z",
+      "error_message": "Wrong reference: runMOATSync should be func",
+      "file": "cli/internal/tui/moat_sync.go",
+      "root_cause": "Used \"runMOATSync\" instead of \"func\"",
+      "fix": "Changed runMOATSync → func",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T00:35:56.790Z"
+    },
+    {
+      "id": "bug-433",
+      "timestamp": "2026-04-25T00:46:00.000Z",
+      "error_message": "Trust: Unknown persists after registry add and successful sync",
+      "file": "cli/internal/moat/sync.go,cli/internal/moat/producer.go,cli/cmd/syllago/registry_sync_moat.go,cli/internal/tui/moat_sync.go,cli/internal/tui/tofu_modal.go",
+      "root_cause": "moat.Sync discarded verified bundleBytes; neither CLI dispatcher nor TUI sync handler wrote <cacheDir>/moat/registries/<name>/{manifest.json,signature.bundle}. EnrichFromMOATManifests always observed 'MOAT cache missing' and skipped enrichment, so trust stayed Unknown indefinitely.",
+      "fix": "Added BundleBytes to moat.SyncResult and populated after fetchBundleBytes. Added moat.WriteManifestCache (atomic write-then-rename of both files) + atomicWriteFile helper. CLI dispatcher (syncMOATRegistry) and TUI orchestrator (runMOATSync) now call it on every successful non-304 sync. New TUI surfaces: moat_sync.go (orchestrator, indirection seam), tofu_modal.go (inline TOFU approval so unpinned-profile syncs can be accepted without leaving the TUI). handleSync routes MOAT vs git; handleTOFUResult re-syncs with acceptTOFU=true on accept.",
+      "tags": [
+        "moat",
+        "trust",
+        "cache",
+        "registry-sync",
+        "tui",
+        "tofu"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T00:46:00.000Z"
     }
   ]
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -113,7 +114,16 @@ func (a App) handleGalleryCardRemove() (tea.Model, tea.Cmd) {
 			true,
 			nil,
 		)
-		a.confirm.itemName = card.name
+		// itemName flows to doRegistryRemoveCmd as the registry identity. The
+		// display name shown in the prompt above can come from registry.yaml,
+		// but the operational key MUST be the config name so removal hits the
+		// right entry. Fall back to card.name if sourceName is unset (older
+		// card-build paths that haven't been updated yet).
+		identity := card.sourceName
+		if identity == "" {
+			identity = card.name
+		}
+		a.confirm.itemName = identity
 		return a, nil
 	}
 	return a, nil
@@ -375,15 +385,25 @@ func (a App) handleRegistryAddResult(msg registryAddMsg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmd1, cmd2)
 }
 
+// cloneFn is a package-level seam so tests can stub git clone without network.
+// Mirrors the same pattern in cmd/syllago/registry_cmd.go.
+var cloneFn = registry.Clone
+
 // doRegistryAddCmd creates a tea.Cmd that clones the registry and updates config.
+// Mirrors the CLI's registry add MOAT auto-detection: allowlist match pins the
+// signing profile before clone; a registry.yaml manifest_uri self-declaration
+// post-clone is the fallback. Both paths set Type=moat so the catalog enricher
+// will populate trust on sync.
 func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
 	url := msg.url
 	name := msg.name
 	ref := msg.ref
 	isLocal := msg.isLocal
 	return func() tea.Msg {
+		var allowlistEntry *moat.AllowlistEntry
 		if !isLocal {
-			if err := registry.Clone(url, name, ref); err != nil {
+			allowlistEntry, _ = moat.LookupSigningIdentity(url)
+			if err := cloneFn(url, name, ref); err != nil {
 				return registryAddDoneMsg{name: name, err: err}
 			}
 		}
@@ -391,7 +411,20 @@ func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
 		if err != nil {
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
 		}
-		cfg.Registries = append(cfg.Registries, config.Registry{Name: name, URL: url, Ref: ref})
+		newRegistry := config.Registry{Name: name, URL: url, Ref: ref}
+		if allowlistEntry != nil && allowlistEntry.Profile != nil {
+			newRegistry.Type = config.RegistryTypeMOAT
+			newRegistry.SigningProfile = allowlistEntry.Profile
+			newRegistry.ManifestURI = allowlistEntry.ManifestURI
+		} else if !isLocal {
+			if dir, cloneDirErr := registry.CloneDir(name); cloneDirErr == nil {
+				if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil && manifest.ManifestURI != "" {
+					newRegistry.Type = config.RegistryTypeMOAT
+					newRegistry.ManifestURI = manifest.ManifestURI
+				}
+			}
+		}
+		cfg.Registries = append(cfg.Registries, newRegistry)
 		if err := config.SaveGlobal(cfg); err != nil {
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
 		}
@@ -411,20 +444,76 @@ func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) 
 	return a, tea.Batch(cmd1, cmd2)
 }
 
-// handleSync starts a registry sync operation.
+// handleSync starts a registry sync operation. MOAT registries route through
+// the MOAT-aware orchestrator (fetch + verify + cache + persist); plain git
+// registries fall back to `git pull`. Mirrors `syllago registry sync`.
 func (a App) handleSync() (tea.Model, tea.Cmd) {
 	card := a.gallery.selectedCard()
 	if card == nil {
 		return a, nil
 	}
-	name := card.name
+	// sourceName is the config-bound identity. card.name may be a manifest-
+	// supplied display label and would not match the cache directory.
+	name := card.sourceName
+	if name == "" {
+		name = card.name
+	}
 	a.registryOpInProgress = true
+
+	if a.registryIsMOAT(name) {
+		cmd1 := a.toast.Push("Syncing "+name+" (moat)...", toastSuccess)
+		return a, tea.Batch(cmd1, a.doMOATSyncCmd(name, false))
+	}
+
 	cmd1 := a.toast.Push("Syncing "+name+"...", toastSuccess)
 	cmd2 := func() tea.Msg {
 		err := registry.Sync(name)
 		return registrySyncDoneMsg{name: name, err: err}
 	}
 	return a, tea.Batch(cmd1, tea.Cmd(cmd2))
+}
+
+// registryIsMOAT reports whether the named registry is MOAT-typed in the
+// in-memory config. The check is best-effort: if the name is missing, we
+// fall through to the git path so a stale gallery card never wedges sync.
+func (a App) registryIsMOAT(name string) bool {
+	for _, r := range a.cfg.Registries {
+		if r.Name == name {
+			return r.IsMOAT()
+		}
+	}
+	return false
+}
+
+// handleMOATSyncDone routes the orchestrator's outcome.
+//   - profileChanged: surfaced as an error toast pointing the user to
+//     remove + re-add (the only path that re-establishes consent).
+//   - requiresTOFU: opens a modal that lets the user accept inline.
+//   - stale: success toast tagged with "stale" so the downgraded badges
+//     in the catalog don't look like a bug.
+//   - happy: success toast + rescan so cards repaint with fresh trust.
+func (a App) handleMOATSyncDone(msg moatSyncDoneMsg) (tea.Model, tea.Cmd) {
+	a.registryOpInProgress = false
+	if msg.err != nil {
+		cmd := a.toast.Push("Sync failed: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	if msg.profileChanged {
+		text := "Sync rejected: signing profile changed for " + msg.name + ". Remove and re-add the registry to re-approve."
+		cmd := a.toast.Push(text, toastError)
+		return a, cmd
+	}
+	if msg.requiresTOFU {
+		a.tofu.Open(msg.name, msg.manifestURL, msg.incomingProfile)
+		return a, nil
+	}
+	verb := "Synced "
+	if msg.stale {
+		verb = "Synced (stale) "
+	}
+	cmd1 := a.toast.Push(verb+msg.name, toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }
 
 // handleSyncDone processes the result of a registry sync operation.
@@ -437,6 +526,20 @@ func (a App) handleSyncDone(msg registrySyncDoneMsg) (tea.Model, tea.Cmd) {
 	cmd1 := a.toast.Push("Synced "+msg.name, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleTOFUResult routes the user's accept/reject decision from the TOFU
+// modal. Accept re-runs MOAT sync with acceptTOFU=true so the orchestrator
+// pins the wire profile on the second pass; reject surfaces a toast and
+// leaves the registry pinned-less (subsequent syncs will re-prompt).
+func (a App) handleTOFUResult(msg tofuResultMsg) (tea.Model, tea.Cmd) {
+	if !msg.accepted {
+		cmd := a.toast.Push("Rejected signing identity for "+msg.name, toastWarning)
+		return a, cmd
+	}
+	a.registryOpInProgress = true
+	cmd1 := a.toast.Push("Trusting signing identity, re-syncing "+msg.name+"...", toastSuccess)
+	return a, tea.Batch(cmd1, a.doMOATSyncCmd(msg.name, true))
 }
 
 // handleRegistryRemoveDone processes the result of a registry remove operation.
@@ -453,14 +556,15 @@ func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea
 
 // doRegistryRemoveCmd creates a tea.Cmd that removes a registry clone and updates config.
 // LoadAndScan merges three config sources (global + contentRoot + projectRoot), so the
-// registry may live in any of them. We remove it from all sources that contain it.
+// registry may live in any of them. We remove it from all sources that contain it and
+// return an error if no source contained the name — silent success on a mis-keyed
+// remove is the bug class we're guarding against.
 func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
 	contentRoot := a.contentRoot
 	projectRoot := a.projectRoot
 	return func() tea.Msg {
-		if err := registry.Remove(name); err != nil {
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
-		}
+		matched := false
+
 		// Remove from project-local configs (contentRoot and projectRoot).
 		seen := map[string]bool{}
 		for _, root := range []string{contentRoot, projectRoot} {
@@ -481,11 +585,13 @@ func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
 			if len(filtered) == len(localCfg.Registries) {
 				continue // registry not in this source
 			}
+			matched = true
 			localCfg.Registries = filtered
 			if err := config.Save(root, localCfg); err != nil {
 				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving local config: %w", err)}
 			}
 		}
+
 		// Remove from global config.
 		cfg, err := config.LoadGlobal()
 		if err != nil {
@@ -497,10 +603,25 @@ func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
 				filtered = append(filtered, r)
 			}
 		}
-		cfg.Registries = filtered
-		if err := config.SaveGlobal(cfg); err != nil {
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+		if len(filtered) != len(cfg.Registries) {
+			matched = true
+			cfg.Registries = filtered
+			if err := config.SaveGlobal(cfg); err != nil {
+				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
+			}
 		}
+
+		if !matched {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("registry %q not found in any config source", name)}
+		}
+
+		// Only delete the clone after at least one config source acknowledged the
+		// removal. This keeps state consistent on a mis-keyed remove: no orphaned
+		// config entry pointing at a deleted clone, no silent success.
+		if err := registry.Remove(name); err != nil {
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
+		}
+
 		return registryRemoveDoneMsg{name: name}
 	}
 }

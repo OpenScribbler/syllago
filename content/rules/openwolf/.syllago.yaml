@@ -1,0 +1,9 @@
+format_version: 1
+id: 7391ea5b-2772-42e8-94d5-cc4f6a73a70b
+name: openwolf
+type: rules
+source_format: md
+source_type: provider
+source_hash: sha256:1e3e33a15594bdff0fccc2678f69aac9e6dddd35ad36f3a679e11cf20201581e
+added_at: 2026-04-24T23:28:27.842773121Z
+added_by: syllago

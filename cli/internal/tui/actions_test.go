@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -293,6 +294,174 @@ func TestActions_HandleUninstall_SingleProviderOpensConfirm(t *testing.T) {
 	}
 }
 
+// stubCloneFn overrides cloneFn to create a fake clone dir at
+// registry.CloneDir(name) containing registry.yaml with yamlContent.
+// Restores on t.Cleanup. Mirrors cmd/syllago/registry_cmd_moat_autodetect_test.go.
+func stubCloneFn(t *testing.T, yamlContent string) {
+	t.Helper()
+	orig := cloneFn
+	cloneFn = func(url, name, ref string) error {
+		cloneDir, err := registry.CloneDir(name)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(cloneDir, 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte(yamlContent), 0o644)
+	}
+	t.Cleanup(func() { cloneFn = orig })
+}
+
+// TestDoRegistryAddCmd_AllowlistSetsMOATFields verifies the allowlist path:
+// adding the bundled meta-registry URL auto-sets Type=moat + ManifestURI
+// without requiring any explicit flags. Regression for the bug where the TUI
+// bypassed MOAT auto-detection entirely.
+func TestDoRegistryAddCmd_AllowlistSetsMOATFields(t *testing.T) {
+	// Not parallel: mutates cloneFn, config.GlobalDirOverride, registry.CacheDirOverride.
+	globalDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = globalDir
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	stubCloneFn(t, "name: syllago-meta-registry\nversion: \"1.0\"\n")
+
+	app := testApp(t)
+	cmd := app.doRegistryAddCmd(registryAddMsg{
+		name: "OpenScribbler/syllago-meta-registry",
+		url:  "https://github.com/OpenScribbler/syllago-meta-registry",
+	})
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	done, ok := msg.(registryAddDoneMsg)
+	if !ok {
+		t.Fatalf("expected registryAddDoneMsg, got %T", msg)
+	}
+	if done.err != nil {
+		t.Fatalf("expected nil err, got %v", done.err)
+	}
+
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal: %v", err)
+	}
+	if len(cfg.Registries) != 1 {
+		t.Fatalf("expected 1 registry, got %d", len(cfg.Registries))
+	}
+	r := cfg.Registries[0]
+	if r.Type != config.RegistryTypeMOAT {
+		t.Errorf("expected Type=moat from allowlist, got %q", r.Type)
+	}
+	if r.SigningProfile == nil {
+		t.Error("expected non-nil SigningProfile from allowlist")
+	}
+	if r.ManifestURI == "" {
+		t.Error("expected non-empty ManifestURI from allowlist")
+	}
+}
+
+// TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields verifies the self-declaration
+// fallback: a non-allowlisted URL that ships a registry.yaml with manifest_uri
+// gets Type=moat + ManifestURI set from that self-declaration.
+func TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields(t *testing.T) {
+	// Not parallel: mutates cloneFn, config.GlobalDirOverride, registry.CacheDirOverride.
+	globalDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = globalDir
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	const wantURI = "https://raw.githubusercontent.com/example/non-allowlisted-registry/moat-registry/registry.json"
+	stubCloneFn(t, "name: non-allowlisted-registry\nversion: \"1.0\"\nmanifest_uri: "+wantURI+"\n")
+
+	app := testApp(t)
+	cmd := app.doRegistryAddCmd(registryAddMsg{
+		name: "example/non-allowlisted-registry",
+		url:  "https://github.com/example/non-allowlisted-registry",
+	})
+	if cmd == nil {
+		t.Fatal("expected non-nil cmd")
+	}
+	msg := cmd()
+	done, ok := msg.(registryAddDoneMsg)
+	if !ok {
+		t.Fatalf("expected registryAddDoneMsg, got %T", msg)
+	}
+	if done.err != nil {
+		t.Fatalf("expected nil err, got %v", done.err)
+	}
+
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal: %v", err)
+	}
+	if len(cfg.Registries) != 1 {
+		t.Fatalf("expected 1 registry, got %d", len(cfg.Registries))
+	}
+	r := cfg.Registries[0]
+	if r.Type != config.RegistryTypeMOAT {
+		t.Errorf("expected Type=moat from self-declaration, got %q", r.Type)
+	}
+	if r.ManifestURI != wantURI {
+		t.Errorf("expected ManifestURI=%q from self-declaration, got %q", wantURI, r.ManifestURI)
+	}
+}
+
+// TestDoRegistryAddCmd_NonMOATStaysUnset verifies a plain git registry (no
+// allowlist hit, no manifest_uri in registry.yaml) leaves Type and ManifestURI
+// empty — auto-detection should not false-positive.
+func TestDoRegistryAddCmd_NonMOATStaysUnset(t *testing.T) {
+	// Not parallel: mutates cloneFn, config.GlobalDirOverride, registry.CacheDirOverride.
+	globalDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = globalDir
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	stubCloneFn(t, "name: plain-registry\nversion: \"1.0\"\n")
+
+	app := testApp(t)
+	cmd := app.doRegistryAddCmd(registryAddMsg{
+		name: "example/plain",
+		url:  "https://github.com/example/plain",
+	})
+	msg := cmd()
+	done := msg.(registryAddDoneMsg)
+	if done.err != nil {
+		t.Fatalf("expected nil err, got %v", done.err)
+	}
+
+	cfg, _ := config.LoadGlobal()
+	if len(cfg.Registries) != 1 {
+		t.Fatalf("expected 1 registry, got %d", len(cfg.Registries))
+	}
+	r := cfg.Registries[0]
+	if r.Type != "" {
+		t.Errorf("expected empty Type for plain registry, got %q", r.Type)
+	}
+	if r.ManifestURI != "" {
+		t.Errorf("expected empty ManifestURI for plain registry, got %q", r.ManifestURI)
+	}
+}
+
 // TestDoRegistryRemoveCmd_RemovesFromLocalConfig is the regression test for the
 // bug where doRegistryRemoveCmd only wrote to the global config, leaving a
 // registry that lived in a project-local config untouched after removal.
@@ -348,5 +517,62 @@ func TestDoRegistryRemoveCmd_RemovesFromLocalConfig(t *testing.T) {
 		if r.Name == "my-reg" {
 			t.Errorf("registry still present in project-local config after removal")
 		}
+	}
+}
+
+// TestDoRegistryRemoveCmd_FailsLoudOnMismatch is the regression test for the
+// silent-success bug where the gallery card's display name (overridden by
+// registry.yaml) was used as the operational identity. If the passed name
+// matches no config source, we MUST surface an error — not return a clean
+// "Removed" message that lies about success.
+//
+// The original symptom: card displayed "syllago-meta-registry" (from
+// registry.yaml), config held "OpenScribbler/syllago-meta-registry". Delete
+// passed the display name through, no source matched, registry.Remove ran
+// against a non-existent path (no error), config save was a no-op, toast
+// said "Removed" — but the registry was still on disk and in config.
+func TestDoRegistryRemoveCmd_FailsLoudOnMismatch(t *testing.T) {
+	// Not parallel: mutates global state (registry.CacheDirOverride, config.GlobalDirOverride).
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+	cacheDir := t.TempDir()
+
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = globalDir
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	// Config has the registry under its full identity.
+	if err := config.Save(projectRoot, &config.Config{
+		Registries: []config.Registry{{Name: "owner/full-identity", URL: "https://example.com/repo.git"}},
+	}); err != nil {
+		t.Fatalf("setup: config.Save: %v", err)
+	}
+
+	app := NewApp(
+		testCatalog(t), testProviders(), "0.0.0-test", false, nil,
+		testConfig(), false, projectRoot, projectRoot,
+	)
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+
+	// Pass the display-name (no owner prefix) — should NOT silently succeed.
+	cmd := a.doRegistryRemoveCmd("full-identity")
+	msg := cmd()
+	done := msg.(registryRemoveDoneMsg)
+	if done.err == nil {
+		t.Fatal("expected error for non-matching name, got silent success")
+	}
+	if !strings.Contains(done.err.Error(), "not found") {
+		t.Errorf("expected 'not found' in error, got %q", done.err.Error())
+	}
+
+	// And the registry must STILL be in config — we did not partial-write.
+	loaded, _ := config.Load(projectRoot)
+	if len(loaded.Registries) != 1 || loaded.Registries[0].Name != "owner/full-identity" {
+		t.Errorf("expected registry preserved on mismatch, got %+v", loaded.Registries)
 	}
 }

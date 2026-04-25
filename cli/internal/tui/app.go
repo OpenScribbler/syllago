@@ -86,6 +86,7 @@ type App struct {
 	help           helpOverlay         // keyboard shortcut reference (? key)
 	toast          toastModel          // bottom-right notification overlay
 	registryAdd    registryAddModal    // registry add overlay
+	tofu           tofuModal           // MOAT trust-on-first-use approval overlay
 	trustInspector trustInspectorModel // reusable trust inspector (library + registries)
 
 	// Config group sub-models
@@ -185,6 +186,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		help:            newHelpOverlay(),
 		toast:           newToastModel(),
 		registryAdd:     newRegistryAddModal(),
+		tofu:            newTOFUModal(),
 		trustInspector:  newTrustInspectorModel(),
 
 		moatSession: moat.NewSession(),

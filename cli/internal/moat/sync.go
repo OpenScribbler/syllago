@@ -90,6 +90,13 @@ type SyncResult struct {
 	// re-fetching. nil on NotModified.
 	ManifestBytes []byte
 
+	// BundleBytes is the verbatim response body from the sigstore bundle GET.
+	// Preserved alongside ManifestBytes so callers can persist both into the
+	// manifest cache (<cacheDir>/moat/registries/<name>/) — the cache is what
+	// EnrichFromMOATManifests reads at scan time, so a sync that does not
+	// write the cache produces no observable trust state. nil on NotModified.
+	BundleBytes []byte
+
 	// Verification captures what cryptographic checks passed. Zero value on
 	// NotModified. On a verification *failure* Sync returns a non-nil error
 	// and a partially-populated SyncResult — Verification is zero-valued in
@@ -235,6 +242,7 @@ func Sync(
 	if err != nil {
 		return result, fmt.Errorf("moat.Sync: fetch bundle: %w", err)
 	}
+	result.BundleBytes = bundleBytes
 
 	pinned := pinnedProfileForVerify(reg, result.Manifest)
 	verification, err := syncVerifyFn(fr.Bytes, bundleBytes, pinned, trustedRootJSON)

@@ -455,7 +455,8 @@ and "syllago install" to activate updated content.`,
 			}
 			if reg.IsMOAT() {
 				fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", name)
-				code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, reg, root, time.Now(), yes)
+				cacheDir, _ := config.GlobalDirPath()
+				code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, reg, root, cacheDir, time.Now(), yes)
 				if err != nil {
 					return err
 				}
@@ -501,13 +502,14 @@ and "syllago install" to activate updated content.`,
 		}
 
 		var moatGateExit int
+		cacheDir, _ := config.GlobalDirPath()
 		for i := range cfg.Registries {
 			r := &cfg.Registries[i]
 			if !r.IsMOAT() {
 				continue
 			}
 			fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", r.Name)
-			code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, r, root, time.Now(), yes)
+			code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, r, root, cacheDir, time.Now(), yes)
 			if err != nil {
 				return err
 			}

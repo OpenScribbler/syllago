@@ -335,6 +335,107 @@ func manifestCachePathsFor(absCacheDir, name string) (string, string, error) {
 		nil
 }
 
+// WriteManifestCache persists a verified manifest+bundle pair into the
+// per-registry cache layout that EnrichFromMOATManifests reads. Without
+// this call, a successful Sync leaves no observable trust state — the
+// next catalog scan finds the cache empty and emits "MOAT cache missing".
+//
+// The same path-construction + traversal-guard helper is shared with the
+// reader side, so a registry name that fails escape checks here fails
+// them there too. Both files are written atomically (write-then-rename)
+// so a crash between writes leaves either both old or one new + one old —
+// never a torn pair the reader would parse as authentic.
+//
+// Caller obligations:
+//   - cacheDir SHOULD be the same value passed to EnrichFromMOATManifests
+//     (typically config.GlobalDirPath()), so reader and writer agree on
+//     the cache root.
+//   - manifestBytes MUST be the exact bytes that VerifyManifest returned
+//     OK on. Writing un-verified bytes here would create a "verified
+//     because cached" loop the next time enrich-time verification runs.
+//   - bundleBytes MUST be the exact bytes fetched from manifest_uri +
+//     ".sigstore" alongside manifestBytes. Pairing a manifest with a
+//     stale bundle would fail enrich-time verification and downgrade
+//     trust on the next rescan.
+func WriteManifestCache(cacheDir, name string, manifestBytes, bundleBytes []byte) error {
+	if cacheDir == "" {
+		return fmt.Errorf("WriteManifestCache: cacheDir is empty")
+	}
+	if name == "" {
+		return fmt.Errorf("WriteManifestCache: registry name is empty")
+	}
+	if !catalog.IsValidRegistryName(name) {
+		return fmt.Errorf("WriteManifestCache: registry name %q is not valid", name)
+	}
+	if len(manifestBytes) == 0 {
+		return fmt.Errorf("WriteManifestCache: manifestBytes is empty")
+	}
+	if len(bundleBytes) == 0 {
+		return fmt.Errorf("WriteManifestCache: bundleBytes is empty")
+	}
+
+	absCache, err := filepath.Abs(cacheDir)
+	if err != nil {
+		return fmt.Errorf("resolve cacheDir: %w", err)
+	}
+
+	manifestPath, bundlePath, err := manifestCachePathsFor(absCache, name)
+	if err != nil {
+		return err
+	}
+
+	regCacheDir := filepath.Dir(manifestPath)
+	if err := os.MkdirAll(regCacheDir, 0o755); err != nil {
+		return fmt.Errorf("mkdir cache: %w", err)
+	}
+
+	if err := atomicWriteFile(manifestPath, manifestBytes); err != nil {
+		return fmt.Errorf("write manifest: %w", err)
+	}
+	if err := atomicWriteFile(bundlePath, bundleBytes); err != nil {
+		return fmt.Errorf("write bundle: %w", err)
+	}
+	return nil
+}
+
+// atomicWriteFile writes data to path via a sibling temp file + rename.
+// os.Rename is atomic on the same filesystem, so a reader that observes
+// the destination path will see either the previous bytes or the new
+// bytes — never a partial write. Using a sibling rather than os.TempDir()
+// guarantees same-filesystem rename.
+func atomicWriteFile(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	cleanup := func() { _ = os.Remove(tmpName) }
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Chmod(tmpName, 0o644); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		cleanup()
+		return err
+	}
+	return nil
+}
+
 // ScanAndEnrich composes a fresh catalog scan with MOAT enrichment. This is
 // the production pipeline the TUI rescan tea.Cmd and every CLI command that
 // materializes a live catalog should call. Living in moat (not catalog)

@@ -32,6 +32,8 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.remove.height = ch
 		a.registryAdd.width = msg.Width
 		a.registryAdd.height = ch
+		a.tofu.width = msg.Width
+		a.tofu.height = ch
 		a.trustInspector.SetSize(msg.Width, ch)
 		a.configSettings.SetSize(msg.Width, ch)
 		a.configSystem.SetSize(msg.Width, ch)
@@ -92,6 +94,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.registryAdd.active {
 			var cmd tea.Cmd
 			a.registryAdd, cmd = a.registryAdd.Update(msg)
+			return a, cmd
+		}
+		if a.tofu.active {
+			var cmd tea.Cmd
+			a.tofu, cmd = a.tofu.Update(msg)
 			return a, cmd
 		}
 		if a.trustInspector.active {
@@ -171,6 +178,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.remove, cmd = a.remove.Update(msg)
+			return a, cmd
+		}
+
+		// TOFU modal captures all key input when active (except ctrl+c)
+		if a.tofu.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.tofu, cmd = a.tofu.Update(msg)
 			return a, cmd
 		}
 
@@ -504,6 +521,10 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.handleRegistryAddDone(msg)
 	case registrySyncDoneMsg:
 		return a.handleSyncDone(msg)
+	case moatSyncDoneMsg:
+		return a.handleMOATSyncDone(msg)
+	case tofuResultMsg:
+		return a.handleTOFUResult(msg)
 	case registryRemoveDoneMsg:
 		return a.handleRegistryRemoveDone(msg)
 

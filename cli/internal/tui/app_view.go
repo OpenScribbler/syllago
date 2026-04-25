@@ -34,6 +34,9 @@ func (a App) View() string {
 	if a.registryAdd.active {
 		content = overlayModal(content, a.registryAdd.View(), a.width, a.contentHeight())
 	}
+	if a.tofu.active {
+		content = overlayModal(content, a.tofu.View(), a.width, a.contentHeight())
+	}
 	if a.trustInspector.active {
 		content = overlayModal(content, a.trustInspector.View(), a.width, a.contentHeight())
 	}

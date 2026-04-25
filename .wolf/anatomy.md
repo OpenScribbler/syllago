@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-24T22:36:23.834Z
-> Files: 1180 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-25T00:45:45.020Z
+> Files: 1188 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -52,6 +52,7 @@
 
 ## ../../../.config/pai/
 
+- `.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json` (~28 tok)
 - `.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json` (~28 tok)
 - `.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json` (~24 tok)
 - `.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json` (~28 tok)
@@ -63,6 +64,10 @@
 ## ../../../.config/pai/skills/research/
 
 - `SKILL.md` — Research Skill (~1746 tok)
+
+## ../../../.syllago/
+
+- `config.json` (~49 tok)
 
 ## ../../../personal/stealth-fetch/
 
@@ -1669,13 +1674,13 @@
 - `moat_cmd.go` — Struct: trustStatusJSON (~1491 tok)
 - `moat_sign_cmd.go` (~2182 tok)
 - `registry_cmd_test.go` — TestRegistryAddRejectsDisallowedURL, TestRegistryAddAllowsURLWhenNoPolicy, TestRegistryAddAllowsURLI (~5422 tok)
-- `registry_cmd.go` — Struct: registryListItem (~7074 tok)
+- `registry_cmd.go` — Declares skills (~8143 tok)
 - `registry_create_native_test.go` — TestAllItemsFromScan_Empty, TestAllItemsFromScan_MultipleProviders, TestAllItemsFromScan_HookFields, (~4038 tok)
 - `registry_create_native.go` — Struct: numberedItem (~3399 tok)
 - `registry_signing_test.go` — TestResolveSigningProfile_AllowlistMatch, TestResolveSigningProfile_FlagsOverrideAllowlist, TestReso (~3284 tok)
 - `registry_signing.go` — Struct: signingFlagSet (~1955 tok)
 - `registry_sync_moat_test.go` — TestSyncMOAT_HappyPath_PinnedProfile, TestSyncMOAT_NotModified, TestSyncMOAT_TOFU_WithoutYes_Returns (~4497 tok)
-- `registry_sync_moat.go` (~1688 tok)
+- `registry_sync_moat.go` (~1919 tok)
 - `registry_verify_test.go` — TestVerifyRegistryForAdd_NilReg, TestVerifyRegistryForAdd_UnpinnedGitRegistry, TestVerifyRegistryFor (~7612 tok)
 - `registry_verify.go` — Struct: verifyOutcome (~3627 tok)
 - `share_cmd_test.go` — TestShareCmdRegisters, TestShareCmdHasToFlag, TestShareCmdValidatesArgs, TestFindLibraryItem_NotFoun (~4275 tok)
@@ -1946,7 +1951,8 @@
 - `noninteractive_test.go` — TestExitCodeFor_AllFourFailureClasses, TestExitCodeFor_NoneReturnsSuccess, TestExitCodeFor_UnknownRe (~1947 tok)
 - `noninteractive.go` — — non-interactive failure classification (ADR 0007 G-18). (~1948 tok)
 - `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~3765 tok)
-- `producer.go` — EnrichFromMOATManifests (~3997 tok)
+- `producer_write_test.go` — TestWriteManifestCache_RoundTrip, TestWriteManifestCache_OverwriteAtomic, TestWriteManifestCache_Val (~1645 tok)
+- `producer.go` — EnrichFromMOATManifests (~4925 tok)
 - `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
 - `rekor.go` — Struct: rekorEntry (~860 tok)
 - `revocation_test.go` — TestRevocationStatus_String, TestRevocationSet_AddFromManifest_RegistrySourceBlocks, TestRevocationS (~3692 tok)
@@ -1962,7 +1968,7 @@
 - `sigstore_verify_test.go` — TestBuildBundle_FromRekorFixture, TestVerifyItemSigstore_HappyPath, TestVerifyItemSigstore_RejectsWr (~1867 tok)
 - `sigstore_verify.go` — BuildBundle, VerifyItemSigstore (~1604 tok)
 - `sync_test.go` — Struct: syncHarness (~5589 tok)
-- `sync.go` — Struct: SyncResult (~4055 tok)
+- `sync.go` — Struct: SyncResult (~4168 tok)
 - `trusted_root_loader_test.go` — TestBundledTrustedRoot_BytesNonEmpty, TestBundledTrustedRoot_StalenessBands, TestBundledTrustedRoot_ (~2252 tok)
 - `trusted_root_loader.go` — Struct: TrustedRootInfo (~2260 tok)
 - `trusted_root_path_test.go` — TestTrustedRootFromPath_Success, TestTrustedRootFromPath_EmptyPath, TestTrustedRootFromPath_MissingF (~1022 tok)
@@ -2035,8 +2041,8 @@
 
 ## cli/internal/tui/
 
-- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~2718 tok)
-- `actions.go` — Struct: removeDoneMsg (~6454 tok)
+- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~4844 tok)
+- `actions.go` — Struct: removeDoneMsg (~8463 tok)
 - `add_probe_tmp_test.go` — TestProbe_DiscoverPai (~280 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
@@ -2055,10 +2061,11 @@
 - `add_wizard_view.go` — Struct: sourceOption (~10176 tok)
 - `add_wizard.go` — Struct: addConfirmItem (~23862 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
-- `app_update.go` — Declares checkbox (~5744 tok)
-- `app_view.go` (~1041 tok)
-- `app.go` — Struct: App (~4666 tok)
-- `cards.go` — Struct: cardData (~3324 tok)
+- `app_update.go` — Declares checkbox (~5990 tok)
+- `app_view.go` (~1067 tok)
+- `app.go` — Struct: App (~5393 tok)
+- `cards_test.go` — TestBuildRegistryCards_SourceNameSurvivesManifestOverride, TestBuildRegistryCards_SourceNameWhenNoMa (~716 tok)
+- `cards.go` — Struct: cardData (~3539 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
 - `checkbox_list.go` — Struct: checkboxItem (~1893 tok)
 - `config_sandbox_test.go` — TestSandboxConfigModel_DefaultTabIsDomains, TestSandboxConfigModel_TabCyclesTabs, TestSandboxConfigM (~1613 tok)
@@ -2095,6 +2102,8 @@
 - `local_dir_probe_test.go` — TestProbe_LocalDirDiscovery (~610 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: ruleTargetStatus (~3407 tok)
+- `moat_sync_test.go` — TestRegistryIsMOAT_True, TestRegistryIsMOAT_FalseForGit, TestRegistryIsMOAT_FalseForUnknown, TestHan (~1778 tok)
+- `moat_sync.go` — Struct: moatSyncDoneMsg (~1854 tok)
 - `modal.go` — Struct: editSavedMsg (~2807 tok)
 - `private_prompt.go` (~635 tok)
 - `publisher_warn_test.go` — TestIsPublisherRevoked, TestPublisherWarnBody, TestPublisherWarnTitle, TestPrivatePromptTitle, TestP (~2960 tok)
@@ -2105,6 +2114,8 @@
 - `table_test.go` — TestProviderAbbrev_KnownSlugs, TestProviderAbbrev_UnknownSlug, TestAbbrevToSlug_RoundTrip, TestAbbre (~1957 tok)
 - `table.go` — Struct: tableModel (~6120 tok)
 - `testhelpers_test.go` (~1816 tok)
+- `tofu_modal_test.go` — TestTOFUModal_OpenSetsState, TestTOFUModal_CloseClearsState, TestTOFUModal_EscRejects, TestTOFUModal (~1394 tok)
+- `tofu_modal.go` — Struct: tofuResultMsg (~1595 tok)
 - `topbar_test.go` — TestTopBar_InitialState, TestTopBar_SetGroup, TestTopBar_NextPrevTab, TestTopBar_TabWraps, TestTopBa (~2062 tok)
 - `topbar.go` — Struct: tabGroup (~2914 tok)
 - `trust_debug_test.go` — TestDebugRegistryTrustZone (~386 tok)
