@@ -349,6 +349,191 @@ func TestSigningProfile_Equal(t *testing.T) {
 	}
 }
 
+// TestSigningProfile_AuthorizesIdentity covers the regex-aware authorization
+// semantic used by NeedsSigningProfileReapproval. The bundled allowlist
+// uses regex form to span several workflow paths under one trust grant —
+// the wire manifest's literal subject must be authorized by that regex
+// without forcing re-approval.
+func TestSigningProfile_AuthorizesIdentity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pinned   SigningProfile
+		incoming SigningProfile
+		want     bool
+	}{
+		{
+			"literal_match",
+			SigningProfile{Issuer: "iss", Subject: "sub", RepositoryID: "1", RepositoryOwnerID: "2"},
+			SigningProfile{Issuer: "iss", Subject: "sub", RepositoryID: "1", RepositoryOwnerID: "2"},
+			true,
+		},
+		{
+			"literal_subject_differs",
+			SigningProfile{Issuer: "iss", Subject: "sub-a", RepositoryID: "1", RepositoryOwnerID: "2"},
+			SigningProfile{Issuer: "iss", Subject: "sub-b", RepositoryID: "1", RepositoryOwnerID: "2"},
+			false,
+		},
+		{
+			"regex_pinned_authorizes_literal_match",
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "",
+				SubjectRegex:      `^https://github\.com/Org/repo/\.github/workflows/(a|b|c)\.yml@refs/heads/main$`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "https://github.com/Org/repo/.github/workflows/b.yml@refs/heads/main",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			true,
+		},
+		{
+			"regex_pinned_rejects_non_match",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `^https://github\.com/Org/repo/\.github/workflows/(a|b|c)\.yml@refs/heads/main$`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "https://github.com/Other/repo/.github/workflows/a.yml@refs/heads/main",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			false,
+		},
+		{
+			"regex_pinned_authorizes_same_regex_wire",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `^.+@main$`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `^.+@main$`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			true,
+		},
+		{
+			"regex_pinned_invalid_regex_fails_closed",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `[invalid(`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "anything",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			false,
+		},
+		{
+			"repo_id_conflict_when_both_set",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `.+`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "anything",
+				RepositoryID:      "999",
+				RepositoryOwnerID: "2",
+			},
+			false,
+		},
+		{
+			"owner_id_conflict_when_both_set",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `.+`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "anything",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "999",
+			},
+			false,
+		},
+		{
+			// OpenScribbler real-world case: bundled allowlist pins numeric IDs;
+			// the wire manifest declares only issuer+subject (no IDs). Pinned
+			// strictness wins — cert verification still applies the pinned IDs
+			// against the cert's OIDC extensions. Authorized.
+			"pinned_ids_wire_empty_is_authorized",
+			SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `^https://github\.com/Org/repo/\.github/workflows/(a|b|c)\.yml@refs/heads/main$`,
+				RepositoryID:      "1193220959",
+				RepositoryOwnerID: "263775997",
+			},
+			SigningProfile{
+				Issuer:  "iss",
+				Subject: "https://github.com/Org/repo/.github/workflows/a.yml@refs/heads/main",
+			},
+			true,
+		},
+		{
+			// ADR 0007: bumping from TOFU (no IDs) to pinned IDs is a tightening
+			// of the trust grant the user did not consent to. Re-approval required.
+			"wire_adds_ids_pinned_empty_is_reapproval",
+			SigningProfile{
+				Issuer:  "iss",
+				Subject: "sub",
+			},
+			SigningProfile{
+				Issuer:            "iss",
+				Subject:           "sub",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			false,
+		},
+		{
+			"issuer_regex_authorizes_literal",
+			SigningProfile{
+				IssuerRegex:       `^https://token\.actions\.githubusercontent\.com$`,
+				Subject:           "sub",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			SigningProfile{
+				Issuer:            "https://token.actions.githubusercontent.com",
+				Subject:           "sub",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tt.pinned.AuthorizesIdentity(tt.incoming); got != tt.want {
+				t.Errorf("AuthorizesIdentity() = %v; want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestRegistry_NeedsSigningProfileReapproval is the core TOFU-vs-reapproval
 // decision. Document the four states explicitly so the test reads like a
 // requirements table.
@@ -392,6 +577,40 @@ func TestRegistry_NeedsSigningProfileReapproval(t *testing.T) {
 			incoming: other,
 			want:     true,
 			reason:   "issuer OR subject changed → re-approval required",
+		},
+		{
+			name: "regex_pinned_matches_literal_wire",
+			current: &SigningProfile{
+				Issuer:            "iss",
+				SubjectRegex:      `^https://github\.com/Org/repo/\.github/workflows/(a|b|c)\.yml@refs/heads/main$`,
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			incoming: SigningProfile{
+				Issuer:            "iss",
+				Subject:           "https://github.com/Org/repo/.github/workflows/b.yml@refs/heads/main",
+				RepositoryID:      "1",
+				RepositoryOwnerID: "2",
+			},
+			want:   false,
+			reason: "regex-pinned profile authorizes wire literal that matches → no re-approval",
+		},
+		{
+			// OpenScribbler real-world: bundled allowlist pins regex+IDs; wire
+			// declares only literal issuer+subject. No re-approval (regression: bug-445).
+			name: "openscribbler_real_world_no_reapproval",
+			current: &SigningProfile{
+				Issuer:            "https://token.actions.githubusercontent.com",
+				SubjectRegex:      `^https://github\.com/OpenScribbler/syllago-meta-registry/\.github/workflows/(moat|moat-publisher|moat-registry)\.yml@refs/heads/(main|master)$`,
+				RepositoryID:      "1193220959",
+				RepositoryOwnerID: "263775997",
+			},
+			incoming: SigningProfile{
+				Issuer:  "https://token.actions.githubusercontent.com",
+				Subject: "https://github.com/OpenScribbler/syllago-meta-registry/.github/workflows/moat-registry.yml@refs/heads/master",
+			},
+			want:   false,
+			reason: "bundled allowlist pin (regex + IDs) authorizes wire literal-only profile (regression: bug-445)",
 		},
 	}
 	for _, tt := range tests {

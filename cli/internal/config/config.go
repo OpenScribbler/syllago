@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
 
@@ -45,8 +46,10 @@ type SigningProfile struct {
 	// field existed). New captures set this explicitly.
 	ProfileVersion int `json:"profile_version,omitempty"`
 
-	// SubjectRegex / IssuerRegex relax the exact-match rule when set. Reserved
-	// for slice 2+; slice-1 verifiers compare Subject/Issuer exactly.
+	// SubjectRegex / IssuerRegex relax the exact-match rule when set. The
+	// verifier (moat.VerifyManifest, moat.VerifyItemSigstore) forwards both
+	// literal and regex fields to sigstore-go's NewShortCertificateIdentity,
+	// so allowlist entries may pin a regex without a literal Subject/Issuer.
 	SubjectRegex string `json:"subject_regex,omitempty"`
 	IssuerRegex  string `json:"issuer_regex,omitempty"`
 
@@ -77,11 +80,92 @@ func (s SigningProfile) IsZero() bool {
 //
 // ProfileVersion and the regex fields do not participate in equality: they
 // are schema metadata and relaxation knobs, not identity.
+//
+// Equal is the strict literal comparison. Trust decisions
+// (NeedsSigningProfileReapproval) use AuthorizesIdentity instead, which is
+// regex-aware so a regex-pinned profile authorizes any wire-declared literal
+// the regex matches.
 func (s SigningProfile) Equal(other SigningProfile) bool {
 	return s.Issuer == other.Issuer &&
 		s.Subject == other.Subject &&
 		s.RepositoryID == other.RepositoryID &&
 		s.RepositoryOwnerID == other.RepositoryOwnerID
+}
+
+// AuthorizesIdentity reports whether `incoming` represents a cert-identity
+// claim already authorized by this profile. Differs from Equal in two ways:
+//
+//   - When this profile is in regex form (Subject="" + SubjectRegex set), an
+//     incoming literal Subject is authorized if SubjectRegex matches it. The
+//     bundled allowlist (signing_identities.json) uses regex form to span
+//     several workflow paths under one trust grant; manifests typically
+//     declare a single literal subject. Treating these as "different"
+//     identities would force re-approval on every sync. The same relaxation
+//     applies to Issuer/IssuerRegex.
+//
+//   - Numeric IDs (RepositoryID, RepositoryOwnerID) compare with a "wire may
+//     omit, pinned may not relax" rule. Pinned-set + wire-empty is fine
+//     (pinned strictness wins; the cert verifier still binds the pinned IDs
+//     against the cert's OIDC extensions, so repo-transfer forgery is still
+//     caught). Pinned-empty + wire-set IS a re-approval event per ADR 0007 —
+//     the publisher tightened the binding and the user's TOFU consent did
+//     not cover the new constraint. Both set + different also fails.
+//
+// The fundamental invariant: numeric IDs in this method compare two PROFILE
+// CLAIMS, not cert facts. Cert facts are checked in moat.VerifyManifest
+// against the pinned profile and are independent of this comparison.
+func (s SigningProfile) AuthorizesIdentity(incoming SigningProfile) bool {
+	if !numericIDsAuthorize(s, incoming) {
+		return false
+	}
+	if !subjectAuthorizes(s, incoming) {
+		return false
+	}
+	return issuerAuthorizes(s, incoming)
+}
+
+func numericIDsAuthorize(pinned, incoming SigningProfile) bool {
+	if pinned.RepositoryID == "" && incoming.RepositoryID != "" {
+		return false
+	}
+	if pinned.RepositoryID != "" && incoming.RepositoryID != "" && pinned.RepositoryID != incoming.RepositoryID {
+		return false
+	}
+	if pinned.RepositoryOwnerID == "" && incoming.RepositoryOwnerID != "" {
+		return false
+	}
+	if pinned.RepositoryOwnerID != "" && incoming.RepositoryOwnerID != "" && pinned.RepositoryOwnerID != incoming.RepositoryOwnerID {
+		return false
+	}
+	return true
+}
+
+func subjectAuthorizes(pinned, incoming SigningProfile) bool {
+	if pinned.SubjectRegex == "" {
+		return pinned.Subject == incoming.Subject
+	}
+	re, err := regexp.Compile(pinned.SubjectRegex)
+	if err != nil {
+		return false
+	}
+	if incoming.Subject != "" {
+		return re.MatchString(incoming.Subject)
+	}
+	return pinned.SubjectRegex == incoming.SubjectRegex
+}
+
+func issuerAuthorizes(pinned, incoming SigningProfile) bool {
+	if pinned.IssuerRegex == "" {
+		return pinned.Issuer == incoming.Issuer
+	}
+	re, err := regexp.Compile(pinned.IssuerRegex)
+	if err != nil {
+		return false
+	}
+	if incoming.Issuer != "" {
+		return re.MatchString(incoming.Issuer)
+	}
+	return pinned.IssuerRegex == incoming.IssuerRegex
 }
 
 // Registry represents a content source registered in this project.
@@ -140,7 +224,11 @@ func (r *Registry) IsGit() bool {
 // NeedsSigningProfileReapproval reports whether syncing against `incoming`
 // would require a re-approval prompt. Returns false when no signing profile
 // has been recorded yet (that is a TOFU case, not a re-approval case) and
-// when the incoming profile matches the recorded one exactly.
+// when the incoming profile is already authorized by the recorded one.
+//
+// Uses AuthorizesIdentity (regex-aware) rather than Equal (strict literal)
+// so a regex-pinned profile does not trigger re-approval every sync when
+// the wire manifest declares a literal subject the regex still authorizes.
 //
 // Name/Operator changes alone do NOT trigger re-approval — they live
 // elsewhere on the struct and are intentionally not consulted here. Only
@@ -149,7 +237,7 @@ func (r *Registry) NeedsSigningProfileReapproval(incoming SigningProfile) bool {
 	if r.SigningProfile == nil || r.SigningProfile.IsZero() {
 		return false
 	}
-	return !r.SigningProfile.Equal(incoming)
+	return !r.SigningProfile.AuthorizesIdentity(incoming)
 }
 
 // ProviderPathConfig holds custom path overrides for a single provider.

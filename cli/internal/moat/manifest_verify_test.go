@@ -221,6 +221,57 @@ func TestVerifyManifest_MalformedBundle(t *testing.T) {
 	expectVerifyError(t, err, CodeInvalid)
 }
 
+// TestVerifyManifest_HappyPath_SubjectRegex pins the workflow SAN as a regex
+// (the form the bundled OpenScribbler/syllago-meta-registry allowlist entry
+// uses). Until this test landed, the verifier passed empty strings for the
+// regex parameters of sigstore-go's NewShortCertificateIdentity and any
+// regex-only allowlist entry tripped MOAT_IDENTITY_MISMATCH on the matcher
+// constructor with "must be subject alternative name criteria".
+func TestVerifyManifest_HappyPath_SubjectRegex(t *testing.T) {
+	t.Parallel()
+	artifact, bundleBytes := buildFixtureBundleBytes(t)
+	profile := SigningProfile{
+		Issuer:       expectedProfile().Issuer,
+		SubjectRegex: `^https://github\.com/OpenScribbler/syllago-meta-registry/\.github/workflows/(moat|moat-publisher|moat-registry)\.yml@refs/heads/(main|master)$`,
+	}
+	trustedRoot := loadTrustedRoot(t)
+
+	result, err := VerifyManifest(artifact, bundleBytes, &profile, trustedRoot)
+	if err != nil {
+		t.Fatalf("VerifyManifest with subject_regex must succeed on valid fixture: %v", err)
+	}
+	if !result.IdentityMatches {
+		t.Errorf("expected IdentityMatches=true with regex profile, got %+v", result)
+	}
+}
+
+// TestVerifyManifest_WrongSubjectRegex pins a regex that does not cover the
+// fixture's workflow path and asserts the verifier rejects it. Pairs with
+// TestVerifyManifest_HappyPath_SubjectRegex to prove the regex is actually
+// being applied (rather than silently accepting any signature).
+func TestVerifyManifest_WrongSubjectRegex(t *testing.T) {
+	t.Parallel()
+	artifact, bundleBytes := buildFixtureBundleBytes(t)
+	profile := SigningProfile{
+		Issuer:       expectedProfile().Issuer,
+		SubjectRegex: `^https://github\.com/attacker/.*$`,
+	}
+	trustedRoot := loadTrustedRoot(t)
+
+	_, err := VerifyManifest(artifact, bundleBytes, &profile, trustedRoot)
+	if err == nil {
+		t.Fatal("VerifyManifest must reject when subject_regex does not match cert SAN")
+	}
+	var ve *VerifyError
+	if !errors.As(err, &ve) {
+		t.Fatalf("expected *VerifyError, got %T: %v", err, err)
+	}
+	if ve.Code != CodeIdentityMismatch && ve.Code != CodeInvalid {
+		t.Errorf("expected %s or %s, got %s (err=%v)",
+			CodeIdentityMismatch, CodeInvalid, ve.Code, err)
+	}
+}
+
 // TestVerifyManifest_WrongSubject — pinned profile with an attacker-chosen
 // subject must hard-fail. This is the baseline SAN match sigstore-go enforces
 // via the certificate identity policy.

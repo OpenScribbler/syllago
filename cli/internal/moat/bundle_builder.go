@@ -158,7 +158,14 @@ func VerifyItemSigstore(item AttestationItem, profile SigningProfile, rekorRaw [
 		return fmt.Errorf("building verifier: %w", err)
 	}
 
-	certID, err := verify.NewShortCertificateIdentity(profile.Issuer, "", profile.Subject, "")
+	// Forward both literal and regex SAN/issuer fields — see manifest_verify.go
+	// for why omitting the regex pair breaks regex-only allowlist entries.
+	certID, err := verify.NewShortCertificateIdentity(
+		profile.Issuer,
+		profile.IssuerRegex,
+		profile.Subject,
+		profile.SubjectRegex,
+	)
 	if err != nil {
 		return fmt.Errorf("building certificate identity: %w", err)
 	}

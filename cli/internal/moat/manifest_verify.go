@@ -11,7 +11,9 @@ package moat
 //  3. Rekor inclusion: the transparency log entry's inclusion proof
 //     verifies against the Rekor public key in the trusted root.
 //  4. Identity match: the cert's OIDC issuer matches pinnedProfile.Issuer
-//     and the SAN subject matches pinnedProfile.Subject.
+//     (or IssuerRegex) and the SAN subject matches pinnedProfile.Subject
+//     (or SubjectRegex). Regex variants let allowlist entries cover repos
+//     that publish from multiple workflow paths.
 //  5. Numeric-ID match (GitHub only): when Issuer is the GitHub Actions
 //     issuer, the cert's RepositoryID and RepositoryOwnerID OIDC
 //     extensions MUST match the pinned profile. This closes the
@@ -172,11 +174,17 @@ func VerifyManifest(
 			"constructing verifier", err)
 	}
 
+	// sigstore-go's NewSANMatcher / NewIssuerMatcher accept literal-only,
+	// regex-only, or both. Allowlist entries for repos that publish from
+	// multiple workflow paths (e.g. moat.yml AND moat-publisher.yml) carry
+	// only SubjectRegex; passing "" through here would leave sigstore-go with
+	// no SAN criteria and trip its "must be subject alternative name
+	// criteria" guard. Forwarding both fields lets either form verify.
 	certID, err := verify.NewShortCertificateIdentity(
 		pinnedProfile.Issuer,
-		"",
+		pinnedProfile.IssuerRegex,
 		pinnedProfile.Subject,
-		"",
+		pinnedProfile.SubjectRegex,
 	)
 	if err != nil {
 		return VerificationResult{}, verifyError(CodeIdentityMismatch,
