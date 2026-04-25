@@ -4,6 +4,141 @@
 
 Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. All provider conversions go through syllago's own canonical format as a hub.
 
+## Container Diagram
+
+```mermaid
+graph TB
+    %% ===== Entry Points =====
+    subgraph Entry["Entry Points"]
+        CLI["cmd/syllago<br/>(Cobra commands)"]
+        TUI["internal/tui<br/>(Bubble Tea app)"]
+    end
+
+    %% ===== Content Ingestion =====
+    subgraph Ingest["Content Ingestion"]
+        Add["add<br/>(filesystem + git sources)"]
+        Discover["discover<br/>(find monolithic rule files)"]
+        Splitter["splitter<br/>(split CLAUDE.md/AGENTS.md/etc.)"]
+        Analyzer["analyzer<br/>(detect content type + confidence)"]
+        Parse["parse<br/>(YAML / TOML / JSON helpers)"]
+        Metadata["metadata<br/>(.syllago.yaml, SKILL.md, AGENT.md)"]
+        ContentFmt["contentformat<br/>(canonical enums)"]
+    end
+
+    %% ===== Catalog & Storage =====
+    subgraph Storage["Catalog & Storage"]
+        Catalog["catalog<br/>(scan + index library)"]
+        Rulestore["rulestore<br/>(rule write/load/hash)"]
+        Config["config<br/>(global + project + paths)"]
+        Snapshot["snapshot<br/>(all-or-nothing backups)"]
+    end
+
+    %% ===== Conversion Hub =====
+    subgraph Convert["Conversion Hub (spoke ↔ canonical ↔ spoke)"]
+        Converter["converter<br/>(MDC / TOML / JSON / YAML)"]
+        Provider["provider<br/>(11 supported tools + detection)"]
+    end
+
+    %% ===== Installation =====
+    subgraph Install["Installation"]
+        Installer["installer<br/>(symlinks + JSON merge for hooks/MCP)"]
+        Loadout["loadout<br/>(BuildManifest, apply, preview)"]
+        InstallCheck["installcheck<br/>(state + drift scan)"]
+        Promote["promote<br/>(local → shared)"]
+        Sandbox["sandbox<br/>(bubblewrap isolation)"]
+    end
+
+    %% ===== Registry & Trust (MOAT) =====
+    subgraph Trust["Registry & Trust"]
+        Registry["registry<br/>(git-based registries)"]
+        MOAT["moat<br/>(sigstore verify + bundles)"]
+        Signing["signing<br/>(hook content signatures)"]
+        GitUtil["gitutil<br/>(clone/pull/status/diff)"]
+    end
+
+    %% ===== Capability Monitoring =====
+    subgraph Capmon["Capability Monitoring"]
+        CapMon["capmon<br/>(provider capability cache)"]
+        ProvMon["provmon<br/>(manifest + source-hash checker)"]
+        Audit["audit<br/>(structured JSON audit log)"]
+    end
+
+    %% ===== Diagnostics & Ops =====
+    subgraph Ops["Diagnostics & Ops"]
+        Doctor["doctor<br/>(health checks)"]
+        Output["output<br/>(StructuredError, --json/--quiet)"]
+        ErrorDocs["errordocs<br/>(embedded --explain markdown)"]
+        Telemetry["telemetry<br/>(opt-in PostHog events)"]
+        Updater["updater<br/>(self-update from GH releases)"]
+    end
+
+    %% ===== Edges: entry points fan out =====
+    CLI --> Add
+    CLI --> Loadout
+    CLI --> Installer
+    CLI --> Converter
+    CLI --> Registry
+    CLI --> Doctor
+    CLI --> CapMon
+    CLI --> Updater
+    CLI --> Output
+    CLI --> Telemetry
+
+    TUI --> Catalog
+    TUI --> Add
+    TUI --> Loadout
+    TUI --> Installer
+    TUI --> Registry
+    TUI --> MOAT
+    TUI --> Config
+
+    %% ===== Data flow: Add path =====
+    Add --> Discover
+    Add --> Analyzer
+    Discover --> Splitter
+    Splitter --> Metadata
+    Analyzer --> ContentFmt
+    Add --> Parse
+    Add --> Converter
+    Converter --> Catalog
+    Catalog --> Rulestore
+
+    %% ===== Data flow: Install path =====
+    Loadout --> Catalog
+    Loadout --> Snapshot
+    Loadout --> Installer
+    Installer --> Converter
+    Installer --> Provider
+    Installer --> InstallCheck
+    Installer --> Audit
+
+    %% ===== Trust integrations =====
+    Registry --> GitUtil
+    Registry --> MOAT
+    MOAT --> Signing
+    Add --> Registry
+    Promote --> GitUtil
+
+    %% ===== Capability + provider awareness =====
+    CapMon --> Provider
+    ProvMon --> Provider
+    Doctor --> Config
+    Doctor --> Provider
+    Doctor --> InstallCheck
+
+    %% ===== Cross-cutting =====
+    Output --> ErrorDocs
+    Config --> Provider
+
+    %% ===== Styling =====
+    classDef entry fill:#1e3a5f,stroke:#4a90d9,color:#fff
+    classDef hub fill:#3d2a4e,stroke:#a06bc9,color:#fff
+    classDef trust fill:#3d3520,stroke:#c9a86b,color:#fff
+    class CLI,TUI entry
+    class Converter,Provider hub
+    class Registry,MOAT,Signing,GitUtil trust
+```
+
 ## Package Map
 
 ### cmd/syllago/

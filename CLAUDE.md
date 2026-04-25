@@ -15,11 +15,17 @@ Content registries are community-driven — syllago provides the tooling but doe
 
 ```bash
 make setup          # Configure git hooks (run once after clone)
-make build          # Build dev binary (cli/syllago → ~/.local/bin/syllago)
+make build          # Compile binary to cli/syllago
+cp cli/syllago ~/.local/bin/syllago   # Install to PATH (REQUIRED — see below)
 make test           # Run all tests
 ```
 
-IMPORTANT: Always run `make build` after code changes before testing. The `syllago` command runs from the compiled binary, not source.
+IMPORTANT: After any Go code change, you MUST do BOTH steps before declaring work complete or asking the user to test:
+
+1. **Build** — `make build` writes the compiled binary to `cli/syllago` only. The Makefile has no install target.
+2. **Install to PATH** — `cp cli/syllago ~/.local/bin/syllago` (or whichever path `which syllago` resolves to). The user's `syllago` command runs the binary on PATH, NOT `cli/syllago`. Skipping this step means the user tests against a stale binary and your fix appears not to work — wasting a full debug cycle.
+
+If you only ran `make build`, the work is NOT done. Both commands are mandatory; treat them as one indivisible step.
 
 IMPORTANT: Always run `cd cli && make fmt` before committing Go changes. CI enforces gofmt and will fail on unformatted code. A pre-commit hook also blocks unformatted commits locally.
 
