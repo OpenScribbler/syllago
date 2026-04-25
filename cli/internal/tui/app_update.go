@@ -252,49 +252,21 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case msg.Type == tea.KeyCtrlC:
 			return a, tea.Quit
+		case msg.Type == tea.KeyEsc:
+			// Esc backs out of drill-ins (gallery card, library detail,
+			// explorer detail) but never resets the tab group or quits.
+			// On non-drill states it falls through to the active model so
+			// it can clear a persisted search filter — preserving the
+			// long-standing `/` → Esc UX on Content/Registries tabs.
+			if handled, model, cmd := a.handleBackOut(false); handled {
+				return model, cmd
+			}
+			return a.routeKey(msg)
 		case msg.String() == keyQuit:
 			// Only quit from top-level browse. If in a drill-down or
 			// non-landing view, back out one level instead.
-
-			// Gallery drill-in: back out through library detail → library browse → gallery
-			if a.isGalleryTab() && a.galleryDrillIn {
-				if a.library.mode == libraryDetail {
-					a.library.mode = libraryBrowse
-					a.library.detailItem = nil
-					a.library.SetSize(a.width, a.contentHeight())
-					a.updateNavState()
-					return a, nil
-				}
-				// Exit drill-in back to gallery
-				a.galleryDrillIn = false
-				a.galleryDrillCard = ""
-				a.library.SetItems(a.catalog.Items) // restore full library
-				a.updateNavState()
-				return a, nil
-			}
-
-			if a.isLibraryTab() && a.library.mode == libraryDetail {
-				a.library.mode = libraryBrowse
-				a.library.detailItem = nil
-				a.library.SetSize(a.width, a.contentHeight())
-				a.updateNavState()
-				return a, nil
-			}
-			if !a.isLibraryTab() && a.explorer.mode == explorerDetail {
-				a.explorer.mode = explorerBrowse
-				a.explorer.detailItem = nil
-				a.explorer.sizeBrowsePanes()
-				a.explorer.preview.LoadItem(a.explorer.items.Selected())
-				a.updateNavState()
-				return a, nil
-			}
-			if !a.isLibraryTab() {
-				// Return to landing page (Collections > Library)
-				cmd := a.topBar.SetGroup(0)
-				a.galleryDrillIn = false
-				a.refreshContent()
-				a.updateNavState()
-				return a, cmd
+			if handled, model, cmd := a.handleBackOut(true); handled {
+				return model, cmd
 			}
 			return a, tea.Quit
 
@@ -731,6 +703,58 @@ func (a App) handleEditSaved(msg editSavedMsg) (tea.Model, tea.Cmd) {
 	a.refreshContent()
 	cmd := a.toast.Push("Saved", toastSuccess)
 	return a, cmd
+}
+
+// handleBackOut walks one level out of a drill-in or non-landing view.
+// Returns (true, model, cmd) when it consumed the action; (false, _, _)
+// when there's nowhere to back out to (the caller decides whether to
+// quit, no-op, or do something else).
+//
+// `includeTabReset` controls whether the non-library → landing transition
+// fires. keyQuit passes true (matches historical `q` semantics: "go all
+// the way back to Library"). KeyEsc passes false so that Esc on Content
+// or Registries tabs reaches the active model, where it can clear a
+// persisted search filter — preserving the long-standing `/` → Esc UX.
+func (a App) handleBackOut(includeTabReset bool) (bool, tea.Model, tea.Cmd) {
+	// Gallery drill-in: back out through library detail → library browse → gallery
+	if a.isGalleryTab() && a.galleryDrillIn {
+		if a.library.mode == libraryDetail {
+			a.library.mode = libraryBrowse
+			a.library.detailItem = nil
+			a.library.SetSize(a.width, a.contentHeight())
+			a.updateNavState()
+			return true, a, nil
+		}
+		a.galleryDrillIn = false
+		a.galleryDrillCard = ""
+		a.library.SetItems(a.catalog.Items)
+		a.updateNavState()
+		return true, a, nil
+	}
+
+	if a.isLibraryTab() && a.library.mode == libraryDetail {
+		a.library.mode = libraryBrowse
+		a.library.detailItem = nil
+		a.library.SetSize(a.width, a.contentHeight())
+		a.updateNavState()
+		return true, a, nil
+	}
+	if !a.isLibraryTab() && a.explorer.mode == explorerDetail {
+		a.explorer.mode = explorerBrowse
+		a.explorer.detailItem = nil
+		a.explorer.sizeBrowsePanes()
+		a.explorer.preview.LoadItem(a.explorer.items.Selected())
+		a.updateNavState()
+		return true, a, nil
+	}
+	if includeTabReset && !a.isLibraryTab() {
+		cmd := a.topBar.SetGroup(0)
+		a.galleryDrillIn = false
+		a.refreshContent()
+		a.updateNavState()
+		return true, a, cmd
+	}
+	return false, a, nil
 }
 
 // routeKey sends key messages to the active content model.

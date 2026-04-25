@@ -350,9 +350,15 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 }
 
 // registryAddDoneMsg is sent when a registry add operation completes.
+//
+// isMOAT signals that the saved registry is MOAT-typed (allowlist match or
+// registry.yaml self-declaration). The handler uses this to chain a sync
+// immediately after add — without it, the manifest cache is never populated
+// and the gallery shows "Trust: Unknown" until the user manually presses S.
 type registryAddDoneMsg struct {
-	name string
-	err  error
+	name   string
+	err    error
+	isMOAT bool
 }
 
 // registrySyncDoneMsg is sent when a registry sync operation completes.
@@ -428,17 +434,34 @@ func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
 		if err := config.SaveGlobal(cfg); err != nil {
 			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
 		}
-		return registryAddDoneMsg{name: name}
+		return registryAddDoneMsg{name: name, isMOAT: newRegistry.IsMOAT()}
 	}
 }
 
 // handleRegistryAddDone processes the result of a registry add operation.
+//
+// MOAT-typed registries chain straight into a sync so the manifest cache is
+// populated before the next rescan. Without this, EnrichFromMOATManifests
+// sees an empty cache, downgrades trust to Unknown, and the gallery shows
+// "Trust: Unknown" until the user manually presses S. For unpinned
+// (self-declared) registries, the sync surfaces the TOFU modal — which is
+// the correct gate for first-add consent.
 func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) {
-	a.registryOpInProgress = false
 	if msg.err != nil {
+		a.registryOpInProgress = false
 		cmd := a.toast.Push("Add failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
+	if msg.isMOAT {
+		// Keep registryOpInProgress=true through the sync; handleMOATSyncDone
+		// (or handleTOFUResult) clears it. Skip the immediate rescan — the
+		// sync handler triggers its own once the cache is in place, so the
+		// catalog refresh sees real trust badges instead of Unknown.
+		cmd1 := a.toast.Push("Added "+msg.name+" — verifying signing identity...", toastSuccess)
+		cmd2 := a.doMOATSyncCmd(msg.name, false)
+		return a, tea.Batch(cmd1, cmd2)
+	}
+	a.registryOpInProgress = false
 	cmd1 := a.toast.Push("Added registry: "+msg.name, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)

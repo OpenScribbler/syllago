@@ -6973,6 +6973,93 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-25T00:46:00.000Z"
+    },
+    {
+      "id": "bug-434",
+      "timestamp": "2026-04-25T01:00:57.394Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→11 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T01:00:57.394Z"
+    },
+    {
+      "id": "bug-435",
+      "timestamp": "2026-04-25T01:01:54.801Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/tui/app_update.go",
+      "root_cause": "30 lines replaced/restructured",
+      "fix": "Rewrote 49→20 lines (30 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T01:01:54.801Z"
+    },
+    {
+      "id": "bug-436",
+      "timestamp": "2026-04-25T01:08:00.000Z",
+      "error_message": "User: 'I just added [a registry], and it still says trust unknown.' Manifest cache writer (bug-433) only ran on Sync action, not on Add.",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "handleRegistryAddDone only toasted + rescanned. doRegistryAddCmd correctly set Type=moat for allowlist/self-declared registries, but no sync was dispatched, so the manifest cache stayed empty and EnrichFromMOATManifests downgraded trust to Unknown on the next rescan. The fix path for bug-433 (writing the cache) was correct but only kicked in for the explicit Sync action.",
+      "fix": "Added isMOAT field to registryAddDoneMsg; when true, handleRegistryAddDone keeps registryOpInProgress=true and dispatches doMOATSyncCmd(name, false). The sync's own handler triggers a rescan after cache is populated. Self-declared (unpinned) registries surface the existing TOFU modal — the correct first-add consent gate.",
+      "tags": [
+        "moat",
+        "tui",
+        "trust",
+        "registry-add",
+        "cache",
+        "high-impact"
+      ],
+      "related_bugs": ["bug-433"],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T01:08:00.000Z"
+    },
+    {
+      "id": "bug-437",
+      "timestamp": "2026-04-25T01:08:00.000Z",
+      "error_message": "User: 'Esc to exit a drill-in on a registry card. You can only use Q to go back to the main registry card view.'",
+      "file": "cli/internal/tui/app_update.go",
+      "root_cause": "Only the keyQuit ('q') case in app_update.go handled gallery drill-in back-out. KeyEsc fell through to routeKey, which delegated to the gallery model — gallery's Esc handler only clears search filter, never exits drill-in. Esc-on-drill-in had no path back to the gallery.",
+      "fix": "Extracted handleBackOut(includeTabReset bool) so keyQuit and KeyEsc share back-out semantics. Esc passes false (no tab reset) so it can still fall through to routeKey for clearing persisted search filters on Content/Registries tabs. q passes true (matches historical 'q from non-library tab → Library' behavior).",
+      "tags": [
+        "tui",
+        "keyboard",
+        "drill-in",
+        "registry-card",
+        "ux"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T01:08:00.000Z"
+    },
+    {
+      "id": "bug-438",
+      "timestamp": "2026-04-25T01:18:00.000Z",
+      "error_message": "User: 'I don't see the registry in the TUI, but when I try to add it, it says it already exists.'",
+      "file": "cli/internal/moat/load_scan.go,cli/cmd/syllago/main.go",
+      "root_cause": "LoadAndScan and the TUI startup path both filtered registries through registry.IsCloned(name), which checks ~/.syllago/registries/<name>/. MOAT registries cache at <cacheDir>/moat/registries/<name>/ and are never git-cloned, so IsCloned was always false for them. Result: configured MOAT registries were absent from RegistrySources, so the TUI gallery showed them as 'No items found' — but config-membership checks (e.g. registry add's 'already exists') still saw them, leaving the user confused.",
+      "fix": "In both LoadAndScan and the TUI startup, treat MOAT registries as 'always include' with Path = <cacheDir>/moat/registries/<name>. Git registries keep the IsCloned guard. Added regression test TestLoadAndScan_IncludesUnsynced_MOAT pinning the new contract.",
+      "tags": [
+        "moat",
+        "tui",
+        "gallery",
+        "registry-add",
+        "cache-vs-clone"
+      ],
+      "related_bugs": ["bug-436", "bug-433"],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T01:18:00.000Z"
     }
   ]
 }

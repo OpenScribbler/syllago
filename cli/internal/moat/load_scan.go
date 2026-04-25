@@ -18,6 +18,7 @@ package moat
 // the cycle form.
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -54,15 +55,28 @@ func LoadAndScan(root, projectRoot string, now time.Time) (*ScanResult, error) {
 	contentCfg, _ := config.Load(root)
 	merged := config.Merge(globalCfg, config.Merge(contentCfg, projectCfg))
 
+	cacheDir, _ := config.GlobalDirPath()
+
 	var regSources []catalog.RegistrySource
 	for _, r := range merged.Registries {
+		// MOAT registries live under <cacheDir>/moat/registries/<name>/ and
+		// are never git-cloned — registry.IsCloned would always say false,
+		// so the user would see an empty gallery after `registry add`.
+		// Include them unconditionally so the card surfaces with whatever
+		// state the cache has (synced, stale, or never-fetched).
+		if r.IsMOAT() {
+			regSources = append(regSources, catalog.RegistrySource{
+				Name: r.Name,
+				Path: filepath.Join(cacheDir, "moat", "registries", r.Name),
+			})
+			continue
+		}
 		if registry.IsCloned(r.Name) {
 			dir, _ := registry.CloneDir(r.Name)
 			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
 		}
 	}
 
-	cacheDir, _ := config.GlobalDirPath()
 	lf, _ := LoadLockfile(LockfilePath(projectRoot))
 
 	cat, err := ScanAndEnrich(merged, root, projectRoot, regSources, lf, cacheDir, now)

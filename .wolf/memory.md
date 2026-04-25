@@ -4205,3 +4205,48 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-25 17:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:00 | Edited cli/internal/tui/actions.go | expanded (+6 lines) | ~122 |
+| 18:01 | Edited cli/internal/tui/actions.go | expanded (+17 lines) | ~428 |
+| 18:01 | Edited cli/internal/tui/app_update.go | reduced (-29 lines) | ~200 |
+| 18:02 | Edited cli/internal/tui/app_update.go | modified isLibraryTab() | ~436 |
+| 18:03 | Created cli/internal/tui/back_out_test.go | — | ~981 |
+| 18:03 | Edited cli/internal/tui/moat_sync_test.go | modified TestHandleRegistryAddDone_MOAT_DispatchesSync() | ~439 |
+| 18:04 | Edited cli/internal/tui/app_update.go | 9→10 lines | ~127 |
+| 18:06 | Edited cli/internal/tui/app_update.go | modified isLibraryTab() | ~487 |
+| 18:06 | Edited cli/internal/tui/app_update.go | 17→17 lines | ~192 |
+| 18:06 | Edited cli/internal/tui/back_out_test.go | inline fix | ~6 |
+| 18:06 | Edited cli/internal/tui/back_out_test.go | modified TestEsc_NonLibraryTab_NoDrillIn_DoesNotResetTab() | ~287 |
+| 18:08 | Fixed bug-436 (Trust:Unknown after add) — wired add → MOAT sync | cli/internal/tui/actions.go | added isMOAT to registryAddDoneMsg; chained doMOATSyncCmd from handleRegistryAddDone | ~80 |
+| 18:08 | Fixed bug-437 (Esc on registry-card drill-in) — extracted handleBackOut | cli/internal/tui/app_update.go | shared between Esc (no tab reset) + q (tab reset); preserves search-filter Esc on non-library tabs | ~140 |
+| 18:08 | Added 12 unit tests for back-out + MOAT add chain | cli/internal/tui/back_out_test.go, moat_sync_test.go | full TUI suite green (8.0s) | ~210 |
+
+## Session: 2026-04-25 18:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:16 | Edited cli/internal/moat/load_scan.go | 7→8 lines | ~56 |
+| 18:16 | Edited cli/internal/moat/load_scan.go | modified IsMOAT() | ~214 |
+| 18:16 | Edited cli/internal/moat/load_scan.go | 4→3 lines | ~15 |
+| 18:17 | Edited cli/internal/moat/load_scan_test.go | modified TestLoadAndScan_IncludesUnsynced_MOAT() | ~511 |
+| 18:18 | Edited cli/cmd/syllago/main.go | modified IsMOAT() | ~357 |
+| 18:20 | drove TUI headlessly via tmux | bug-438 confirmed: MOAT registry now appears in gallery, sync triggers (and surfaces upstream sigstore-bundle parse error from registry's legacy `rekorBundle`-format publish workflow) | bug-438 fixed |

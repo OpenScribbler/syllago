@@ -130,3 +130,41 @@ func TestLoadAndScan_EnumeratesClonedRegistry(t *testing.T) {
 		t.Errorf("expected merged config to carry the registry entry, got %d", len(res.Config.Registries))
 	}
 }
+
+// TestLoadAndScan_IncludesUnsynced_MOAT pins the bug-fix for "I added a MOAT
+// registry but it doesn't show up in the TUI gallery." MOAT registries cache
+// at <cacheDir>/moat/registries/<name>/ and are never git-cloned, so the
+// pre-fix IsCloned guard excluded them entirely — even after a successful
+// add. They MUST appear in RegistrySources unconditionally so the user can
+// see what they configured and trigger sync from the gallery.
+func TestLoadAndScan_IncludesUnsynced_MOAT(t *testing.T) {
+	withIsolatedGlobals(t)
+	root := t.TempDir()
+
+	cfgDir := filepath.Join(root, ".syllago")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatalf("mkdir cfg: %v", err)
+	}
+	cfgJSON := `{"registries":[{"name":"acme/registry","url":"https://github.com/acme/registry","type":"moat","manifest_uri":"https://example.com/registry.json"}]}`
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.json"), []byte(cfgJSON), 0o644); err != nil {
+		t.Fatalf("write cfg: %v", err)
+	}
+
+	// Deliberately do NOT create any clone or moat cache — the registry
+	// has been added but never synced. It must still appear in the source
+	// list with the moat cache path, so the gallery surfaces the card.
+	res, err := LoadAndScan(root, root, time.Now())
+	if err != nil {
+		t.Fatalf("LoadAndScan: %v", err)
+	}
+	if len(res.RegistrySources) != 1 {
+		t.Fatalf("expected 1 source for unsynced MOAT registry, got %d", len(res.RegistrySources))
+	}
+	if res.RegistrySources[0].Name != "acme/registry" {
+		t.Errorf("expected name 'acme/registry', got %q", res.RegistrySources[0].Name)
+	}
+	want := filepath.Join(config.GlobalDirOverride, "moat", "registries", "acme/registry")
+	if res.RegistrySources[0].Path != want {
+		t.Errorf("MOAT path = %q; want %q", res.RegistrySources[0].Path, want)
+	}
+}

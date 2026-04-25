@@ -194,6 +194,46 @@ func TestHandleSync_NoSelectedCard(t *testing.T) {
 	}
 }
 
+// Add-path → MOAT sync wiring. Without this chain, the manifest cache stays
+// empty after add and EnrichFromMOATManifests downgrades trust to Unknown.
+// The bug the user reported: trust still says "Unknown" after a fresh add
+// because handleRegistryAddDone only toasted + rescanned.
+func TestHandleRegistryAddDone_MOAT_DispatchesSync(t *testing.T) {
+	t.Parallel()
+	a := testApp(t)
+	a.registryOpInProgress = true
+	m, cmd := a.handleRegistryAddDone(registryAddDoneMsg{name: "moat-reg", isMOAT: true})
+	got := m.(App)
+	if !got.registryOpInProgress {
+		t.Error("MOAT add must keep registryOpInProgress=true through the sync")
+	}
+	if cmd == nil {
+		t.Fatal("MOAT add must dispatch a sync cmd")
+	}
+}
+
+func TestHandleRegistryAddDone_NonMOAT_OnlyRescans(t *testing.T) {
+	t.Parallel()
+	a := testApp(t)
+	a.registryOpInProgress = true
+	m, _ := a.handleRegistryAddDone(registryAddDoneMsg{name: "git-reg", isMOAT: false})
+	got := m.(App)
+	if got.registryOpInProgress {
+		t.Error("non-MOAT add should clear registryOpInProgress immediately")
+	}
+}
+
+func TestHandleRegistryAddDone_Error_ClearsInProgress(t *testing.T) {
+	t.Parallel()
+	a := testApp(t)
+	a.registryOpInProgress = true
+	m, _ := a.handleRegistryAddDone(registryAddDoneMsg{name: "x", err: errors.New("clone failed"), isMOAT: true})
+	got := m.(App)
+	if got.registryOpInProgress {
+		t.Error("error path must clear registryOpInProgress even when isMOAT=true")
+	}
+}
+
 // Sanity: empty catalog stays consistent across MOAT path so future
 // regressions where an unrelated handler accidentally resets RegistryTrusts
 // are caught here.

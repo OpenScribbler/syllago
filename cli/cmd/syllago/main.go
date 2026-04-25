@@ -285,15 +285,6 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		cancel()
 	}
 
-	// Build registry sources from config
-	var regSources []catalog.RegistrySource
-	for _, r := range cfg.Registries {
-		if registry.IsCloned(r.Name) {
-			dir, _ := registry.CloneDir(r.Name)
-			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
-		}
-	}
-
 	projectRoot, _ := findProjectRoot()
 	if projectRoot == "" {
 		projectRoot = root
@@ -306,6 +297,27 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	// no-op here.
 	cacheDir, _ := config.GlobalDirPath()
 	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
+
+	// Build registry sources from config. MOAT registries are cache-backed
+	// (never git-cloned), so include them unconditionally — keeping the
+	// IsCloned guard for them would hide every freshly-added MOAT registry
+	// from the gallery until something else cloned a sibling git repo.
+	// Mirrors moat.LoadAndScan; the two paths must stay in sync until the
+	// startup path is migrated to call LoadAndScan directly.
+	var regSources []catalog.RegistrySource
+	for _, r := range cfg.Registries {
+		if r.IsMOAT() {
+			regSources = append(regSources, catalog.RegistrySource{
+				Name: r.Name,
+				Path: filepath.Join(cacheDir, "moat", "registries", r.Name),
+			})
+			continue
+		}
+		if registry.IsCloned(r.Name) {
+			dir, _ := registry.CloneDir(r.Name)
+			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
+		}
+	}
 
 	cat, err := moat.ScanAndEnrich(cfg, root, projectRoot, regSources, lf, cacheDir, time.Now())
 	if err != nil {

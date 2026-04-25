@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-25T00:45:45.020Z
-> Files: 1188 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-25T01:18:13.737Z
+> Files: 1189 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1669,7 +1669,7 @@
 - `loadout_apply.go` (~2836 tok)
 - `loadout_create.go` (~1656 tok)
 - `loadout_remove_test.go` — TestRunLoadoutRemove, TestRunLoadoutRemove_InteractiveConfirmsRemoval, TestRunLoadoutRemove_Interact (~2831 tok)
-- `main.go` (~4147 tok)
+- `main.go` (~4298 tok)
 - `moat_cmd_test.go` — TestRunMoatTrustStatus_Human_Fresh, TestRunMoatTrustStatus_Human_Warn, TestRunMoatTrustStatus_Human_ (~1481 tok)
 - `moat_cmd.go` — Struct: trustStatusJSON (~1491 tok)
 - `moat_sign_cmd.go` (~2182 tok)
@@ -1940,8 +1940,8 @@
 - `item_verify_shard_index_test.go` — TestBuildTransparencyLogEntry_PreservesShardLocalLogIndex, TestBuildTransparencyLogEntry_VerifyInclu (~2451 tok)
 - `item_verify_test.go` — TestVerifyAttestationItem_HappyPath, TestVerifyAttestationItem_RejectsWrongIdentity, TestVerifyAttes (~2667 tok)
 - `item_verify.go` — VerifyAttestationItem (~4527 tok)
-- `load_scan_test.go` — TestLoadAndScan_EmptyProject, TestLoadAndScan_EnumeratesClonedRegistry (~1352 tok)
-- `load_scan.go` — Struct: ScanResult (~830 tok)
+- `load_scan_test.go` — TestLoadAndScan_EmptyProject, TestLoadAndScan_EnumeratesClonedRegistry, TestLoadAndScan_IncludesUnsy (~1824 tok)
+- `load_scan.go` — Struct: ScanResult (~973 tok)
 - `lockfile_test.go` — TestNewLockfile_Invariants, TestLockfile_RoundTripEmpty, TestLockfile_LoadMissingFileReturnsFresh, T (~5990 tok)
 - `lockfile.go` — Struct: RegistryLockState (~4766 tok)
 - `manifest_test.go` — TestParseManifest_Minimal, TestParseManifest_FullExample, TestParseManifest_TrustTiers, TestParseMan (~7105 tok)
@@ -2042,7 +2042,7 @@
 ## cli/internal/tui/
 
 - `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~4844 tok)
-- `actions.go` — Struct: removeDoneMsg (~8463 tok)
+- `actions.go` — Struct: removeDoneMsg (~8801 tok)
 - `add_probe_tmp_test.go` — TestProbe_DiscoverPai (~280 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
@@ -2061,9 +2061,10 @@
 - `add_wizard_view.go` — Struct: sourceOption (~10176 tok)
 - `add_wizard.go` — Struct: addConfirmItem (~23862 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~14664 tok)
-- `app_update.go` — Declares checkbox (~5990 tok)
+- `app_update.go` — Declares checkbox (~6293 tok)
 - `app_view.go` (~1067 tok)
 - `app.go` — Struct: App (~5393 tok)
+- `back_out_test.go` — TestHandleBackOut_LandingPage_NotHandled, TestHandleBackOut_GalleryDrillIn_LibraryDetail_BacksToBrow (~1255 tok)
 - `cards_test.go` — TestBuildRegistryCards_SourceNameSurvivesManifestOverride, TestBuildRegistryCards_SourceNameWhenNoMa (~716 tok)
 - `cards.go` — Struct: cardData (~3539 tok)
 - `checkbox_list_test.go` — TestCheckboxList_Navigation, TestCheckboxList_Toggle, TestCheckboxList_ToggleDisabled, TestCheckboxL (~2398 tok)
@@ -2102,7 +2103,7 @@
 - `local_dir_probe_test.go` — TestProbe_LocalDirDiscovery (~610 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
 - `metapanel.go` — Struct: ruleTargetStatus (~3407 tok)
-- `moat_sync_test.go` — TestRegistryIsMOAT_True, TestRegistryIsMOAT_FalseForGit, TestRegistryIsMOAT_FalseForUnknown, TestHan (~1778 tok)
+- `moat_sync_test.go` — TestRegistryIsMOAT_True, TestRegistryIsMOAT_FalseForGit, TestRegistryIsMOAT_FalseForUnknown, TestHan (~2154 tok)
 - `moat_sync.go` — Struct: moatSyncDoneMsg (~1854 tok)
 - `modal.go` — Struct: editSavedMsg (~2807 tok)
 - `private_prompt.go` (~635 tok)
