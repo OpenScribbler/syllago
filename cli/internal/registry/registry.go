@@ -107,6 +107,11 @@ func checkGit() error {
 
 // Clone clones the given URL into the registry cache as name.
 // If ref is non-empty, checks out that branch/tag after cloning.
+//
+// If the destination already exists (stale clone left from a previous failure
+// or out-of-band creation), Clone returns an actionable error WITHOUT touching
+// the existing directory. Cleanup-on-failure only runs for clones we created
+// in this call, so a pre-existing path is never silently destroyed.
 func Clone(url, name, ref string) error {
 	if !catalog.IsValidRegistryName(name) {
 		return fmt.Errorf("registry name %q is invalid (use letters, numbers, - and _ with optional owner/repo format)", name)
@@ -119,6 +124,11 @@ func Clone(url, name, ref string) error {
 	if err != nil {
 		return err
 	}
+	if _, statErr := os.Stat(dir); statErr == nil {
+		return fmt.Errorf("registry cache already contains %q at %s — remove it with `syllago registry remove %s` (or delete the directory) and try again", name, dir, name)
+	} else if !errors.Is(statErr, fs.ErrNotExist) {
+		return fmt.Errorf("checking registry cache at %s: %w", dir, statErr)
+	}
 	if err := os.MkdirAll(filepath.Dir(dir), 0755); err != nil {
 		return fmt.Errorf("creating registry cache: %w", err)
 	}
@@ -128,7 +138,9 @@ func Clone(url, name, ref string) error {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		// Clean up partial clone
+		// Only clean up the partial clone we just created. The pre-flight
+		// stat above guarantees `dir` did not exist at function entry, so
+		// removing it here cannot destroy unrelated user data.
 		_ = os.RemoveAll(dir)
 		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}

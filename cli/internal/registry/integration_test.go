@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -266,6 +267,47 @@ func TestIntegration_DuplicateClone(t *testing.T) {
 	err := Clone(bare, "test-reg", "")
 	if err == nil {
 		t.Fatal("expected error on duplicate clone, got nil")
+	}
+}
+
+// TestIntegration_StaleClonePreserved verifies that when Clone fails because
+// the destination already exists (e.g. an orphaned clone from a previous add
+// where the config was never persisted), the existing directory is NOT
+// destroyed and the error message points the user to the recovery command.
+func TestIntegration_StaleClonePreserved(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	requireGit(t)
+	setupCacheOverride(t)
+
+	bare := createBareRepo(t, "valid")
+
+	// Pre-create a stale clone with a marker file so we can detect deletion.
+	dir, _ := CloneDir("stale-reg")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	markerPath := filepath.Join(dir, "MARKER.txt")
+	if err := os.WriteFile(markerPath, []byte("preexisting"), 0644); err != nil {
+		t.Fatalf("WriteFile marker: %v", err)
+	}
+
+	err := Clone(bare, "stale-reg", "")
+	if err == nil {
+		t.Fatal("expected error when destination already exists, got nil")
+	}
+
+	// The marker file must still be there — Clone must not destroy
+	// directories it did not create.
+	if _, statErr := os.Stat(markerPath); statErr != nil {
+		t.Fatalf("pre-existing marker was destroyed by Clone: %v", statErr)
+	}
+
+	// Error should mention the recovery command so the TUI toast / CLI
+	// stderr surfaces an actionable next step.
+	if !strings.Contains(err.Error(), "syllago registry remove") {
+		t.Errorf("error %q does not mention recovery command", err.Error())
 	}
 }
 
