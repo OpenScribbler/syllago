@@ -814,6 +814,12 @@ func TestRunMoatSignDev_OutMkdirFails(t *testing.T) {
 
 // withRegistryProjectAndCache sets up a temp project root with a config + a
 // registry cache override. Returns the project root.
+//
+// Registries live in the global config (~/.syllago/config.json), so the helper
+// also redirects config.GlobalDirOverride at `root`. The returned `root` is
+// thus both the project root (for findProjectRoot) and the global config
+// directory — kept colocated so existing tests that pass `root` to LoadGlobal
+// see the same fixture.
 func withRegistryProjectAndCache(t *testing.T, regs []provider.Provider, cfg interface{}) string {
 	t.Helper()
 	_ = regs // unused, signature parity with similar helpers
@@ -828,13 +834,17 @@ func withRegistryProjectAndCache(t *testing.T, regs []provider.Provider, cfg int
 	findProjectRoot = func() (string, error) { return root, nil }
 	t.Cleanup(func() { findProjectRoot = origRoot })
 
+	origGlobal := config.GlobalDirOverride
+	config.GlobalDirOverride = root
+	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
+
 	if cfg != nil {
 		c, ok := cfg.(*config.Config)
 		if !ok {
 			t.Fatalf("withRegistryProjectAndCache: cfg must be *config.Config, got %T", cfg)
 		}
-		if err := config.Save(root, c); err != nil {
-			t.Fatalf("config.Save: %v", err)
+		if err := config.SaveGlobal(c); err != nil {
+			t.Fatalf("config.SaveGlobal: %v", err)
 		}
 	}
 	return root
@@ -886,9 +896,10 @@ func TestRegistryRemove_HappyPath(t *testing.T) {
 	}
 
 	// Verify config was saved with only "keep" remaining.
-	saved, err := config.Load(root)
+	_ = root
+	saved, err := config.LoadGlobal()
 	if err != nil {
-		t.Fatalf("config.Load: %v", err)
+		t.Fatalf("config.LoadGlobal: %v", err)
 	}
 	if len(saved.Registries) != 1 || saved.Registries[0].Name != "keep" {
 		t.Errorf("expected 1 remaining registry 'keep', got %v", saved.Registries)

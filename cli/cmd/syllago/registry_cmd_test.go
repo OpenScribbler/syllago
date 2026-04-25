@@ -15,19 +15,15 @@ import (
 
 func TestRegistryAddRejectsDisallowedURL(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	cfg := &config.Config{
 		Providers:         []string{"claude-code"},
 		AllowedRegistries: []string{"https://github.com/allowed/only.git"},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
-
-	origDir, _ := os.Getwd()
-	os.Chdir(tmp)
-	defer os.Chdir(origDir)
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/not/allowed.git"})
 	if err == nil {
@@ -43,19 +39,15 @@ func TestRegistryAddAllowsURLWhenNoPolicy(t *testing.T) {
 	// We test only up to the clone step — clone will fail (no network/git),
 	// but the important thing is the error is NOT about allowedRegistries.
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	cfg := &config.Config{
 		Providers: []string{"claude-code"},
 		// AllowedRegistries is empty — all URLs permitted
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
-
-	origDir, _ := os.Getwd()
-	os.Chdir(tmp)
-	defer os.Chdir(origDir)
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/any/repo.git"})
 	// The call will fail at git clone (no network), but must NOT fail with allowedRegistries error
@@ -68,19 +60,15 @@ func TestRegistryAddAllowsURLInPolicy(t *testing.T) {
 	// When a URL is explicitly in AllowedRegistries, it should pass the check.
 	// Again, clone will fail but must NOT fail with allowedRegistries error.
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	cfg := &config.Config{
 		Providers:         []string{"claude-code"},
 		AllowedRegistries: []string{"https://github.com/allowed/repo.git"},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
-
-	origDir, _ := os.Getwd()
-	os.Chdir(tmp)
-	defer os.Chdir(origDir)
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/allowed/repo.git"})
 	// Clone will fail but NOT with allowedRegistries error
@@ -93,7 +81,7 @@ func TestRegistryAddAllowsURLInPolicy(t *testing.T) {
 // manifest version and description when a registry.yaml is present in the clone.
 func TestRegistryListShowsManifest(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	// Create a fake registry clone dir with a registry.yaml
 	cacheDir, err := registry.CacheDir()
@@ -116,13 +104,9 @@ func TestRegistryListShowsManifest(t *testing.T) {
 			{Name: "test-reg-43", URL: "https://github.com/example/test-reg-43.git"},
 		},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
-
-	origDir, _ := os.Getwd()
-	os.Chdir(tmp)
-	defer os.Chdir(origDir)
 
 	// Capture output
 	stdout, _ := output.SetForTest(t)
@@ -150,20 +134,16 @@ func TestRegistryAddExpandsAlias(t *testing.T) {
 	defer delete(registry.KnownAliases, testAlias)
 
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	// Config restricts to the expanded alias URL
 	cfg := &config.Config{
 		Providers:         []string{"claude-code"},
 		AllowedRegistries: []string{testURL},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
-
-	origDir, _ := os.Getwd()
-	os.Chdir(tmp)
-	defer os.Chdir(origDir)
 
 	// Pass the short alias — it should expand and pass the allowedRegistries check,
 	// then fail at git clone (no network), but NOT with an allowedRegistries error.
@@ -171,6 +151,16 @@ func TestRegistryAddExpandsAlias(t *testing.T) {
 	if err != nil && strings.Contains(err.Error(), "allowedRegistries") {
 		t.Errorf("alias should expand before allowedRegistries check, got: %v", err)
 	}
+}
+
+// withGlobalConfigDir redirects config.LoadGlobal/SaveGlobal at `dir` for the
+// duration of t. Use this in registry CRUD tests that previously relied on
+// `os.Chdir(tmp)` + project-local `.syllago/config.json`.
+func withGlobalConfigDir(t *testing.T, dir string) {
+	t.Helper()
+	orig := config.GlobalDirOverride
+	config.GlobalDirOverride = dir
+	t.Cleanup(func() { config.GlobalDirOverride = orig })
 }
 
 // chdirTo changes to dir and restores the original cwd on cleanup.
@@ -418,7 +408,7 @@ func overrideProbe(t *testing.T, fn func(url string) (string, error)) {
 
 func TestReprobeRegistryVisibility_UpdatesPublic(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	// Manifest must also declare "public" for the stricter-wins resolver to pick it.
 	cacheDir := t.TempDir()
@@ -438,11 +428,11 @@ func TestReprobeRegistryVisibility_UpdatesPublic(t *testing.T) {
 			{Name: "reg1", URL: "https://github.com/owner/repo.git", Visibility: registry.VisibilityUnknown},
 		},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if cfg.Registries[0].Visibility != registry.VisibilityPublic {
 		t.Errorf("expected Visibility=public, got %q", cfg.Registries[0].Visibility)
@@ -451,9 +441,9 @@ func TestReprobeRegistryVisibility_UpdatesPublic(t *testing.T) {
 		t.Error("expected VisibilityCheckedAt to be set")
 	}
 	// Verify config was saved.
-	saved, err := config.Load(tmp)
+	saved, err := config.LoadGlobal()
 	if err != nil {
-		t.Fatalf("config.Load: %v", err)
+		t.Fatalf("config.LoadGlobal: %v", err)
 	}
 	if len(saved.Registries) != 1 || saved.Registries[0].Visibility != registry.VisibilityPublic {
 		t.Errorf("saved config did not persist visibility update: %+v", saved.Registries)
@@ -463,7 +453,7 @@ func TestReprobeRegistryVisibility_UpdatesPublic(t *testing.T) {
 func TestReprobeRegistryVisibility_NoManifestResolvesToUnknown(t *testing.T) {
 	// Probe returns "public" but no manifest → stricter-wins resolves to "unknown".
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 	isolateRegistryCache(t)
 	overrideProbe(t, func(url string) (string, error) {
 		return registry.VisibilityPublic, nil
@@ -475,7 +465,7 @@ func TestReprobeRegistryVisibility_NoManifestResolvesToUnknown(t *testing.T) {
 		},
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if cfg.Registries[0].Visibility != registry.VisibilityUnknown {
 		t.Errorf("expected Visibility=unknown (no manifest declaration), got %q", cfg.Registries[0].Visibility)
@@ -487,7 +477,7 @@ func TestReprobeRegistryVisibility_NoManifestResolvesToUnknown(t *testing.T) {
 
 func TestReprobeRegistryVisibility_UpdatesPrivate(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 	isolateRegistryCache(t)
 	overrideProbe(t, func(url string) (string, error) {
 		return registry.VisibilityPrivate, nil
@@ -498,11 +488,11 @@ func TestReprobeRegistryVisibility_UpdatesPrivate(t *testing.T) {
 			{Name: "reg1", URL: "https://github.com/owner/private.git", Visibility: registry.VisibilityPublic},
 		},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if cfg.Registries[0].Visibility != registry.VisibilityPrivate {
 		t.Errorf("expected Visibility=private, got %q", cfg.Registries[0].Visibility)
@@ -511,7 +501,7 @@ func TestReprobeRegistryVisibility_UpdatesPrivate(t *testing.T) {
 
 func TestReprobeRegistryVisibility_ProbeErrorDoesNotUpdate(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 	isolateRegistryCache(t)
 	overrideProbe(t, func(url string) (string, error) {
 		return "", errProbeFailed
@@ -523,7 +513,7 @@ func TestReprobeRegistryVisibility_ProbeErrorDoesNotUpdate(t *testing.T) {
 		},
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if cfg.Registries[0].Visibility != registry.VisibilityPublic {
 		t.Errorf("expected Visibility unchanged (public), got %q", cfg.Registries[0].Visibility)
@@ -535,7 +525,7 @@ func TestReprobeRegistryVisibility_ProbeErrorDoesNotUpdate(t *testing.T) {
 
 func TestReprobeRegistryVisibility_FreshCacheSkipsProbe(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 	isolateRegistryCache(t)
 
 	probeCalled := false
@@ -552,7 +542,7 @@ func TestReprobeRegistryVisibility_FreshCacheSkipsProbe(t *testing.T) {
 		},
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if probeCalled {
 		t.Error("expected probe NOT to be called when cache is fresh")
@@ -564,7 +554,7 @@ func TestReprobeRegistryVisibility_FreshCacheSkipsProbe(t *testing.T) {
 
 func TestReprobeRegistryVisibility_NameNotFoundNoOp(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 	isolateRegistryCache(t)
 
 	probeCalled := false
@@ -579,7 +569,7 @@ func TestReprobeRegistryVisibility_NameNotFoundNoOp(t *testing.T) {
 		},
 	}
 
-	reprobeRegistryVisibility(cfg, "missing", tmp)
+	reprobeRegistryVisibility(cfg, "missing")
 
 	if probeCalled {
 		t.Error("expected probe NOT to be called when name is not found")
@@ -591,7 +581,7 @@ func TestReprobeRegistryVisibility_NameNotFoundNoOp(t *testing.T) {
 
 func TestReprobeRegistryVisibility_ManifestStricterWins(t *testing.T) {
 	tmp := t.TempDir()
-	os.WriteFile(filepath.Join(tmp, "go.mod"), []byte("module test"), 0644)
+	withGlobalConfigDir(t, tmp)
 
 	// Set up a cached manifest with explicit "private" declaration.
 	cacheDir := t.TempDir()
@@ -618,11 +608,11 @@ func TestReprobeRegistryVisibility_ManifestStricterWins(t *testing.T) {
 			{Name: "reg1", URL: "https://github.com/owner/repo.git"},
 		},
 	}
-	if err := config.Save(tmp, cfg); err != nil {
-		t.Fatalf("config.Save: %v", err)
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
 	}
 
-	reprobeRegistryVisibility(cfg, "reg1", tmp)
+	reprobeRegistryVisibility(cfg, "reg1")
 
 	if cfg.Registries[0].Visibility != registry.VisibilityPrivate {
 		t.Errorf("expected manifest-declared private to win over public probe, got %q", cfg.Registries[0].Visibility)

@@ -130,11 +130,11 @@ func syncMOATRegistry(
 	fetchedAt := res.FetchedAt
 	reg.LastFetchedAt = &fetchedAt
 
-	if err := config.Save(cfgRoot, cfg); err != nil {
+	if err := config.SaveGlobal(cfg); err != nil {
 		return 0, output.NewStructuredErrorDetail(
 			output.ErrRegistrySaveFailed,
 			fmt.Sprintf("could not persist sync state for registry %q", reg.Name),
-			"Check filesystem permissions on .syllago/config.json.",
+			"Check filesystem permissions on ~/.syllago/config.json.",
 			err.Error(),
 		)
 	}

@@ -37,11 +37,18 @@ func withStubbedMoatSync(
 	t.Cleanup(func() { moatSyncFn = orig })
 }
 
-// tempProjectRoot returns a temp directory that `config.Save` can write
-// into (it needs a .syllago subdir path; the package creates it on save).
+// tempProjectRoot returns a temp directory used as both the project root (for
+// the MOAT lockfile) and the global config directory. Registries live in the
+// global config (~/.syllago/config.json) — this helper colocates them in one
+// dir so the same `root` value can be passed to both syncMOATRegistry's
+// cfgRoot arg (lockfile path) and the global config save.
 func tempProjectRoot(t *testing.T) string {
 	t.Helper()
-	return t.TempDir()
+	root := t.TempDir()
+	orig := config.GlobalDirOverride
+	config.GlobalDirOverride = filepath.Join(root, ".syllago")
+	t.Cleanup(func() { config.GlobalDirOverride = orig })
+	return root
 }
 
 // moatRegFixture returns a MOAT-typed registry suitable for most dispatcher

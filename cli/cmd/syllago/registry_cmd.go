@@ -56,10 +56,6 @@ var registryAddCmd = &cobra.Command{
   syllago registry add https://github.com/team/rules.git --ref main`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findContentRepoRoot()
-		if err != nil {
-			return err
-		}
 		gitURL := args[0]
 
 		// Expand short aliases before any other processing
@@ -98,7 +94,7 @@ var registryAddCmd = &cobra.Command{
 			return output.NewStructuredError(output.ErrRegistryInvalid, fmt.Sprintf("registry name %q is invalid", name), "Use letters, numbers, - and _ with optional owner/repo format")
 		}
 
-		cfg, err := config.Load(root)
+		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return err
 		}
@@ -232,7 +228,7 @@ var registryAddCmd = &cobra.Command{
 			}
 		}
 		cfg.Registries = append(cfg.Registries, newRegistry)
-		if err := config.Save(root, cfg); err != nil {
+		if err := config.SaveGlobal(cfg); err != nil {
 			// Config save failed — clean up the clone so it doesn't become orphaned.
 			dir, _ := registry.CloneDir(name)
 			_ = os.RemoveAll(dir)
@@ -261,7 +257,7 @@ var registryAddCmd = &cobra.Command{
 				if !alreadyPresent {
 					cfg.Sandbox.AllowedDomains = append(cfg.Sandbox.AllowedDomains, host)
 				}
-				if saveErr := config.Save(root, cfg); saveErr != nil {
+				if saveErr := config.SaveGlobal(cfg); saveErr != nil {
 					fmt.Fprintf(output.Writer, "Warning: failed to save sandbox allowlist: %s\n", saveErr)
 				} else {
 					fmt.Fprintf(output.Writer, "Added %s to sandbox allowlist.\n", host)
@@ -279,13 +275,9 @@ var registryRemoveCmd = &cobra.Command{
 	Example: `  syllago registry remove team-rules`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findContentRepoRoot()
-		if err != nil {
-			return err
-		}
 		name := args[0]
 
-		cfg, err := config.Load(root)
+		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return err
 		}
@@ -304,7 +296,7 @@ var registryRemoveCmd = &cobra.Command{
 		}
 
 		cfg.Registries = filtered
-		if err := config.Save(root, cfg); err != nil {
+		if err := config.SaveGlobal(cfg); err != nil {
 			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving config after registry removal", "Check write permissions on .syllago/config.json", err.Error())
 		}
 
@@ -336,11 +328,7 @@ var registryListCmd = &cobra.Command{
   # JSON output
   syllago registry list --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findContentRepoRoot()
-		if err != nil {
-			return err
-		}
-		cfg, err := config.Load(root)
+		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return err
 		}
@@ -427,7 +415,7 @@ and "syllago install" to activate updated content.`,
 		if err != nil {
 			return err
 		}
-		cfg, err := config.Load(root)
+		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return err
 		}
@@ -449,7 +437,7 @@ and "syllago install" to activate updated content.`,
 				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
 			if reg.IsGit() {
-				if _, err := tryUpgradeToMOAT(reg, cfg, root, output.Writer); err != nil {
+				if _, err := tryUpgradeToMOAT(reg, cfg, output.Writer); err != nil {
 					return err
 				}
 			}
@@ -478,7 +466,7 @@ and "syllago install" to activate updated content.`,
 				return err
 			}
 			// Re-probe visibility on sync
-			reprobeRegistryVisibility(cfg, name, root)
+			reprobeRegistryVisibility(cfg, name)
 			fmt.Fprintf(output.Writer, "Synced: %s\n", name)
 			return nil
 		}
@@ -495,7 +483,7 @@ and "syllago install" to activate updated content.`,
 		for i := range cfg.Registries {
 			r := &cfg.Registries[i]
 			if r.IsGit() {
-				if _, err := tryUpgradeToMOAT(r, cfg, root, output.Writer); err != nil {
+				if _, err := tryUpgradeToMOAT(r, cfg, output.Writer); err != nil {
 					return err
 				}
 			}
@@ -534,7 +522,7 @@ and "syllago install" to activate updated content.`,
 					fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
 					hasErrors = true
 				} else {
-					reprobeRegistryVisibility(cfg, res.Name, root)
+					reprobeRegistryVisibility(cfg, res.Name)
 					fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
 				}
 			}
@@ -586,11 +574,7 @@ Use --type to filter by content type. To install registry content, use
   syllago registry items --type skills`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findContentRepoRoot()
-		if err != nil {
-			return err
-		}
-		cfg, err := config.Load(root)
+		cfg, err := config.LoadGlobal()
 		if err != nil {
 			return err
 		}
@@ -781,7 +765,7 @@ func truncateStr(s string, max int) string {
 
 // reprobeRegistryVisibility re-probes the visibility for a named registry
 // and saves the updated config if the visibility changed or the cache is stale.
-func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
+func reprobeRegistryVisibility(cfg *config.Config, name string) {
 	for i := range cfg.Registries {
 		if cfg.Registries[i].Name != name {
 			continue
@@ -802,7 +786,7 @@ func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
 		now := time.Now().UTC()
 		r.Visibility = newVis
 		r.VisibilityCheckedAt = &now
-		_ = config.Save(root, cfg) // best-effort save
+		_ = config.SaveGlobal(cfg) // best-effort save
 		return
 	}
 }
@@ -814,7 +798,7 @@ func reprobeRegistryVisibility(cfg *config.Config, name, root string) {
 // Precondition: r.IsGit() must be true before calling.
 // CloneDir may return an error if the registry is configured but not cloned yet —
 // in that case registry.yaml self-declaration is skipped (can't read from a non-existent clone).
-func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, cfgRoot string, out io.Writer) (bool, error) {
+func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, out io.Writer) (bool, error) {
 	// 1. Allowlist check — pre-trusted, no TOFU on first sync.
 	if entry, ok := moat.LookupSigningIdentity(r.URL); ok && entry.ManifestURI != "" {
 		r.Type = config.RegistryTypeMOAT
@@ -823,7 +807,7 @@ func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, cfgRoot string, ou
 			r.SigningProfile = entry.Profile
 		}
 		fmt.Fprintf(out, "Auto-upgraded %s to MOAT (allowlist match).\n", r.Name)
-		if err := config.Save(cfgRoot, cfg); err != nil {
+		if err := config.SaveGlobal(cfg); err != nil {
 			return false, fmt.Errorf("saving upgraded registry config: %w", err)
 		}
 		return true, nil
@@ -837,7 +821,7 @@ func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, cfgRoot string, ou
 		r.Type = config.RegistryTypeMOAT
 		r.ManifestURI = manifest.ManifestURI
 		fmt.Fprintf(out, "Auto-upgraded %s to MOAT (registry.yaml manifest_uri). Run `syllago registry sync --yes %s` to pin the signing identity.\n", r.Name, r.Name)
-		if err := config.Save(cfgRoot, cfg); err != nil {
+		if err := config.SaveGlobal(cfg); err != nil {
 			return false, fmt.Errorf("saving upgraded registry config: %w", err)
 		}
 		return true, nil

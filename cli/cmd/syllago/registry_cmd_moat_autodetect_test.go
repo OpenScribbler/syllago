@@ -46,7 +46,8 @@ func TestRegistryAutoMOAT_AllowlistURL_SetsManifestURI(t *testing.T) {
 		t.Fatalf("registry add failed: %v", err)
 	}
 
-	got, err := config.Load(root)
+	_ = root
+	got, err := config.LoadGlobal()
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
@@ -84,7 +85,8 @@ func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
 		t.Fatalf("registry add failed: %v", err)
 	}
 
-	got, err := config.Load(root)
+	_ = root
+	got, err := config.LoadGlobal()
 	if err != nil {
 		t.Fatalf("load config: %v", err)
 	}
