@@ -21,20 +21,24 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
-// withStubbedMoatSync swaps the package-level moatSyncFn seam. Tests that
-// use this helper MUST NOT run in parallel with each other (they mutate a
-// shared global). The pattern matches withStubbedVerifiers in
-// registry_verify_test.go.
+// withStubbedMoatSync swaps the orchestrator's SyncOneFn seam (which the
+// CLI's syncMOATRegistry now delegates to). Tests using this helper MUST NOT
+// run in parallel with each other (mutates a shared global).
+//
+// Note: install_moat_test.go and install_moat_integration_test.go still stub
+// the lower-level moatSyncFn directly, since the install path bypasses the
+// orchestrator and runs sync inline.
 func withStubbedMoatSync(
 	t *testing.T,
 	fn func(context.Context, *config.Registry, *moat.Lockfile, []byte, *moat.Fetcher, time.Time) (moat.SyncResult, error),
 ) {
 	t.Helper()
-	orig := moatSyncFn
-	moatSyncFn = fn
-	t.Cleanup(func() { moatSyncFn = orig })
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = fn
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 }
 
 // tempProjectRoot returns a temp directory used as both the project root (for
@@ -74,12 +78,15 @@ func incomingProfile() config.SigningProfile {
 }
 
 func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
-	// No t.Parallel — swaps package-level moatSyncFn.
+	// No t.Parallel — swaps package-level moatSyncFn and GlobalDirOverride.
 	root := tempProjectRoot(t)
 	pinned := incomingProfile()
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	fetchedAt := time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
@@ -106,10 +113,16 @@ func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
 	if !strings.Contains(out.String(), "verified") {
 		t.Errorf("expected 'verified' in stdout, got %q", out.String())
 	}
-	if cfg.Registries[0].ManifestETag != `"v42"` {
-		t.Errorf("ManifestETag = %q; want %q", cfg.Registries[0].ManifestETag, `"v42"`)
+	// Reload from disk — the orchestrator persists; the in-memory cfg passed
+	// in is no longer mutated since the orchestrator owns its own LoadGlobal.
+	reloaded, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("reload cfg: %v", err)
 	}
-	if cfg.Registries[0].LastFetchedAt == nil || !cfg.Registries[0].LastFetchedAt.Equal(fetchedAt) {
+	if reloaded.Registries[0].ManifestETag != `"v42"` {
+		t.Errorf("ManifestETag = %q; want %q", reloaded.Registries[0].ManifestETag, `"v42"`)
+	}
+	if reloaded.Registries[0].LastFetchedAt == nil || !reloaded.Registries[0].LastFetchedAt.Equal(fetchedAt) {
 		t.Errorf("LastFetchedAt not persisted to %s", fetchedAt)
 	}
 	// Config file should exist on disk.
@@ -129,6 +142,9 @@ func TestSyncMOAT_NotModified(t *testing.T) {
 	reg.SigningProfile = &pinned
 	reg.ManifestETag = `"v42"`
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	fetchedAt := time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
@@ -158,6 +174,9 @@ func TestSyncMOAT_TOFU_WithoutYes_ReturnsExit10(t *testing.T) {
 	root := tempProjectRoot(t)
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
@@ -176,12 +195,18 @@ func TestSyncMOAT_TOFU_WithoutYes_ReturnsExit10(t *testing.T) {
 	if code != moat.ExitMoatTOFUAcceptance {
 		t.Fatalf("exit code = %d; want %d", code, moat.ExitMoatTOFUAcceptance)
 	}
-	if cfg.Registries[0].SigningProfile != nil {
-		t.Errorf("SigningProfile should NOT be persisted on TOFU without --yes; got %+v", cfg.Registries[0].SigningProfile)
+	// Reload to confirm gated path did NOT advance trust state. The
+	// orchestrator owns persistence; the in-memory cfg is no longer mutated.
+	reloaded, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("reload cfg: %v", err)
 	}
-	// Config file should NOT be written on gated path.
-	if _, err := os.Stat(filepath.Join(root, ".syllago", "config.json")); !os.IsNotExist(err) {
-		t.Errorf("config was saved on gated path; expected no save")
+	if reloaded.Registries[0].SigningProfile != nil {
+		t.Errorf("SigningProfile should NOT be persisted on TOFU without --yes; got %+v", reloaded.Registries[0].SigningProfile)
+	}
+	// Lockfile must NOT be written on gated path.
+	if _, err := os.Stat(filepath.Join(root, ".syllago", "moat-lockfile.json")); !os.IsNotExist(err) {
+		t.Errorf("lockfile was saved on gated path; expected no save")
 	}
 	if !strings.Contains(errW.String(), "interactive approval") {
 		t.Errorf("expected TOFU actionable message on stderr, got %q", errW.String())
@@ -192,6 +217,9 @@ func TestSyncMOAT_TOFU_WithYes_PersistsProfile(t *testing.T) {
 	root := tempProjectRoot(t)
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	fetchedAt := time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
@@ -213,12 +241,16 @@ func TestSyncMOAT_TOFU_WithYes_PersistsProfile(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit code = %d; want 0", code)
 	}
-	if cfg.Registries[0].SigningProfile == nil {
+	reloaded, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("reload cfg: %v", err)
+	}
+	if reloaded.Registries[0].SigningProfile == nil {
 		t.Fatal("SigningProfile not persisted after TOFU+yes")
 	}
-	if cfg.Registries[0].SigningProfile.Subject != incomingProfile().Subject {
+	if reloaded.Registries[0].SigningProfile.Subject != incomingProfile().Subject {
 		t.Errorf("SigningProfile.Subject = %q; want %q",
-			cfg.Registries[0].SigningProfile.Subject, incomingProfile().Subject)
+			reloaded.Registries[0].SigningProfile.Subject, incomingProfile().Subject)
 	}
 	if !strings.Contains(out.String(), "tofu-accepted") {
 		t.Errorf("expected 'tofu-accepted' in stdout, got %q", out.String())
@@ -232,6 +264,9 @@ func TestSyncMOAT_ProfileChanged_ReturnsExit11(t *testing.T) {
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
@@ -252,9 +287,13 @@ func TestSyncMOAT_ProfileChanged_ReturnsExit11(t *testing.T) {
 	if code != moat.ExitMoatSigningProfileChange {
 		t.Fatalf("exit code = %d; want %d", code, moat.ExitMoatSigningProfileChange)
 	}
-	if cfg.Registries[0].SigningProfile.Subject != "repo:example/registry:ref:refs/heads/old" {
+	reloaded, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("reload cfg: %v", err)
+	}
+	if reloaded.Registries[0].SigningProfile.Subject != "repo:example/registry:ref:refs/heads/old" {
 		t.Errorf("SigningProfile should not be mutated on gated path; got %q",
-			cfg.Registries[0].SigningProfile.Subject)
+			reloaded.Registries[0].SigningProfile.Subject)
 	}
 	if !strings.Contains(errW.String(), "re-approve") {
 		t.Errorf("expected re-approve hint on stderr, got %q", errW.String())
@@ -267,6 +306,9 @@ func TestSyncMOAT_StalenessExpired_ReturnsExit13(t *testing.T) {
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
@@ -295,6 +337,9 @@ func TestSyncMOAT_VerifyError_ReturnsStructuredError(t *testing.T) {
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{}, &moat.VerifyError{
@@ -320,6 +365,9 @@ func TestSyncMOAT_TransportError_ReturnsStructuredError(t *testing.T) {
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{}, errors.New("dial tcp: connection refused")
@@ -405,6 +453,9 @@ func TestSyncMOAT_PersistenceRoundTrip(t *testing.T) {
 	reg := moatRegFixture("https://registry.example.com/manifest.json")
 	reg.SigningProfile = &pinned
 	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
 
 	fetchedAt := time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
 	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, lf *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
@@ -426,8 +477,10 @@ func TestSyncMOAT_PersistenceRoundTrip(t *testing.T) {
 		t.Fatalf("first sync failed: code=%d err=%v", code, err)
 	}
 
-	// Reload config from disk and verify ETag round-tripped.
-	reloaded, err := config.Load(root)
+	// Reload global config from disk and verify ETag round-tripped. The
+	// orchestrator persists to LoadGlobal/SaveGlobal (controlled by
+	// GlobalDirOverride in tempProjectRoot), not the project-local Load.
+	reloaded, err := config.LoadGlobal()
 	if err != nil {
 		t.Fatalf("reload config: %v", err)
 	}

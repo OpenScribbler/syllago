@@ -1,19 +1,21 @@
 package tui
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
@@ -391,50 +393,61 @@ func (a App) handleRegistryAddResult(msg registryAddMsg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmd1, cmd2)
 }
 
-// cloneFn is a package-level seam so tests can stub git clone without network.
-// Mirrors the same pattern in cmd/syllago/registry_cmd.go.
-var cloneFn = registry.Clone
-
-// doRegistryAddCmd creates a tea.Cmd that clones the registry and updates config.
-// Mirrors the CLI's registry add MOAT auto-detection: allowlist match pins the
-// signing profile before clone; a registry.yaml manifest_uri self-declaration
-// post-clone is the fallback. Both paths set Type=moat so the catalog enricher
-// will populate trust on sync.
+// doRegistryAddCmd creates a tea.Cmd that delegates to the shared
+// registryops.AddRegistry orchestrator. The TUI used to fork its own copy
+// of the add logic, which silently dropped the CLI's validation gates
+// (name format check, allowedRegistries policy enforcement, non-syllago
+// repo rejection) — bead syllago-mpold tracked that security gap. After
+// this refactor both surfaces share identical gates.
+//
+// MOAT detection: the orchestrator runs allowlist lookup + registry.yaml
+// self-declaration internally. Callers don't need to reproduce either.
+//
+// Validation errors are translated into human-readable strings for the
+// toast layer. The TUI doesn't surface structured-error codes — operators
+// get a one-line description, which is the expected presentation.
 func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
 	url := msg.url
 	name := msg.name
 	ref := msg.ref
 	isLocal := msg.isLocal
 	return func() tea.Msg {
-		var allowlistEntry *moat.AllowlistEntry
-		if !isLocal {
-			allowlistEntry, _ = moat.LookupSigningIdentity(url)
-			if err := cloneFn(url, name, ref); err != nil {
-				return registryAddDoneMsg{name: name, err: err}
-			}
-		}
-		cfg, err := config.LoadGlobal()
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
+
+		outcome, err := registryops.AddRegistry(ctx, registryops.AddOpts{
+			URL:     url,
+			Name:    name,
+			Ref:     ref,
+			IsLocal: isLocal,
+		})
 		if err != nil {
-			return registryAddDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+			return registryAddDoneMsg{name: name, err: humaniseAddErr(err, name, url)}
 		}
-		newRegistry := config.Registry{Name: name, URL: url, Ref: ref}
-		if allowlistEntry != nil && allowlistEntry.Profile != nil {
-			newRegistry.Type = config.RegistryTypeMOAT
-			newRegistry.SigningProfile = allowlistEntry.Profile
-			newRegistry.ManifestURI = allowlistEntry.ManifestURI
-		} else if !isLocal {
-			if dir, cloneDirErr := registry.CloneDir(name); cloneDirErr == nil {
-				if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil && manifest.ManifestURI != "" {
-					newRegistry.Type = config.RegistryTypeMOAT
-					newRegistry.ManifestURI = manifest.ManifestURI
-				}
-			}
-		}
-		cfg.Registries = append(cfg.Registries, newRegistry)
-		if err := config.SaveGlobal(cfg); err != nil {
-			return registryAddDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
-		}
-		return registryAddDoneMsg{name: name, isMOAT: newRegistry.IsMOAT()}
+		return registryAddDoneMsg{name: outcome.Registry.Name, isMOAT: outcome.Registry.IsMOAT()}
+	}
+}
+
+// humaniseAddErr converts orchestrator sentinel errors into the short
+// strings the toast layer expects. Mirrors the CLI's classifyAddError but
+// without the structured-error wrapping (the TUI doesn't render exit codes
+// or JSON shapes).
+func humaniseAddErr(err error, name, url string) error {
+	switch {
+	case errors.Is(err, registryops.ErrAddInvalidName):
+		return fmt.Errorf("registry name %q is invalid", name)
+	case errors.Is(err, registryops.ErrAddDuplicate):
+		return fmt.Errorf("registry %q already exists", name)
+	case errors.Is(err, registryops.ErrAddNotAllowed):
+		return fmt.Errorf("registry URL %q is not in the allowedRegistries list", url)
+	case errors.Is(err, registryops.ErrAddNotSyllago):
+		return fmt.Errorf("not a syllago registry — clone removed")
+	case errors.Is(err, registryops.ErrAddCloneFailed):
+		return err
+	case errors.Is(err, registryops.ErrAddSaveFailed):
+		return err
+	default:
+		return err
 	}
 }
 
@@ -577,74 +590,20 @@ func (a App) handleRegistryRemoveDone(msg registryRemoveDoneMsg) (tea.Model, tea
 	return a, tea.Batch(cmd1, cmd2)
 }
 
-// doRegistryRemoveCmd creates a tea.Cmd that removes a registry clone and updates config.
-// LoadAndScan merges three config sources (global + contentRoot + projectRoot), so the
-// registry may live in any of them. We remove it from all sources that contain it and
-// return an error if no source contained the name — silent success on a mis-keyed
-// remove is the bug class we're guarding against.
+// doRegistryRemoveCmd is a thin wrapper around registryops.RemoveRegistry.
+// Registries live in global config only (decision 2026-04-24, syllago-fhtxa);
+// the orchestrator owns load/filter/save plus best-effort clone deletion.
 func (a App) doRegistryRemoveCmd(name string) tea.Cmd {
-	contentRoot := a.contentRoot
-	projectRoot := a.projectRoot
 	return func() tea.Msg {
-		matched := false
-
-		// Remove from project-local configs (contentRoot and projectRoot).
-		seen := map[string]bool{}
-		for _, root := range []string{contentRoot, projectRoot} {
-			if root == "" || seen[root] || !config.Exists(root) {
-				continue
-			}
-			seen[root] = true
-			localCfg, err := config.Load(root)
-			if err != nil {
-				continue
-			}
-			var filtered []config.Registry
-			for _, r := range localCfg.Registries {
-				if r.Name != name {
-					filtered = append(filtered, r)
-				}
-			}
-			if len(filtered) == len(localCfg.Registries) {
-				continue // registry not in this source
-			}
-			matched = true
-			localCfg.Registries = filtered
-			if err := config.Save(root, localCfg); err != nil {
-				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving local config: %w", err)}
-			}
-		}
-
-		// Remove from global config.
-		cfg, err := config.LoadGlobal()
+		outcome, err := registryops.RemoveRegistry(name)
 		if err != nil {
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("loading config: %w", err)}
+			return registryRemoveDoneMsg{name: name, err: err}
 		}
-		var filtered []config.Registry
-		for _, r := range cfg.Registries {
-			if r.Name != name {
-				filtered = append(filtered, r)
-			}
+		if outcome.CloneRemoveErr != nil {
+			// Surface as a soft error so the toast tells the user the config
+			// was updated but the on-disk clone needs manual cleanup.
+			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removed from config; clone cleanup failed: %w", outcome.CloneRemoveErr)}
 		}
-		if len(filtered) != len(cfg.Registries) {
-			matched = true
-			cfg.Registries = filtered
-			if err := config.SaveGlobal(cfg); err != nil {
-				return registryRemoveDoneMsg{name: name, err: fmt.Errorf("saving config: %w", err)}
-			}
-		}
-
-		if !matched {
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("registry %q not found in any config source", name)}
-		}
-
-		// Only delete the clone after at least one config source acknowledged the
-		// removal. This keeps state consistent on a mis-keyed remove: no orphaned
-		// config entry pointing at a deleted clone, no silent success.
-		if err := registry.Remove(name); err != nil {
-			return registryRemoveDoneMsg{name: name, err: fmt.Errorf("removing clone: %w", err)}
-		}
-
 		return registryRemoveDoneMsg{name: name}
 	}
 }

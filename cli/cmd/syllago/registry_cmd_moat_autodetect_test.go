@@ -10,14 +10,16 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
-// stubClone overrides cloneFn to create a fake clone dir at registry.CloneDir(name)
-// containing a registry.yaml with the given content. Restores on t.Cleanup.
+// stubClone swaps the orchestrator's clone seam (registryops.CloneFn) with a
+// stub that creates a fake clone dir at registry.CloneDir(name) containing a
+// registry.yaml with the given content. Restored on t.Cleanup.
 func stubClone(t *testing.T, yamlContent string) {
 	t.Helper()
-	orig := cloneFn
-	cloneFn = func(url, name, ref string) error {
+	orig := registryops.CloneFn
+	registryops.CloneFn = func(url, name, ref string) error {
 		cloneDir, err := registry.CloneDir(name)
 		if err != nil {
 			return err
@@ -27,7 +29,7 @@ func stubClone(t *testing.T, yamlContent string) {
 		}
 		return os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte(yamlContent), 0644)
 	}
-	t.Cleanup(func() { cloneFn = orig })
+	t.Cleanup(func() { registryops.CloneFn = orig })
 }
 
 func TestRegistryAutoMOAT_AllowlistURL_SetsManifestURI(t *testing.T) {

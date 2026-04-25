@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 // testAppWithInstalledRule builds an App with one library rule already installed
@@ -294,13 +295,13 @@ func TestActions_HandleUninstall_SingleProviderOpensConfirm(t *testing.T) {
 	}
 }
 
-// stubCloneFn overrides cloneFn to create a fake clone dir at
-// registry.CloneDir(name) containing registry.yaml with yamlContent.
-// Restores on t.Cleanup. Mirrors cmd/syllago/registry_cmd_moat_autodetect_test.go.
+// stubCloneFn swaps the orchestrator's clone seam (registryops.CloneFn) with
+// a stub that creates a fake clone dir at registry.CloneDir(name) containing
+// registry.yaml with yamlContent. Restores on t.Cleanup.
 func stubCloneFn(t *testing.T, yamlContent string) {
 	t.Helper()
-	orig := cloneFn
-	cloneFn = func(url, name, ref string) error {
+	orig := registryops.CloneFn
+	registryops.CloneFn = func(url, name, ref string) error {
 		cloneDir, err := registry.CloneDir(name)
 		if err != nil {
 			return err
@@ -310,7 +311,7 @@ func stubCloneFn(t *testing.T, yamlContent string) {
 		}
 		return os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte(yamlContent), 0o644)
 	}
-	t.Cleanup(func() { cloneFn = orig })
+	t.Cleanup(func() { registryops.CloneFn = orig })
 }
 
 // TestDoRegistryAddCmd_AllowlistSetsMOATFields verifies the allowlist path:
@@ -462,16 +463,20 @@ func TestDoRegistryAddCmd_NonMOATStaysUnset(t *testing.T) {
 	}
 }
 
-// TestDoRegistryRemoveCmd_RemovesFromLocalConfig is the regression test for the
-// bug where doRegistryRemoveCmd only wrote to the global config, leaving a
-// registry that lived in a project-local config untouched after removal.
-func TestDoRegistryRemoveCmd_RemovesFromLocalConfig(t *testing.T) {
+// TestDoRegistryRemoveCmd_RemovesFromGlobalConfig verifies the orchestrator
+// path: a registry in global config is pruned and the global config is saved.
+//
+// Pre-S1 the TUI also wrote to project-local configs as a workaround for an
+// inconsistency. After S1 (registries-are-global) project-local registries
+// can't exist; after S2 (orchestrator) the TUI delegates to
+// registryops.RemoveRegistry which only touches global. This test pins the
+// new contract.
+func TestDoRegistryRemoveCmd_RemovesFromGlobalConfig(t *testing.T) {
 	// Not parallel: mutates global state (registry.CacheDirOverride, config.GlobalDirOverride).
 	projectRoot := t.TempDir()
 	globalDir := t.TempDir()
 	cacheDir := t.TempDir()
 
-	// Redirect global config and registry cache away from the real home.
 	origGlobal := config.GlobalDirOverride
 	config.GlobalDirOverride = globalDir
 	t.Cleanup(func() { config.GlobalDirOverride = origGlobal })
@@ -480,12 +485,11 @@ func TestDoRegistryRemoveCmd_RemovesFromLocalConfig(t *testing.T) {
 	registry.CacheDirOverride = cacheDir
 	t.Cleanup(func() { registry.CacheDirOverride = origCache })
 
-	// Write a registry into the project-local config only (not global).
-	localCfg := &config.Config{
+	globalCfg := &config.Config{
 		Registries: []config.Registry{{Name: "my-reg", URL: "https://example.com/repo.git"}},
 	}
-	if err := config.Save(projectRoot, localCfg); err != nil {
-		t.Fatalf("setup: config.Save: %v", err)
+	if err := config.SaveGlobal(globalCfg); err != nil {
+		t.Fatalf("setup: config.SaveGlobal: %v", err)
 	}
 
 	app := NewApp(
@@ -508,14 +512,13 @@ func TestDoRegistryRemoveCmd_RemovesFromLocalConfig(t *testing.T) {
 		t.Fatalf("expected nil err, got %v", done.err)
 	}
 
-	// The registry must be gone from the project-local config.
-	result, err := config.Load(projectRoot)
+	result, err := config.LoadGlobal()
 	if err != nil {
-		t.Fatalf("config.Load: %v", err)
+		t.Fatalf("config.LoadGlobal: %v", err)
 	}
 	for _, r := range result.Registries {
 		if r.Name == "my-reg" {
-			t.Errorf("registry still present in project-local config after removal")
+			t.Errorf("registry still present in global config after removal")
 		}
 	}
 }
@@ -545,11 +548,11 @@ func TestDoRegistryRemoveCmd_FailsLoudOnMismatch(t *testing.T) {
 	registry.CacheDirOverride = cacheDir
 	t.Cleanup(func() { registry.CacheDirOverride = origCache })
 
-	// Config has the registry under its full identity.
-	if err := config.Save(projectRoot, &config.Config{
+	// Global config has the registry under its full identity.
+	if err := config.SaveGlobal(&config.Config{
 		Registries: []config.Registry{{Name: "owner/full-identity", URL: "https://example.com/repo.git"}},
 	}); err != nil {
-		t.Fatalf("setup: config.Save: %v", err)
+		t.Fatalf("setup: config.SaveGlobal: %v", err)
 	}
 
 	app := NewApp(
@@ -571,7 +574,7 @@ func TestDoRegistryRemoveCmd_FailsLoudOnMismatch(t *testing.T) {
 	}
 
 	// And the registry must STILL be in config — we did not partial-write.
-	loaded, _ := config.Load(projectRoot)
+	loaded, _ := config.LoadGlobal()
 	if len(loaded.Registries) != 1 || loaded.Registries[0].Name != "owner/full-identity" {
 		t.Errorf("expected registry preserved on mismatch, got %+v", loaded.Registries)
 	}

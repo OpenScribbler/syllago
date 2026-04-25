@@ -1,17 +1,15 @@
 package tui
 
-// MOAT-aware registry sync for the TUI. Mirrors `syllago registry sync` so
-// pressing Sync / clicking the gallery's sync action runs the same
-// fetch+verify+cache+persist flow the CLI does — without that, MOAT
+// MOAT-aware registry sync presentation adapter. Wraps registryops.SyncOne
+// (the shared orchestrator) into a tea.Cmd so the gallery's Sync action runs
+// the same fetch+verify+cache+persist flow the CLI does. Without that, MOAT
 // registries only ever show Trust: Unknown because the cache that
 // EnrichFromMOATManifests reads is never populated.
 //
-// Layering: this file imports moat + config directly. The TUI is normally a
-// presentation layer (.claude/rules/tui-elm.md rule #8), but registry sync
-// orchestration is the same shape on both surfaces and duplicating the
-// dispatcher in cmd/syllago would split the persistence contract across two
-// places. Calling moat + config from inside a tea.Cmd keeps the I/O off the
-// event loop, which is what the rule actually guards against.
+// All persistence (config, lockfile, manifest cache) happens inside
+// registryops.SyncOne — this file only translates outcomes into tea.Msg
+// variants the App.Update loop knows how to route. See bead syllago-nb5ed
+// for the orchestrator extraction.
 
 import (
 	"context"
@@ -22,6 +20,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 // moatSyncDoneMsg reports the outcome of a MOAT-aware sync. Exactly one of
@@ -53,7 +52,7 @@ type moatSyncDoneMsg struct {
 	stale bool
 }
 
-// moatSyncFn is the indirection point so tests can stub the end-to-end
+// moatSyncFnTUI is the indirection point so tests can stub the end-to-end
 // orchestrator without standing up an httptest + sigstore bundle pair.
 // Production calls runMOATSync.
 var moatSyncFnTUI func(ctx context.Context, name, projectRoot string, acceptTOFU bool) tea.Msg = runMOATSync
@@ -71,97 +70,42 @@ func (a App) doMOATSyncCmd(name string, acceptTOFU bool) tea.Cmd {
 	}
 }
 
-// runMOATSync performs the sync end-to-end and shapes the result into a
-// moatSyncDoneMsg. The function is exported (lowercase) only to the package
-// so tests can stub it via moatSyncFnTUI.
-//
-// projectRoot is the root the lockfile is co-located with (matches the CLI
-// dispatcher's `root` arg from `findContentRepoRoot`). cacheDir is always
-// the global syllago dir — manifest cache is shared across projects.
-//
-// Persistence happens here, not in handleSync, because the sync depends on
-// values (pinned profile, ETag, fetched_at) that must be written together.
-// Splitting the persistence across the goroutine and the message handler
-// would re-introduce the kind of partial-success bug the registry-remove
-// path was just hardened against.
+// runMOATSync calls the shared orchestrator and shapes the outcome into a
+// moatSyncDoneMsg. projectRoot is the lockfile root (matches the CLI
+// dispatcher's cfgRoot from findContentRepoRoot); the manifest cache lives
+// under config.GlobalDirPath() and the orchestrator resolves it itself.
 func runMOATSync(ctx context.Context, name, projectRoot string, acceptTOFU bool) tea.Msg {
-	cfg, err := config.LoadGlobal()
+	outcome, err := registryops.SyncOne(ctx, name, registryops.SyncOpts{
+		AcceptTOFU:   acceptTOFU,
+		LockfileRoot: projectRoot,
+		Now:          time.Now(),
+	})
 	if err != nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("load global config: %w", err)}
-	}
-	var reg *config.Registry
-	for i := range cfg.Registries {
-		if cfg.Registries[i].Name == name {
-			reg = &cfg.Registries[i]
-			break
+		if status, ok := registryops.IsTrustedRootStale(err); ok {
+			return moatSyncDoneMsg{name: name, err: fmt.Errorf("bundled trusted root unusable (%s); run `syllago update`", status.String())}
 		}
-	}
-	if reg == nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("registry %q not found in global config", name)}
-	}
-	if !reg.IsMOAT() {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("registry %q is not MOAT-typed", name)}
-	}
-
-	now := time.Now()
-	rootInfo := moat.BundledTrustedRoot(now)
-	switch rootInfo.Status {
-	case moat.TrustedRootStatusExpired, moat.TrustedRootStatusMissing, moat.TrustedRootStatusCorrupt:
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("bundled trusted root unusable (%s); run `syllago update`", rootInfo.Status.String())}
-	}
-
-	cacheDir, err := config.GlobalDirPath()
-	if err != nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("resolve cache dir: %w", err)}
-	}
-
-	lockfilePath := moat.LockfilePath(projectRoot)
-	lf, err := moat.LoadLockfile(lockfilePath)
-	if err != nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("load lockfile: %w", err)}
-	}
-
-	res, err := moat.Sync(ctx, reg, lf, rootInfo.Bytes, nil, now)
-	if err != nil {
 		return moatSyncDoneMsg{name: name, err: err}
 	}
 
-	// Map gate flags. Precedence matches the CLI dispatcher: ProfileChanged
-	// is non-recoverable from this surface; TOFU is interactive; Stale is a
-	// warning that does not block persistence (the catalog will still
-	// downgrade trust to Unsigned per attachRegistryTrust).
-	if res.ProfileChanged {
-		return moatSyncDoneMsg{name: name, profileChanged: true, manifestURL: res.ManifestURL, incomingProfile: res.IncomingProfile}
+	if outcome.GateProfileChanged {
+		return moatSyncDoneMsg{
+			name:            name,
+			profileChanged:  true,
+			manifestURL:     outcome.MoatResult.ManifestURL,
+			incomingProfile: outcome.MoatResult.IncomingProfile,
+		}
 	}
-	if res.IsTOFU && !acceptTOFU {
-		return moatSyncDoneMsg{name: name, requiresTOFU: true, manifestURL: res.ManifestURL, incomingProfile: res.IncomingProfile}
-	}
-	// StalenessExpired falls through to persistence: the fresh manifest is
-	// still saved (the catalog enricher will downgrade items to Unsigned
-	// because the staleness clock is past expiry), and the stale flag is
-	// informational so the user knows why trust badges downgraded.
-
-	// Happy / TOFU-accepted path: persist trust state.
-	if res.IsTOFU {
-		profile := res.IncomingProfile
-		reg.SigningProfile = &profile
-	}
-	reg.ManifestETag = res.ETag
-	fetchedAt := res.FetchedAt
-	reg.LastFetchedAt = &fetchedAt
-
-	if err := config.SaveGlobal(cfg); err != nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("save config: %w", err)}
-	}
-	if err := lf.Save(lockfilePath); err != nil {
-		return moatSyncDoneMsg{name: name, err: fmt.Errorf("save lockfile: %w", err)}
-	}
-
-	if !res.NotModified && len(res.ManifestBytes) > 0 && len(res.BundleBytes) > 0 {
-		if err := moat.WriteManifestCache(cacheDir, reg.Name, res.ManifestBytes, res.BundleBytes); err != nil {
-			return moatSyncDoneMsg{name: name, err: fmt.Errorf("write manifest cache: %w", err)}
+	if outcome.GateTOFUNeeded {
+		return moatSyncDoneMsg{
+			name:            name,
+			requiresTOFU:    true,
+			manifestURL:     outcome.MoatResult.ManifestURL,
+			incomingProfile: outcome.MoatResult.IncomingProfile,
 		}
 	}
 
-	return moatSyncDoneMsg{name: name, stale: res.Staleness == moat.StalenessExpired}
+	return moatSyncDoneMsg{
+		name:  name,
+		stale: outcome.MoatResult.Staleness == moat.StalenessExpired,
+	}
 }

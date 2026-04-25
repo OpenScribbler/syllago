@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -10,22 +11,16 @@ import (
 
 	"time"
 
-	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
-
-// cloneFn is a package-level seam so tests can stub git clone without network
-// access. Override in tests to pre-create the clone dir at registry.CloneDir(name).
-var cloneFn = func(url, name, ref string) error {
-	return registry.Clone(url, name, ref)
-}
 
 var registryCmd = &cobra.Command{
 	Use:   "registry",
@@ -58,7 +53,10 @@ var registryAddCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		gitURL := args[0]
 
-		// Expand short aliases before any other processing
+		// Expand short aliases before any other processing. The orchestrator
+		// expects an already-resolved URL — alias expansion is a CLI
+		// presentation step ("Expanding alias..." line) that the TUI
+		// doesn't replicate.
 		if fullURL, wasExpanded := registry.ExpandAlias(gitURL); wasExpanded {
 			fmt.Fprintf(output.Writer, "Expanding alias %q → %s\n", gitURL, fullURL)
 			gitURL = fullURL
@@ -77,42 +75,21 @@ var registryAddCmd = &cobra.Command{
 		rawSigningFlags = trimAllFlagValues(rawSigningFlags)
 		rawSigningFlags.UserRequestedMOAT = moatFlag || anySigningFlagSet(rawSigningFlags)
 
-		// Resolve signing profile BEFORE the clone so a hard-fail doesn't
-		// leave a half-cloned orphan on disk. The signing resolution is
-		// cheap (local allowlist lookup + flag validation) so running it
-		// first is free.
+		// Resolve signing profile BEFORE delegating to the orchestrator so
+		// flag validation errors surface before any clone attempt. Cheap —
+		// local allowlist lookup + flag validation only.
 		signing, err := resolveSigningProfile(gitURL, rawSigningFlags)
 		if err != nil {
 			return err
 		}
 
-		name := nameFlag
-		if name == "" {
-			name = registry.NameFromURL(gitURL)
-		}
-		if !catalog.IsValidRegistryName(name) {
-			return output.NewStructuredError(output.ErrRegistryInvalid, fmt.Sprintf("registry name %q is invalid", name), "Use letters, numbers, - and _ with optional owner/repo format")
-		}
+		// Pre-flight peek at cfg only to decide which security banner to
+		// print (prominent for first registry, brief otherwise). The
+		// orchestrator does the authoritative load + duplicate check below.
+		cfgPreview, _ := config.LoadGlobal()
+		isFirstRegistry := cfgPreview != nil && len(cfgPreview.Registries) == 0
 
-		cfg, err := config.LoadGlobal()
-		if err != nil {
-			return err
-		}
-
-		// Check for duplicate name
-		for _, r := range cfg.Registries {
-			if r.Name == name {
-				return output.NewStructuredError(output.ErrRegistryDuplicate, fmt.Sprintf("registry %q already exists", name), "Use a different --name or remove it first")
-			}
-		}
-
-		// Enforce allowedRegistries policy
-		if !cfg.IsRegistryAllowed(gitURL) {
-			return output.NewStructuredError(output.ErrRegistryNotAllowed, fmt.Sprintf("registry URL %q is not in the allowedRegistries list", gitURL), "Contact your team lead to add it to .syllago/config.json")
-		}
-
-		// Security warning: prominent box on first registry, brief reminder otherwise
-		if len(cfg.Registries) == 0 {
+		if isFirstRegistry {
 			fmt.Fprintf(output.Writer, `
 ┌──────────────────────────────────────────────────────┐
 │                   SECURITY NOTICE                    │
@@ -135,107 +112,49 @@ var registryAddCmd = &cobra.Command{
 		}
 
 		// Announce signing-identity resolution before the clone so the
-		// operator sees the pinning decision in context with the clone.
+		// operator sees the pinning decision in context.
 		if msg := describeProfileSource(signing, gitURL); msg != "" {
 			fmt.Fprintf(output.Writer, "%s\n", msg)
 		}
 
-		// Clone the registry
-		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, name)
-		if err := cloneFn(gitURL, name, refFlag); err != nil {
-			return err
+		opts := registryops.AddOpts{
+			URL:  gitURL,
+			Name: nameFlag,
+			Ref:  refFlag,
+		}
+		if signing != nil && signing.Profile != nil {
+			opts.SigningProfile = signing.Profile
+			opts.SigningManifestURI = signing.ManifestURI
 		}
 
-		// Smart detection: check if this is a proper syllago registry.
-		dir, _ := registry.CloneDir(name)
+		// Resolve the effective name now (matches orchestrator's derivation)
+		// so the "Cloning X as Y" line matches what gets persisted.
+		effectiveName := nameFlag
+		if effectiveName == "" {
+			effectiveName = registry.NameFromURL(gitURL)
+		}
+		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, effectiveName)
 
-		// Decision #3: When no registry.yaml exists, run the content analyzer
-		// to generate one in the cache directory. This enables the scanner to
-		// discover content regardless of how the repo is organized.
-		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil {
-			cfg := analyzer.DefaultConfig()
-			a := analyzer.New(cfg)
-			result, analyzeErr := a.Analyze(dir)
-			if analyzeErr == nil && len(result.AllItems()) > 0 {
-				_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
-			}
+		outcome, err := registryops.AddRegistry(cmd.Context(), opts)
+		if err != nil {
+			return classifyAddError(err, effectiveName, gitURL, outcome)
 		}
 
-		scanResult := catalog.ScanNativeContent(dir)
-
-		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
-			// Before rejecting, check if the repo has indexed items via registry.yaml.
-			// A repo with a manifest.Items list is a valid indexed native registry.
-			manifest, _ := registry.LoadManifestFromDir(dir)
-			if manifest == nil || len(manifest.Items) == 0 {
-				fmt.Fprintf(output.ErrWriter, "\nThis repo doesn't appear to be a syllago registry.\n")
-				fmt.Fprintf(output.ErrWriter, "Found provider-native content:\n\n")
-				for _, pc := range scanResult.Providers {
-					fmt.Fprintf(output.ErrWriter, "  %s:\n", pc.ProviderName)
-					for typeLabel, items := range pc.Items {
-						fmt.Fprintf(output.ErrWriter, "    %s: %d item(s)\n", typeLabel, len(items))
-					}
-				}
-				fmt.Fprintf(output.ErrWriter, "\nThis content cannot be added as a registry (registries require syllago format).\n")
-				fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
-				_ = os.RemoveAll(dir)
-				return output.NewStructuredError(output.ErrRegistryInvalid, "not a syllago registry -- clone removed", "This content cannot be added as a registry (registries require syllago format)")
-			}
-		} else if !scanResult.HasSyllagoStructure && len(scanResult.Providers) == 0 {
-			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", name)
+		if outcome.NoContentFound {
+			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", outcome.Registry.Name)
 		}
 
-		// Probe visibility from hosting platform API
-		probeResult, _ := registry.ProbeVisibility(gitURL)
-
-		// Check manifest declaration and resolve (stricter wins)
-		manifestDecl := ""
-		if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
-			manifestDecl = manifest.Visibility
-		}
-		visibility := registry.ResolveVisibility(probeResult, manifestDecl)
-		now := time.Now().UTC()
-
-		if registry.IsPrivate(visibility) {
+		if registry.IsPrivate(outcome.Visibility) {
 			fmt.Fprintf(output.Writer, "Visibility: private (content from this registry will be tainted)\n")
 		} else {
 			fmt.Fprintf(output.Writer, "Visibility: public\n")
 		}
 
-		// Save to config. A populated signing profile also flips the
-		// registry Type to "moat" — the verifier and install pipeline key
-		// on Type, so persisting both together keeps them in sync.
-		newRegistry := config.Registry{
-			Name:                name,
-			URL:                 gitURL,
-			Ref:                 refFlag,
-			Visibility:          visibility,
-			VisibilityCheckedAt: &now,
-		}
-		if signing != nil && signing.Profile != nil {
-			newRegistry.Type = config.RegistryTypeMOAT
-			newRegistry.SigningProfile = signing.Profile
-			newRegistry.ManifestURI = signing.ManifestURI // from allowlist; empty for flag-sourced profiles
-		}
-		// MOAT self-declaration: if registry.yaml declares manifest_uri and the
-		// allowlist didn't already provide a signing profile, mark as MOAT.
-		// First sync will require --yes (TOFU — per spec §Registry Trust).
-		if signing == nil || signing.Profile == nil {
-			if selfDeclManifest, _ := registry.LoadManifestFromDir(dir); selfDeclManifest != nil && selfDeclManifest.ManifestURI != "" {
-				newRegistry.Type = config.RegistryTypeMOAT
-				newRegistry.ManifestURI = selfDeclManifest.ManifestURI
-				fmt.Fprintf(output.Writer, "MOAT compliance detected via registry.yaml. Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", name)
-			}
-		}
-		cfg.Registries = append(cfg.Registries, newRegistry)
-		if err := config.SaveGlobal(cfg); err != nil {
-			// Config save failed — clean up the clone so it doesn't become orphaned.
-			dir, _ := registry.CloneDir(name)
-			_ = os.RemoveAll(dir)
-			return output.NewStructuredErrorDetail(output.ErrRegistrySaveFailed, "saving registry config", "Check write permissions on .syllago/config.json", err.Error())
+		if outcome.SelfDeclaredMOAT {
+			fmt.Fprintf(output.Writer, "MOAT compliance detected via registry.yaml. Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", outcome.Registry.Name)
 		}
 
-		fmt.Fprintf(output.Writer, "Added registry: %s\n", name)
+		fmt.Fprintf(output.Writer, "Added registry: %s\n", outcome.Registry.Name)
 
 		// SAND-003: Offer to add registry domain to sandbox allowlist.
 		parsed, parseErr := url.Parse(gitURL)
@@ -247,6 +166,11 @@ var registryAddCmd = &cobra.Command{
 			var answer string
 			fmt.Fscan(os.Stdin, &answer)
 			if strings.ToLower(strings.TrimSpace(answer)) == "y" {
+				cfg, loadErr := config.LoadGlobal()
+				if loadErr != nil {
+					fmt.Fprintf(output.Writer, "Warning: failed to load config for sandbox update: %s\n", loadErr)
+					return nil
+				}
 				alreadyPresent := false
 				for _, d := range cfg.Sandbox.AllowedDomains {
 					if d == host {
@@ -269,6 +193,32 @@ var registryAddCmd = &cobra.Command{
 	},
 }
 
+// classifyAddError maps the orchestrator's sentinel errors to the CLI's
+// structured-error codes. Each branch produces the same CLI surface the
+// pre-extraction RunE produced — exit codes, JSON shapes, error codes — so
+// downstream callers (CI, scripts) don't notice the refactor.
+func classifyAddError(err error, name, url string, outcome registryops.AddOutcome) error {
+	switch {
+	case errors.Is(err, registryops.ErrAddInvalidName):
+		return output.NewStructuredError(output.ErrRegistryInvalid, fmt.Sprintf("registry name %q is invalid", name), "Use letters, numbers, - and _ with optional owner/repo format")
+	case errors.Is(err, registryops.ErrAddDuplicate):
+		return output.NewStructuredError(output.ErrRegistryDuplicate, fmt.Sprintf("registry %q already exists", name), "Use a different --name or remove it first")
+	case errors.Is(err, registryops.ErrAddNotAllowed):
+		return output.NewStructuredError(output.ErrRegistryNotAllowed, fmt.Sprintf("registry URL %q is not in the allowedRegistries list", url), "Contact your team lead to add it to .syllago/config.json")
+	case errors.Is(err, registryops.ErrAddNotSyllago):
+		fmt.Fprintf(output.ErrWriter, "\nThis repo doesn't appear to be a syllago registry.\n")
+		fmt.Fprintf(output.ErrWriter, "This content cannot be added as a registry (registries require syllago format).\n")
+		fmt.Fprintf(output.ErrWriter, "To add this content to your library, use: syllago add <path> (coming soon)\n")
+		return output.NewStructuredError(output.ErrRegistryInvalid, "not a syllago registry -- clone removed", "This content cannot be added as a registry (registries require syllago format)")
+	case errors.Is(err, registryops.ErrAddSaveFailed):
+		return output.NewStructuredErrorDetail(output.ErrRegistrySaveFailed, "saving registry config", "Check write permissions on .syllago/config.json", err.Error())
+	case errors.Is(err, registryops.ErrAddCloneFailed):
+		return err // already shaped — git clone errors propagate as-is
+	default:
+		return err
+	}
+}
+
 var registryRemoveCmd = &cobra.Command{
 	Use:     "remove <name>",
 	Short:   "Remove a registry and delete its local clone",
@@ -277,31 +227,20 @@ var registryRemoveCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		cfg, err := config.LoadGlobal()
+		outcome, err := registryops.RemoveRegistry(name)
 		if err != nil {
-			return err
-		}
-
-		found := false
-		var filtered []config.Registry
-		for _, r := range cfg.Registries {
-			if r.Name == name {
-				found = true
-				continue
+			switch {
+			case errors.Is(err, registryops.ErrRemoveNotFound):
+				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
+			case errors.Is(err, registryops.ErrRemoveSaveFailed):
+				return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving config after registry removal", "Check write permissions on .syllago/config.json", err.Error())
+			default:
+				return err
 			}
-			filtered = append(filtered, r)
-		}
-		if !found {
-			return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 		}
 
-		cfg.Registries = filtered
-		if err := config.SaveGlobal(cfg); err != nil {
-			return output.NewStructuredErrorDetail(output.ErrConfigSave, "saving config after registry removal", "Check write permissions on .syllago/config.json", err.Error())
-		}
-
-		if err := registry.Remove(name); err != nil {
-			fmt.Fprintf(output.ErrWriter, "Warning: could not delete clone for %q: %s\n", name, err)
+		if outcome.CloneRemoveErr != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: could not delete clone for %q: %s\n", name, outcome.CloneRemoveErr)
 		}
 
 		fmt.Fprintf(output.Writer, "Removed registry: %s\n", name)

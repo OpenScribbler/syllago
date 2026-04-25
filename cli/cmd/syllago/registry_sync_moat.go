@@ -1,21 +1,23 @@
 package main
 
-// MOAT registry-sync dispatcher (ADR 0007 Phase 2a, bead syllago-gj7ad).
+// MOAT registry-sync presentation adapter (ADR 0007 Phase 2a, bead syllago-gj7ad
+// for the original; bead syllago-nb5ed for the refactor that moved the
+// orchestrator into internal/registryops).
 //
 // This file is the TTY-owner for `syllago registry sync <name>` when the
-// registry is MOAT-backed. It composes the moat.Sync orchestrator with the
-// interactive/non-interactive context only the CLI knows about:
+// registry is MOAT-backed. It composes registryops.SyncOne — the shared
+// orchestrator — with the interactive/non-interactive context only the CLI
+// knows about:
 //
-//   - Maps SyncResult flags (IsTOFU, ProfileChanged, Staleness) to the G-18
-//     exit codes (10 / 11 / 13).
-//   - Persists trust state on success (reg.SigningProfile on TOFU accept,
-//     reg.ManifestETag on every successful fetch, lockfile on every success).
-//   - Emits a single human line on happy paths; the stderr actionable message
-//     on gated paths follows NonInteractiveFailure.Message() so pipelines can
-//     grep by the kebab-case label.
+//   - Maps SyncOutcome flags to the G-18 exit codes (10 / 11 / 13).
+//   - Emits a single human stdout line on the happy path; the stderr
+//     actionable message on gated paths follows NonInteractiveFailure.Message()
+//     so pipelines can grep by the kebab-case label.
+//   - Wraps orchestrator errors in CLI-shaped structured errors.
 //
-// The moat package itself takes no write-access to the config file — that
-// isolation is deliberate, and every persistence decision lives here.
+// All persistence (config, lockfile, manifest cache) happens inside
+// registryops.SyncOne — this file does not touch the on-disk state, exactly
+// because it shares that logic with the TUI.
 
 import (
 	"context"
@@ -27,14 +29,22 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
-// moatSyncFn is a package-level seam so tests can stub the end-to-end sync
-// without spinning up an httptest server. Production calls moat.Sync.
+// moatSyncFn is the low-level test seam used by install_moat.go (which runs
+// its own sync inline rather than going through the orchestrator). The
+// `syllago registry sync` path uses registryops.SyncOneFn instead.
+//
+// Keeping both seams is deliberate: install needs to control the sync ↔
+// install ordering itself, while the registry-sync command can delegate the
+// whole orchestration. Tests for either path stub their own seam.
 var moatSyncFn = moat.Sync
 
 // syncMOATRegistry runs one MOAT sync against `reg` and returns a
-// NonInteractiveFailure-shaped exit code. Contract:
+// NonInteractiveFailure-shaped exit code.
+//
+// Returns:
 //
 //	(0, nil)     — happy path (verified, fresh, pinned match or TOFU+yes), or
 //	              304 short-circuit. Caller proceeds normally.
@@ -44,19 +54,8 @@ var moatSyncFn = moat.Sync
 //	(0, err)     — transport, parse, or cryptographic failure. Caller surfaces
 //	              the structured error via cobra's normal error path.
 //
-// Side effects (only on the (0, nil) return path):
-//   - lockfile.registries[manifest_uri].fetched_at is advanced.
-//   - lockfile.revoked_hashes is merged additively with registry-source
-//     revocations from the fresh manifest.
-//   - reg.ManifestETag is set to the ETag returned by the server, so the
-//     next Sync can send If-None-Match.
-//   - On TOFU+yes, reg.SigningProfile is set to the observed IncomingProfile.
-//   - cfg is saved (reg is a pointer into cfg.Registries).
-//
-// On a gated (code != 0) or errored return, lockfile and cfg are NOT saved.
-// The caller's retry (interactive approval, manifest refresh) must re-run
-// sync from scratch — partial persistence would silently advance trust state
-// without operator acknowledgement.
+// All persistence happens inside registryops.SyncOne — see that function's
+// doc for the side-effect list.
 func syncMOATRegistry(
 	ctx context.Context,
 	out, errW io.Writer,
@@ -73,26 +72,21 @@ func syncMOATRegistry(
 		return 0, fmt.Errorf("syncMOATRegistry: registry %q is not MOAT", reg.Name)
 	}
 
-	rootInfo := moat.BundledTrustedRoot(now)
-	if rootInfo.Status == moat.TrustedRootStatusExpired ||
-		rootInfo.Status == moat.TrustedRootStatusMissing ||
-		rootInfo.Status == moat.TrustedRootStatusCorrupt {
-		return 0, output.NewStructuredErrorDetail(
-			output.ErrMoatTrustedRootStale,
-			fmt.Sprintf("bundled trusted root unusable while syncing registry %q", reg.Name),
-			"Run `syllago update` to refresh the bundled Sigstore trusted root.",
-			rootInfo.Status.String(),
-		)
-	}
-
-	lockfilePath := moat.LockfilePath(cfgRoot)
-	lf, err := moat.LoadLockfile(lockfilePath)
+	outcome, err := registryops.SyncOne(ctx, reg.Name, registryops.SyncOpts{
+		AcceptTOFU:   yes,
+		LockfileRoot: cfgRoot,
+		CacheDir:     cacheDir,
+		Now:          now,
+	})
 	if err != nil {
-		return 0, fmt.Errorf("load lockfile: %w", err)
-	}
-
-	res, err := moatSyncFn(ctx, reg, lf, rootInfo.Bytes, nil, now)
-	if err != nil {
+		if status, ok := registryops.IsTrustedRootStale(err); ok {
+			return 0, output.NewStructuredErrorDetail(
+				output.ErrMoatTrustedRootStale,
+				fmt.Sprintf("bundled trusted root unusable while syncing registry %q", reg.Name),
+				"Run `syllago update` to refresh the bundled Sigstore trusted root.",
+				status.String(),
+			)
+		}
 		var ve *moat.VerifyError
 		if errors.As(err, &ve) {
 			return 0, classifyVerifyError(reg.Name, err)
@@ -105,68 +99,26 @@ func syncMOATRegistry(
 		)
 	}
 
-	// Map SyncResult flags to NonInteractiveFailure codes. ProfileChanged
-	// always gates, regardless of --yes — re-approval requires removing and
+	// Map gate flags to NonInteractiveFailure codes. ProfileChanged always
+	// gates regardless of --yes — re-approval requires removing and
 	// re-adding the registry interactively.
-	if res.ProfileChanged {
+	if outcome.GateProfileChanged {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureSigningProfileChange.Message())
 		return moat.ExitMoatSigningProfileChange, nil
 	}
-	if res.IsTOFU && !yes {
+	if outcome.GateTOFUNeeded {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureTOFUAcceptance.Message())
 		return moat.ExitMoatTOFUAcceptance, nil
 	}
-	if res.Staleness == moat.StalenessExpired {
+	if outcome.MoatResult.Staleness == moat.StalenessExpired {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
 		return moat.ExitMoatManifestStale, nil
-	}
-
-	// Happy path (including TOFU+yes). Persist trust state and lockfile.
-	if res.IsTOFU {
-		profile := res.IncomingProfile
-		reg.SigningProfile = &profile
-	}
-	reg.ManifestETag = res.ETag
-	fetchedAt := res.FetchedAt
-	reg.LastFetchedAt = &fetchedAt
-
-	if err := config.SaveGlobal(cfg); err != nil {
-		return 0, output.NewStructuredErrorDetail(
-			output.ErrRegistrySaveFailed,
-			fmt.Sprintf("could not persist sync state for registry %q", reg.Name),
-			"Check filesystem permissions on ~/.syllago/config.json.",
-			err.Error(),
-		)
-	}
-	if err := lf.Save(lockfilePath); err != nil {
-		return 0, output.NewStructuredErrorDetail(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("could not persist moat lockfile after syncing %q", reg.Name),
-			"Check filesystem permissions on .syllago/moat-lockfile.json.",
-			err.Error(),
-		)
-	}
-
-	// Persist the verified manifest+bundle into the cache that
-	// EnrichFromMOATManifests reads at scan time. Without this, a
-	// successful sync produces no observable trust state — the next
-	// catalog scan finds the cache empty and warns "MOAT cache missing".
-	// Skipped on 304 (cache is already current) and on stubbed tests
-	// that return empty bytes (the gate below mirrors NotModified).
-	if !res.NotModified && len(res.ManifestBytes) > 0 && len(res.BundleBytes) > 0 && cacheDir != "" {
-		if err := moat.WriteManifestCache(cacheDir, reg.Name, res.ManifestBytes, res.BundleBytes); err != nil {
-			return 0, output.NewStructuredErrorDetail(
-				output.ErrMoatInvalid,
-				fmt.Sprintf("could not persist moat manifest cache for registry %q", reg.Name),
-				"Check filesystem permissions on the syllago cache directory.",
-				err.Error(),
-			)
-		}
 	}
 
 	// One-line human status. The NotModified branch is distinct because the
 	// body was not re-verified (nothing to re-verify), so operators reading
 	// logs should know they're still trusting the previously-verified bytes.
+	res := outcome.MoatResult
 	switch {
 	case res.NotModified:
 		fmt.Fprintf(out, "Synced: %s (not-modified, fetched_at=%s)\n",
