@@ -461,6 +461,16 @@ func (l *libraryModel) loadSelectedFile() {
 	if l.detailItem == nil {
 		return
 	}
+	// MOAT-materialized registry item: the cache holds only manifest.json +
+	// signature.bundle, not the content tree (content is fetched at install
+	// time via SourceURI). Without this branch the preview pane silently
+	// renders "(no preview)" with no explanation, which reads as a bug.
+	if isUnstagedRegistryItem(l.detailItem) {
+		l.preview.fileName = "(not staged)"
+		l.preview.offset = 0
+		l.preview.lines = unstagedRegistryItemPreview(l.detailItem)
+		return
+	}
 	path := l.tree.SelectedPath()
 	if path == "" {
 		// Directory selected or empty — show primary file
@@ -482,6 +492,31 @@ func (l *libraryModel) loadSelectedFile() {
 		return
 	}
 	l.preview.lines = strings.Split(content, "\n")
+}
+
+// isUnstagedRegistryItem reports whether an item was synthesized from a MOAT
+// manifest (Source is a registry name, but the cache has no on-disk content
+// tree to read). The discriminator is empty Path with non-empty Source —
+// scanner-discovered items always have a Path; materialized items never do.
+func isUnstagedRegistryItem(item *catalog.ContentItem) bool {
+	return item != nil && item.Path == "" && item.Source != ""
+}
+
+// unstagedRegistryItemPreview returns the placeholder body shown in the
+// preview pane for a MOAT-materialized item that has no on-disk files yet.
+// Spelled out so the user understands the empty pane is by design and knows
+// the next step.
+func unstagedRegistryItemPreview(item *catalog.ContentItem) []string {
+	return []string{
+		"This item is published by the registry but its files have not",
+		"been fetched yet.",
+		"",
+		"Source registry: " + item.Source,
+		"",
+		"Press [i] to install — the registry will fetch the content blob,",
+		"verify its attestation, and stage it under the appropriate",
+		"provider directory.",
+	}
 }
 
 // sizeDetailPanes calculates sizes for the detail mode (tree + preview).

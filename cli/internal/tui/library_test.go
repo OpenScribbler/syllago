@@ -43,6 +43,34 @@ func newLibraryWithDiskItems(t *testing.T, w, h int) (libraryModel, string) {
 	return l, root
 }
 
+func TestLibrary_DrillIn_UnstagedRegistryItem_ShowsExplanation(t *testing.T) {
+	t.Parallel()
+	// MOAT-materialized items have empty Path (cache holds only manifest +
+	// signature.bundle, not the content tree). Without the unstaged-item
+	// branch in loadSelectedFile the preview pane silently rendered nothing,
+	// which read as a bug.
+	item := catalog.ContentItem{
+		Name:   "syllago-guide",
+		Type:   catalog.Skills,
+		Source: "OpenScribbler/syllago-meta-registry",
+		// Path and Files intentionally empty — that's the materialization tell.
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(120, 30)
+	l.drillIn(&l.table.items[0])
+
+	if l.preview.fileName != "(not staged)" {
+		t.Errorf("expected preview filename '(not staged)' for unstaged registry item, got %q", l.preview.fileName)
+	}
+	body := strings.Join(l.preview.lines, "\n")
+	if !strings.Contains(body, "OpenScribbler/syllago-meta-registry") {
+		t.Errorf("expected preview body to name the source registry, got: %q", body)
+	}
+	if !strings.Contains(body, "[i]") {
+		t.Errorf("expected preview body to point user at [i] install, got: %q", body)
+	}
+}
+
 func TestLibrary_SetDetailFocus_TogglesFocusFields(t *testing.T) {
 	t.Parallel()
 	l, _ := newLibraryWithDiskItems(t, 120, 30)
