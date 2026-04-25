@@ -231,8 +231,12 @@ func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Registry remove: on Registries tab, no ContentItem path, but name is set.
-	if a.isRegistriesTab() && msg.item.Path == "" && msg.itemName != "" {
+	// Registry remove: on Registries tab and the confirm carries no ContentItem
+	// (Type unset). The earlier discriminator used Path=="" but MOAT-materialized
+	// items also have empty Path while still carrying a Type — that collision
+	// routed item uninstalls through the registry-remove orchestrator and
+	// surfaced as "registry not found".
+	if a.isRegistriesTab() && msg.item.Type == "" && msg.itemName != "" {
 		a.registryOpInProgress = true
 		cmd1 := a.toast.Push("Removing registry: "+msg.itemName+"...", toastSuccess)
 		cmd2 := a.doRegistryRemoveCmd(msg.itemName)

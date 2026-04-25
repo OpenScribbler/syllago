@@ -1344,6 +1344,29 @@ func TestApp_ActionHandler_ConfirmRegistryRemoveDispatches(t *testing.T) {
 	}
 }
 
+// TestApp_ActionHandler_ConfirmRegistryItemUninstall_NotMisroutedAsRegistryRemove
+// pins the discriminator that decides between registry-remove and item-uninstall
+// in handleConfirmResult. Before this regression test the discriminator was
+// item.Path == "", which collided with MOAT-materialized items (synthesized
+// from manifest with empty Path), routing item uninstalls through
+// doRegistryRemoveCmd and surfacing as "registry not found: <item-name>".
+func TestApp_ActionHandler_ConfirmRegistryItemUninstall_NotMisroutedAsRegistryRemove(t *testing.T) {
+	a := testAppOnRegistries(t)
+
+	msg := confirmResultMsg{
+		confirmed: true,
+		// MOAT-materialized item: Type set, Path empty.
+		item:     catalog.ContentItem{Name: "syllago-guide", Type: catalog.Skills, Path: ""},
+		itemName: "syllago-guide",
+	}
+	m, _ := a.Update(msg)
+	a = m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("expected registryOpInProgress == false: item with Type set must not route to doRegistryRemoveCmd")
+	}
+}
+
 func TestApp_ActionHandler_ConfirmLoadoutStillWorks(t *testing.T) {
 	// Create a fresh app on Loadouts (not Registries).
 	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
