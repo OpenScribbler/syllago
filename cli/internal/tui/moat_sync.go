@@ -136,13 +136,10 @@ func runMOATSync(ctx context.Context, name, projectRoot string, acceptTOFU bool)
 	if res.IsTOFU && !acceptTOFU {
 		return moatSyncDoneMsg{name: name, requiresTOFU: true, manifestURL: res.ManifestURL, incomingProfile: res.IncomingProfile}
 	}
-	if res.Staleness == moat.StalenessExpired {
-		// Persist the fresh manifest (the catalog enricher will mark its
-		// items Unsigned because the staleness clock is past expiry); the
-		// stale flag is informational so the user knows why trust badges
-		// downgraded.
-		// Fall through to persistence.
-	}
+	// StalenessExpired falls through to persistence: the fresh manifest is
+	// still saved (the catalog enricher will downgrade items to Unsigned
+	// because the staleness clock is past expiry), and the stale flag is
+	// informational so the user knows why trust badges downgraded.
 
 	// Happy / TOFU-accepted path: persist trust state.
 	if res.IsTOFU {
