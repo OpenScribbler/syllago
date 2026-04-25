@@ -839,3 +839,106 @@ func TestEnrichCatalog_E2E_HashMismatchDowngradesThroughJSON(t *testing.T) {
 			gotDesc, "Verified (registry-attested)")
 	}
 }
+
+// --- materializeMOATItems ---------------------------------------------
+//
+// Regression coverage for the gallery-says-zero-items bug: MOAT cache
+// dirs hold no content tree, so the filesystem scanner finds nothing and
+// the gallery card reads "0 items" even after a successful sync. The fix
+// materializes manifest entries directly into cat.Items.
+
+func TestMaterializeMOATItems_NilGuards(t *testing.T) {
+	t.Parallel()
+	// Both must be no-ops, not panics.
+	materializeMOATItems(nil, "reg", &Manifest{})
+	cat := &catalog.Catalog{}
+	materializeMOATItems(cat, "reg", nil)
+	if len(cat.Items) != 0 {
+		t.Errorf("nil manifest mutated catalog: got %d items", len(cat.Items))
+	}
+}
+
+func TestMaterializeMOATItems_AddsEntries(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{Content: []ContentEntry{
+		{Name: "alpha", DisplayName: "Alpha", Type: "skill"},
+		{Name: "beta", DisplayName: "Beta", Type: "agent"},
+		{Name: "gamma", DisplayName: "Gamma", Type: "rules"},
+		{Name: "delta", DisplayName: "Delta", Type: "command"},
+	}}
+	cat := &catalog.Catalog{}
+	materializeMOATItems(cat, "reg", m)
+
+	if got := len(cat.Items); got != 4 {
+		t.Fatalf("Items len = %d, want 4", got)
+	}
+	wantTypes := map[string]catalog.ContentType{
+		"alpha": catalog.Skills,
+		"beta":  catalog.Agents,
+		"gamma": catalog.Rules,
+		"delta": catalog.Commands,
+	}
+	for _, it := range cat.Items {
+		if it.Registry != "reg" || it.Source != "reg" {
+			t.Errorf("item %q: Registry=%q Source=%q, want reg/reg", it.Name, it.Registry, it.Source)
+		}
+		if it.Type != wantTypes[it.Name] {
+			t.Errorf("item %q: Type=%v, want %v", it.Name, it.Type, wantTypes[it.Name])
+		}
+	}
+}
+
+func TestMaterializeMOATItems_SkipsUnknownType(t *testing.T) {
+	t.Parallel()
+	// MOAT v0.6.0 defers hooks/mcp; conforming clients MUST ignore unknown
+	// types rather than smuggle them through as Skills or some default.
+	m := &Manifest{Content: []ContentEntry{
+		{Name: "h", Type: "hook"},
+		{Name: "s", Type: "skill"},
+		{Name: "x", Type: "made-up-future-type"},
+	}}
+	cat := &catalog.Catalog{}
+	materializeMOATItems(cat, "reg", m)
+
+	if got := len(cat.Items); got != 1 || cat.Items[0].Name != "s" {
+		t.Errorf("Items = %+v, want only the skill row", cat.Items)
+	}
+}
+
+func TestMaterializeMOATItems_IdempotentOnTypeName(t *testing.T) {
+	t.Parallel()
+	// If a future change pre-stages content under the registry source path
+	// so the scanner produces rows, materialize must NOT duplicate them.
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{
+		{Name: "alpha", Type: catalog.Skills, Registry: "reg", Source: "reg"},
+	}}
+	m := &Manifest{Content: []ContentEntry{
+		{Name: "alpha", Type: "skill"}, // duplicate
+		{Name: "beta", Type: "skill"},  // new
+	}}
+	materializeMOATItems(cat, "reg", m)
+	if got := len(cat.Items); got != 2 {
+		t.Fatalf("Items len = %d, want 2 (dedup on type/name)", got)
+	}
+}
+
+func TestMaterializeMOATItems_LeavesOtherRegistriesAlone(t *testing.T) {
+	t.Parallel()
+	// Items belonging to a different registry must not block dedup or
+	// cause cross-registry shadowing.
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{
+		{Name: "alpha", Type: catalog.Skills, Registry: "other"},
+	}}
+	m := &Manifest{Content: []ContentEntry{
+		{Name: "alpha", Type: "skill"},
+	}}
+	materializeMOATItems(cat, "reg", m)
+	if got := len(cat.Items); got != 2 {
+		t.Fatalf("Items len = %d, want 2 (other-reg item must stay; reg item must be added)", got)
+	}
+	for _, it := range cat.Items {
+		if it.Name == "alpha" && it.Registry == "reg" && it.Type != catalog.Skills {
+			t.Errorf("materialized item type = %v, want Skills", it.Type)
+		}
+	}
+}

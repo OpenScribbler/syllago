@@ -66,6 +66,55 @@ func moatTierToCatalogTier(t TrustTier) catalog.TrustTier {
 	return catalog.TrustTierUnknown
 }
 
+// materializeMOATItems injects one ContentItem per manifest entry into
+// cat.Items for the given registry. MOAT cache dirs hold only
+// manifest.json + signature.bundle — no content tree — so the filesystem
+// scanner finds zero items for MOAT registries. Without materialization
+// the gallery card reads "0 items" and the library/explorer never see
+// registry rows even after a successful sync.
+//
+// Synthesized items leave Path empty: the actual content blob is fetched
+// at install time via entry.SourceURI, never pre-staged in the cache.
+// Type maps through FromMOATType; entries whose type is not MOAT-
+// recognized (hooks, mcp, future spec extensions) are skipped per the
+// spec's "conforming clients MUST ignore unknown types" rule.
+//
+// Idempotent on (Registry, Type, Name): if a future change pre-stages
+// content under the registry source path so the scanner produces rows,
+// this helper will not duplicate them. A nil catalog or nil manifest is
+// a no-op.
+func materializeMOATItems(cat *catalog.Catalog, registryName string, m *Manifest) {
+	if cat == nil || m == nil {
+		return
+	}
+	existing := make(map[string]bool, len(cat.Items))
+	for _, it := range cat.Items {
+		if it.Registry != registryName {
+			continue
+		}
+		existing[string(it.Type)+"/"+it.Name] = true
+	}
+	for i := range m.Content {
+		entry := &m.Content[i]
+		ct, ok := FromMOATType(entry.Type)
+		if !ok {
+			continue
+		}
+		key := string(ct) + "/" + entry.Name
+		if existing[key] {
+			continue
+		}
+		cat.Items = append(cat.Items, catalog.ContentItem{
+			Name:        entry.Name,
+			DisplayName: entry.DisplayName,
+			Type:        ct,
+			Registry:    registryName,
+			Source:      registryName,
+		})
+		existing[key] = true
+	}
+}
+
 // EnrichCatalog populates the display-only trust fields on every
 // ContentItem whose Registry field matches registryName, using the
 // manifest's content rows and revocations list.

@@ -204,6 +204,16 @@ func EnrichFromMOATManifests(
 		}
 
 		status := CheckRegistry(lf, reg.ManifestURI, m, now)
+
+		// Materialize manifest entries as catalog items BEFORE enrichment and
+		// trust aggregation. MOAT cache dirs hold only manifest.json + bundle
+		// (no content tree), so the filesystem scanner finds zero items for
+		// MOAT registries — without this step the gallery card reads "0
+		// items" and the library/explorer never see registry rows. Done for
+		// Fresh AND Stale/Expired so users can still see what's known to be
+		// in the registry; trust state surfaces the staleness separately.
+		materializeMOATItems(cat, reg.Name, m)
+
 		switch status {
 		case StalenessFresh:
 			EnrichCatalog(cat, reg.Name, m)
