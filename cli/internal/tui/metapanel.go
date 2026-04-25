@@ -44,6 +44,12 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 	}
 
 	// Any local item (library or content root) can be installed — not registry-only items.
+	// MOAT-materialized items are intentionally excluded for now: the TUI install
+	// pipeline (installer.Install) reads from item.Path, but materialized items
+	// have empty Path because the content blob is only fetched at install time
+	// from the manifest's SourceURI. The CLI install path knows how to do that
+	// fetch; the TUI does not yet. Until that is plumbed, hiding the button is
+	// the honest signal — the toast in handleInstall directs the user to the CLI.
 	canInstall := false
 	if item.Library || item.Registry == "" {
 		for _, prov := range providers {

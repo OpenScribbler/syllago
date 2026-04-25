@@ -648,9 +648,20 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Registry-only items must be added to the library first.
+	// Registry-only items must be added to the library first. MOAT-materialized
+	// items get a different message because there is no "add to library" step
+	// for them — the content blob is fetched at install time from the
+	// manifest's SourceURI, and the TUI install pipeline doesn't yet plumb
+	// that fetch. The CLI does, so point users there until the TUI install
+	// path learns to handle MOAT items.
 	if !item.Library && item.Registry != "" {
-		cmd := a.toast.Push("Add this item to your library first", toastWarning)
+		var msg string
+		if isUnstagedRegistryItem(item) {
+			msg = fmt.Sprintf("TUI install for MOAT items not yet supported. Run: syllago install %s:%s", item.Registry, item.Name)
+		} else {
+			msg = "Add this item to your library first"
+		}
+		cmd := a.toast.Push(msg, toastWarning)
 		return a, cmd
 	}
 

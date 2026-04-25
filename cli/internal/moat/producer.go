@@ -265,7 +265,10 @@ func attachRegistryTrust(
 		Subject:     m.RegistrySigningProfile.Subject,
 		Operator:    m.Operator,
 		ManifestURI: reg.ManifestURI,
-		Staleness:   status.String(),
+		// CatalogLabel returns the title-cased label the TUI compares
+		// against ("Fresh"/"Stale"/"Expired"). Using String() here writes
+		// lowercase and silently breaks the gallery glyph + sidebar status.
+		Staleness: status.CatalogLabel(),
 	}
 	if lf != nil {
 		if lockState, ok := lf.Registries[reg.ManifestURI]; ok {

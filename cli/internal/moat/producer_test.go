@@ -187,6 +187,50 @@ func TestEnrichFromMOATManifests_FreshCacheWithContent(t *testing.T) {
 	}
 }
 
+// TestAttachRegistryTrust_StalenessLabelIsCatalogContract pins the wire
+// label produced into catalog.RegistryTrust.Staleness against the
+// contract documented in catalog/types.go ("Fresh", "Stale", "Expired"
+// — title case). Regression: an earlier producer wrote
+// status.String() (lowercase "fresh") which silently broke the TUI
+// gallery glyph and contents-sidebar status, both of which compare
+// against capital "Fresh". A successful sync looked like a permanent
+// stale state to the user.
+func TestAttachRegistryTrust_StalenessLabelIsCatalogContract(t *testing.T) {
+	stubEnrichVerifyOK(t)
+	cases := []struct {
+		name        string
+		fetchedAgo  time.Duration
+		wantStale   string
+		wantWarning bool
+	}{
+		{name: "fresh", fetchedAgo: 1 * time.Hour, wantStale: "Fresh"},
+		{name: "stale", fetchedAgo: 73 * time.Hour, wantStale: "Stale", wantWarning: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := t.TempDir()
+			writeManifestCache(t, cache, "example-reg", fixtureManifestJSON, true)
+
+			cfg := moatCfgPinned("example-reg", "https://registry.example.com/manifest.json")
+			now := time.Now().UTC()
+			lf := &Lockfile{}
+			lf.SetRegistryFetchedAt("https://registry.example.com/manifest.json", now.Add(-tc.fetchedAgo))
+
+			cat := &catalog.Catalog{}
+			if err := EnrichFromMOATManifests(cat, cfg, lf, cache, now); err != nil {
+				t.Fatalf("EnrichFromMOATManifests: %v", err)
+			}
+			rt, ok := cat.RegistryTrusts["example-reg"]
+			if !ok {
+				t.Fatalf("RegistryTrusts entry missing for example-reg; got keys=%v", cat.RegistryTrusts)
+			}
+			if rt.Staleness != tc.wantStale {
+				t.Errorf("Staleness = %q, want %q (catalog contract is title-case)", rt.Staleness, tc.wantStale)
+			}
+		})
+	}
+}
+
 // --- Failure paths: each emits exactly one warning and skips enrich ----
 
 func TestEnrichFromMOATManifests_MissingCache(t *testing.T) {

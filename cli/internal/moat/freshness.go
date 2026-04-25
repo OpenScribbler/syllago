@@ -66,7 +66,11 @@ const (
 	StalenessExpired
 )
 
-// String returns a short diagnostic label.
+// String returns a short diagnostic label (lowercase).
+// Used for warnings, error wrapping, and tests — anywhere a sentence-style
+// label reads naturally. The display-facing catalog field uses
+// CatalogLabel() instead; the two MUST stay distinct because TUI string
+// comparisons are case-sensitive.
 func (s StalenessStatus) String() string {
 	switch s {
 	case StalenessFresh:
@@ -77,6 +81,31 @@ func (s StalenessStatus) String() string {
 		return "expired"
 	default:
 		return "unknown"
+	}
+}
+
+// CatalogLabel returns the title-cased label that conforms to the
+// catalog.RegistryTrust.Staleness contract documented at
+// catalog/types.go: "Fresh", "Stale", "Expired" (plus "Missing" — produced
+// elsewhere when no manifest cache is present at all).
+//
+// The TUI gallery glyph and contents-sidebar status both compare against
+// "Fresh" with a capital F. Writing the lowercase String() label into
+// catalog.RegistryTrust.Staleness silently breaks both surfaces — the card
+// renders the orange "!" stale glyph forever and the sidebar prints the
+// label in danger-red — even after a successful sync. Callers writing the
+// catalog field MUST use CatalogLabel(); diagnostic strings can keep
+// String().
+func (s StalenessStatus) CatalogLabel() string {
+	switch s {
+	case StalenessFresh:
+		return "Fresh"
+	case StalenessStale:
+		return "Stale"
+	case StalenessExpired:
+		return "Expired"
+	default:
+		return "Unknown"
 	}
 }
 

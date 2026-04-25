@@ -75,6 +75,12 @@ func (h helpOverlay) View() string {
 		return strings.Join(lines, "\n")
 	}
 
+	// Trust Glyphs lives in col1 so the two columns end up at similar heights
+	// (Nav+FileTree+Glyphs ≈ Actions+Gallery). Otherwise col2 runs ~10 lines
+	// taller than col1 and the box has a "giant empty spot" on the left.
+	// Render glyphs through their styles so the legend matches what users see
+	// on registry cards — lipgloss preserves nested ANSI runs through the
+	// Width() padding inside section().
 	col1 := lipgloss.JoinVertical(lipgloss.Left,
 		section("Navigation", [][2]string{
 			{"1 / 2 / 3", "Switch group"},
@@ -90,11 +96,14 @@ func (h helpOverlay) View() string {
 			{"Enter", "Open file"},
 			{"Esc", "Close detail"},
 		}),
+		"",
+		section("Trust Glyphs", [][2]string{
+			{trustVerifiedStyle.Render("✓"), "Verified — fresh attestation"},
+			{trustStaleStyle.Render("!"), "Stale — re-sync to refresh"},
+			{trustRevokedStyle.Render("R"), "Revoked — item withdrawn"},
+		}),
 	)
 
-	// Render trust glyphs through their styles so the legend matches what the
-	// user actually sees on registry cards. The styles compose with the Width
-	// padding inside section() because lipgloss preserves nested ANSI runs.
 	col2 := lipgloss.JoinVertical(lipgloss.Left,
 		section("Actions", [][2]string{
 			{"a", "Add content"},
@@ -114,16 +123,22 @@ func (h helpOverlay) View() string {
 			{"Tab", "Grid / contents"},
 			{"Enter", "Drill into card"},
 		}),
-		"",
-		section("Trust Glyphs", [][2]string{
-			{trustVerifiedStyle.Render("✓"), "Verified — registry attested, fresh"},
-			{trustStaleStyle.Render("!"), "Stale — re-sync to refresh attestations"},
-			{trustRevokedStyle.Render("R"), "Revoked — at least one item withdrawn"},
-		}),
 	)
 
-	// Two-column layout
-	colW := 36
+	// Adaptive column width: scale to the available terminal so descriptions
+	// don't wrap. Floor at 36 (the legacy width — keeps the 80-col case from
+	// blowing past the screen) and cap at 55 (anything wider just gets
+	// awkward whitespace between key and description).
+	colW := 44
+	if h.width > 0 {
+		colW = (h.width - 11) / 2
+		if colW < 36 {
+			colW = 36
+		}
+		if colW > 55 {
+			colW = 55
+		}
+	}
 	col1Styled := lipgloss.NewStyle().Width(colW).Render(col1)
 	col2Styled := lipgloss.NewStyle().Width(colW).Render(col2)
 	columns := lipgloss.JoinHorizontal(lipgloss.Top, col1Styled, "   ", col2Styled)
