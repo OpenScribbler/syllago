@@ -28,12 +28,64 @@ Vulnerabilities we want to hear about:
 
 ## Trust Model
 
-- Syllago operates no central registry or marketplace
-- Registries are git repos cloned over HTTPS -- integrity is provided by git, not syllago
-- **Built-in content** (shipped with the syllago binary) is maintained by the syllago team
-- **Registry content** from `syllago registry add <url>` is third-party and unverified
-- **App install scripts** from registries require explicit user confirmation before execution
-- Users should review hooks and MCP configs before installing -- they execute as your user
+- Syllago operates no central registry or marketplace, but it is the reference implementation of [MOAT](https://github.com/OpenScribbler/moat) and ships with a bundled allowlist that auto-pins the official meta-registry's signing identity.
+- Registries are git repositories cloned over HTTPS. When the registry publishes a MOAT manifest, syllago performs cryptographic verification on top of the git transport (Sigstore signature, Rekor inclusion, GitHub OIDC numeric-ID match). Registries without a MOAT manifest fall back to git-only integrity.
+- **Built-in content** (the items shipped at `~/.syllago/content/` after `syllago init`) is maintained by the syllago team.
+- **Registry content** is verifiable: each item carries a trust tier — `DUAL-ATTESTED`, `SIGNED`, or `UNSIGNED` — surfaced by `syllago list`, `syllago info`, and the TUI.
+- **App install scripts** from registries require explicit user confirmation before execution.
+- Users should still review hooks and MCP configs before installing — by design, they execute as your user. Signature verification proves origin and integrity, not safety of the code itself.
+
+## Content Verification (MOAT)
+
+Syllago is the reference implementation of MOAT (Model for Origin, Attestation, and Trust), a community-owned spec for verifying AI coding tool content. The MOAT package is at [`cli/internal/moat/`](cli/internal/moat/). The full spec lives at https://github.com/OpenScribbler/moat.
+
+**Trust tiers (`cli/internal/moat/lockfile.go`):**
+
+| Tier | Meaning |
+|---|---|
+| `DUAL-ATTESTED` | Both the registry signing profile *and* the per-item attestation verify against bundled trust roots, with matching Rekor inclusion proofs. Strongest tier. |
+| `SIGNED` | Manifest signature verifies against a pinned signing profile, but no per-item dual-attestation is present. |
+| `UNSIGNED` | No MOAT manifest. Falls back to git-only integrity. Accepted only if the registry was added without `--moat` and is not in the allowlist. |
+
+**Verification pipeline:**
+
+1. **Fetch** — clone the registry over HTTPS, locate `moat-registry.json` and per-item attestations.
+2. **Sigstore verify** — verify the cosign bundle against the bundled Sigstore trusted root.
+3. **Rekor inclusion** — check the Rekor log entry referenced by `rekor_log_index` is present and matches the canonical payload hash.
+4. **Identity match** — confirm the OIDC certificate's subject (workflow SAN), issuer, and **GitHub repository numeric IDs** (`repository_id`, `repository_owner_id`) match the pinned signing profile. Numeric ID pinning defeats repo-rename and ownership-transfer attacks where an attacker reuses a human-readable name.
+5. **Tier resolution** — assign one of the three tiers above; `--min-trust` policy can refuse anything below the configured floor (`MOAT_009`).
+
+**Pinning paths (at `syllago registry add` time):**
+
+- **Bundled allowlist** — well-known registries auto-pin from [`cli/internal/moat/signing_identities.json`](cli/internal/moat/signing_identities.json). Currently the official meta-registry only.
+- **Explicit flags** — `--signing-identity <workflow-san> --signing-repository-id <id> --signing-repository-owner-id <id>`. Operator records the pin in the commit that runs `registry add`.
+- **Hard fail** — if MOAT was requested or implied by partial flags but neither path provides a complete identity, `MOAT_001 IDENTITY_UNPINNED` blocks the add. There is no Trust-On-First-Use path by design.
+
+**Trusted-root staleness cliff:** the bundled Sigstore trusted root has a 365-day cliff (per ADR 0007). Once expired, `MOAT_005` blocks verification until the binary is updated or `--trusted-root` is supplied.
+
+**Revocation:** registries and publishers can be revoked archivally (in the bundled list) or live (via the registry source). Reasons: `malicious`, `compromised`, `deprecated`, `policy_violation`. Blocked installs surface `MOAT_008`.
+
+**Error codes:** `MOAT_001` through `MOAT_009` are documented in [`cli/internal/output/errors.go`](cli/internal/output/errors.go) and explainable at runtime via `syllago explain MOAT_NNN`.
+
+## Sandbox (Linux)
+
+Syllago ships a bubblewrap-based sandbox for executing third-party AI CLI tools with credential and filesystem isolation. Implementation is at [`cli/internal/sandbox/`](cli/internal/sandbox/) (24 source files: `bwrap.go`, `bridge.go`, `configdiff.go`, `envfilter.go`, `proxy.go`, `runner.go`, `staging.go`, plus tests).
+
+**Capabilities:**
+
+- **Process isolation** — bubblewrap (`bwrap`) wraps the wrapped tool's process tree.
+- **Credential protection** — env-var allowlist (`envfilter.go`) drops secrets that the wrapped tool does not need.
+- **Network egress allowlist** — domain + port list, enforced via a proxy (`proxy.go`).
+- **Filesystem staging** — `staging.go` mounts a curated subset of the user's home into the sandbox.
+- **Config diff-and-approve** — on session exit, `configdiff.go` shows what the wrapped tool changed in its config and prompts for approval. High-risk keys (`mcpServers`, `hooks`, `commands`) trigger a stricter confirmation.
+
+**Commands:**
+
+- `syllago sandbox run <tool> -- <args>` — execute inside the sandbox.
+- `syllago sandbox check` — preflight diagnostic (verifies `bwrap` present, profile valid).
+- `syllago sandbox info` — show effective profile.
+
+**Platform support:** Linux only today. macOS sandbox support is on the roadmap.
 
 ## Registry Privacy
 
