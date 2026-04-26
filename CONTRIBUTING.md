@@ -45,19 +45,74 @@ syllago ships with AI content — skills, agents, rules, hooks, and more — tha
 
 ### Requirements
 
-- Go 1.25+
+- Go 1.26+
 - Make
+- `golangci-lint` v2.x (only required if you want to run lint locally; CI runs it on every push)
+
+### One-time setup
+
+After cloning, install the git hooks:
+
+```bash
+make setup
+```
+
+This wires up `.githooks/pre-commit` (gofmt enforcement) and `.githooks/pre-push` (golangci-lint + freshness checks for `commands.json` and `providers.json`). Skipping this step means CI will reject your push.
 
 ### Building and Testing
 
-From the `cli/` directory (or use `make` targets from the repo root):
+From the repo root (the root `Makefile` delegates into `cli/`):
 
 ```bash
-make build    # Build binary to ~/.local/bin/syllago
-make test     # Run test suite (includes go vet)
-make fmt      # Format code with gofmt
-make vet      # Run go vet
+make build    # Compiles the binary to cli/syllago (does NOT install to PATH)
+make test     # Runs the full test suite
+make fmt      # Formats Go code with gofmt
+make vet      # Runs go vet
 ```
+
+After `make build`, the binary lives at `cli/syllago`. To test against your `syllago` command on PATH, copy it explicitly:
+
+```bash
+cp cli/syllago ~/.local/bin/syllago   # or wherever `which syllago` resolves
+```
+
+This is intentionally separate from `make build` so the build target is non-destructive.
+
+### Linting
+
+`cli/.golangci.yml` configures golangci-lint v2 with `gofmt` formatting enforcement. CI runs the same config:
+
+```bash
+cd cli && golangci-lint run ./...
+```
+
+The pre-push hook runs this automatically.
+
+### Test coverage
+
+Every code change should ship with tests. The internal target is **80% coverage minimum per package, 95%+ aspirational**. Bug fixes must include a regression test that would have caught the bug. New CLI commands need integration tests using cobra's `RunE` pattern.
+
+To check coverage locally:
+
+```bash
+cd cli && go test ./your/package/... -coverprofile=cov.out && go tool cover -func=cov.out | grep total
+```
+
+### Regenerating derived files
+
+Some files in the repo are generated and CI fails if they're stale:
+
+- After adding or changing CLI flags: `cd cli && make gendocs` regenerates `commands.json`.
+- After provider changes: the same target also regenerates `providers.json`.
+- After adding telemetry properties: `cd cli && make gendocs` updates `telemetry.json`. The drift-detection test `TestGentelemetry_CatalogMatchesEnrichCalls` will fail if you forget.
+
+### Architectural decisions
+
+Significant architectural choices are recorded as ADRs in [`docs/adr/`](docs/adr/). [`docs/adr/INDEX.md`](docs/adr/INDEX.md) is the index. Strict-enforcement ADRs block commits that touch their scoped files; advisory ADRs warn. Read the relevant ADR before modifying files in its scope.
+
+### Code of Conduct
+
+Contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Telemetry
 
