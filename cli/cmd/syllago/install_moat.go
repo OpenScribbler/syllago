@@ -51,6 +51,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
@@ -128,12 +129,24 @@ func parseRegistryItemSyntax(arg string) (string, string, bool) {
 // The function re-uses the same seams as syncMOATRegistry so test harnesses
 // written for that path (moatSyncFn, moatSyncExit) compose without
 // additional stubbing.
+// targetProv is the provider that the resolved MOAT item should be
+// installed to once fetchAndRecord has staged its source-cache directory.
+// May be nil for dry-run paths or when the caller has not yet selected
+// a provider (in non-dry-run that's a programmer error and we surface it
+// as a structured input-missing failure rather than panicking).
+//
+// method/baseDir thread the same install semantics as the library install
+// path (--method, --base-dir) into the MOAT pipeline so the resulting
+// symlink/copy ends up where operators expect.
 func runInstallFromRegistry(
 	ctx context.Context,
 	out, errW io.Writer,
 	cfg *config.Config,
 	cfgRoot string,
 	registryName, itemName string,
+	targetProv *provider.Provider,
+	method installer.InstallMethod,
+	baseDir string,
 	dryRun bool,
 	now time.Time,
 ) error {
@@ -307,7 +320,31 @@ func runInstallFromRegistry(
 	if fetchErr != nil {
 		return fetchErr
 	}
-	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), cacheDir)
+
+	// Provider-side install: stage the cached source tree into the
+	// provider's content directory (~/.claude/skills/foo, ~/.codex/agents,
+	// etc.). Until this lands, fetchAndRecord pinned the lockfile + cached
+	// the bytes but the operator's chosen provider directory was empty —
+	// install was effectively a no-op from the user's perspective.
+	if targetProv == nil {
+		return output.NewStructuredError(
+			output.ErrInputMissing,
+			"install destination not specified",
+			"Pass --to <provider> to choose where the registry item is installed.",
+		)
+	}
+	installPath, installErr := installer.InstallCachedMOATToProvider(
+		cacheDir, entry, *targetProv, cfgRoot, method, baseDir,
+	)
+	if installErr != nil {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
+			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
+			installErr.Error(),
+		)
+	}
+	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), installPath)
 	return nil
 }
 

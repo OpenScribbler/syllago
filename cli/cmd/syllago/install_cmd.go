@@ -256,6 +256,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				projectRoot,
 				regName,
 				itemName,
+				prov,
+				method,
+				baseDir,
 				dryRun,
 				moatInstallNow(),
 			)

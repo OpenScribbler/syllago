@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
@@ -89,6 +90,9 @@ func TestRunInstallFromRegistry_RegistryNotFound(t *testing.T) {
 		t.TempDir(),
 		"ghost",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -109,6 +113,9 @@ func TestRunInstallFromRegistry_NotMOATRegistry(t *testing.T) {
 		t.TempDir(),
 		"git-only",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -168,6 +175,9 @@ func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -190,6 +200,9 @@ func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -220,6 +233,9 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"missing",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -249,6 +265,9 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -290,6 +309,9 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -335,6 +357,9 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -405,6 +430,9 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -448,6 +476,9 @@ func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectEr
 		t.TempDir(),
 		"example",
 		"item",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true,
 		time.Now(),
 	)
@@ -568,6 +599,9 @@ func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -597,6 +631,9 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -632,6 +669,9 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -665,6 +705,9 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) 
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -700,6 +743,9 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -731,6 +777,9 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -761,6 +810,9 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -787,6 +839,9 @@ func TestRunInstallFromRegistry_DryRunPreviewsGateDecision(t *testing.T) {
 		t.TempDir(),
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		true, // dry-run
 		time.Now(),
 	)

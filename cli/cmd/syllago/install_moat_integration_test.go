@@ -42,10 +42,44 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
+
+// integrationTestProvider is a minimal provider stub for the integration
+// suite. Skills install under <home>/.testprovider/skills/<name> so tests
+// using t.Setenv("HOME", ...) can assert against a deterministic path.
+func integrationTestProvider() provider.Provider {
+	return provider.Provider{
+		Name:      "Test Provider",
+		Slug:      "testprovider",
+		ConfigDir: ".testprovider",
+		InstallDir: func(homeDir string, ct catalog.ContentType) string {
+			switch ct {
+			case catalog.Skills:
+				return filepath.Join(homeDir, ".testprovider", "skills")
+			case catalog.Agents:
+				return filepath.Join(homeDir, ".testprovider", "agents")
+			case catalog.Rules:
+				return filepath.Join(homeDir, ".testprovider", "rules")
+			case catalog.Commands:
+				return filepath.Join(homeDir, ".testprovider", "commands")
+			}
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool {
+			switch ct {
+			case catalog.Skills, catalog.Agents, catalog.Rules, catalog.Commands:
+				return true
+			}
+			return false
+		},
+	}
+}
 
 // integrationEnv wires the integration-test seams and cleans up on
 // t.Cleanup. It returns the project root and a helper that reads the
@@ -86,6 +120,11 @@ func setupIntegrationEnv(t *testing.T) *integrationEnv {
 func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	env := setupIntegrationEnv(t)
 
+	// Pin HOME to projectRoot so the test provider's InstallDir resolves
+	// under the temp tree — keeps the symlink target predictable and lets
+	// t.TempDir's auto-cleanup take care of artifacts.
+	t.Setenv("HOME", env.projectRoot)
+
 	// Serve a real tarball over TLS so the whole fetch+extract pipeline
 	// runs, not just the stubbed SyncResult.
 	body := buildTarGz(t, map[string]string{"SKILL.md": "# from registry\n"})
@@ -113,6 +152,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 
 	out := &bytes.Buffer{}
 	cfg := cfgWithPinnedMOATRegistry()
+	prov := integrationTestProvider()
 	err := runInstallFromRegistry(
 		context.Background(),
 		out,
@@ -121,6 +161,9 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 		env.projectRoot,
 		"example",
 		"my-skill",
+		&prov,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -152,6 +195,17 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	matches, _ := filepath.Glob(filepath.Join(env.cacheRoot, "example", "my-skill", "*", "SKILL.md"))
 	if len(matches) != 1 {
 		t.Errorf("expected exactly 1 SKILL.md in cache, got %d (root=%s)", len(matches), env.cacheRoot)
+	}
+
+	// Provider-side install: the symlink should land at the provider's
+	// skills dir under the pinned HOME.
+	want := filepath.Join(env.projectRoot, ".testprovider", "skills", "my-skill")
+	info, err := os.Lstat(want)
+	if err != nil {
+		t.Fatalf("Lstat provider install path %q: %v", want, err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("expected symlink at %q, got mode %v", want, info.Mode())
 	}
 }
 
@@ -187,6 +241,9 @@ func TestInstallIntegration_RegistryRevocationRefuses(t *testing.T) {
 		env.projectRoot,
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -235,6 +292,9 @@ func TestInstallIntegration_PublisherWarnHeadlessExits12(t *testing.T) {
 		env.projectRoot,
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -275,6 +335,9 @@ func TestInstallIntegration_PrivatePromptHeadlessExits10(t *testing.T) {
 		env.projectRoot,
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
@@ -317,6 +380,9 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 		env.projectRoot,
 		"example",
 		"my-skill",
+		nil,
+		installer.MethodSymlink,
+		"",
 		false,
 		time.Now(),
 	)
