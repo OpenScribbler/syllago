@@ -160,7 +160,7 @@ func copyRegularFile(srcPath, dstPath string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("open src %s: %w", srcPath, err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
 		return fmt.Errorf("mkdir parent of %s: %w", dstPath, err)
@@ -169,7 +169,7 @@ func copyRegularFile(srcPath, dstPath string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("create dst %s: %w", dstPath, err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("copy %s -> %s: %w", srcPath, dstPath, err)

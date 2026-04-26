@@ -71,7 +71,7 @@ func FetchRekorEntry(ctx context.Context, logIndex int64) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("rekor: fetch logIndex %d: %w", logIndex, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("rekor: unexpected status %d for logIndex %d", resp.StatusCode, logIndex)

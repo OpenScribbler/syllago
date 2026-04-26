@@ -75,7 +75,7 @@ func FetchPublisherAttestation(ctx context.Context, sourceURI string) ([]byte, e
 	if err != nil {
 		return nil, fmt.Errorf("publisher-attestation: fetch %s: %w", rawURL, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("publisher-attestation: %s not found at %s — publisher repo missing the moat-attestation branch or moat-attestation.json", ownerRepo, rawURL)

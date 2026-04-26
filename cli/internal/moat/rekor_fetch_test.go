@@ -22,7 +22,6 @@ package moat
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -174,7 +173,7 @@ func TestFetchRekorEntry_ContextCancelled(t *testing.T) {
 // that breaks the verifier.
 func TestFetchRekorEntry_BytesAreParseable(t *testing.T) {
 	// Minimal valid rekorResponse: single-entry map keyed by UUID.
-	body := fmt.Sprintf(`{
+	body := `{
   "abc123": {
     "body": "ZXlKaGNHbFdaWEp6YVc5dUlqb2lNQzR3TGpFaWZRPT0=",
     "integratedTime": 1700000000,
@@ -191,7 +190,7 @@ func TestFetchRekorEntry_BytesAreParseable(t *testing.T) {
       "signedEntryTimestamp": ""
     }
   }
-}`)
+}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = io.WriteString(w, body)
 	}))
