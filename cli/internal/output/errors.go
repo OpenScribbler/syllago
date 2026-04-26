@@ -3,7 +3,7 @@ package output
 import "strings"
 
 // DocsBaseURL is the base URL for syllago error documentation.
-const DocsBaseURL = "https://openscribbler.github.io/syllago-docs"
+const DocsBaseURL = "https://syllago.dev"
 
 // Error code constants. Each code is namespaced by category and numbered.
 // Format: CATEGORY_NNN
@@ -103,7 +103,7 @@ const (
 )
 
 // docsURL converts an error code like "CATALOG_001" to its documentation URL.
-// "CATALOG_001" -> "https://openscribbler.github.io/syllago-docs/errors/catalog-001/"
+// "CATALOG_001" -> "https://syllago.dev/errors/catalog-001/"
 func docsURL(code string) string {
 	slug := strings.ToLower(strings.ReplaceAll(code, "_", "-"))
 	return DocsBaseURL + "/errors/" + slug + "/"

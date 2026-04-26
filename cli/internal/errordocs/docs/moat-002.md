@@ -33,5 +33,5 @@ Non-GitHub issuers (custom OIDC providers, GitLab, Buildkite) do not require num
 
 ```
 Error MOAT_002: GitHub Actions issuer requires --signing-repository-id and --signing-repository-owner-id
-  Suggestion: Find numeric IDs with `gh api repos/OWNER/REPO --jq '.id, .owner.id'`. See https://openscribbler.github.io/syllago-docs/moat/registry-add-signing-identity/.
+  Suggestion: Find numeric IDs with `gh api repos/OWNER/REPO --jq '.id, .owner.id'`. See https://syllago.dev/moat/registry-add-signing-identity/.
 ```

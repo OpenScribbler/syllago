@@ -38,7 +38,7 @@ func mustStringFlag(cmd *cobra.Command, name string) string {
 // MoatPinningDocsURL is the syllago-docs page this command points operators
 // at when the hard-fail fires. The page must exist before slice-2b merges —
 // see the syllago-docs bead (syllago-docs-6cv).
-const MoatPinningDocsURL = "https://openscribbler.github.io/syllago-docs/moat/registry-add-signing-identity/"
+const MoatPinningDocsURL = "https://syllago.dev/moat/registry-add-signing-identity/"
 
 // signingFlagSet holds the raw --signing-* flag values plus a "user passed
 // anything" bit so we can distinguish "user explicitly requested MOAT" from

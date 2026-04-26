@@ -9,7 +9,7 @@ import (
 
 func TestDocsURL_Format(t *testing.T) {
 	got := docsURL("CATALOG_001")
-	want := "https://openscribbler.github.io/syllago-docs/errors/catalog-001/"
+	want := "https://syllago.dev/errors/catalog-001/"
 	if got != want {
 		t.Errorf("docsURL(%q) = %q, want %q", "CATALOG_001", got, want)
 	}
@@ -20,9 +20,9 @@ func TestDocsURL_OtherCategories(t *testing.T) {
 		code string
 		want string
 	}{
-		{"REGISTRY_001", "https://openscribbler.github.io/syllago-docs/errors/registry-001/"},
-		{"INSTALL_003", "https://openscribbler.github.io/syllago-docs/errors/install-003/"},
-		{"CONVERT_002", "https://openscribbler.github.io/syllago-docs/errors/convert-002/"},
+		{"REGISTRY_001", "https://syllago.dev/errors/registry-001/"},
+		{"INSTALL_003", "https://syllago.dev/errors/install-003/"},
+		{"CONVERT_002", "https://syllago.dev/errors/convert-002/"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.code, func(t *testing.T) {
@@ -39,7 +39,7 @@ func TestNewStructuredError_PopulatesDocsURL(t *testing.T) {
 	if se.DocsURL == "" {
 		t.Error("DocsURL should be populated automatically")
 	}
-	want := "https://openscribbler.github.io/syllago-docs/errors/catalog-001/"
+	want := "https://syllago.dev/errors/catalog-001/"
 	if se.DocsURL != want {
 		t.Errorf("DocsURL = %q, want %q", se.DocsURL, want)
 	}
@@ -101,7 +101,7 @@ func TestPrintStructuredError_PlainText(t *testing.T) {
 	if !strings.Contains(out, "run syllago init") {
 		t.Errorf("plain text output missing suggestion, got:\n%s", out)
 	}
-	if !strings.Contains(out, "https://openscribbler.github.io/syllago-docs/errors/catalog-001/") {
+	if !strings.Contains(out, "https://syllago.dev/errors/catalog-001/") {
 		t.Errorf("plain text output missing docs URL, got:\n%s", out)
 	}
 	if !strings.Contains(out, "Run 'syllago explain CATALOG_001' for details") {

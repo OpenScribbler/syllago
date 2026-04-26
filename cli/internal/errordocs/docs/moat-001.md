@@ -24,12 +24,12 @@ Pick one of the three supported paths:
    ```
 3. **Skip MOAT** — if you only need unsigned git content, omit `--moat` and the signing flags. Syllago will fall back to the legacy git-clone flow (no signature verification).
 
-For the full workflow, see <https://openscribbler.github.io/syllago-docs/moat/registry-add-signing-identity/>.
+For the full workflow, see <https://syllago.dev/moat/registry-add-signing-identity/>.
 
 ## Example Output
 
 ```
 Error MOAT_001: registry at https://github.com/newteam/new-registry.git has no pinned signing identity
   Suggestion: Pass --signing-identity <workflow-san> and --signing-repository-id / --signing-repository-owner-id (required for GitHub Actions issuers), or request an allowlist entry.
-  Details: See https://openscribbler.github.io/syllago-docs/moat/registry-add-signing-identity/ for the full workflow and allowlist contribution process.
+  Details: See https://syllago.dev/moat/registry-add-signing-identity/ for the full workflow and allowlist contribution process.
 ```
