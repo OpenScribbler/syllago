@@ -16,11 +16,25 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
+
+// formatToastErr renders an error for a TUI toast. For output.StructuredError
+// (the standard CLI error envelope), it appends the Details field — without
+// it MOAT verification failures and similar wrapped errors arrive as the bare
+// "[CODE] message" with no diagnostic content. Plain errors fall through to
+// Error() unchanged so non-structured errors look the same as before.
+func formatToastErr(err error) string {
+	var se output.StructuredError
+	if errors.As(err, &se) && se.Details != "" {
+		return fmt.Sprintf("[%s] %s — %s", se.Code, se.Message, se.Details)
+	}
+	return err.Error()
+}
 
 // removeDoneMsg is sent when a library item remove operation completes.
 type removeDoneMsg struct {
@@ -1134,7 +1148,7 @@ func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
 // handleInstallDone processes the result of an install operation.
 func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
-		cmd := a.toast.Push("Install failed: "+msg.err.Error(), toastError)
+		cmd := a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
 		return a, cmd
 	}
 	name := msg.itemName

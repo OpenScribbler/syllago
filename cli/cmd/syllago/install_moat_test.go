@@ -44,7 +44,11 @@ func TestParseRegistryItemSyntax_Table(t *testing.T) {
 		{"", "", "", false},
 		{"/leading", "", "", false},
 		{"trailing/", "", "", false},
-		{"a/b/c", "", "", false},
+		// Multi-slash arg: registry name may contain slashes (e.g. GitHub-style
+		// "owner/repo"); item is always a single path segment per MOAT spec, so
+		// we split on the LAST slash.
+		{"OpenScribbler/syllago-meta-registry/split-rules-llm", "OpenScribbler/syllago-meta-registry", "split-rules-llm", true},
+		{"a/b/c", "a/b", "c", true},
 		{"//", "", "", false},
 	}
 	for _, c := range cases {

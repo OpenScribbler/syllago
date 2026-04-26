@@ -43,15 +43,12 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 		installed = strings.Join(abbrevs, ",")
 	}
 
-	// Any local item (library or content root) can be installed — not registry-only items.
-	// MOAT-materialized items are intentionally excluded for now: the TUI install
-	// pipeline (installer.Install) reads from item.Path, but materialized items
-	// have empty Path because the content blob is only fetched at install time
-	// from the manifest's SourceURI. The CLI install path knows how to do that
-	// fetch; the TUI does not yet. Until that is plumbed, hiding the button is
-	// the honest signal — the toast in handleInstall directs the user to the CLI.
+	// Any local item (library or content root) can be installed, plus unstaged
+	// MOAT items — for those the TUI install path fetches the blob from the
+	// registry at install time via doMOATInstallCmd. Pure registry-only items
+	// without MOAT provenance still require an explicit Add step.
 	canInstall := false
-	if item.Library || item.Registry == "" {
+	if item.Library || item.Registry == "" || isUnstagedRegistryItem(&item) {
 		for _, prov := range providers {
 			if prov.Detected && installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
 				canInstall = true

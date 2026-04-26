@@ -95,23 +95,24 @@ func defaultMoatInstallPrompt(w io.Writer, question string) bool {
 	return ans == "" || ans == "y" || ans == "yes"
 }
 
-// parseRegistryItemSyntax splits a positional "registry/item" argument.
-// Returns (registryName, itemName, true) when the arg contains exactly one
-// "/", both halves are non-empty, and neither half is blank. Any other
-// shape returns ok=false so the caller can fall through to the existing
-// library-install path.
+// parseRegistryItemSyntax splits a positional "registry/item" argument
+// on the LAST "/". Per MOAT spec §"Repository Layout", item names are a
+// single path segment under the canonical category dir (e.g.
+// "skills/split-rules-llm/" → item is "split-rules-llm"), so splitting on
+// the last slash always yields the correct (registry, item) tuple — even
+// when the registry name itself contains slashes (e.g. GitHub-prefixed
+// names like "OpenScribbler/syllago-meta-registry").
 //
-// A blank registry ("/foo") or blank item ("foo/") is a user mistake, not
-// an implicit library install — ok=false surfaces it as "no item named
-// '/foo' found" which is a better diagnostic than a silent fallback.
-// Multi-slash args ("a/b/c") also return false because a registry name
-// cannot contain "/" (config.Registry.Name rules forbid it).
+// Returns (registryName, itemName, true) when arg contains at least one
+// "/", and both halves are non-empty. Returns ok=false otherwise so the
+// caller can fall through to the existing library-install path.
+//
+// A blank registry ("/foo") or blank item ("foo/") surfaces as ok=false
+// — a user mistake that produces "no item named ..." rather than a silent
+// fallback.
 func parseRegistryItemSyntax(arg string) (string, string, bool) {
-	idx := strings.Index(arg, "/")
+	idx := strings.LastIndex(arg, "/")
 	if idx < 0 {
-		return "", "", false
-	}
-	if strings.Count(arg, "/") != 1 {
 		return "", "", false
 	}
 	reg := arg[:idx]

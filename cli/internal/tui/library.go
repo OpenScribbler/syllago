@@ -721,7 +721,7 @@ func (l libraryModel) renderMetadataContent(width int) string {
 	}
 	row := l.table.rows[l.table.cursor]
 	canInstall := false
-	if item.Library || item.Registry == "" {
+	if item.Library || item.Registry == "" || isUnstagedRegistryItem(item) {
 		for _, prov := range l.table.providers {
 			if prov.Detected && installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
 				canInstall = true

@@ -64,3 +64,34 @@ func IsMOATEmittable(ct catalog.ContentType) bool {
 	_, ok := ToMOATType(ct)
 	return ok
 }
+
+// CategoryDirForMOATType returns the canonical category-directory name a
+// content item of the given MOAT type lives under in the publisher source
+// repo. Defined in moat-spec.md §"Repository Layout":
+//
+//	command → commands/
+//	rules   → rules/
+//	skill   → skills/
+//	agent   → agents/
+//
+// Returns ("", false) for unknown types — install paths MUST treat unknown
+// types as ignorable per spec (the type namespace is reserved for future
+// extension).
+//
+// .moat/publisher.yml override (Tier 2 discovery) is NOT covered here — a
+// follow-up bead should add that lookup so non-canonical layouts can be
+// installed. Until then, install only succeeds for items at the canonical
+// path.
+func CategoryDirForMOATType(typeStr string) (string, bool) {
+	switch typeStr {
+	case "command":
+		return "commands", true
+	case "rules":
+		return "rules", true
+	case "skill":
+		return "skills", true
+	case "agent":
+		return "agents", true
+	}
+	return "", false
+}

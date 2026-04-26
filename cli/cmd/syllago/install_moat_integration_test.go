@@ -31,11 +31,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,11 +94,11 @@ func setupIntegrationEnv(t *testing.T) *integrationEnv {
 		cacheRoot:   t.TempDir(),
 	}
 
-	t.Cleanup(withTLSClient(t))
-
 	origCache := moatinstall.SourceCacheDir
 	moatinstall.SourceCacheDir = func() (string, error) { return env.cacheRoot, nil }
 	t.Cleanup(func() { moatinstall.SourceCacheDir = origCache })
+
+	stubCloneScratchDir(t)
 
 	// Fail-closed default: if a test doesn't set syncResultFn, force a
 	// loud error so stub drift is caught.
@@ -126,15 +122,14 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	// t.TempDir's auto-cleanup take care of artifacts.
 	t.Setenv("HOME", env.projectRoot)
 
-	// Serve a real tarball over TLS so the whole fetch+extract pipeline
-	// runs, not just the stubbed SyncResult.
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# from registry\n"})
-	sum := sha256.Sum256(body)
-	contentHash := "sha256:" + hex.EncodeToString(sum[:])
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
+	// Build a fake source-repo tree and stub CloneRepoFn to copy it into
+	// the production code's scratch dir. We exercise the spec-correct
+	// clone+tree-hash flow without spawning git or hitting network.
+	fixtureRoot := t.TempDir()
+	contentHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# from registry\n",
+	})
+	stubCloneFromFixture(t, fixtureRoot)
 
 	env.syncResultFn = func() (moat.SyncResult, error) {
 		return moat.SyncResult{
@@ -143,7 +138,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 				Name:        "my-skill",
 				Type:        "skill",
 				ContentHash: contentHash,
-				SourceURI:   srv.URL,
+				SourceURI:   "https://github.com/example/repo",
 				AttestedAt:  time.Now().UTC(),
 			}}},
 			IncomingProfile: incomingProfile(),

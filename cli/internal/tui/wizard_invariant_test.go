@@ -151,6 +151,37 @@ func TestInstallWizard_ValidateStep_PanicsOnEmpty(t *testing.T) {
 	w.validateStep() // should panic
 }
 
+func TestInstallWizard_ValidateStep_AcceptsUnstagedMOATItem(t *testing.T) {
+	t.Parallel()
+	// Unstaged MOAT items have empty Path because the content blob is fetched
+	// from the registry at install time (doMOATInstallCmd). Source is the
+	// discriminator. The wizard must accept these without panicking.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("unexpected panic for unstaged MOAT item: %v", r)
+		}
+	}()
+
+	root := t.TempDir()
+	prov := testInstallProvider("Claude Code", "claude-code", true)
+	item := catalog.ContentItem{
+		Name:     "remote-skill",
+		Type:     catalog.Skills,
+		Source:   "moat-registry",
+		Registry: "moat-registry",
+		// Path intentionally empty — unstaged MOAT discriminator.
+	}
+	w := &installWizardModel{
+		shell:             newWizardShell("Install", []string{"Provider", "Location", "Method", "Review"}),
+		step:              installStepProvider,
+		item:              item,
+		providers:         []provider.Provider{prov},
+		providerInstalled: []bool{false},
+		projectRoot:       root,
+	}
+	w.validateStep()
+}
+
 func TestInstallWizard_ValidateStep_PanicsOnInstalledLocation(t *testing.T) {
 	t.Parallel()
 	// Verify that entering location step with installed provider panics.

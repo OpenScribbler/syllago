@@ -237,7 +237,10 @@ func openInstallWizard(item catalog.ContentItem, providers []provider.Provider, 
 func (m *installWizardModel) validateStep() {
 	switch m.step {
 	case installStepProvider:
-		if m.item.Path == "" {
+		// An item is valid if it has on-disk content (Path) or registry
+		// provenance that fetches on install (Source — unstaged MOAT items).
+		// An item with neither is a programmer error: nothing to install.
+		if m.item.Name == "" || (m.item.Path == "" && m.item.Source == "") {
 			panic("wizard invariant: installStepProvider entered with empty item")
 		}
 	case installStepLocation:

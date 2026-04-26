@@ -2,32 +2,23 @@ package moatinstall
 
 // Tests for FetchAndRecord and helpers (moved from cmd/syllago when the
 // orchestration was extracted into this package — bead syllago-kdxus
-// Phase 2). Rationale: the TUI needs to reach the same fetch logic, and
-// cmd/syllago is a main package so cannot be imported.
+// Phase 2; rewritten in syllago-cvwj5 to follow the spec-correct
+// clone+tree-hash flow).
 //
 // Scope:
-//   - downloadTarball — 200 path, non-200 failure, oversize guard.
-//   - extractGzipTarball — regular files, nested dirs, path-traversal
-//     rejection (absolute, "..", symlinks out of tree).
-//   - FetchAndRecord — end-to-end Proceed path: fetch + hash-verify +
-//     extract + RecordInstall + lf.Save. Also exercises the two early
-//     refusals (non-UNSIGNED tier with no profile, non-https scheme) and
-//     the hash-mismatch failure.
+//   - FetchAndRecord — end-to-end Proceed path: clone + content_hash
+//     verify + copyTree + RecordInstall + lf.Save. Also exercises the
+//     two early refusals (non-UNSIGNED tier with no profile, non-https
+//     scheme), the hash-mismatch failure, and the Dual-Attested second
+//     leg failure modes.
 //
-// Tests use httptest.NewTLSServer for the source-artifact pipeline so the
-// scheme check on https:// SourceURIs still runs end-to-end.
+// Test seam: CloneRepoFn is stubbed with a copyTree-from-fixture function
+// so we exercise the full hash + extract path without spawning git.
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"crypto/tls"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,199 +31,83 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
-// withTLSClient swaps Client for one that trusts httptest's self-signed
-// cert. Tests that exercise the Proceed path must serve over TLS because
-// FetchAndRecord enforces https:// on SourceURI.
-func withTLSClient(t *testing.T) func() {
+// makeRepoFixture creates a fake source-repo tree at
+// <root>/<categoryDir>/<name>/SKILL.md (or whatever filename the caller
+// supplies) and returns the spec-correct content_hash for the item
+// subdirectory. Mirrors moat-spec.md §"Repository Layout": the item lives
+// at <category>/<name>/, and content_hash covers that subdirectory.
+func makeRepoFixture(t *testing.T, root, categoryDir, name string, files map[string]string) string {
 	t.Helper()
-	orig := Client
-	Client = &http.Client{
-		Timeout:   5 * time.Second,
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
+	itemDir := filepath.Join(root, categoryDir, name)
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatalf("mkdir item: %v", err)
 	}
-	return func() { Client = orig }
-}
-
-func TestDownloadTarball_OK(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := []byte("hello world")
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
-	got, err := downloadTarball(context.Background(), srv.URL)
+	for rel, content := range files {
+		full := filepath.Join(itemDir, rel)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatalf("mkdir parent: %v", err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatalf("write file: %v", err)
+		}
+	}
+	h, err := moat.ContentHash(itemDir)
 	if err != nil {
-		t.Fatalf("downloadTarball: %v", err)
+		t.Fatalf("ContentHash: %v", err)
 	}
-	if !bytes.Equal(got, body) {
-		t.Errorf("body mismatch: got %q, want %q", got, body)
-	}
+	return h
 }
 
-func TestDownloadTarball_Non200(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "missing", http.StatusNotFound)
-	}))
-	t.Cleanup(srv.Close)
-
-	_, err := downloadTarball(context.Background(), srv.URL)
-	if err == nil || !strings.Contains(err.Error(), "404") {
-		t.Errorf("expected 404 error, got %v", err)
+// stubCloneFromFixture replaces CloneRepoFn with one that copies
+// fixtureRoot into the production code's destDir, mimicking a successful
+// `git clone` of fixtureRoot.
+func stubCloneFromFixture(t *testing.T, fixtureRoot string) {
+	t.Helper()
+	orig := CloneRepoFn
+	CloneRepoFn = func(_ context.Context, _, destDir string) error {
+		return copyTree(fixtureRoot, destDir)
 	}
+	t.Cleanup(func() { CloneRepoFn = orig })
 }
 
-func TestDownloadTarball_Oversize(t *testing.T) {
-	origClient := Client
-	Client = &http.Client{
-		Transport: oversizeRoundTripper{size: MaxBytes + 10},
-	}
-	t.Cleanup(func() { Client = origClient })
-
-	_, err := downloadTarball(context.Background(), "https://example.com/big.tar.gz")
-	if err == nil || !strings.Contains(err.Error(), "exceeds") {
-		t.Errorf("expected oversize error, got %v", err)
-	}
+// stubCloneRepoErr replaces CloneRepoFn with one that always returns retErr.
+func stubCloneRepoErr(t *testing.T, retErr error) {
+	t.Helper()
+	orig := CloneRepoFn
+	CloneRepoFn = func(_ context.Context, _, _ string) error { return retErr }
+	t.Cleanup(func() { CloneRepoFn = orig })
 }
 
-type oversizeRoundTripper struct{ size int }
-
-func (rt oversizeRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	body := &zeroReader{n: rt.size}
-	return &http.Response{
-		StatusCode: http.StatusOK,
-		Status:     "200 OK",
-		Body:       io.NopCloser(body),
-		Header:     http.Header{},
-		Request:    req,
-	}, nil
+// stubCloneScratchDir gives tests a hermetic temp dir for clone scratch.
+func stubCloneScratchDir(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	orig := CloneScratchDir
+	CloneScratchDir = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { CloneScratchDir = orig })
 }
 
-type zeroReader struct {
-	n    int
-	read int
+// stubSourceCacheDir points the install cache at a temp dir.
+func stubSourceCacheDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	orig := SourceCacheDir
+	SourceCacheDir = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { SourceCacheDir = orig })
+	return dir
 }
 
-func (r *zeroReader) Read(p []byte) (int, error) {
-	if r.read >= r.n {
-		return 0, io.EOF
-	}
-	remaining := r.n - r.read
-	if remaining > len(p) {
-		remaining = len(p)
-	}
-	for i := 0; i < remaining; i++ {
-		p[i] = 0
-	}
-	r.read += remaining
-	return remaining, nil
-}
-
-func TestExtractGzipTarball_Ok(t *testing.T) {
-	body := buildTarGz(t, map[string]string{
-		"SKILL.md":      "# My Skill\n",
-		"prompts/a.md":  "A\n",
-		"prompts/b.md":  "B\n",
-		"nested/deep/x": "x\n",
-	})
-	dest := filepath.Join(t.TempDir(), "out")
-	if err := extractGzipTarball(body, dest); err != nil {
-		t.Fatalf("extract: %v", err)
-	}
-
-	for name, want := range map[string]string{
-		"SKILL.md":      "# My Skill\n",
-		"prompts/a.md":  "A\n",
-		"prompts/b.md":  "B\n",
-		"nested/deep/x": "x\n",
-	} {
-		p := filepath.Join(dest, name)
-		got, err := os.ReadFile(p)
-		if err != nil {
-			t.Errorf("read %q: %v", name, err)
-			continue
-		}
-		if string(got) != want {
-			t.Errorf("%q = %q, want %q", name, got, want)
-		}
-	}
-}
-
-func TestExtractGzipTarball_RejectsPathTraversal(t *testing.T) {
-	cases := []struct {
-		name string
-		path string
-	}{
-		{"dotdot", "../etc/passwd"},
-		{"absolute", "/etc/passwd"},
-		{"nested-dotdot", "foo/../../../etc/passwd"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			body := buildTarGz(t, map[string]string{tc.path: "evil"})
-			dest := filepath.Join(t.TempDir(), "out")
-			err := extractGzipTarball(body, dest)
-			if err == nil || !strings.Contains(err.Error(), "escapes destination") {
-				t.Errorf("expected escapes-destination error, got %v", err)
-			}
-		})
-	}
-}
-
-func TestExtractGzipTarball_SkipsSymlinks(t *testing.T) {
-	var buf bytes.Buffer
-	gzw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gzw)
-	if err := tw.WriteHeader(&tar.Header{
-		Name:     "evil-link",
-		Typeflag: tar.TypeSymlink,
-		Linkname: "/etc/passwd",
-		Mode:     0o777,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := tw.WriteHeader(&tar.Header{
-		Name:     "regular.txt",
-		Typeflag: tar.TypeReg,
-		Size:     4,
-		Mode:     0o644,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tw.Write([]byte("hi!\n")); err != nil {
-		t.Fatal(err)
-	}
-	_ = tw.Close()
-	_ = gzw.Close()
-
-	dest := filepath.Join(t.TempDir(), "out")
-	if err := extractGzipTarball(buf.Bytes(), dest); err != nil {
-		t.Fatalf("extract: %v", err)
-	}
-	if _, err := os.Lstat(filepath.Join(dest, "evil-link")); !os.IsNotExist(err) {
-		t.Errorf("symlink should have been skipped; got err=%v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dest, "regular.txt")); err != nil {
-		t.Errorf("regular file should have been written: %v", err)
-	}
-}
+const fakeRepoURL = "https://github.com/example/repo"
 
 func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# hi\n"})
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
@@ -240,12 +115,12 @@ func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
 		Name:        "my-skill",
 		Type:        "skill",
 		ContentHash: entryHash,
-		SourceURI:   srv.URL,
+		SourceURI:   fakeRepoURL,
 		AttestedAt:  time.Now().UTC(),
 	}
 
 	origNow := Now
-	Now = func() time.Time { return time.Date(2026, 4, 20, 0, 0, 0, 0, time.UTC) }
+	Now = func() time.Time { return time.Date(2026, 4, 25, 0, 0, 0, 0, time.UTC) }
 	t.Cleanup(func() { Now = origNow })
 
 	dir, err := FetchAndRecord(
@@ -288,25 +163,24 @@ func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
 }
 
 func TestFetchAndRecord_HashMismatch(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := []byte("not-a-tarball-but-bytes")
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
+	fixtureRoot := t.TempDir()
+	// Real hash from the fixture, but we set entry.ContentHash to a wrong
+	// value to simulate publisher-source drift.
+	_ = makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 	wrongHash := "sha256:" + strings.Repeat("aa", 32)
 
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	lf := &moat.Lockfile{}
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
+		Type:        "skill",
 		ContentHash: wrongHash,
-		SourceURI:   srv.URL,
+		SourceURI:   fakeRepoURL,
 	}
 	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", lf, nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -319,25 +193,36 @@ func TestFetchAndRecord_HashMismatch(t *testing.T) {
 	}
 }
 
-func withVerifyItemStub(t *testing.T, result moat.VerificationResult, retErr error) *struct {
+// verifyCall is one captured invocation of the VerifyItem seam — used so
+// Dual-Attested tests can inspect both the registry leg and the publisher
+// leg independently.
+type verifyCall struct {
+	Item    moat.AttestationItem
+	Profile *moat.SigningProfile
+	Rekor   []byte
+}
+
+// verifyCapture aggregates multi-call captures plus a single-call view for
+// existing tests that only assert on the last invocation.
+type verifyCapture struct {
 	Item    moat.AttestationItem
 	Profile *moat.SigningProfile
 	Rekor   []byte
 	Called  int
-} {
+	Calls   []verifyCall
+}
+
+func withVerifyItemStub(t *testing.T, result moat.VerificationResult, retErr error) *verifyCapture {
 	t.Helper()
-	captured := &struct {
-		Item    moat.AttestationItem
-		Profile *moat.SigningProfile
-		Rekor   []byte
-		Called  int
-	}{}
+	captured := &verifyCapture{}
 	orig := VerifyItem
 	VerifyItem = func(item moat.AttestationItem, profile *moat.SigningProfile, rekorRaw []byte, trustedRootJSON []byte) (moat.VerificationResult, error) {
+		rekorCopy := append([]byte(nil), rekorRaw...)
 		captured.Item = item
 		captured.Profile = profile
-		captured.Rekor = append([]byte(nil), rekorRaw...)
+		captured.Rekor = rekorCopy
 		captured.Called++
+		captured.Calls = append(captured.Calls, verifyCall{Item: item, Profile: profile, Rekor: rekorCopy})
 		return result, retErr
 	}
 	t.Cleanup(func() { VerifyItem = orig })
@@ -353,6 +238,47 @@ func withRekorStub(t *testing.T, body []byte) {
 	orig := moat.RekorBaseURLForTest()
 	moat.SetRekorBaseURLForTest(srv.URL)
 	t.Cleanup(func() { moat.SetRekorBaseURLForTest(orig) })
+}
+
+// withRekorPerIndexStub serves a different body per Rekor logIndex.
+// Dual-Attested tests need this because the registry leg and the publisher
+// leg fetch different Rekor entries against the same package-level base URL.
+func withRekorPerIndexStub(t *testing.T, bodies map[int64][]byte) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		idx := r.URL.Query().Get("logIndex")
+		var match []byte
+		for k, v := range bodies {
+			if fmt.Sprintf("%d", k) == idx {
+				match = v
+				break
+			}
+		}
+		if match == nil {
+			http.Error(w, "no fixture", http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write(match)
+	}))
+	t.Cleanup(srv.Close)
+	orig := moat.RekorBaseURLForTest()
+	moat.SetRekorBaseURLForTest(srv.URL)
+	t.Cleanup(func() { moat.SetRekorBaseURLForTest(orig) })
+}
+
+// withPublisherAttestationStub overrides FetchPublisherAttestationFn to
+// return canned bytes (or an error) without touching the network. Pair
+// with withRekorPerIndexStub for end-to-end Dual-Attested coverage.
+func withPublisherAttestationStub(t *testing.T, body []byte, retErr error) *struct{ Called int } {
+	t.Helper()
+	called := &struct{ Called int }{}
+	orig := FetchPublisherAttestationFn
+	FetchPublisherAttestationFn = func(_ context.Context, _ string) ([]byte, error) {
+		called.Called++
+		return body, retErr
+	}
+	t.Cleanup(func() { FetchPublisherAttestationFn = orig })
+	return called
 }
 
 func signedFixture(srvURL, contentHash string, withProfile bool) *moat.ContentEntry {
@@ -375,28 +301,22 @@ func signedFixture(srvURL, contentHash string, withProfile bool) *moat.ContentEn
 }
 
 func TestFetchAndRecord_Happy_Signed(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# hi\n"})
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
-
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 
 	rekorBytes := []byte(`{"abc123":{"body":"...","integratedTime":1700000000,"logID":"deadbeef","logIndex":1336116369,"verification":{"inclusionProof":{"checkpoint":"","hashes":[],"logIndex":1336116369,"rootHash":"","treeSize":100},"signedEntryTimestamp":""}}}`)
 	withRekorStub(t, rekorBytes)
 	captured := withVerifyItemStub(t, moat.VerificationResult{}, nil)
 
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
-	entry := signedFixture(srv.URL, entryHash, false)
+	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
 		Issuer:  "https://token.actions.githubusercontent.com",
 		Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
@@ -435,7 +355,7 @@ func TestFetchAndRecord_Happy_Signed(t *testing.T) {
 	if captured.Item.RekorLogIndex != 1336116369 {
 		t.Errorf("AttestationItem.RekorLogIndex = %d, want 1336116369", captured.Item.RekorLogIndex)
 	}
-	if !bytes.Equal(captured.Rekor, rekorBytes) {
+	if string(captured.Rekor) != string(rekorBytes) {
 		t.Errorf("rekor bytes did not round-trip verbatim")
 	}
 
@@ -445,34 +365,40 @@ func TestFetchAndRecord_Happy_Signed(t *testing.T) {
 	if lf.Entries[0].TrustTier != "SIGNED" {
 		t.Errorf("lockfile trust_tier = %q, want SIGNED", lf.Entries[0].TrustTier)
 	}
-	if !bytes.Equal(lf.Entries[0].AttestationBundle, rekorBytes) {
+	if string(lf.Entries[0].AttestationBundle) != string(rekorBytes) {
 		t.Errorf("lockfile AttestationBundle did not preserve Rekor bytes")
 	}
 }
 
 func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# hi\n"})
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
+	registryRekorIdx := int64(1336116369)
+	publisherRekorIdx := int64(1336116370)
+	registryRekorBytes := []byte(`{"reg":{"body":"...","logIndex":1336116369}}`)
+	publisherRekorBytes := []byte(`{"pub":{"body":"...","logIndex":1336116370}}`)
+	withRekorPerIndexStub(t, map[int64][]byte{
+		registryRekorIdx:  registryRekorBytes,
+		publisherRekorIdx: publisherRekorBytes,
+	})
 
-	rekorBytes := []byte(`{"abc123":{"body":"...","integratedTime":1700000000,"logID":"deadbeef","logIndex":1336116369,"verification":{"inclusionProof":{"checkpoint":"","hashes":[],"logIndex":1336116369,"rootHash":"","treeSize":100},"signedEntryTimestamp":""}}}`)
-	withRekorStub(t, rekorBytes)
+	publisherJSON := []byte(fmt.Sprintf(
+		`{"schema_version":1,"items":[{"name":"my-skill","content_hash":%q,"source_ref":"refs/heads/main","rekor_log_id":"x","rekor_log_index":%d}]}`,
+		entryHash, publisherRekorIdx,
+	))
+	pubStub := withPublisherAttestationStub(t, publisherJSON, nil)
 	captured := withVerifyItemStub(t, moat.VerificationResult{}, nil)
 
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
-	entry := signedFixture(srv.URL, entryHash, true)
+	entry := signedFixture(fakeRepoURL, entryHash, true)
 	registryProfile := &moat.SigningProfile{
 		Issuer:  "https://token.actions.githubusercontent.com",
 		Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
@@ -485,24 +411,43 @@ func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
 		t.Fatalf("FetchAndRecord: %v", err)
 	}
 
-	if captured.Profile != entry.SigningProfile {
-		t.Errorf("DUAL-ATTESTED must use per-item profile; got %+v", captured.Profile)
+	if pubStub.Called != 1 {
+		t.Errorf("publisher attestation must be fetched exactly once for DUAL-ATTESTED; got %d", pubStub.Called)
+	}
+	if captured.Called != 2 {
+		t.Fatalf("DUAL-ATTESTED requires 2 verify calls (registry + publisher); got %d", captured.Called)
+	}
+	if captured.Calls[0].Profile != registryProfile {
+		t.Errorf("first verify call must pin to registry profile; got %+v", captured.Calls[0].Profile)
+	}
+	if string(captured.Calls[0].Rekor) != string(registryRekorBytes) {
+		t.Errorf("first verify must receive registry Rekor bytes verbatim")
+	}
+	if captured.Calls[1].Profile != entry.SigningProfile {
+		t.Errorf("second verify call must pin to per-item publisher profile; got %+v", captured.Calls[1].Profile)
+	}
+	if string(captured.Calls[1].Rekor) != string(publisherRekorBytes) {
+		t.Errorf("second verify must receive publisher Rekor bytes verbatim")
+	}
+	if captured.Calls[1].Item.RekorLogIndex != publisherRekorIdx {
+		t.Errorf("second verify must use publisher logIndex %d; got %d", publisherRekorIdx, captured.Calls[1].Item.RekorLogIndex)
 	}
 	if lf.Entries[0].TrustTier != "DUAL-ATTESTED" {
 		t.Errorf("lockfile trust_tier = %q, want DUAL-ATTESTED", lf.Entries[0].TrustTier)
 	}
+	// Lockfile keeps the registry's per-item Rekor bundle (the one whose
+	// content_hash and source_uri the manifest published) — not the
+	// publisher's separate entry.
+	if string(lf.Entries[0].AttestationBundle) != string(registryRekorBytes) {
+		t.Errorf("lockfile AttestationBundle must hold registry Rekor bytes, not publisher's")
+	}
 }
 
 func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# hi\n"})
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
-
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 
 	rekorSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
@@ -520,13 +465,12 @@ func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
 	}
 	t.Cleanup(func() { VerifyItem = origVerify })
 
-	cacheRoot := t.TempDir()
-	origCache := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = origCache })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	lf := &moat.Lockfile{}
-	entry := signedFixture(srv.URL, entryHash, false)
+	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
@@ -545,28 +489,22 @@ func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
 }
 
 func TestFetchAndRecord_Signed_VerifyFails(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := buildTarGz(t, map[string]string{"SKILL.md": "# hi\n"})
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
-
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
 
 	rekorBytes := []byte(`{"abc123":{"body":"...","logIndex":1336116369}}`)
 	withRekorStub(t, rekorBytes)
 	verifyErr := errors.New("identity mismatch")
 	withVerifyItemStub(t, moat.VerificationResult{}, verifyErr)
 
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	lf := &moat.Lockfile{}
-	entry := signedFixture(srv.URL, entryHash, false)
+	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
@@ -585,8 +523,9 @@ func TestFetchAndRecord_Signed_RequiresProfile(t *testing.T) {
 	idx := int64(42)
 	entry := &moat.ContentEntry{
 		Name:          "my-skill",
+		Type:          "skill",
 		ContentHash:   "sha256:" + strings.Repeat("cc", 32),
-		SourceURI:     "https://example.com/x.tar.gz",
+		SourceURI:     fakeRepoURL,
 		RekorLogIndex: &idx,
 	}
 	_, err := FetchAndRecord(
@@ -596,17 +535,170 @@ func TestFetchAndRecord_Signed_RequiresProfile(t *testing.T) {
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 }
 
+// TestFetchAndRecord_DualAttested_PublisherFetchFails covers the case
+// where the registry leg succeeds but moat-attestation.json cannot be
+// retrieved. The whole install must fail-closed — partial trust is not a
+// valid Dual-Attested outcome.
+func TestFetchAndRecord_DualAttested_PublisherFetchFails(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
+
+	withRekorStub(t, []byte(`{"reg":{"logIndex":1336116369}}`))
+	withPublisherAttestationStub(t, nil, errors.New("404 not found"))
+	withVerifyItemStub(t, moat.VerificationResult{}, nil)
+
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
+
+	lf := &moat.Lockfile{}
+	entry := signedFixture(fakeRepoURL, entryHash, true)
+	registryProfile := &moat.SigningProfile{
+		Issuer:  "https://token.actions.githubusercontent.com",
+		Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
+	}
+
+	_, err := FetchAndRecord(
+		context.Background(), entry, "example", "https://example.com/m",
+		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
+	)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "publisher attestation") {
+		t.Errorf("expected publisher-attestation message; got %+v", err)
+	}
+	if len(lf.Entries) != 0 {
+		t.Errorf("lockfile must not be mutated when publisher leg fails; got %d entries", len(lf.Entries))
+	}
+}
+
+// TestFetchAndRecord_DualAttested_PublisherEntryMissing covers the case
+// where moat-attestation.json is fetched but contains no items[] entry
+// matching the manifest's content_hash. Indicates the registry indexed
+// content the publisher never attested.
+func TestFetchAndRecord_DualAttested_PublisherEntryMissing(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
+
+	withRekorStub(t, []byte(`{"reg":{"logIndex":1336116369}}`))
+	// Publisher attestation lists a different content_hash → no match.
+	withPublisherAttestationStub(t, []byte(`{"items":[{"name":"other","content_hash":"sha256:`+strings.Repeat("ff", 32)+`","rekor_log_index":99}]}`), nil)
+	withVerifyItemStub(t, moat.VerificationResult{}, nil)
+
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
+
+	lf := &moat.Lockfile{}
+	entry := signedFixture(fakeRepoURL, entryHash, true)
+	registryProfile := &moat.SigningProfile{
+		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
+	}
+
+	_, err := FetchAndRecord(
+		context.Background(), entry, "example", "https://example.com/m",
+		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
+	)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "does not cover") {
+		t.Errorf("expected 'does not cover' message; got %+v", err)
+	}
+	if len(lf.Entries) != 0 {
+		t.Errorf("lockfile must not be mutated when publisher entry is missing; got %d entries", len(lf.Entries))
+	}
+}
+
+// TestFetchAndRecord_DualAttested_PublisherVerifyFails covers the case
+// where both Rekor entries fetch fine, but the publisher's separate Rekor
+// entry's cert subject does not match the per-item signing_profile.
+func TestFetchAndRecord_DualAttested_PublisherVerifyFails(t *testing.T) {
+	fixtureRoot := t.TempDir()
+	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# hi\n",
+	})
+
+	registryRekorIdx := int64(1336116369)
+	publisherRekorIdx := int64(1336116370)
+	withRekorPerIndexStub(t, map[int64][]byte{
+		registryRekorIdx:  []byte(`{"reg":{"logIndex":1336116369}}`),
+		publisherRekorIdx: []byte(`{"pub":{"logIndex":1336116370}}`),
+	})
+	withPublisherAttestationStub(t, []byte(fmt.Sprintf(
+		`{"items":[{"name":"my-skill","content_hash":%q,"rekor_log_index":%d}]}`,
+		entryHash, publisherRekorIdx,
+	)), nil)
+
+	// First call (registry leg) succeeds; second (publisher leg) fails.
+	callCount := 0
+	origVerify := VerifyItem
+	VerifyItem = func(_ moat.AttestationItem, _ *moat.SigningProfile, _, _ []byte) (moat.VerificationResult, error) {
+		callCount++
+		if callCount == 2 {
+			return moat.VerificationResult{}, errors.New("publisher cert subject mismatch")
+		}
+		return moat.VerificationResult{}, nil
+	}
+	t.Cleanup(func() { VerifyItem = origVerify })
+
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
+
+	lf := &moat.Lockfile{}
+	entry := signedFixture(fakeRepoURL, entryHash, true)
+	registryProfile := &moat.SigningProfile{
+		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
+	}
+
+	_, err := FetchAndRecord(
+		context.Background(), entry, "example", "https://example.com/m",
+		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
+	)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "publisher attestation verification failed") {
+		t.Errorf("expected publisher-verify message; got %+v", err)
+	}
+	if callCount != 2 {
+		t.Errorf("expected 2 verify calls (registry + publisher); got %d", callCount)
+	}
+	if len(lf.Entries) != 0 {
+		t.Errorf("lockfile must not be mutated when publisher verify fails; got %d entries", len(lf.Entries))
+	}
+}
+
 func TestFetchAndRecord_RefusesNonHTTPSScheme(t *testing.T) {
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
+		Type:        "skill",
 		ContentHash: "sha256:" + strings.Repeat("cc", 32),
 		SourceURI:   "git+https://example.com/repo.git",
 	}
 	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", &moat.Lockfile{}, nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
-	if !errors.As(err, &se) || !strings.Contains(se.Message, "scheme not supported") {
-		t.Errorf("expected scheme-not-supported refusal; got %+v", err)
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "source_uri scheme") {
+		t.Errorf("expected source_uri scheme refusal; got %+v", err)
+	}
+}
+
+func TestFetchAndRecord_RejectsUnsupportedType(t *testing.T) {
+	entry := &moat.ContentEntry{
+		Name:        "my-hook",
+		Type:        "hook",
+		ContentHash: "sha256:" + strings.Repeat("cc", 32),
+		SourceURI:   fakeRepoURL,
+	}
+	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", &moat.Lockfile{}, nil, nil)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "unsupported MOAT content type") {
+		t.Errorf("expected unsupported-type refusal; got %+v", err)
 	}
 }
 
@@ -614,80 +706,54 @@ func TestFetchAndRecord_NilGuards(t *testing.T) {
 	if _, err := FetchAndRecord(context.Background(), nil, "r", "u", "p", &moat.Lockfile{}, nil, nil); err == nil {
 		t.Error("expected error on nil entry")
 	}
-	entry := &moat.ContentEntry{Name: "x", ContentHash: "sha256:aa", SourceURI: "https://x"}
+	entry := &moat.ContentEntry{Name: "x", Type: "skill", ContentHash: "sha256:aa", SourceURI: fakeRepoURL}
 	if _, err := FetchAndRecord(context.Background(), entry, "r", "u", "p", nil, nil, nil); err == nil {
 		t.Error("expected error on nil lockfile")
 	}
 }
 
-func TestFetchAndRecord_ExtractFailsOnCorruptGzip(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	body := []byte("definitely not gzip")
-	sum := sha256.Sum256(body)
-	entryHash := "sha256:" + hex.EncodeToString(sum[:])
-
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-
-	cacheRoot := t.TempDir()
-	orig := SourceCacheDir
-	SourceCacheDir = func() (string, error) { return cacheRoot, nil }
-	t.Cleanup(func() { SourceCacheDir = orig })
+func TestFetchAndRecord_CloneFailure(t *testing.T) {
+	stubCloneRepoErr(t, errors.New("git clone failed: repo not found"))
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
 
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
-		ContentHash: entryHash,
-		SourceURI:   srv.URL,
-	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lf.json", &moat.Lockfile{}, nil, nil)
-	assertStructuredCode(t, err, output.ErrSystemIO)
-}
-
-func TestFetchAndRecord_FetchFailure(t *testing.T) {
-	t.Cleanup(withTLSClient(t))
-	entry := &moat.ContentEntry{
-		Name:        "my-skill",
+		Type:        "skill",
 		ContentHash: "sha256:" + strings.Repeat("aa", 32),
-		SourceURI:   "https://127.0.0.1:1/unreachable.tar.gz",
+		SourceURI:   fakeRepoURL,
 	}
 	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lf.json", &moat.Lockfile{}, nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
-	if !errors.As(err, &se) || !strings.Contains(se.Message, "could not fetch") {
-		t.Errorf("expected fetch-failure message; got %+v", err)
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "could not clone source repo") {
+		t.Errorf("expected clone-failure message; got %+v", err)
 	}
 }
 
-// buildTarGz builds an in-memory .tar.gz from the given files map.
-// Keys are slash-separated paths relative to the archive root.
-func buildTarGz(t *testing.T, files map[string]string) []byte {
-	t.Helper()
-	var buf bytes.Buffer
-	gzw := gzip.NewWriter(&buf)
-	tw := tar.NewWriter(gzw)
-	for name, content := range files {
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     name,
-			Mode:     0o644,
-			Size:     int64(len(content)),
-			Typeflag: tar.TypeReg,
-		}); err != nil {
-			t.Fatalf("tar header: %v", err)
-		}
-		if _, err := tw.Write([]byte(content)); err != nil {
-			t.Fatalf("tar write: %v", err)
-		}
+func TestFetchAndRecord_ItemNotFoundInRepo(t *testing.T) {
+	// Repo exists but has no skills/missing-skill/ subdirectory.
+	fixtureRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(fixtureRoot, "skills", "other-skill"), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if err := tw.Close(); err != nil {
-		t.Fatalf("tar close: %v", err)
+
+	stubCloneFromFixture(t, fixtureRoot)
+	stubCloneScratchDir(t)
+	stubSourceCacheDir(t)
+
+	entry := &moat.ContentEntry{
+		Name:        "missing-skill",
+		Type:        "skill",
+		ContentHash: "sha256:" + strings.Repeat("aa", 32),
+		SourceURI:   fakeRepoURL,
 	}
-	if err := gzw.Close(); err != nil {
-		t.Fatalf("gzip close: %v", err)
+	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lf.json", &moat.Lockfile{}, nil, nil)
+	assertStructuredCode(t, err, output.ErrMoatInvalid)
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Message, "item not found in source repo") {
+		t.Errorf("expected item-not-found message; got %+v", err)
 	}
-	_ = fmt.Sprintf
-	return buf.Bytes()
 }
 
 // assertStructuredCode fails the test if err is nil or is not a structured

@@ -1,0 +1,178 @@
+package moatinstall
+
+// Source-repo cloning for MOAT install (bead syllago-cvwj5).
+//
+// The MOAT spec defines content[].source_uri as the source repository URI
+// (moat-spec.md line 781) and content_hash as a content-tree merkle hash
+// computed by the algorithm in moat_hash.py (sorted "<file_hash>  <path>"
+// lines, UTF-8 BOM stripped, CRLF normalized for text). Install MUST
+// materialize the source repo, locate the item subdirectory at
+// <category_dir>/<entry.name>/, and verify by recomputing the tree hash —
+// not by hashing arbitrary tarball bytes.
+//
+// History: prior versions of this package treated source_uri as a tarball
+// URL and hashed the response body with sha256. That collapsed two
+// distinct algorithms into one and could only succeed against synthetic
+// fixtures whose ContentHash equaled sha256(tarball). Against any
+// conforming registry it failed with a content_hash mismatch.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+// CloneRepoFn is the test seam for source-repo materialization. Production
+// uses cloneRepoShallow (git clone --depth=1 with hardened flags). Tests
+// stub this to copy a fixture directory into destDir so they exercise the
+// full hash-verify + extract path without spawning git.
+//
+// The seam is at the moatinstall layer rather than wrapping registry.Clone
+// because the registry helpers are coupled to syllago's registry-cache
+// layout (CloneDir, CloneRecord). MOAT source clones are scratch-space
+// throwaways keyed off a temp dir.
+var CloneRepoFn = cloneRepoShallow
+
+// cloneRepoShallow runs `git clone --depth=1` of sourceURI into destDir
+// using the same hardening flags as registry.cloneArgs:
+//   - core.hooksPath=/dev/null (no clone-side hook execution)
+//   - --no-recurse-submodules (no transitive code we didn't ask for)
+//   - GIT_CONFIG_NOSYSTEM=1 (no system-wide config influence)
+//
+// destDir MUST not already exist; the function creates it. Caller is
+// responsible for cleaning up on success and failure (callers in fetch.go
+// use defer os.RemoveAll(destDir)).
+func cloneRepoShallow(ctx context.Context, sourceURI, destDir string) error {
+	if err := checkGit(); err != nil {
+		return err
+	}
+	if _, err := os.Stat(destDir); err == nil {
+		return fmt.Errorf("clone destination already exists: %s", destDir)
+	}
+	if err := os.MkdirAll(filepath.Dir(destDir), 0o755); err != nil {
+		return fmt.Errorf("creating clone parent dir: %w", err)
+	}
+
+	cmd := exec.CommandContext(ctx, "git",
+		"-c", "core.hooksPath=/dev/null",
+		"clone",
+		"--depth=1",
+		"--no-recurse-submodules",
+		"--quiet",
+		sourceURI, destDir,
+	)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		_ = os.RemoveAll(destDir)
+		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// checkGit returns an error if git is not on PATH. Mirrors the helper in
+// internal/registry — duplicated rather than imported to keep the
+// moatinstall package free of registry-cache coupling.
+func checkGit() error {
+	_, err := exec.LookPath("git")
+	if err != nil {
+		return errors.New("git is required for MOAT install but was not found on PATH")
+	}
+	return nil
+}
+
+// validateSourceURI rejects anything other than https:// repo URLs. The
+// MOAT spec example uses "https://github.com/owner/repo" (line 750-ish);
+// we reject other schemes (git://, ssh://, git+https://) until a use case
+// surfaces. URL parse errors and empty paths surface here so the caller
+// gets a structured error before paying for a clone attempt.
+func validateSourceURI(sourceURI string) error {
+	if sourceURI == "" {
+		return errors.New("source_uri is empty")
+	}
+	u, err := url.Parse(sourceURI)
+	if err != nil {
+		return fmt.Errorf("source_uri parse: %w", err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("source_uri scheme not supported: %q (only https://)", u.Scheme)
+	}
+	if u.Host == "" || u.Path == "" || u.Path == "/" {
+		return fmt.Errorf("source_uri missing host or path: %s", sourceURI)
+	}
+	return nil
+}
+
+// copyTree recursively copies srcDir into dstDir. dstDir is removed first
+// so a partial copy from a prior failed install never leaves stale files
+// alongside fresh ones.
+//
+// Symlinks are rejected — moat.ContentHash already enforces a no-symlinks
+// policy on the source tree, so any symlink encountered here indicates
+// something walked outside the verified subtree (a bug or attempted
+// escape). Non-regular non-dir entries (devices, fifos, sockets) are
+// silently skipped, mirroring the prior tarball-extraction policy.
+func copyTree(srcDir, dstDir string) error {
+	if err := os.RemoveAll(dstDir); err != nil {
+		return fmt.Errorf("clearing dst: %w", err)
+	}
+	if err := os.MkdirAll(dstDir, 0o755); err != nil {
+		return fmt.Errorf("creating dst: %w", err)
+	}
+
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, relErr := filepath.Rel(srcDir, path)
+		if relErr != nil {
+			return relErr
+		}
+		if rel == "." {
+			return nil
+		}
+		target := filepath.Join(dstDir, rel)
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("symlink rejected during copy: %s", rel)
+		}
+		switch {
+		case info.IsDir():
+			return os.MkdirAll(target, info.Mode().Perm()|0o700)
+		case info.Mode().IsRegular():
+			return copyRegularFile(path, target, info.Mode())
+		default:
+			return nil
+		}
+	})
+}
+
+// copyRegularFile is a small helper isolated for testability. Modes are
+// preserved up to the unix permission bits.
+func copyRegularFile(srcPath, dstPath string, mode os.FileMode) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return fmt.Errorf("open src %s: %w", srcPath, err)
+	}
+	defer src.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+		return fmt.Errorf("mkdir parent of %s: %w", dstPath, err)
+	}
+	dst, err := os.OpenFile(dstPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode.Perm()|0o600)
+	if err != nil {
+		return fmt.Errorf("create dst %s: %w", dstPath, err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("copy %s -> %s: %w", srcPath, dstPath, err)
+	}
+	return nil
+}
