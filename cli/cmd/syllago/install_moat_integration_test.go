@@ -46,6 +46,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -99,9 +100,9 @@ func setupIntegrationEnv(t *testing.T) *integrationEnv {
 
 	t.Cleanup(withTLSClient(t))
 
-	origCache := moatSourceCacheDir
-	moatSourceCacheDir = func() (string, error) { return env.cacheRoot, nil }
-	t.Cleanup(func() { moatSourceCacheDir = origCache })
+	origCache := moatinstall.SourceCacheDir
+	moatinstall.SourceCacheDir = func() (string, error) { return env.cacheRoot, nil }
+	t.Cleanup(func() { moatinstall.SourceCacheDir = origCache })
 
 	// Fail-closed default: if a test doesn't set syncResultFn, force a
 	// loud error so stub drift is caught.

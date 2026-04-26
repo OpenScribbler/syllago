@@ -1,39 +1,20 @@
-package main
+package moatinstall
 
-// Source-fetcher for the MOAT registry-install Proceed path (ADR 0007
-// Phase 2, bead syllago-u128o — fourth slice of parent bead syllago-svdwc).
+// FetchAndRecord — the Proceed-branch action for both CLI and TUI MOAT
+// installs. Extracted from cmd/syllago/install_moat_fetch.go so the TUI can
+// reach it (cmd/syllago is a main package and cannot be imported).
 //
-// Scope of this slice:
+// Behavior is unchanged from the prior in-CLI implementation:
 //
-//   - Fetch an HTTPS tarball source artifact from ContentEntry.SourceURI.
-//     The sha256 of the fetched bytes MUST equal ContentEntry.ContentHash
-//     before any filesystem side-effect happens.
-//   - Extract the tarball into a per-registry, per-item content cache under
-//     ~/.cache/syllago/moat-sources/<registry>/<item>/<sha256-prefix>/.
-//   - Record the install in the project lockfile via
-//     installer.RecordInstall and persist with lf.Save. UNSIGNED tier uses
-//     a null AttestationBundle; SIGNED/DUAL-ATTESTED tiers require a
-//     per-item Rekor bundle that is not yet fetched by Sync — those tiers
-//     return a structured MOAT_004 error pending a sibling bead.
+//   - SIGNED/DUAL-ATTESTED tiers: fetch the per-item Rekor entry by index,
+//     verify against the supplied identity (per-item profile if present,
+//     else the registry-level profile), then download + hash-verify +
+//     extract + record.
+//   - UNSIGNED tier: skip the Rekor + verify step, download + hash-verify +
+//     extract + record with a null AttestationBundle.
 //
-// What this slice intentionally does NOT do:
-//
-//   - Provider-level install (copying content into ~/.claude/, symlinks,
-//     hooks-JSON merge). `syllago install <registry>/<item>` only pins the
-//     registry item into the project lockfile + content cache; a later
-//     `syllago install <item>` flows through the existing library path.
-//   - Fetch per-item Rekor bundles for SIGNED/DUAL-ATTESTED tiers. Those
-//     require a GET to rekor.sigstore.dev/api/v1/log/entries?logIndex=<n>
-//     plus re-verification via VerifyAttestationItem — tracked separately
-//     since the scope is non-trivial and the MOAT fixtures in use are
-//     UNSIGNED.
-//   - Support git+https source URIs. Tarball covers the common publisher
-//     pipeline; git clone-based publishing is a follow-up.
-//
-// Cache layout rationale: the sha256-prefix directory name lets the same
-// content cache hold multiple versions of an item without name collisions
-// while still being cheap to garbage-collect (prune subtrees with no
-// corresponding lockfile entry).
+// All failure modes return structured errors with stable codes — the
+// caller (CLI or TUI) only has to surface them.
 
 import (
 	"archive/tar"
@@ -56,19 +37,20 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
-// moatFetchClient is the HTTP client seam for source-artifact fetches.
-// Tests swap this to a httptest.Server client. Default uses a 60s timeout
-// to accommodate larger tarballs than manifest fetches.
-var moatFetchClient = &http.Client{Timeout: 60 * time.Second}
+// Client is the HTTP client used for source-artifact fetches. Tests swap
+// this to a httptest.Server-backed client. 60s default timeout matches the
+// CLI's pre-extraction value — large enough for typical content tarballs,
+// small enough that a hung registry doesn't lock the install indefinitely.
+var Client = &http.Client{Timeout: 60 * time.Second}
 
-// moatFetchMaxBytes caps the source-artifact size. 100 MiB is well above
-// any reasonable content-item tarball but far below what a runaway or
-// malicious registry could use to exhaust disk.
-const moatFetchMaxBytes = 100 << 20
+// MaxBytes caps the source-artifact size. 100 MiB is well above any
+// reasonable content-item tarball and far below what a runaway or malicious
+// registry could use to exhaust disk.
+const MaxBytes = 100 << 20
 
-// moatSourceCacheDir returns the root cache directory for all MOAT source
-// artifacts. Tests override via env var or by swapping this variable.
-var moatSourceCacheDir = func() (string, error) {
+// SourceCacheDir returns the root cache directory for MOAT source
+// artifacts. Tests override by replacing this variable.
+var SourceCacheDir = func() (string, error) {
 	cache, err := os.UserCacheDir()
 	if err != nil {
 		return "", err
@@ -76,41 +58,34 @@ var moatSourceCacheDir = func() (string, error) {
 	return filepath.Join(cache, "syllago", "moat-sources"), nil
 }
 
-// moatVerifyItem is the per-item verification seam. Production points at
+// VerifyItem is the per-item verification seam. Production points at
 // moat.VerifyAttestationItem (the full ECDSA → SET → inclusion proof →
-// Fulcio identity → repo-ID binding chain). Wiring tests in this package
-// stub it to short-circuit the crypto — the real chain is exercised by the
-// crypto-anchored unit tests in cli/internal/moat/item_verify_test.go.
-var moatVerifyItem = moat.VerifyAttestationItem
+// Fulcio identity → repo-ID binding chain). Wiring tests stub this to
+// short-circuit the crypto — the real chain is exercised in
+// internal/moat/item_verify_test.go.
+var VerifyItem = moat.VerifyAttestationItem
 
-// fetchAndRecord is the Proceed-branch action: optionally fetch+verify the
-// per-item Rekor attestation, download the source artifact, verify the
-// sha256 matches, extract into the per-item cache, record in the lockfile,
-// and save. Returns the absolute path of the extracted content directory
+// Now is the clock seam for lockfile pinned_at timestamps. Tests pin to a
+// fixed instant for deterministic snapshots.
+var Now = time.Now
+
+// FetchAndRecord runs the install side-effect for a verified manifest
+// entry. Returns the absolute path of the extracted source-artifact tree
 // on success.
 //
 // Caller responsibilities:
-//   - gate decision has already cleared (PreInstallCheck returned Proceed
+//   - Gate decision has already cleared (PreInstallCheck returned Proceed
 //     or an interactive prompt was accepted).
-//   - lf is the in-memory lockfile; fetchAndRecord adds a LockEntry via
-//     RecordInstall and calls lf.Save.
-//   - registryName is the short config.Registry.Name (for cache pathing);
+//   - lf is the in-memory lockfile; FetchAndRecord adds a LockEntry via
+//     installer.RecordInstall and persists with lf.Save.
+//   - registryName is the short config.Registry.Name (drives cache pathing);
 //     registryURL is the manifest URI that goes into LockEntry.Registry.
-//   - registryProfile is the manifest-level RegistrySigningProfile; used
-//     as the verification identity for SIGNED items (no per-item profile).
+//   - registryProfile is the manifest-level RegistrySigningProfile, used as
+//     the verification identity for SIGNED items (no per-item profile).
 //     Ignored for UNSIGNED items.
 //   - trustedRootJSON is the Sigstore trusted-root bytes (e.g. from
 //     moat.BundledTrustedRoot). Required for SIGNED/DUAL-ATTESTED.
-//
-// Tier-specific behavior:
-//   - UNSIGNED: skips Rekor fetch+verify entirely; passes nil
-//     AttestationBundle to RecordInstall.
-//   - SIGNED: fetches the Rekor entry by entry.RekorLogIndex, builds an
-//     AttestationItem, verifies against registryProfile, threads the raw
-//     Rekor bytes into the lockfile entry.
-//   - DUAL-ATTESTED: same as SIGNED but uses entry.SigningProfile (per-item
-//     identity) instead of the manifest-level fallback.
-func fetchAndRecord(
+func FetchAndRecord(
 	ctx context.Context,
 	entry *moat.ContentEntry,
 	registryName, registryURL, lockfilePath string,
@@ -119,16 +94,12 @@ func fetchAndRecord(
 	trustedRootJSON []byte,
 ) (string, error) {
 	if entry == nil {
-		return "", errors.New("fetchAndRecord: entry is nil")
+		return "", errors.New("FetchAndRecord: entry is nil")
 	}
 	if lf == nil {
-		return "", errors.New("fetchAndRecord: lockfile is nil")
+		return "", errors.New("FetchAndRecord: lockfile is nil")
 	}
 
-	// Resolve the verification identity and fetch the per-item Rekor bundle
-	// up-front for signed tiers. Doing this BEFORE the tarball download
-	// fails fast on identity/attestation issues without paying for a
-	// potentially 100 MiB transfer that we'd then throw away.
 	tier := entry.TrustTier()
 	var rekorBundle []byte
 	if tier != moat.TrustTierUnsigned {
@@ -160,7 +131,7 @@ func fetchAndRecord(
 			SourceRef:     entry.SourceURI,
 			RekorLogIndex: *entry.RekorLogIndex,
 		}
-		if _, vErr := moatVerifyItem(item, profile, raw, trustedRootJSON); vErr != nil {
+		if _, vErr := VerifyItem(item, profile, raw, trustedRootJSON); vErr != nil {
 			return "", output.NewStructuredErrorDetail(
 				output.ErrMoatInvalid,
 				fmt.Sprintf("attestation verification failed for %s/%s", registryName, entry.Name),
@@ -179,7 +150,7 @@ func fetchAndRecord(
 		)
 	}
 
-	cacheRoot, err := moatSourceCacheDir()
+	cacheRoot, err := SourceCacheDir()
 	if err != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrSystemHomedir,
@@ -192,8 +163,6 @@ func fetchAndRecord(
 	hashPrefix := shortHashCache(entry.ContentHash)
 	targetDir := filepath.Join(cacheRoot, registryName, entry.Name, hashPrefix)
 
-	// Fetch → hash-verify → extract. Each step maps to a specific error
-	// code so operators can triage without reading Go.
 	body, err := downloadTarball(ctx, entry.SourceURI)
 	if err != nil {
 		return "", output.NewStructuredErrorDetail(
@@ -223,12 +192,7 @@ func fetchAndRecord(
 		)
 	}
 
-	// Lockfile: UNSIGNED → nil rekorBundle (BuildLockEntry writes a null
-	// AttestationBundle). SIGNED/DUAL-ATTESTED → the verbatim Rekor bytes
-	// captured above; BuildLockEntry recomputes the canonical-payload hash
-	// and AddEntry binds the bundle to that hash. Clock seam shared with
-	// the sync path so tests can pin pinned_at deterministically.
-	if _, err := installer.RecordInstall(lf, entry, registryURL, rekorBundle, moatInstallNow()); err != nil {
+	if _, err := installer.RecordInstall(lf, entry, registryURL, rekorBundle, Now()); err != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("could not record install of %s/%s in lockfile", registryName, entry.Name),
@@ -248,9 +212,9 @@ func fetchAndRecord(
 	return targetDir, nil
 }
 
-// downloadTarball GETs url, enforcing moatFetchMaxBytes. Returns the full
-// body on success. Short-circuits on non-200 and on oversize responses
-// before reading any further.
+// downloadTarball GETs url, enforcing MaxBytes. Returns the full body on
+// success. Short-circuits on non-200 and on oversize responses before
+// reading any further.
 func downloadTarball(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -258,7 +222,7 @@ func downloadTarball(ctx context.Context, url string) ([]byte, error) {
 	}
 	req.Header.Set("User-Agent", moat.DefaultUserAgent)
 
-	resp, err := moatFetchClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http GET: %w", err)
 	}
@@ -268,13 +232,13 @@ func downloadTarball(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("unexpected status %d (%s)", resp.StatusCode, resp.Status)
 	}
 
-	limited := io.LimitReader(resp.Body, moatFetchMaxBytes+1)
+	limited := io.LimitReader(resp.Body, MaxBytes+1)
 	body, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, fmt.Errorf("reading body: %w", err)
 	}
-	if int64(len(body)) > moatFetchMaxBytes {
-		return nil, fmt.Errorf("source artifact exceeds %d bytes", moatFetchMaxBytes)
+	if int64(len(body)) > MaxBytes {
+		return nil, fmt.Errorf("source artifact exceeds %d bytes", MaxBytes)
 	}
 	return body, nil
 }
@@ -308,10 +272,6 @@ func extractGzipTarball(body []byte, destDir string) error {
 			return fmt.Errorf("reading tar header: %w", err)
 		}
 
-		// Path-traversal defense. filepath.Clean normalizes separators and
-		// collapses .., then we require the result to stay inside destDir
-		// after a Join. An absolute Name (starts with / on unix) fails the
-		// containment check because Join resets the base.
 		cleaned := filepath.Clean(hdr.Name)
 		if strings.HasPrefix(cleaned, "..") || strings.Contains(cleaned, string(os.PathSeparator)+"..") || filepath.IsAbs(cleaned) {
 			return fmt.Errorf("tar entry escapes destination: %q", hdr.Name)
@@ -334,7 +294,7 @@ func extractGzipTarball(body []byte, destDir string) error {
 			if err != nil {
 				return fmt.Errorf("creating %q: %w", target, err)
 			}
-			if _, err := io.Copy(f, io.LimitReader(tr, moatFetchMaxBytes)); err != nil {
+			if _, err := io.Copy(f, io.LimitReader(tr, MaxBytes)); err != nil {
 				_ = f.Close()
 				return fmt.Errorf("writing %q: %w", target, err)
 			}
@@ -342,28 +302,22 @@ func extractGzipTarball(body []byte, destDir string) error {
 				return fmt.Errorf("closing %q: %w", target, err)
 			}
 		default:
-			// Skip symlinks, devices, FIFOs. A hostile tarball cannot plant a
-			// symlink that the next consumer would traverse.
 			continue
 		}
 	}
 	return nil
 }
 
-// sha256HexOf returns the lowercase hex sha256 of body. The lockfile hash
-// format is "sha256:<hex>", but ContentEntry.ContentHash carries the
-// prefix already — callers compare the returned hex against the hex half
-// after the colon via strings.EqualFold on a trimmed value. Here we
-// accept a plain bytes input and return the hex half; the caller handles
-// the prefix stripping.
+// sha256HexOf returns "sha256:<hex>" for body. Caller compares against
+// ContentEntry.ContentHash via strings.EqualFold.
 func sha256HexOf(body []byte) string {
 	sum := sha256.Sum256(body)
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// shortHashCache returns the first 12 hex chars after the "sha256:"
-// prefix. Used for cache-directory pathing where a full 64-char hash
-// would make the tree visually noisy in ls output.
+// shortHashCache returns the first 12 hex chars after "sha256:". Used for
+// cache-directory pathing where a full 64-char hash would make the tree
+// visually noisy in ls output.
 func shortHashCache(contentHash string) string {
 	stripped := strings.TrimPrefix(contentHash, "sha256:")
 	if len(stripped) > 12 {

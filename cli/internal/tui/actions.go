@@ -14,6 +14,8 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
@@ -677,20 +679,16 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Registry-only items must be added to the library first. MOAT-materialized
-	// items get a different message because there is no "add to library" step
-	// for them — the content blob is fetched at install time from the
-	// manifest's SourceURI, and the TUI install pipeline doesn't yet plumb
-	// that fetch. The CLI does, so point users there until the TUI install
-	// path learns to handle MOAT items.
-	if !item.Library && item.Registry != "" {
-		var msg string
-		if isUnstagedRegistryItem(item) {
-			msg = fmt.Sprintf("TUI install for MOAT items not yet supported. Run: syllago install %s:%s", item.Registry, item.Name)
-		} else {
-			msg = "Add this item to your library first"
-		}
-		cmd := a.toast.Push(msg, toastWarning)
+	// Non-MOAT registry items (git-registry clones not yet promoted into the
+	// library) still require an explicit `Add` step because the content blob
+	// already lives on disk under the registry checkout — installing in place
+	// would couple the install path to a transient clone directory. MOAT-
+	// materialized items take a different code path: the content blob is
+	// fetched at install time from the manifest's SourceURI and staged into
+	// a per-item cache directory, so they flow straight through the wizard
+	// here and branch in doInstallCmd → doMOATInstallCmd.
+	if !item.Library && item.Registry != "" && !isUnstagedRegistryItem(item) {
+		cmd := a.toast.Push("Add this item to your library first", toastWarning)
 		return a, cmd
 	}
 
@@ -826,6 +824,14 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 		return a.doInstallAppendCmd(msg)
 	}
 
+	// Unstaged MOAT items have no on-disk content tree (item.Path is empty)
+	// because the bytes live in the registry, not the local catalog. Route
+	// through the MOAT fetch + provider-install pipeline instead of the
+	// library install path, which assumes a populated source directory.
+	if isUnstagedRegistryItem(&item) {
+		return a.doMOATInstallCmd(msg)
+	}
+
 	var baseDir string
 	switch msg.location {
 	case "global":
@@ -884,6 +890,110 @@ func (a App) doInstallAppendCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 		done.targetPath = target
+		return done
+	}
+}
+
+// doMOATInstallCmd is the install path for unstaged MOAT items — items
+// synthesized from a MOAT manifest that have no on-disk content tree yet
+// (item.Path == "" / item.Source == registry name). It performs the network
+// fetch + sigstore verification via moatinstall.FetchAndRecord, then stages
+// the cached source tree into the chosen provider via
+// installer.InstallCachedMOATToProvider, mirroring the CLI install path in
+// runInstallFromRegistry.
+//
+// Inputs are captured before returning the tea.Cmd so the closure does not
+// race with rescans that mutate a.cfg / a.moatGate. The lockfile is reloaded
+// inside the closure because async installs can land out of order with
+// other lockfile-mutating commands; we want the freshest view at write time.
+//
+// The MOAT install gate has already been evaluated in handleInstallResult
+// before this command is dispatched. Re-evaluating here would either
+// duplicate prompts or silently downgrade decisions if state changed
+// mid-install — neither is desirable. Trust the caller's gate result.
+func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
+	item := msg.item
+	prov := msg.provider
+	method := msg.method
+	projectRoot := msg.projectRoot
+
+	var reg *config.Registry
+	for i := range a.cfg.Registries {
+		if a.cfg.Registries[i].Name == item.Source {
+			reg = &a.cfg.Registries[i]
+			break
+		}
+	}
+
+	var (
+		manifest *moat.Manifest
+		entry    *moat.ContentEntry
+	)
+	if a.moatGate != nil {
+		if m, ok := a.moatGate.Manifests[item.Source]; ok {
+			manifest = m
+			if e, found := moat.FindContentEntry(m, item.Name); found {
+				entry = e
+			}
+		}
+	}
+
+	lockfilePath := moat.LockfilePath(projectRoot)
+	rootInfo := moat.BundledTrustedRoot(time.Now())
+
+	var baseDir string
+	switch msg.location {
+	case "global":
+		baseDir = ""
+	case "project":
+		baseDir = projectRoot
+	default:
+		baseDir = msg.location
+	}
+
+	return func() tea.Msg {
+		done := installDoneMsg{
+			itemName:     item.DisplayName,
+			providerName: prov.Name,
+		}
+		if reg == nil {
+			done.err = fmt.Errorf("registry %q not found in config", item.Source)
+			return done
+		}
+		if manifest == nil || entry == nil {
+			done.err = fmt.Errorf("registry %q does not list %q in its manifest (run 'R' to rescan)", item.Source, item.Name)
+			return done
+		}
+		if rootInfo.Status == moat.TrustedRootStatusExpired ||
+			rootInfo.Status == moat.TrustedRootStatusMissing ||
+			rootInfo.Status == moat.TrustedRootStatusCorrupt {
+			done.err = fmt.Errorf("bundled trusted root unusable (%s); run `syllago update`", rootInfo.Status.String())
+			return done
+		}
+
+		lf, err := moat.LoadLockfile(lockfilePath)
+		if err != nil {
+			done.err = fmt.Errorf("load lockfile: %w", err)
+			return done
+		}
+
+		cacheDir, fetchErr := moatinstall.FetchAndRecord(
+			context.Background(), entry, reg.Name, reg.ManifestURI,
+			lockfilePath, lf, &manifest.RegistrySigningProfile, rootInfo.Bytes,
+		)
+		if fetchErr != nil {
+			done.err = fetchErr
+			return done
+		}
+
+		installPath, installErr := installer.InstallCachedMOATToProvider(
+			cacheDir, entry, prov, projectRoot, method, baseDir,
+		)
+		if installErr != nil {
+			done.err = installErr
+			return done
+		}
+		done.targetPath = installPath
 		return done
 	}
 }

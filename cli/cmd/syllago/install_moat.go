@@ -50,6 +50,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -313,7 +314,7 @@ func runInstallFromRegistry(
 	// download. UNSIGNED tiers skip the verification path and land with a
 	// null AttestationBundle. The trustedRoot bytes were already validated
 	// at sync time (rootInfo.Status check above).
-	cacheDir, fetchErr := fetchAndRecord(
+	cacheDir, fetchErr := moatinstall.FetchAndRecord(
 		ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf,
 		&res.Manifest.RegistrySigningProfile, rootInfo.Bytes,
 	)
