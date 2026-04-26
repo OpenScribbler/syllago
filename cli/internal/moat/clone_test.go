@@ -1,9 +1,10 @@
-package moatinstall
+package moat
 
-// Tests for the source-repo clone helpers (bead syllago-cvwj5). The real
-// `git clone` is exercised end-to-end in install_moat_integration_test.go
-// via the CloneRepoFn seam; here we cover the input-validation and
-// directory-copy helpers that surround it.
+// Tests for the source-repo clone helpers (relocated from moatinstall in
+// bead syllago-i352v so the moat-package content cache can share them).
+// The real `git clone` is exercised end-to-end via the CloneRepoFn seam in
+// install + sync flows; here we cover the input-validation and directory-
+// copy helpers that surround it.
 
 import (
 	"os"
@@ -35,7 +36,7 @@ func TestValidateSourceURI(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := validateSourceURI(tc.uri)
+			err := ValidateSourceURI(tc.uri)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("expected error for %q, got nil", tc.uri)
@@ -66,8 +67,8 @@ func TestCopyTree_HappyPath(t *testing.T) {
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
-	if err := copyTree(src, dst); err != nil {
-		t.Fatalf("copyTree: %v", err)
+	if err := CopyTree(src, dst); err != nil {
+		t.Fatalf("CopyTree: %v", err)
 	}
 
 	got, err := os.ReadFile(filepath.Join(dst, "skills", "x", "SKILL.md"))
@@ -91,7 +92,7 @@ func TestCopyTree_RejectsSymlinks(t *testing.T) {
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
-	err := copyTree(src, dst)
+	err := CopyTree(src, dst)
 	if err == nil || !strings.Contains(err.Error(), "symlink rejected") {
 		t.Errorf("expected symlink-rejected error; got %v", err)
 	}
@@ -112,8 +113,8 @@ func TestCopyTree_OverwritesExistingDst(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := copyTree(src, dst); err != nil {
-		t.Fatalf("copyTree: %v", err)
+	if err := CopyTree(src, dst); err != nil {
+		t.Fatalf("CopyTree: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dst, "stale.txt")); !os.IsNotExist(err) {
 		t.Errorf("stale.txt should have been removed; got err=%v", err)

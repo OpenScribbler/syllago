@@ -212,7 +212,7 @@ func FetchAndRecord(
 		}
 	}
 
-	if err := validateSourceURI(entry.SourceURI); err != nil {
+	if err := moat.ValidateSourceURI(entry.SourceURI); err != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("%s for %s/%s", err.Error(), registryName, entry.Name),
@@ -272,7 +272,7 @@ func FetchAndRecord(
 	_ = os.Remove(cloneDir)
 	defer func() { _ = os.RemoveAll(cloneDir) }()
 
-	if cloneErr := CloneRepoFn(ctx, entry.SourceURI, cloneDir); cloneErr != nil {
+	if cloneErr := moat.CloneRepoFn(ctx, entry.SourceURI, cloneDir); cloneErr != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("could not clone source repo for %s/%s", registryName, entry.Name),
@@ -308,7 +308,7 @@ func FetchAndRecord(
 		)
 	}
 
-	if err := copyTree(itemDir, targetDir); err != nil {
+	if err := moat.CopyTree(itemDir, targetDir); err != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrSystemIO,
 			fmt.Sprintf("could not stage verified source for %s/%s", registryName, entry.Name),

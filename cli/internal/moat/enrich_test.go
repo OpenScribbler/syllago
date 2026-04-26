@@ -9,6 +9,8 @@ package moat
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -940,5 +942,161 @@ func TestMaterializeMOATItems_LeavesOtherRegistriesAlone(t *testing.T) {
 		if it.Name == "alpha" && it.Registry == "reg" && it.Type != catalog.Skills {
 			t.Errorf("materialized item type = %v, want Skills", it.Type)
 		}
+	}
+}
+
+// --- materializeMOATItemsWithCache ----------------------------------------
+//
+// When sync wrote a content cache for the registry, materialize should
+// populate Path + Files from the cache so the TUI library preview can
+// render content directly. Cache miss preserves the previous empty-Path
+// behavior so the rule is additive.
+
+func TestMaterializeMOATItemsWithCache_PopulatesPathFromCache(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	itemDir := filepath.Join(cacheDir, "moat", "registries", "reg", "items", "skills", "alpha")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "SKILL.md"), []byte("# alpha\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &Manifest{Content: []ContentEntry{{Name: "alpha", Type: "skill"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, cacheDir)
+
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	got := cat.Items[0]
+	if got.Path != itemDir {
+		t.Errorf("Path = %q, want %q", got.Path, itemDir)
+	}
+	if len(got.Files) != 1 || got.Files[0] != "SKILL.md" {
+		t.Errorf("Files = %v, want [SKILL.md]", got.Files)
+	}
+}
+
+func TestMaterializeMOATItemsWithCache_CacheMissLeavesPathEmpty(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir() // no items cached
+
+	m := &Manifest{Content: []ContentEntry{{Name: "alpha", Type: "skill"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, cacheDir)
+
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	if cat.Items[0].Path != "" {
+		t.Errorf("Path = %q, want empty (cache miss)", cat.Items[0].Path)
+	}
+}
+
+func TestMaterializeMOATItemsWithCache_EmptyCacheDirEquivalentToCacheMiss(t *testing.T) {
+	t.Parallel()
+	m := &Manifest{Content: []ContentEntry{{Name: "alpha", Type: "skill"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, "")
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	if cat.Items[0].Path != "" {
+		t.Errorf("Path = %q, want empty when cacheDir is unset", cat.Items[0].Path)
+	}
+}
+
+// TestMaterializeMOATItemsWithCache_SkillReadsDescriptionFromFrontmatter
+// covers the registry-drill-in description gap: MOAT registry skills were
+// showing a blank description column on the registry-card drill-in view
+// because materialize set Path/Files but never parsed SKILL.md frontmatter.
+// The library-page scanner reads frontmatter via catalog.ParseFrontmatter;
+// this test pins the same behavior at the materialize boundary so registry
+// items show the same description users see on the library page.
+func TestMaterializeMOATItemsWithCache_SkillReadsDescriptionFromFrontmatter(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	itemDir := filepath.Join(cacheDir, "moat", "registries", "reg", "items", "skills", "alpha")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	skillBody := "---\nname: Alpha Skill\ndescription: Does the alpha thing\n---\n# body\n"
+	if err := os.WriteFile(filepath.Join(itemDir, "SKILL.md"), []byte(skillBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &Manifest{Content: []ContentEntry{{Name: "alpha", Type: "skill"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, cacheDir)
+
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	got := cat.Items[0]
+	if got.Description != "Does the alpha thing" {
+		t.Errorf("Description = %q, want %q", got.Description, "Does the alpha thing")
+	}
+	if got.DisplayName != "Alpha Skill" {
+		t.Errorf("DisplayName = %q, want %q", got.DisplayName, "Alpha Skill")
+	}
+}
+
+// TestMaterializeMOATItemsWithCache_AgentReadsDescriptionFromFrontmatter
+// pins the same parity for agents: AGENT.md frontmatter feeds Description +
+// DisplayName, matching what the library-page scanner does for native agents.
+func TestMaterializeMOATItemsWithCache_AgentReadsDescriptionFromFrontmatter(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	itemDir := filepath.Join(cacheDir, "moat", "registries", "reg", "items", "agents", "beta")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	agentBody := "---\nname: Beta Agent\ndescription: Beta agent description\n---\nbody\n"
+	if err := os.WriteFile(filepath.Join(itemDir, "AGENT.md"), []byte(agentBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &Manifest{Content: []ContentEntry{{Name: "beta", Type: "agent"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, cacheDir)
+
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	got := cat.Items[0]
+	if got.Description != "Beta agent description" {
+		t.Errorf("Description = %q, want %q", got.Description, "Beta agent description")
+	}
+	if got.DisplayName != "Beta Agent" {
+		t.Errorf("DisplayName = %q, want %q", got.DisplayName, "Beta Agent")
+	}
+}
+
+// TestMaterializeMOATItemsWithCache_SkillMissingFrontmatterLeavesDescriptionEmpty
+// guards the no-frontmatter case: an item whose SKILL.md has no YAML front
+// matter must not error or panic; Description stays empty (matches the
+// library-page scanner, which silently leaves the field empty on parse error).
+func TestMaterializeMOATItemsWithCache_SkillMissingFrontmatterLeavesDescriptionEmpty(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	itemDir := filepath.Join(cacheDir, "moat", "registries", "reg", "items", "skills", "gamma")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "SKILL.md"), []byte("# Just a heading\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := &Manifest{Content: []ContentEntry{{Name: "gamma", Type: "skill"}}}
+	cat := &catalog.Catalog{}
+	materializeMOATItemsWithCache(cat, "reg", m, cacheDir)
+
+	if len(cat.Items) != 1 {
+		t.Fatalf("Items len = %d, want 1", len(cat.Items))
+	}
+	if cat.Items[0].Description != "" {
+		t.Errorf("Description = %q, want empty when frontmatter is absent", cat.Items[0].Description)
 	}
 }

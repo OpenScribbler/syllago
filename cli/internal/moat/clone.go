@@ -1,20 +1,20 @@
-package moatinstall
+package moat
 
-// Source-repo cloning for MOAT install (bead syllago-cvwj5).
+// Source-repo cloning helpers, shared by sync-time content cache writes
+// (contentcache.go) and install-time fetch (moatinstall/fetch.go).
 //
 // The MOAT spec defines content[].source_uri as the source repository URI
 // (moat-spec.md line 781) and content_hash as a content-tree merkle hash
 // computed by the algorithm in moat_hash.py (sorted "<file_hash>  <path>"
-// lines, UTF-8 BOM stripped, CRLF normalized for text). Install MUST
-// materialize the source repo, locate the item subdirectory at
-// <category_dir>/<entry.name>/, and verify by recomputing the tree hash —
-// not by hashing arbitrary tarball bytes.
+// lines, UTF-8 BOM stripped, CRLF normalized for text). Both call sites must
+// materialize the source repo and locate the item subdirectory at
+// <category_dir>/<entry.name>/ to verify or render the tree.
 //
-// History: prior versions of this package treated source_uri as a tarball
-// URL and hashed the response body with sha256. That collapsed two
-// distinct algorithms into one and could only succeed against synthetic
-// fixtures whose ContentHash equaled sha256(tarball). Against any
-// conforming registry it failed with a content_hash mismatch.
+// History: prior versions of moatinstall treated source_uri as a tarball URL
+// and hashed the response body with sha256. That collapsed two distinct
+// algorithms into one and could only succeed against synthetic fixtures whose
+// ContentHash equaled sha256(tarball). Against any conforming registry it
+// failed with a content_hash mismatch.
 
 import (
 	"context"
@@ -28,16 +28,19 @@ import (
 	"strings"
 )
 
-// CloneRepoFn is the test seam for source-repo materialization. Production
-// uses cloneRepoShallow (git clone --depth=1 with hardened flags). Tests
-// stub this to copy a fixture directory into destDir so they exercise the
-// full hash-verify + extract path without spawning git.
-//
-// The seam is at the moatinstall layer rather than wrapping registry.Clone
-// because the registry helpers are coupled to syllago's registry-cache
-// layout (CloneDir, CloneRecord). MOAT source clones are scratch-space
-// throwaways keyed off a temp dir.
-var CloneRepoFn = cloneRepoShallow
+// CloneRepoFunc is the test-injectable signature for source-repo
+// materialization. Production uses cloneRepoShallow (git clone --depth=1
+// with hardened flags). Tests pass a closure that copies a fixture into
+// destDir so they exercise the full hash-verify + extract path without
+// spawning git.
+type CloneRepoFunc func(ctx context.Context, sourceURI, destDir string) error
+
+// CloneRepoFn is the package-level seam for callers that want to swap the
+// production cloner without threading a parameter through every layer.
+// moatinstall.FetchAndRecord reads this directly. New callers SHOULD prefer
+// passing a CloneRepoFunc explicitly (e.g. WriteContentCache) so test
+// substitution is local rather than global.
+var CloneRepoFn CloneRepoFunc = cloneRepoShallow
 
 // cloneRepoShallow runs `git clone --depth=1` of sourceURI into destDir
 // using the same hardening flags as registry.cloneArgs:
@@ -46,8 +49,7 @@ var CloneRepoFn = cloneRepoShallow
 //   - GIT_CONFIG_NOSYSTEM=1 (no system-wide config influence)
 //
 // destDir MUST not already exist; the function creates it. Caller is
-// responsible for cleaning up on success and failure (callers in fetch.go
-// use defer os.RemoveAll(destDir)).
+// responsible for cleaning up on success and failure.
 func cloneRepoShallow(ctx context.Context, sourceURI, destDir string) error {
 	if err := checkGit(); err != nil {
 		return err
@@ -76,23 +78,21 @@ func cloneRepoShallow(ctx context.Context, sourceURI, destDir string) error {
 	return nil
 }
 
-// checkGit returns an error if git is not on PATH. Mirrors the helper in
-// internal/registry — duplicated rather than imported to keep the
-// moatinstall package free of registry-cache coupling.
+// checkGit returns an error if git is not on PATH.
 func checkGit() error {
 	_, err := exec.LookPath("git")
 	if err != nil {
-		return errors.New("git is required for MOAT install but was not found on PATH")
+		return errors.New("git is required for MOAT operations but was not found on PATH")
 	}
 	return nil
 }
 
-// validateSourceURI rejects anything other than https:// repo URLs. The
+// ValidateSourceURI rejects anything other than https:// repo URLs. The
 // MOAT spec example uses "https://github.com/owner/repo" (line 750-ish);
 // we reject other schemes (git://, ssh://, git+https://) until a use case
 // surfaces. URL parse errors and empty paths surface here so the caller
 // gets a structured error before paying for a clone attempt.
-func validateSourceURI(sourceURI string) error {
+func ValidateSourceURI(sourceURI string) error {
 	if sourceURI == "" {
 		return errors.New("source_uri is empty")
 	}
@@ -109,7 +109,7 @@ func validateSourceURI(sourceURI string) error {
 	return nil
 }
 
-// copyTree recursively copies srcDir into dstDir. dstDir is removed first
+// CopyTree recursively copies srcDir into dstDir. dstDir is removed first
 // so a partial copy from a prior failed install never leaves stale files
 // alongside fresh ones.
 //
@@ -118,7 +118,7 @@ func validateSourceURI(sourceURI string) error {
 // something walked outside the verified subtree (a bug or attempted
 // escape). Non-regular non-dir entries (devices, fifos, sockets) are
 // silently skipped, mirroring the prior tarball-extraction policy.
-func copyTree(srcDir, dstDir string) error {
+func CopyTree(srcDir, dstDir string) error {
 	if err := os.RemoveAll(dstDir); err != nil {
 		return fmt.Errorf("clearing dst: %w", err)
 	}

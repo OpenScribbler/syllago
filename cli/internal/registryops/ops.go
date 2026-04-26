@@ -78,6 +78,18 @@ type SyncOutcome struct {
 	// On a gated outcome, Persisted is false and the caller must NOT advance
 	// trust state.
 	Persisted bool
+
+	// ContentCacheReport summarizes the sync-time content-cache write —
+	// number of items cached and any per-entry warnings (clone failure,
+	// hash mismatch, missing subdir). Surfaces are free to render warnings
+	// or ignore them; the trust-state path treats this as advisory.
+	ContentCacheReport moat.CacheReport
+
+	// ContentCacheErr is non-nil when WriteContentCache returned a
+	// programmer-error sentinel (nil manifest, invalid registry name,
+	// missing cloneFn). Per-entry failures travel via Warnings on
+	// ContentCacheReport, not here.
+	ContentCacheErr error
 }
 
 // trustedRootStaleError is returned when the bundled Sigstore trusted root is
@@ -212,6 +224,21 @@ func SyncOne(ctx context.Context, name string, opts SyncOpts) (SyncOutcome, erro
 	if !res.NotModified && len(res.ManifestBytes) > 0 && len(res.BundleBytes) > 0 {
 		if err := moat.WriteManifestCache(cacheDir, reg.Name, res.ManifestBytes, res.BundleBytes); err != nil {
 			return out, fmt.Errorf("write manifest cache: %w", err)
+		}
+
+		// Content cache populates ContentItem.Path/Files at refresh time so
+		// the TUI library preview can render registry items without a fetch
+		// step. Failures here are NON-FATAL by design — a sync that
+		// produced fresh trust state must still complete even if a single
+		// source repo is unreachable. ContentCacheReport carries per-entry
+		// warnings that callers can surface; the trust-state path is
+		// untouched on degraded outcomes.
+		if res.Manifest != nil {
+			report, err := moat.WriteContentCache(ctx, cacheDir, reg.Name, res.Manifest, moat.CloneRepoFn)
+			if err != nil {
+				out.ContentCacheErr = err
+			}
+			out.ContentCacheReport = report
 		}
 	}
 

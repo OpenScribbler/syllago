@@ -103,6 +103,13 @@ type RemoveOutcome struct {
 	// by this path even on success; this error covers I/O around
 	// Registries[] only.
 	LockfilePruneErr error
+
+	// ContentCacheRemoveErr is non-nil when the per-registry items/
+	// subtree (sync-time content cache) could not be deleted. Treat as a
+	// warning — the registry is already gone from config, and the only
+	// consequence is wasted disk until a manual cleanup or the next add+
+	// remove cycle.
+	ContentCacheRemoveErr error
 }
 
 // RemoveRegistry orchestrates a single registry remove. Loads global
@@ -159,6 +166,14 @@ func RemoveRegistry(opts RemoveOpts) (RemoveOutcome, error) {
 	if opts.CacheDir != "" {
 		if err := moat.RemoveManifestCache(opts.CacheDir, opts.Name); err != nil {
 			out.ManifestCacheRemoveErr = err
+		}
+		// Content cache (sync-time blob mirror under .../items/) lives
+		// alongside the manifest cache. Remove it on the same hook so the
+		// next add+sync starts from a clean state and we don't leak gigs of
+		// orphaned source-tree copies. Idempotent — a missing items/ dir is
+		// not an error.
+		if err := moat.RemoveContentCache(opts.CacheDir, opts.Name); err != nil {
+			out.ContentCacheRemoveErr = err
 		}
 	}
 

@@ -212,7 +212,7 @@ func EnrichFromMOATManifests(
 		// items" and the library/explorer never see registry rows. Done for
 		// Fresh AND Stale/Expired so users can still see what's known to be
 		// in the registry; trust state surfaces the staleness separately.
-		materializeMOATItems(cat, reg.Name, m)
+		materializeMOATItemsWithCache(cat, reg.Name, m, absCache)
 
 		switch status {
 		case StalenessFresh:

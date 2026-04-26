@@ -58,24 +58,24 @@ func makeRepoFixture(t *testing.T, root, categoryDir, name string, files map[str
 	return h
 }
 
-// stubCloneFromFixture replaces CloneRepoFn with one that copies
+// stubCloneFromFixture replaces moat.CloneRepoFn with one that copies
 // fixtureRoot into the production code's destDir, mimicking a successful
 // `git clone` of fixtureRoot.
 func stubCloneFromFixture(t *testing.T, fixtureRoot string) {
 	t.Helper()
-	orig := CloneRepoFn
-	CloneRepoFn = func(_ context.Context, _, destDir string) error {
-		return copyTree(fixtureRoot, destDir)
+	orig := moat.CloneRepoFn
+	moat.CloneRepoFn = func(_ context.Context, _, destDir string) error {
+		return moat.CopyTree(fixtureRoot, destDir)
 	}
-	t.Cleanup(func() { CloneRepoFn = orig })
+	t.Cleanup(func() { moat.CloneRepoFn = orig })
 }
 
-// stubCloneRepoErr replaces CloneRepoFn with one that always returns retErr.
+// stubCloneRepoErr replaces moat.CloneRepoFn with one that always returns retErr.
 func stubCloneRepoErr(t *testing.T, retErr error) {
 	t.Helper()
-	orig := CloneRepoFn
-	CloneRepoFn = func(_ context.Context, _, _ string) error { return retErr }
-	t.Cleanup(func() { CloneRepoFn = orig })
+	orig := moat.CloneRepoFn
+	moat.CloneRepoFn = func(_ context.Context, _, _ string) error { return retErr }
+	t.Cleanup(func() { moat.CloneRepoFn = orig })
 }
 
 // stubCloneScratchDir gives tests a hermetic temp dir for clone scratch.

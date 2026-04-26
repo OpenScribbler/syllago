@@ -20,6 +20,10 @@ package moat
 // catalog scan; enrichment only fills in the trust surface.
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
@@ -83,7 +87,25 @@ func moatTierToCatalogTier(t TrustTier) catalog.TrustTier {
 // content under the registry source path so the scanner produces rows,
 // this helper will not duplicate them. A nil catalog or nil manifest is
 // a no-op.
+//
+// Equivalent to materializeMOATItemsWithCache with an empty cacheDir; kept
+// as a wrapper for the producer path that does not have a cacheDir handy.
 func materializeMOATItems(cat *catalog.Catalog, registryName string, m *Manifest) {
+	materializeMOATItemsWithCache(cat, registryName, m, "")
+}
+
+// materializeMOATItemsWithCache is the cache-aware variant that powers
+// invisible content preview. When cacheDir is non-empty and the per-item
+// content cache populated by sync (see contentcache.go) holds bytes for
+// the entry, this function fills ContentItem.Path + Files so the TUI
+// preview can render content directly. Cache misses leave Path empty —
+// the install-time fetch path remains the staging boundary.
+//
+// cacheDir is the global syllago dir (config.GlobalDirPath result), the
+// same value passed to EnrichFromMOATManifests / WriteContentCache.
+// An empty cacheDir disables cache lookup entirely (used by tests and the
+// no-cacheDir wrapper above).
+func materializeMOATItemsWithCache(cat *catalog.Catalog, registryName string, m *Manifest, cacheDir string) {
 	if cat == nil || m == nil {
 		return
 	}
@@ -104,15 +126,88 @@ func materializeMOATItems(cat *catalog.Catalog, registryName string, m *Manifest
 		if existing[key] {
 			continue
 		}
-		cat.Items = append(cat.Items, catalog.ContentItem{
+		item := catalog.ContentItem{
 			Name:        entry.Name,
 			DisplayName: entry.DisplayName,
 			Type:        ct,
 			Registry:    registryName,
 			Source:      registryName,
-		})
+		}
+		if cacheDir != "" {
+			if categoryDir, ok := CategoryDirForMOATType(entry.Type); ok {
+				if cachedPath, err := ContentCachePathFor(cacheDir, registryName, categoryDir, entry.Name); err == nil {
+					if info, statErr := os.Stat(cachedPath); statErr == nil && info.IsDir() {
+						item.Path = cachedPath
+						item.Files = collectCachedFiles(cachedPath)
+						enrichFromCachedFrontmatter(&item, cachedPath)
+					}
+				}
+			}
+		}
+		cat.Items = append(cat.Items, item)
 		existing[key] = true
 	}
+}
+
+// enrichFromCachedFrontmatter mirrors the library-page scanner: skills read
+// SKILL.md frontmatter, agents read AGENT.md, populating DisplayName +
+// Description. Other content types have no frontmatter convention at this
+// boundary and are left untouched. Read errors and missing frontmatter are
+// silent — same behavior as catalog.scanner so registry items present
+// identically to local items in the TUI.
+func enrichFromCachedFrontmatter(item *catalog.ContentItem, cachedPath string) {
+	var fmFile string
+	switch item.Type {
+	case catalog.Skills:
+		fmFile = "SKILL.md"
+	case catalog.Agents:
+		fmFile = "AGENT.md"
+	default:
+		return
+	}
+	data, err := os.ReadFile(filepath.Join(cachedPath, fmFile))
+	if err != nil {
+		return
+	}
+	fm, fmErr := catalog.ParseFrontmatter(data)
+	if fmErr != nil {
+		return
+	}
+	if fm.Name != "" {
+		item.DisplayName = fm.Name
+	}
+	if fm.Description != "" {
+		item.Description = fm.Description
+	}
+}
+
+// collectCachedFiles walks itemDir and returns relative paths of every
+// non-hidden regular file. Mirrors catalog.collectFiles (package-private)
+// but lives here to keep the moat → catalog import direction one-way.
+func collectCachedFiles(itemDir string) []string {
+	var files []string
+	_ = filepath.WalkDir(itemDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		name := d.Name()
+		if strings.HasPrefix(name, ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		rel, relErr := filepath.Rel(itemDir, path)
+		if relErr != nil {
+			return nil
+		}
+		files = append(files, rel)
+		return nil
+	})
+	return files
 }
 
 // EnrichCatalog populates the display-only trust fields on every

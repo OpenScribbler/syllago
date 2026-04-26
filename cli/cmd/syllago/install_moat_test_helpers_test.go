@@ -43,19 +43,19 @@ func makeRepoFixture(t *testing.T, root, categoryDir, name string, files map[str
 	return h
 }
 
-// stubCloneFromFixture replaces moatinstall.CloneRepoFn with one that
+// stubCloneFromFixture replaces moat.CloneRepoFn with one that
 // recursively copies fixtureRoot into the production code's destDir,
 // mimicking a successful git clone of fixtureRoot.
 func stubCloneFromFixture(t *testing.T, fixtureRoot string) {
 	t.Helper()
-	orig := moatinstall.CloneRepoFn
-	moatinstall.CloneRepoFn = func(_ context.Context, _, destDir string) error {
+	orig := moat.CloneRepoFn
+	moat.CloneRepoFn = func(_ context.Context, _, destDir string) error {
 		if err := os.MkdirAll(destDir, 0o755); err != nil {
 			return err
 		}
 		return os.CopyFS(destDir, os.DirFS(fixtureRoot))
 	}
-	t.Cleanup(func() { moatinstall.CloneRepoFn = orig })
+	t.Cleanup(func() { moat.CloneRepoFn = orig })
 }
 
 // stubCloneScratchDir hermetically points clone scratch space at a t.TempDir
