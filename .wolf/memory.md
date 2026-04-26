@@ -4759,3 +4759,116 @@
 | 10:07 | Edited cli/internal/moat/rekor_fetch.go | modified func() | ~46 |
 | 10:07 | Edited cli/internal/moat/rekor_fetch_test.go | 18→18 lines | ~104 |
 | 10:07 | Edited cli/internal/moat/rekor_fetch_test.go | 10→9 lines | ~25 |
+| 10:12 | Session end: 8 writes across 6 files (enrich_test.go, enrich.go, clone.go, publisher_attestation.go, rekor_fetch.go) | 12 reads | ~46718 tok |
+
+## Session: 2026-04-26 10:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 10:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:48 | Edited README.md | 3→3 lines | ~55 |
+| 10:48 | Edited README.md | removed 6 lines | ~8 |
+| 10:48 | Edited README.md | modified Rules() | ~176 |
+| 10:48 | Edited README.md | inline fix | ~21 |
+| 10:48 | Edited README.md | inline fix | ~45 |
+| 10:48 | Edited README.md | inline fix | ~35 |
+| 10:48 | Edited README.md | inline fix | ~32 |
+| 10:49 | Edited README.md | 14→19 lines | ~201 |
+| 10:49 | Edited logos/social-preview.svg | reduced (-9 lines) | ~169 |
+| 10:49 | Edited README.md | modified rule() | ~244 |
+| 10:49 | Session end: 10 writes across 2 files (README.md, social-preview.svg) | 2 reads | ~7748 tok |
+| 10:49 | Edited README.md | reduced (-71 lines) | ~475 |
+| 10:50 | Edited README.md | expanded (+28 lines) | ~948 |
+| 10:50 | Edited README.md | 15→20 lines | ~338 |
+| 10:50 | Edited README.md | 7→8 lines | ~198 |
+| 10:50 | Edited README.md | inline fix | ~140 |
+| 10:51 | Edited README.md | 5→6 lines | ~237 |
+| 10:51 | README review pass complete | README.md | accuracy fixes (provider table 12→15, sync-install rename, doc URLs syllago.dev), expanded MOAT section, offloaded TUI/CLI/config/conversion verbosity to docs site links, added Telemetry section. 378→314 lines | ~600 |
+| 10:52 | Session end: 16 writes across 2 files (README.md, social-preview.svg) | 2 reads | ~10392 tok |
+| 10:52 | Session end: 16 writes across 2 files (README.md, social-preview.svg) | 2 reads | ~10392 tok |
+| 10:54 | Edited logos/social-preview.svg | 2→2 lines | ~25 |
+| 10:54 | Edited logos/social-preview.svg | 11→11 lines | ~162 |
+| 10:54 | Session end: 18 writes across 2 files (README.md, social-preview.svg) | 4 reads | ~14949 tok |
+| 10:55 | Edited cli/internal/output/errors.go | 2→2 lines | ~28 |
+| 10:55 | Edited cli/internal/output/errors.go | 2→2 lines | ~38 |
+| 10:55 | Edited cli/cmd/syllago/registry_signing.go | "https://openscribbler.git" → "https://syllago.dev/moat/" | ~23 |
+| 10:55 | Edited cli/internal/output/errors_test.go | inline fix | ~6 |
+| 10:56 | Edited cli/internal/errordocs/docs/moat-001.md | inline fix | ~15 |
+| 10:56 | Edited cli/internal/errordocs/docs/moat-002.md | inline fix | ~15 |
+| 10:57 | Edited logos/social-preview.svg | inline fix | ~42 |
+| 10:57 | Edited logos/social-preview.svg | inline fix | ~37 |
+| 10:57 | Session end: 26 writes across 7 files (README.md, social-preview.svg, errors.go, registry_signing.go, errors_test.go) | 7 reads | ~16093 tok |
+| 10:58 | Edited README.md | 81→81 lines | ~1529 |
+| 11:00 | Updated docs URLs in Go code | errors.go, registry_signing.go, errors_test.go, errordocs/{moat-001,moat-002}.md | openscribbler.github.io → syllago.dev (5 files); fmt + test pass; rebuilt + installed | ~700 |
+| 11:00 | Reordered README sections | README.md | Trust and Supply Chain moved from after Accessibility to right after Features for prominence | ~120 |
+| 10:59 | Session end: 27 writes across 7 files (README.md, social-preview.svg, errors.go, registry_signing.go, errors_test.go) | 7 reads | ~17731 tok |
+| 11:01 | Session end: 27 writes across 7 files (README.md, social-preview.svg, errors.go, registry_signing.go, errors_test.go) | 7 reads | ~17731 tok |
+
+## Session: 2026-04-26 11:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 11:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 11:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:05 | Edited .gitignore | 9→14 lines | ~63 |
+| 11:06 | Session end: 1 writes across 1 files (.gitignore) | 1 reads | ~450 tok |
+
+## Session: 2026-04-26 11:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:13 | Edited docs/reviews/loadout-ux-coding-expert.md | "/home/hhewett/.local/src/" → "docs/plans/2026-03-12-loa" | ~19 |
+| 11:13 | Edited docs/reviews/loadout-ux-security-expert.md | "docs/loadout-ux-redesign." → "docs/plans/2026-03-12-loa" | ~34 |
+| 11:13 | Edited docs/reviews/loadout-ux-ux-expert.md | "docs/loadout-ux-redesign." → "docs/plans/2026-03-12-loa" | ~19 |
+| 11:13 | Edited docs/reviews/registry-add-ux.md | inline fix | ~18 |
+| 11:13 | Edited docs/plans/2026-03-11-registry-add-ux-plan.md | "docs/review-registry-add-" → "docs/reviews/registry-add" | ~26 |
+| 11:13 | Edited docs/prompts/loadout-ux-phase3-continuation.md | "docs/loadout-ux-redesign." → "docs/plans/2026-03-12-loa" | ~37 |
+| 11:13 | Edited docs/prompts/registry-add-ux.md | 2→2 lines | ~52 |
+| 11:13 | Edited docs/plans/2026-03-01-tui-polish-registry-design.md | inline fix | ~10 |
+| 11:15 | Session end: 8 writes across 7 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 16 reads | ~6198 tok |
+| 11:19 | Edited .gitignore | 3→5 lines | ~24 |
+| 11:19 | Edited CONTRIBUTING.md | modified root() | ~686 |
+| 11:19 | Session end: 10 writes across 9 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 20 reads | ~14382 tok |
+| 11:20 | Session end: 10 writes across 9 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 21 reads | ~17296 tok |
+| 11:20 | Created demos/hero.tape | — | ~449 |
+| 11:20 | Created docs/vhs/demo-tui-browse.tape | — | ~342 |
+| 11:21 | Rewrote demos/hero.tape and docs/vhs/demo-tui-browse.tape — replaced old sidebar navigation (Down/Down/Enter) with current TUI nav (1/2/3 groups, Tab sub-tabs); hero now shows browse + install wizard flow | demos/hero.tape, docs/vhs/demo-tui-browse.tape | done | ~500 |
+| 11:21 | Session end: 12 writes across 11 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 21 reads | ~18143 tok |
+| 11:24 | Edited .gitignore | 5→4 lines | ~20 |
+| 11:25 | Session end: 13 writes across 11 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 21 reads | ~18164 tok |
+| 11:27 | Created demos/hero.tape | — | ~578 |
+| 11:27 | Session end: 14 writes across 11 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 21 reads | ~18784 tok |
+| 11:28 | Session end: 14 writes across 11 files (loadout-ux-coding-expert.md, loadout-ux-security-expert.md, loadout-ux-ux-expert.md, registry-add-ux.md, 2026-03-11-registry-add-ux-plan.md) | 21 reads | ~18784 tok |
+
+## Session: 2026-04-26 11:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:30 | Edited SECURITY.md | modified tiers() | ~1436 |
+| 11:31 | Edited ROADMAP.md | expanded (+27 lines) | ~1381 |
+| 11:32 | Created demos/hero.tape | — | ~447 |
+| 11:33 | Created ARCHITECTURE.md | — | ~4836 |
+
+## Session: 2026-04-26 11:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:39 | Created demos/hero.tape | — | ~478 |
+| 11:41 | Session end: 1 writes across 1 files (hero.tape) | 4 reads | ~512 tok |
+
+## Session: 2026-04-26 11:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

@@ -7761,6 +7761,230 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-26T16:47:33.822Z"
+    },
+    {
+      "id": "bug-481",
+      "timestamp": "2026-04-26T17:49:00.606Z",
+      "error_message": "Significant refactor of ",
+      "file": "README.md",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 14→19 lines (8 removed) | Also: ## Conversion Examples; Syllago automatically converts between provider-sp | Also: ## All Commands; | Command | Description | | Also: ## Security and Supply Chain; Syllago does not operate any registry or marketpla | Also: What's done and what's next:; - **Privacy and integrity** -- registry privacy ga | Also: - **Cross-provider conversion** -- Add content fro; - **Interactive TUI** -- Browse, search, install, ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 6,
+      "last_seen": "2026-04-26T17:51:07.071Z"
+    },
+    {
+      "id": "bug-482",
+      "timestamp": "2026-04-26T17:49:13.118Z",
+      "error_message": "Significant refactor of ",
+      "file": "logos/social-preview.svg",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 21→12 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "svg"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T17:49:13.118Z"
+    },
+    {
+      "id": "bug-483",
+      "timestamp": "2026-04-26T17:54:27.087Z",
+      "error_message": "Incorrect value in code",
+      "file": "logos/social-preview.svg",
+      "root_cause": "Had \"translate(385, 110) scale(1.0)\"",
+      "fix": "Changed to \"translate(344, 110) scale(1.175)\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "svg"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-26T17:57:22.993Z"
+    },
+    {
+      "id": "bug-484",
+      "timestamp": "2026-04-26T17:55:07.753Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/output/errors.go",
+      "root_cause": "Had \"https://openscribbler.github.io/syllago-docs\"",
+      "fix": "Changed to \"https://syllago.dev\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-26T17:55:08.248Z"
+    },
+    {
+      "id": "bug-485",
+      "timestamp": "2026-04-26T17:55:12.915Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/cmd/syllago/registry_signing.go",
+      "root_cause": "Had \"https://openscribbler.github.io/syllago-docs/moat",
+      "fix": "Changed to \"https://syllago.dev/moat/registry-add-signing-ide",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T17:55:12.915Z"
+    },
+    {
+      "id": "bug-486",
+      "timestamp": "2026-04-26T18:13:14.162Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/reviews/loadout-ux-coding-expert.md",
+      "root_cause": "Had `/home/hhewett/.local/src/syllago/docs/loadout-ux-",
+      "fix": "Changed to `docs/plans/2026-03-12-loadout-ux-redesign.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:14.162Z"
+    },
+    {
+      "id": "bug-487",
+      "timestamp": "2026-04-26T18:13:14.697Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/reviews/loadout-ux-security-expert.md",
+      "root_cause": "Had `docs/loadout-ux-redesign.md`",
+      "fix": "Changed to `docs/plans/2026-03-12-loadout-ux-redesign.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:14.697Z"
+    },
+    {
+      "id": "bug-488",
+      "timestamp": "2026-04-26T18:13:15.216Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/reviews/loadout-ux-ux-expert.md",
+      "root_cause": "Had `docs/loadout-ux-redesign.md`",
+      "fix": "Changed to `docs/plans/2026-03-12-loadout-ux-redesign.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:15.216Z"
+    },
+    {
+      "id": "bug-489",
+      "timestamp": "2026-04-26T18:13:17.078Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/plans/2026-03-11-registry-add-ux-plan.md",
+      "root_cause": "Had `docs/review-registry-add-ux.md`",
+      "fix": "Changed to `docs/reviews/registry-add-ux.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:17.078Z"
+    },
+    {
+      "id": "bug-490",
+      "timestamp": "2026-04-26T18:13:17.518Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/prompts/loadout-ux-phase3-continuation.md",
+      "root_cause": "Had `docs/loadout-ux-redesign.md`",
+      "fix": "Changed to `docs/plans/2026-03-12-loadout-ux-redesign.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:17.518Z"
+    },
+    {
+      "id": "bug-491",
+      "timestamp": "2026-04-26T18:13:18.004Z",
+      "error_message": "Incorrect value in code",
+      "file": "docs/prompts/registry-add-ux.md",
+      "root_cause": "Had `docs/plan-registry-add-ux.md`",
+      "fix": "Changed to `docs/plans/2026-03-11-registry-add-ux-plan.md`",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:13:18.004Z"
+    },
+    {
+      "id": "bug-492",
+      "timestamp": "2026-04-26T18:19:19.003Z",
+      "error_message": "Significant refactor of ",
+      "file": "CONTRIBUTING.md",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 19→74 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:19:19.003Z"
+    },
+    {
+      "id": "bug-493",
+      "timestamp": "2026-04-26T18:30:13.424Z",
+      "error_message": "Significant refactor of ",
+      "file": "SECURITY.md",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 8→60 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:30:13.424Z"
+    },
+    {
+      "id": "bug-494",
+      "timestamp": "2026-04-26T18:31:16.425Z",
+      "error_message": "Significant refactor of ",
+      "file": "ROADMAP.md",
+      "root_cause": "36 lines replaced/restructured",
+      "fix": "Rewrote 78→105 lines (36 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T18:31:16.425Z"
     }
   ]
 }

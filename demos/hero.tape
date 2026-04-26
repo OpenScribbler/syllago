@@ -1,13 +1,20 @@
-# Hero demo: TUI loadout creation wizard
+# Hero demo: TUI library browse + search + cross-provider install
 #
-# Shows: launch -> Loadouts -> Create -> wizard steps -> review
+# Shows: launch → library browse → search → install wizard → success
 #
-# Prerequisites:
-#   1. cd ~/demo-project
-#   2. Hide global settings: mv ~/.claude/settings.json ~/.claude/settings.json.bak
-#   3. Ensure library has content from demo-project
+# Navigation reference (current TUI):
+#   1 / 2 / 3  — switch top-level groups (Collections, Content, Config)
+#   Tab        — cycle sub-tabs within a group
+#   ↑/↓        — navigate list items
+#   /          — open search
+#   i          — open install wizard on selected item
 #
-# NOTE: Navigation depends on TUI layout. Test and adjust key counts.
+# Demo installs "code-review" skill (shared library) to Gemini CLI.
+# Gemini CLI is the 2nd provider in the wizard list (Down once from Claude Code).
+#
+# Review step requires Tab (focus buttons) + Right (cursor to Install) + Enter.
+#
+# Record: cd /path/to/syllago/demos && vhs hero.tape
 
 Output "hero.gif"
 
@@ -19,77 +26,61 @@ Set Padding 20
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 50ms
 
-# Launch syllago TUI from demo project
+# Launch syllago TUI from the demo project
 Type "cd ~/demo-project && syllago"
 Enter
 Sleep 3s
 
-# Pause on homepage
-Sleep 3s
+# Pause on Collections > Library — let the viewer see the layout
+Sleep 2s
 
-# Navigate to Loadouts (sidebar)
-# Library is selected by default, Down twice to Loadouts
+# Browse a few library items
 Down
 Sleep 400ms
 Down
 Sleep 400ms
-Enter
-Sleep 3s
-
-# Press 'c' to create a new loadout
-Type "c"
-Sleep 3s
-
-# Step 1: Pick provider - select Claude Code (should be first)
-Enter
-Sleep 3s
-
-# Step 2: Select content types - check Rules and Skills
-Space
-Sleep 400ms
 Down
 Sleep 400ms
-Space
+
+# Search from Library directly — type "/" then filter
+Type "/"
+Sleep 400ms
+Type "code-review"
+Sleep 800ms
+
+# Confirm search (exits input, keeps filter — code-review is selected)
+Enter
+Sleep 600ms
+
+# Open install wizard
+Type "i"
+Sleep 2s
+
+# Step 1: Provider — Down once selects Gemini CLI (2nd after Claude Code)
+Down
 Sleep 400ms
 Enter
-Sleep 3s
+Sleep 2s
 
-# Step 3a: Select items for first type
-Space
-Sleep 400ms
+# Step 2: Location — accept default install path
 Enter
-Sleep 3s
+Sleep 1.5s
 
-# Step 3b: Select items for second type
-Space
-Sleep 400ms
+# Step 3: Method — accept default (symlink)
 Enter
-Sleep 3s
+Sleep 1.5s
 
-# Step 4: Name the loadout
-Type "my-team-config"
-Sleep 1s
+# Step 4: Review — Tab to buttons zone, Right to Install button, Enter to confirm
 Tab
+Sleep 400ms
+Right
 Sleep 300ms
-Type "Standard config for the engineering team"
-Sleep 1s
 Enter
 Sleep 3s
 
-# Step 5: Destination
-Enter
-Sleep 3s
+# Success toast visible — pause to show it
+Sleep 2s
 
-# Step 6: Review - show the summary
-Sleep 3s
-
-# Back out and quit
-Escape
-Sleep 500ms
-Escape
-Sleep 500ms
-Escape
-Sleep 500ms
-
+# Quit
 Type "q"
 Sleep 1s

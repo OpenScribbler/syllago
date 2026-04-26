@@ -1,5 +1,16 @@
 # Demo 1: TUI Browsing
-# Shows launching the TUI, navigating content, and previewing items.
+# Shows launching the TUI, navigating groups and sub-tabs, and browsing content.
+#
+# Navigation reference (current TUI):
+#   1 / 2 / 3  — switch top-level groups (Collections, Content, Config)
+#   Tab        — cycle sub-tabs within a group
+#   ↑/↓        — navigate list items
+#   /          — search
+#
+# Collections sub-tabs: Library → Registries → Loadouts
+# Content sub-tabs:     Skills → Agents → MCP → Rules → Hooks → Commands
+#
+# Record: cd ~/demo-project && vhs docs/vhs/demo-tui-browse.tape
 
 Output docs/vhs/demo-tui-browse.gif
 
@@ -10,18 +21,26 @@ Set Height 800
 Set Padding 20
 Set TypingSpeed 60ms
 
-# Launch syllago TUI
+# Launch syllago TUI — lands on Collections > Library
 Type "syllago"
 Enter
 Sleep 2s
 
-# Navigate to Skills
+# Browse library items
 Down
 Sleep 500ms
-Enter
+Down
+Sleep 400ms
+Down
+Sleep 400ms
+Down
+Sleep 400ms
+
+# Switch to Content group — starts on Skills
+Type "2"
 Sleep 1s
 
-# Browse skills list
+# Navigate skills
 Down
 Sleep 400ms
 Down
@@ -29,52 +48,35 @@ Sleep 400ms
 Down
 Sleep 400ms
 
-# Open a skill detail
-Enter
-Sleep 1.5s
-
-# Switch to Files tab
+# Tab to Agents
 Tab
+Sleep 800ms
+
+# Tab to Rules
+Tab
+Sleep 400ms
+Tab
+Sleep 400ms
+
+# Browse a few rules
+Down
+Sleep 400ms
+Down
+Sleep 400ms
+
+# Back to Collections
+Type "1"
 Sleep 1s
 
-# Show file preview
-Down
-Sleep 500ms
-Enter
-Sleep 2s
+# Tab to Registries, then Loadouts
+Tab
+Sleep 600ms
+Tab
+Sleep 800ms
 
-# Go back
-Escape
-Sleep 1s
-Escape
-Sleep 1s
-
-# Navigate to Loadouts
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Enter
-Sleep 1.5s
-
-# Show loadout detail
-Enter
+# Pause on Loadouts gallery
 Sleep 2s
 
 # Quit
-Escape
-Sleep 500ms
-Escape
-Sleep 500ms
 Type "q"
 Sleep 1s

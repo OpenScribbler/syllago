@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T17:07:39.358Z
-> Files: 1221 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T18:39:16.866Z
+> Files: 1233 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -182,15 +182,15 @@
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
-- `.gitignore` — Git ignore rules (~382 tok)
+- `.gitignore` — Git ignore rules (~415 tok)
 - `.release-pending.yml` (~34 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
-- `ARCHITECTURE.md` — Syllago Architecture, includes mermaid container diagram (~3800 tok)
+- `ARCHITECTURE.md` — Syllago Architecture (~4534 tok)
 - `CHANGELOG.md` — Changelog (~1660 tok)
 - `CLAUDE.md` — OpenWolf (~1181 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
 - `commands.json` — Declares or (~48402 tok)
-- `CONTRIBUTING.md` — Contributing to syllago (~1285 tok)
+- `CONTRIBUTING.md` — Contributing to syllago (~1842 tok)
 - `GEMINI.md` — Syllago (~697 tok)
 - `install.sh` — Install syllago — AI coding tool content manager (~880 tok)
 - `LICENSE` — Project license (~3025 tok)
@@ -198,9 +198,9 @@
 - `opencode.json` (~5 tok)
 - `opencode.json.bak` (~23 tok)
 - `plan.md` — Contribution Model Implementation Plan (~1180 tok)
-- `README.md` — Project documentation (~4257 tok)
-- `ROADMAP.md` — Roadmap (~978 tok)
-- `SECURITY.md` — Security Policy (~1360 tok)
+- `README.md` — Project documentation (~4375 tok)
+- `ROADMAP.md` — Roadmap (~1295 tok)
+- `SECURITY.md` — Security Policy (~2575 tok)
 - `TUI_MOCKUPS.md` — Syllago TUI: Adaptive Layout Specification (~2438 tok)
 - `VERSION` (~2 tok)
 - `VERSIONING.md` — Versioning (~464 tok)
@@ -1685,7 +1685,7 @@
 - `registry_create_native_test.go` — TestAllItemsFromScan_Empty, TestAllItemsFromScan_MultipleProviders, TestAllItemsFromScan_HookFields, (~4038 tok)
 - `registry_create_native.go` — Struct: numberedItem (~3399 tok)
 - `registry_signing_test.go` — TestResolveSigningProfile_AllowlistMatch, TestResolveSigningProfile_FlagsOverrideAllowlist, TestReso (~3284 tok)
-- `registry_signing.go` — Struct: signingFlagSet (~1955 tok)
+- `registry_signing.go` — Struct: signingFlagSet (~2010 tok)
 - `registry_sync_moat_test.go` — TestSyncMOAT_HappyPath_PinnedProfile, TestSyncMOAT_NotModified, TestSyncMOAT_TOFU_WithoutYes_Returns (~5137 tok)
 - `registry_sync_moat.go` (~1374 tok)
 - `registry_verify_test.go` — TestVerifyRegistryForAdd_NilReg, TestVerifyRegistryForAdd_UnpinnedGitRegistry, TestVerifyRegistryFor (~7612 tok)
@@ -1873,8 +1873,8 @@
 
 - `install-005.md` — What This Means (~148 tok)
 - `item-001.md` — What This Means (~186 tok)
-- `moat-001.md` — What This Means (~537 tok)
-- `moat-002.md` — What This Means (~391 tok)
+- `moat-001.md` — What This Means (~524 tok)
+- `moat-002.md` — What This Means (~385 tok)
 - `moat-003.md` — What This Means (~583 tok)
 - `moat-004.md` — What This Means (~574 tok)
 - `moat-005.md` — What This Means (~460 tok)
@@ -2004,7 +2004,8 @@
 
 ## cli/internal/output/
 
-- `errors.go` — NewStructuredError, NewStructuredErrorDetail, AllErrorCodes (~2401 tok)
+- `errors_test.go` — TestDocsURL_Format, TestDocsURL_OtherCategories, TestNewStructuredError_PopulatesDocsURL, TestNewStr (~1626 tok)
+- `errors.go` — NewStructuredError, NewStructuredErrorDetail, AllErrorCodes (~2387 tok)
 
 ## cli/internal/promote/
 
@@ -2188,6 +2189,10 @@
 - `.syllago.yaml` (~48 tok)
 - `SKILL.md` — Code Review (~307 tok)
 
+## demos/
+
+- `hero.tape` — Hero demo: TUI library browse + search + cross-provider install (~478 tok)
+
 ## docs/
 
 - `adding-a-provider.md` — Adding a Provider to Syllago (~2877 tok)
@@ -2200,6 +2205,8 @@
 
 ## docs/plans/
 
+- `2026-03-01-tui-polish-registry-design.md` — TUI Polish + Registry Experience — Design Document (~3470 tok)
+- `2026-03-11-registry-add-ux-plan.md` — Plan: Registry Add UX Fix (~3918 tok)
 - `2026-04-12-moat-conformance-gap-analysis.md` — MOAT Conformance Gap Analysis — Syllago + syllago-meta-registry (~17344 tok)
 - `2026-04-16-capmon-phase6-recognition-plan.md` — Capmon Phase 6: Full Recognition Pipeline (~2343 tok)
 - `2026-04-16-capmon-self-healing-prompt.md` — Prompt: Self-Healing Source URLs for capmon (~2076 tok)
@@ -2210,6 +2217,11 @@
 - `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
 - `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17530 tok)
 - `2026-04-24-provider-auto-split-design.md` — Provider-Flow Auto-Detect Split — Design (~789 tok)
+
+## docs/prompts/
+
+- `loadout-ux-phase3-continuation.md` — Phase 2 — COMPLETE (~442 tok)
+- `registry-add-ux.md` — Execute: Registry Add UX Fix (~1577 tok)
 
 ## docs/provider-capabilities/
 
@@ -2258,9 +2270,24 @@
 - `2026-04-20-mod-organizer-patterns-research.md` — Mod Organizer 2 → Syllago: Transferable Patterns (~3440 tok)
 - `2026-04-21-loadout-safety-concerns.md` — Loadout Safety, Try/Keep Semantics, and Multi-Loadout Architecture (~3938 tok)
 
+## docs/reviews/
+
+- `loadout-ux-coding-expert.md` — Loadout UX Redesign — Implementation Review (~5435 tok)
+- `loadout-ux-security-expert.md` — Security Review: Loadout UX Redesign (~6198 tok)
+- `loadout-ux-ux-expert.md` — UX Expert Review: Loadout UX Redesign (~4467 tok)
+- `registry-add-ux.md` — Expert Review: Registry Add UX (~2495 tok)
+
 ## docs/runbooks/
 
 - `moat-trusted-root-refresh.md` — MOAT Trusted-Root Refresh Runbook (~1955 tok)
+
+## docs/vhs/
+
+- `demo-tui-browse.tape` — Demo 1: TUI Browsing (~342 tok)
+
+## logos/
+
+- `social-preview.svg` (~2457 tok)
 
 ## releases/
 
