@@ -16,7 +16,7 @@ The TUI has functional screens but inconsistent behavior across them. Modals don
 
 Four workstreams executed in order:
 
-1. **UX Bug Fixes + Consistency** — Fix the 10 reported issues from `docs/ui-issues.md`
+1. **UX Bug Fixes + Consistency** — Fix the 10 reported issues from `docs/reviews/ui-issues-2026-03-01.md`
 2. **Global + Project Content Model** — Add `~/.syllago/content/` as a global content location merged with project content
 3. **Init Overhaul** — Interactive Astro-style wizard for `syllago init`
 4. **Registry Experience** — Remove syllago-tools references, add `syllago registry create` wizard, upgrade TUI registry browser
@@ -25,7 +25,7 @@ Four workstreams executed in order:
 
 ## Workstream 1: UX Bug Fixes + Consistency
 
-Source: `docs/ui-issues.md` + session findings
+Source: `docs/reviews/ui-issues-2026-03-01.md` + session findings
 
 ### 1.1 Unified Help Bar
 

@@ -16,10 +16,15 @@ local/
 content/.syllago/
 
 # Machine-local state (audit logs, install tracking, snapshots)
-.syllago/audit.jsonl
-.syllago/installed.json
-.syllago/snapshots/
-cli/.syllago/audit.jsonl
+.syllago/
+cli/.syllago/
+
+# GitHub Copilot local config
+.copilot/
+
+# Local review artifacts and memory files
+memory/
+reviews/
 
 # OS
 .DS_Store
@@ -47,9 +52,10 @@ docs/*
 !docs/provider-formats/
 # Capmon pipeline sidecars (tracking issue URLs, written at runtime by jtafb)
 docs/provider-formats/*.quality.json
-!docs/research/
 !docs/provider-capabilities/
 !docs/runbooks/
+!docs/guides/
+!docs/reports/
 .capmon-cache/
 tmp/
 
