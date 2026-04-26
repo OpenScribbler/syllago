@@ -1,9 +1,0 @@
-format_version: 1
-id: 65a3bc9f-464c-4dac-8845-c5e9d9493c3a
-name: log-product-feedback
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:bc32221201c10de98a59b752105707d0f3ce7fa8075fb8f97956bf32bb84cb59
-added_at: 2026-04-03T16:25:26.858750341Z
-added_by: syllago

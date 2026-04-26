@@ -1,9 +1,0 @@
-format_version: 1
-id: 2dac271c-1887-4204-b266-fac67ec79997
-name: security-audit
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:268d69385893fcf9bd59b2834bf80fcfa3aae5c491e9a80c09589d00a1fdfac2
-added_at: 2026-04-03T16:25:26.890886802Z
-added_by: syllago

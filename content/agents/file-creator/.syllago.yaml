@@ -1,9 +1,0 @@
-format_version: 1
-id: 2cdab9f2-39cd-4d7c-83be-a516818e78cc
-name: file-creator
-type: agents
-source_format: md
-source_type: provider
-source_hash: sha256:4ee4be1797b2f47996f049a3e8f7cb3ce45b1cef34a022a638a940377d5f86c5
-added_at: 2026-03-29T04:56:14.243256636Z
-added_by: syllago

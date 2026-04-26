@@ -1,9 +1,0 @@
-format_version: 1
-id: 882c4343-4dff-43a7-8fa5-7ea7a8d71e3b
-name: terraform-patterns
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:afdb34ddba1b55d171e0dc1ee6ebe498cae9b4c3a8cef9bdeb26c60759425b5e
-added_at: 2026-04-03T16:25:26.896226729Z
-added_by: syllago

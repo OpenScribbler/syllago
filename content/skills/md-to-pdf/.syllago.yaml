@@ -1,9 +1,0 @@
-format_version: 1
-id: 6b277676-0e73-4ac0-b1c7-8fc4e4a74120
-name: md-to-pdf
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:13d68ad24d5cd2a9c42a08b454519e28bcff1935d09c07d6b00a3a73788c13a2
-added_at: 2026-04-03T16:25:26.860974609Z
-added_by: syllago

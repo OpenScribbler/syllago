@@ -1,9 +1,0 @@
-format_version: 1
-id: 6e607755-8935-48e9-89a4-033ea87e55a0
-name: CLAUDE
-type: rules
-source_format: md
-source_type: provider
-source_hash: sha256:82ccdf7ae159daca3e8e329fca5210cacae173fa892ba353f0e188e2d5db66be
-added_at: 2026-04-24T23:28:27.846624802Z
-added_by: syllago

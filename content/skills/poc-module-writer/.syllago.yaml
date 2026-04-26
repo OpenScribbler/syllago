@@ -1,9 +1,0 @@
-format_version: 1
-id: 75d72a13-36aa-427b-85c2-e49204aa37d5
-name: poc-module-writer
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:af2b0d62a53cc47c10384a14baaace61ec904fefae60b9bdac203f68188c8c16
-added_at: 2026-04-03T16:25:26.872813882Z
-added_by: syllago

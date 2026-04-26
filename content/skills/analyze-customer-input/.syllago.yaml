@@ -1,9 +1,0 @@
-format_version: 1
-id: 3bc68730-3282-43f0-98cb-0afe4c8673ed
-name: analyze-customer-input
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:edc1b71c1f49c7be32f0a826f450e6b760a34369e963bbb4416d2cfe2d813352
-added_at: 2026-04-03T16:25:26.835821153Z
-added_by: syllago

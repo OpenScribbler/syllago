@@ -1,9 +1,0 @@
-format_version: 1
-id: d9811a85-9e4e-4729-92d4-4dc5bade6302
-name: kubernetes-patterns
-type: skills
-source_format: md
-source_type: provider
-source_hash: sha256:6ffb68051cecdbdeaababd2e6224af5ccc48706fadd19265cada9465c3db0d8b
-added_at: 2026-04-03T16:25:26.85627235Z
-added_by: syllago
