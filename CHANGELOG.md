@@ -5,6 +5,63 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.10.0] - 2026-04-26
+
+### Added
+
+- MOAT reference implementation: Sigstore + Rekor verification, GitHub OIDC numeric-ID pinning, `--signing-identity` / `--signing-issuer` / `--signing-repository-id` / `--signing-repository-owner-id` flags on `registry add`, three trust tiers (`DUAL-ATTESTED`, `SIGNED`, `UNSIGNED`), bundled allowlist with auto-pinning for `OpenScribbler/syllago-meta-registry`, lockfile, revocation handling (4 reasons), 90/180/365-day trusted-root staleness cliff, `MOAT_001`–`MOAT_009` error codes explainable via `syllago explain`
+- `syllago moat sign` for self-publishing registries (registry signing profile + per-item attestations)
+- Auto-detect MOAT-capable registries from bundled allowlist or `manifest_uri` in `registry.yaml`
+- `--min-trust` flag for per-call trust-policy floor
+- `--trusted-root` flag for per-registry trusted-root override
+- TUI Trust glyphs on Library rows and Registry cards; reusable Trust Inspector modal (`[t]` hotkey) on both pages
+- Rules splitter: detect monolithic rule files and split on H2/H3/H4 with literal-marker heuristic, BOM/CRLF/trailing-whitespace normalization, decorative-HR exclusion, MUST/SHOULD/MAY casing preservation, `@import` preservation
+- `syllago add --from <path> --split` and the corresponding TUI Provider source flow with auto-detection, heuristic radio step, multi-select review, per-rule rename overrides
+- `syllago install --method=append` for monolithic-file install with empty-file create and trailing-newline repair
+- Rulestore with `.source/` capture and `.history/` chain of normalized hashes; orphan-history-file load is a hard error
+- Install verification: `installcheck` package classifies targets as `Clean`/`Modified`/`Edited`/`Missing`; `--on-clean` and `--on-modified` flags; `installUpdateModal` and `installModifiedModal` per-state TUI modals; library Installed column shows per-target status
+- `provmon` source-hash drift detection with `--fail-on=warn|error` policy
+- `syllago capmon backfill` subcommand
+- TUI Config tab with Settings / Sandbox / System sub-tabs, full mouse parity
+- Multi-provider loadouts (`syllago-starter` ships emitters for Claude Code, Gemini CLI, Codex, Pi from one manifest)
+- Hook script scanner chain with external-subprocess adapter interface (Semgrep / ShellCheck)
+- MCP install paths for Cursor and Windsurf
+- `content-format.json` and `syllago-yaml-schema.json` emitted as release artifacts for docs sync
+- Telemetry properties: `verification_state`, `decision_action`, `discovery_candidate_count`, `selected_count`, `split_method`, `scope`
+
+### Changed
+
+- TUI add wizard merges Discovery and Triage into a single split-pane step
+- Review step lists items grouped by content type with section headers
+- Registry add/sync/remove orchestration unified between CLI and TUI through shared `registryops` package
+- `cli/internal/tui_v1` legacy package retired
+- Personal-import scrub of in-repo `content/` (kept: `syllago-starter` loadout, cross-provider starter rules `concise-comments` and `no-placeholders`, `code-review` skill, hook benchmark corpus)
+- Documentation accuracy pass on README, ROADMAP, ARCHITECTURE, CONTRIBUTING, SECURITY
+
+### Fixed
+
+- `syllago registry remove` now removes the entry from all config sources
+- Triage and review preview rendering for symlinked content and MCP entries
+- Three discovery-triage TUI bugs (right-arrow navigation, hook risk surfacing, agent discovery)
+- Registry-card stale glyph no longer wraps the card title onto a second line
+- Uninstalling an item from a drilled-in registry no longer routes to registry-remove
+- Empty preview when drilling into a MOAT-materialized item
+- `syllago registry add` now refuses to overwrite an existing clone destination
+- Trust column reading every fresh registry as Stale (staleness label casing bug)
+- Wizard discovery paths for split rules and loose file-based content types
+- Phantom CLI command names in user-facing error messages and MOAT suggestion strings
+- System tab now uses `DetectProviders()` instead of `AllProviders()`
+- Snapshot symlink TOCTOU + backup hash verification on restore
+
+### Security
+
+- `go-tuf/v2` pinned to v2.4.1 (patches three CVEs in the sigstore-go init chain)
+- Two test-only data races eliminated under `go test -race`
+
+### Removed
+
+- Cursor `commands` content type support — Cursor 1.6 added slash commands but the runtime contract did not match what syllago was emitting; shipping the broken plumbing was worse than removing it
+
 ## [0.9.0] - 2026-04-17
 
 ### Added
