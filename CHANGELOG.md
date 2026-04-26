@@ -5,6 +5,18 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.10.1] - 2026-04-26
+
+### Fixed
+
+- Release workflow's Homebrew tap update now fails loudly when the Aembit credential step returns an empty token. Previously `continue-on-error: true` masked the failure and the release silently shipped without updating `OpenScribbler/homebrew-tap`, leaving `brew upgrade syllago` stuck on an older version.
+- `Create GitHub Release` step is now idempotent (`gh release view` → `edit` + `upload --clobber` if the release already exists, otherwise `create`). Re-running the release workflow for an existing tag no longer fails with `a release with the same tag name already exists`.
+- Homebrew formula update is now a no-op (early `exit 0`) when the formula is already up to date, so re-runs against an unchanged tag don't fail with `nothing to commit`.
+
+### Added
+
+- `workflow_dispatch` trigger on the release workflow so the pipeline can be re-run for an existing tag without amending the tag or pushing a new one. Use `gh workflow run release.yml --ref vX.Y.Z`.
+
 ## [0.10.0] - 2026-04-26
 
 ### Added

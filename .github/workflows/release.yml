@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -87,42 +88,61 @@ jobs:
             echo "notes_file=$NOTES_FILE" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create GitHub Release (with release notes)
+      - name: Create or update GitHub Release (with release notes)
         if: steps.notes.outputs.notes_file != ''
         env:
           GH_TOKEN: ${{ github.token }}
           NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
         working-directory: cli
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --notes-file "../$NOTES_FILE" \
-            syllago-linux-amd64 syllago-linux-arm64 \
-            syllago-darwin-amd64 syllago-darwin-arm64 \
-            syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json providers.json telemetry.json capabilities.json \
-            content-format.json syllago-yaml-schema.json sbom.spdx.json \
+          ASSETS=(
+            syllago-linux-amd64 syllago-linux-arm64
+            syllago-darwin-amd64 syllago-darwin-arm64
+            syllago-windows-amd64.exe syllago-windows-arm64.exe
+            commands.json providers.json telemetry.json capabilities.json
+            content-format.json syllago-yaml-schema.json sbom.spdx.json
             checksums.txt checksums.txt.bundle
+          )
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; updating notes and re-uploading assets."
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file "../$NOTES_FILE"
+            gh release upload "$GITHUB_REF_NAME" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes-file "../$NOTES_FILE" \
+              "${ASSETS[@]}"
+          fi
 
-      - name: Create GitHub Release (auto-generated notes)
+      - name: Create or update GitHub Release (auto-generated notes)
         if: steps.notes.outputs.notes_file == ''
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: cli
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "$GITHUB_REF_NAME" \
-            --generate-notes \
-            syllago-linux-amd64 syllago-linux-arm64 \
-            syllago-darwin-amd64 syllago-darwin-arm64 \
-            syllago-windows-amd64.exe syllago-windows-arm64.exe \
-            commands.json providers.json telemetry.json capabilities.json \
-            content-format.json syllago-yaml-schema.json sbom.spdx.json \
+          ASSETS=(
+            syllago-linux-amd64 syllago-linux-arm64
+            syllago-darwin-amd64 syllago-darwin-arm64
+            syllago-windows-amd64.exe syllago-windows-arm64.exe
+            commands.json providers.json telemetry.json capabilities.json
+            content-format.json syllago-yaml-schema.json sbom.spdx.json
             checksums.txt checksums.txt.bundle
+          )
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; updating title and re-uploading assets."
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME"
+            gh release upload "$GITHUB_REF_NAME" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              "${ASSETS[@]}"
+          fi
 
       - name: Get Homebrew tap credentials from Aembit
         id: aembit-homebrew
-        continue-on-error: true
         uses: Aembit/get-credentials@652c3288eba4b0f3f03d0fee970b0d6c490f010a # v1.1.2
         with:
           client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
@@ -130,7 +150,6 @@ jobs:
           server-host: github.com
 
       - name: Update Homebrew formula
-        continue-on-error: true
         env:
           HOMEBREW_TAP_TOKEN: ${{ steps.aembit-homebrew.outputs.api-key }}
           VERSION: ${{ env.VERSION }}
@@ -138,18 +157,15 @@ jobs:
         working-directory: cli
         run: |
           if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
-            echo "Homebrew tap token not available, skipping Homebrew update"
-            exit 0
+            echo "::error::Homebrew tap token is empty. The Aembit step succeeded but produced no api-key output. Check that the Aembit credential provider is active and its credentialType is set to ApiKey."
+            exit 1
           fi
 
-          # Extract SHA-256 for macOS binaries
           SHA_DARWIN_AMD64=$(grep syllago-darwin-amd64 checksums.txt | awk '{print $1}')
           SHA_DARWIN_ARM64=$(grep syllago-darwin-arm64 checksums.txt | awk '{print $1}')
 
-          # Clone the tap repo
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/OpenScribbler/homebrew-tap.git" /tmp/homebrew-tap
 
-          # Update the formula
           cd /tmp/homebrew-tap
           mkdir -p Formula
 
@@ -184,5 +200,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/syllago.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date for ${TAG_NAME}; nothing to commit."
+            exit 0
+          fi
           git commit -m "syllago ${TAG_NAME}"
           git push
