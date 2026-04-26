@@ -7547,6 +7547,204 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-25T22:57:32.429Z"
+    },
+    {
+      "id": "bug-468",
+      "timestamp": "2026-04-25T23:07:53.643Z",
+      "error_message": "Wrong reference: Error should be Errorf",
+      "file": "cli/internal/installer/moat_provider_install_test.go",
+      "root_cause": "Used \"Error\" instead of \"Errorf\"",
+      "fix": "Changed Error → Errorf",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T23:07:53.643Z"
+    },
+    {
+      "id": "bug-469",
+      "timestamp": "2026-04-25T23:15:46.234Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/install_moat_test.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 22→17 lines (5 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-25T23:15:46.234Z"
+    },
+    {
+      "id": "bug-470",
+      "timestamp": "2026-04-26T01:20:49.275Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/rulestore/hashlint_test.go",
+      "root_cause": "Had \"cmd/syllago/install_moat_fetch.go\"",
+      "fix": "Changed to \"internal/moatinstall/fetch.go\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T01:20:49.275Z"
+    },
+    {
+      "id": "bug-471",
+      "timestamp": "2026-04-26T01:23:55.190Z",
+      "error_message": "Function not marked async",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "Function uses await but wasn't declared async",
+      "fix": "Added async modifier",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T01:23:55.190Z"
+    },
+    {
+      "id": "bug-472",
+      "timestamp": "2026-04-26T01:50:00.000Z",
+      "error_message": "wizard invariant: installStepProvider entered with empty item — TUI panics on first Update message after [i] opens install wizard for an unstaged MOAT (registry) item; also no [i] Install button in metadata bar for those items.",
+      "file": "cli/internal/tui/install.go, cli/internal/tui/metapanel.go, cli/internal/tui/library.go",
+      "root_cause": "syllago-kdxus added a doMOATInstallCmd path so unstaged MOAT items (Path=='', Source==registryName) can be installed via the TUI, but three pre-existing gatekeepers were not updated: (1) installWizardModel.validateStep() at install.go:240 panicked on m.item.Path=='', (2) computeMetaPanelData in metapanel.go:53 hid the Install button when item.Library==false && item.Registry!='', (3) library.go:723 had a duplicate canInstall computation with the same stale check.",
+      "fix": "validateStep now treats an item as valid when Name is set AND (Path or Source is set) — unstaged MOAT items have Source set and qualify. Both canInstall sites accept items where isUnstagedRegistryItem(item) is true. Added TestInstallWizard_ValidateStep_AcceptsUnstagedMOATItem regression test.",
+      "tags": [
+        "tui",
+        "moat",
+        "install-wizard",
+        "panic",
+        "unstaged-registry"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T01:50:00.000Z"
+    },
+    {
+      "id": "bug-473",
+      "timestamp": "2026-04-26T02:10:00.000Z",
+      "error_message": "TUI install toast collapses output.StructuredError to '[CODE] message', dropping the Details/Suggestion fields. Concretely: '[MOAT_004] attestation verification failed for OpenScribbler/syllago-meta-registry/split-rules-llm' was the entire toast — the actual cause (MOAT_IDENTITY_MISMATCH cert subject vs pinned profile) was unreachable without a debug build.",
+      "file": "cli/internal/tui/actions.go",
+      "root_cause": "StructuredError.Error() only formats Code+Message by design (CLI users get full details via PrintStructuredError, not Error()). The TUI toast handler called msg.err.Error() directly, so anything wrapped in NewStructuredErrorDetail lost the diagnostic content the CLI surfaces.",
+      "fix": "Added formatToastErr(err) helper that errors.As to output.StructuredError and appends Details when present. Used it in handleInstallDone. Toast still truncates the on-screen line, but [c] copies the full message to the clipboard, so users can paste the diagnostic.",
+      "tags": [
+        "tui",
+        "moat",
+        "ux",
+        "error-handling",
+        "diagnostics"
+      ],
+      "related_bugs": [
+        "bug-472"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T02:10:00.000Z"
+    },
+    {
+      "id": "bug-474",
+      "timestamp": "2026-04-26T02:31:32.664Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moatinstall/fetch.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 11→22 lines (7 removed) | Also: profile := entry.SigningProfile; if profile == nil { | Also: //   - registryProfile is the manifest-level Regis; //     the verification identity for SIGNED items ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-04-26T02:32:17.605Z"
+    },
+    {
+      "id": "bug-475",
+      "timestamp": "2026-04-26T02:32:29.818Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moatinstall/fetch_test.go",
+      "root_cause": "5 lines replaced/restructured",
+      "fix": "Rewrote 24→35 lines (5 removed) | Also: rekorBytes := []byte(`{\"abc123\":{\"body\":\"...\",\"int; withRekorStub(t, rekorBytes)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-26T02:33:11.789Z"
+    },
+    {
+      "id": "bug-476",
+      "timestamp": "2026-04-26T02:46:04.438Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moatinstall/clone.go",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 17→5 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T02:46:04.438Z"
+    },
+    {
+      "id": "bug-477",
+      "timestamp": "2026-04-26T02:46:22.343Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/moatinstall/fetch.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 20→16 lines (9 removed) | Also: if !strings.HasPrefix(entry.SourceURI, \"https://\"); fmt.Sprintf(\"source_uri scheme not supported for %",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-04-26T02:46:55.968Z"
+    },
+    {
+      "id": "bug-478",
+      "timestamp": "2026-04-26T02:55:42.794Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/moatinstall/clone.go",
+      "root_cause": "Had \"source_uri scheme %q not supported (only https://",
+      "fix": "Changed to \"source_uri scheme not supported: %q (only https:/",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T02:55:42.795Z"
+    },
+    {
+      "id": "bug-479",
+      "timestamp": "2026-04-26T02:58:43.848Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/cmd/syllago/install_moat_test.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 8→12 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T02:58:43.848Z"
     }
   ]
 }

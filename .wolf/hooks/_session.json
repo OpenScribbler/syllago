@@ -1,11 +1,26 @@
 {
-  "session_id": "session-2026-04-25-1601",
-  "started": "2026-04-25T23:01:54.618Z",
-  "files_read": {},
-  "files_written": [],
-  "edit_counts": {},
+  "session_id": "session-2026-04-26-2004",
+  "started": "2026-04-26T03:04:14.897Z",
+  "files_read": {
+    "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-26T03:04:19.105Z"
+    }
+  },
+  "files_written": [
+    {
+      "file": "/home/hhewett/.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md",
+      "action": "edit",
+      "tokens": 188,
+      "at": "2026-04-26T03:04:29.291Z"
+    }
+  ],
+  "edit_counts": {
+    "../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md": 1
+  },
   "anatomy_hits": 0,
-  "anatomy_misses": 0,
+  "anatomy_misses": 1,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
   "stop_count": 0

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-25T22:58:03.702Z
-> Files: 1201 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T03:04:29.282Z
+> Files: 1217 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -28,6 +28,7 @@
 - `r3-spec-purist.txt` — # Round 3 — Spec-Purist (final) (~1149 tok)
 - `r3-steinberger.txt` — Declares fact (~1050 tok)
 - `raivj_desc.txt` (~218 tok)
+- `verify_item_diag.go` — Diagnostic for the MOAT per-item verify failure on split-rules-llm. (~678 tok)
 
 ## ../../../.claude/hooks/
 
@@ -40,8 +41,10 @@
 - `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
 - `feedback_smoke_uses_real_cli.md` (~453 tok)
 - `learning_hook_event_translation.md` (~430 tok)
+- `learning_moat_dual_attested_verification.md` — Spec-grounded fact (~824 tok)
+- `learning_moat_source_uri_content_hash.md` (~571 tok)
 - `learning_tui_add_container_types.md` — Declares whose (~453 tok)
-- `MEMORY.md` — Syllago Project Memory (~2093 tok)
+- `MEMORY.md` — Syllago Project Memory (~2223 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` (~238 tok)
@@ -54,6 +57,7 @@
 
 - `.research-workflow-state-3411e93b-d007-43f3-8e72-4d7c2f63bf69.json` (~28 tok)
 - `.research-workflow-state-3e857b46-3822-488f-b024-16a79d21200e.json` (~28 tok)
+- `.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json` (~24 tok)
 - `.research-workflow-state-ba666b6c-9b90-4938-9c5d-ad15b2ac2563.json` (~24 tok)
 - `.research-workflow-state-ee5810f1-f94c-485e-85a5-dd85c582ee03.json` (~28 tok)
 
@@ -1657,13 +1661,14 @@
 - `inspect_test.go` — TestInspectShowsItemDetails, TestInspectNotFound, TestInspectJSON, TestInspectInvalidPath, TestInspe (~4962 tok)
 - `inspect.go` — Struct: inspectResult (~4223 tok)
 - `install_cmd_test.go` — TestInstallUnknownProvider, TestInstallItemNotFound, TestInstallDryRunDoesNotWrite, TestInstallTypeF (~4426 tok)
-- `install_cmd.go` — Struct: installResult (~5545 tok)
+- `install_cmd.go` — Struct: installResult (~6063 tok)
 - `install_conflict_test.go` — TestInstallToAll_ConflictWarning_NoInput, TestInstallToAll_ConflictResolution_SharedOnly, TestInstal (~2587 tok)
 - `install_moat_fetch_test.go` — Struct: oversizeRoundTripper (~6696 tok)
 - `install_moat_fetch.go` — Declares moatFetchMaxBytes (~3971 tok)
-- `install_moat_integration_test.go` — Struct: integrationEnv (~2595 tok)
-- `install_moat_test.go` — TestParseRegistryItemSyntax_Table, TestShortHash_Table, TestRunInstallFromRegistry_RegistryNotFound, (~7267 tok)
-- `install_moat.go` — Declares re (~4749 tok)
+- `install_moat_integration_test.go` — Struct: integrationEnv (~3155 tok)
+- `install_moat_test_helpers_test.go` (~658 tok)
+- `install_moat_test.go` — TestParseRegistryItemSyntax_Table, TestShortHash_Table, TestRunInstallFromRegistry_RegistryNotFound, (~7557 tok)
+- `install_moat.go` — Declares re (~5284 tok)
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
 - `list_test.go` — TestListShowsAllItems, TestListFilterByType, TestListFilterBySource, TestListJSON, TestListEmpty (~2018 tok)
 - `list.go` — Struct: listResult (~1253 tok)
@@ -1899,6 +1904,8 @@
 - `mcp.go` — Struct: MCPConfig (~4255 tok)
 - `moat_gate_test.go` — TestMOATGateDecision_String, TestPreInstallCheck_NilEntryPanics, TestPreInstallCheck_HappyPath, Test (~4928 tok)
 - `moat_gate.go` — Struct: GateBlock (~4015 tok)
+- `moat_provider_install_test.go` — TestInstallCachedMOATToProvider_Happy_Skills_Symlink, TestInstallCachedMOATToProvider_Happy_Rules_Co (~1498 tok)
+- `moat_provider_install.go` — InstallCachedMOATToProvider (~705 tok)
 
 ## cli/internal/loadout/
 
@@ -1955,6 +1962,8 @@
 - `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~4229 tok)
 - `producer_write_test.go` — TestWriteManifestCache_RoundTrip, TestWriteManifestCache_OverwriteAtomic, TestWriteManifestCache_Val (~2549 tok)
 - `producer.go` — EnrichFromMOATManifests (~5607 tok)
+- `publisher_attestation_test.go` — TestPublisherOwnerRepoFromSourceURI, TestFindPublisherEntry_HappyPath, TestFindPublisherEntry_CaseIn (~1430 tok)
+- `publisher_attestation.go` — PublisherAttestationBaseURLForTest, SetPublisherAttestationBaseURLForTest, FetchPublisherAttestation (~1740 tok)
 - `rekor_fetch_test.go` — TestFetchRekorEntry_RoundTripBytes, TestFetchRekorEntry_PutsLogIndexOnQuery, TestFetchRekorEntry_Sen (~1854 tok)
 - `rekor_fetch.go` — RekorBaseURLForTest, SetRekorBaseURLForTest, FetchRekorEntry (~977 tok)
 - `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
@@ -1978,9 +1987,16 @@
 - `trusted_root_path_test.go` — TestTrustedRootFromPath_Success, TestTrustedRootFromPath_EmptyPath, TestTrustedRootFromPath_MissingF (~1022 tok)
 - `trusted_root_path.go` — TrustedRootFromPath (~600 tok)
 - `typemap_test.go` — TestToMOATType, TestFromMOATType, TestMOATTypeRoundtrip, TestIsMOATEmittable (~1176 tok)
-- `typemap.go` — ToMOATType, FromMOATType, IsMOATEmittable (~650 tok)
+- `typemap.go` — ToMOATType, FromMOATType, IsMOATEmittable, CategoryDirForMOATType (~905 tok)
 - `verify_test.go` — TestVerifyItem_HappyPath, TestVerifyItem_NegativePaths (~984 tok)
 - `verify.go` — implements a conforming client for MOAT v0.6.0 registries. (~3037 tok)
+
+## cli/internal/moatinstall/
+
+- `clone_test.go` — TestValidateSourceURI, TestCopyTree_HappyPath, TestCopyTree_RejectsSymlinks, TestCopyTree_Overwrites (~1133 tok)
+- `clone.go` — Declares creates (~1653 tok)
+- `fetch_test.go` — Struct: verifyCall (~7414 tok)
+- `fetch.go` — FetchAndRecord (~3792 tok)
 
 ## cli/internal/output/
 
@@ -2036,6 +2052,10 @@
 - `remove_test.go` — TestRemoveRegistry_PrunesNamedEntry, TestRemoveRegistry_NotFound, TestRemoveRegistry_CloneFailureIsS (~2658 tok)
 - `remove.go` — Struct: RemoveOpts (~2099 tok)
 
+## cli/internal/rulestore/
+
+- `hashlint_test.go` — TestNoRawHashFormatting (~595 tok)
+
 ## cli/internal/sandbox/
 
 - `coverage_test.go` — TestShouldSkipDiff, TestProtectStagedFiles, TestProtectStagedFiles_NonDirSnapshot, TestProtectStaged (~3756 tok)
@@ -2055,7 +2075,7 @@
 ## cli/internal/tui/
 
 - `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~4877 tok)
-- `actions.go` — Struct: removeDoneMsg (~9033 tok)
+- `actions.go` — Struct: removeDoneMsg (~10188 tok)
 - `add_probe_tmp_test.go` — TestProbe_DiscoverPai (~280 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
@@ -2110,14 +2130,16 @@
 - `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21272 tok)
 - `install_update.go` (~4511 tok)
 - `install_view.go` — Struct: conflictOpt (~5496 tok)
+- `install.go` — Struct: installResultMsg (~4986 tok)
 - `items_test.go` — TestItems_CursorDown_Wraps, TestItems_CursorDown_AdjustsOffset, TestItems_CursorDown_EmptyListNoop, (~1104 tok)
 - `items.go` — Struct: itemsModel (~2269 tok)
 - `keys.go` (~190 tok)
 - `library_test.go` — TestLibrary_DrillIn_UnstagedRegistryItem_ShowsExplanation, TestLibrary_SetDetailFocus_TogglesFocusFi (~3730 tok)
-- `library.go` — Struct: libraryDrillMsg (~6985 tok)
+- `library.go` — Struct: libraryDrillMsg (~6994 tok)
 - `local_dir_probe_test.go` — TestProbe_LocalDirDiscovery (~610 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
-- `metapanel.go` — Struct: ruleTargetStatus (~3532 tok)
+- `metapanel.go` — Struct: ruleTargetStatus (~3469 tok)
+- `moat_install_test.go` — TestDoMOATInstallCmd_RegistryMissingFromConfig, TestDoMOATInstallCmd_ManifestEntryNotFound, TestDoIn (~1179 tok)
 - `moat_sync_test.go` — TestRegistryIsMOAT_True, TestRegistryIsMOAT_FalseForGit, TestRegistryIsMOAT_FalseForUnknown, TestHan (~2154 tok)
 - `moat_sync.go` — Struct: moatSyncDoneMsg (~1146 tok)
 - `modal.go` — Struct: editSavedMsg (~2807 tok)
@@ -2137,7 +2159,7 @@
 - `trust_debug_test.go` — TestDebugRegistryTrustZone (~386 tok)
 - `trust_inspector_test.go` — TestTrustInspector_OpenForItem_Activates, TestTrustInspector_OpenForItem_TitleIdentifiesSubject, Tes (~3388 tok)
 - `trust_inspector.go` — Struct: RegistryTrustSummary (~2507 tok)
-- `wizard_invariant_test.go` — TestInstallWizard_ValidateStep_Forward, TestInstallWizard_ValidateStep_Esc, TestInstallWizard_Valida (~7677 tok)
+- `wizard_invariant_test.go` — TestInstallWizard_ValidateStep_Forward, TestInstallWizard_ValidateStep_Esc, TestInstallWizard_Valida (~7958 tok)
 
 ## cli/internal/updater/
 

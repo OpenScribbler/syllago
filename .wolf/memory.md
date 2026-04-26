@@ -4564,3 +4564,130 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 16:07 | Created cli/internal/installer/moat_provider_install_test.go | — | ~1498 |
+| 16:07 | Created cli/internal/installer/moat_provider_install.go | — | ~705 |
+| 16:07 | Edited cli/internal/installer/moat_provider_install_test.go | inline fix | ~14 |
+| 16:08 | Edited cli/cmd/syllago/install_moat_test.go | expanded (+6 lines) | ~135 |
+| 16:09 | Edited cli/cmd/syllago/install_moat.go | modified runInstallFromRegistry() | ~218 |
+| 16:09 | Edited cli/cmd/syllago/install_moat.go | 6→7 lines | ~92 |
+| 16:09 | Edited cli/cmd/syllago/install_moat.go | expanded (+24 lines) | ~370 |
+| 16:09 | Edited cli/cmd/syllago/install_moat.go | 6→6 lines | ~106 |
+| 16:09 | Edited cli/cmd/syllago/install_cmd.go | 15→18 lines | ~87 |
+| 16:12 | Edited cli/cmd/syllago/install_moat_integration_test.go | 4→5 lines | ~61 |
+
+## Session: 2026-04-25 16:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:15 | Edited cli/cmd/syllago/install_moat_test.go | 22→17 lines | ~91 |
+| 16:16 | Edited cli/cmd/syllago/install_moat_integration_test.go | modified integrationTestProvider() | ~407 |
+| 16:16 | Edited cli/cmd/syllago/install_moat_integration_test.go | modified TestInstallIntegration_CleanUnsignedSucceeds() | ~795 |
+| 16:18 | Session end: 3 writes across 2 files (install_moat_test.go, install_moat_integration_test.go) | 5 reads | ~17312 tok |
+| 18:14 | Created cli/internal/moatinstall/fetch.go | — | ~3152 |
+| 18:16 | Created cli/internal/moatinstall/fetch_test.go | — | ~6014 |
+
+## Session: 2026-04-26 18:18
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:18 | Edited cli/cmd/syllago/install_moat.go | 7→8 lines | ~108 |
+| 18:18 | Edited cli/cmd/syllago/install_moat.go | fetchAndRecord() → FetchAndRecord() | ~45 |
+| 18:19 | Created cli/cmd/syllago/install_moat_test_helpers_test.go | — | ~484 |
+| 18:19 | Edited cli/cmd/syllago/install_moat_integration_test.go | 6→7 lines | ~107 |
+| 18:19 | Edited cli/cmd/syllago/install_moat_integration_test.go | modified Cleanup() | ~50 |
+| 18:20 | Edited cli/internal/rulestore/hashlint_test.go | modified Join() | ~50 |
+| 18:23 | Edited cli/internal/tui/actions.go | Sprintf() → items() | ~198 |
+| 18:23 | Edited cli/internal/tui/actions.go | modified isUnstagedRegistryItem() | ~267 |
+| 18:23 | Edited cli/internal/tui/actions.go | 8→10 lines | ~140 |
+| 18:23 | Edited cli/internal/tui/actions.go | expanded (+104 lines) | ~888 |
+| 18:25 | Created cli/internal/tui/moat_install_test.go | — | ~1179 |
+| 18:27 | Session end: 11 writes across 6 files (install_moat.go, install_moat_test_helpers_test.go, install_moat_integration_test.go, hashlint_test.go, actions.go) | 11 reads | ~46330 tok |
+| 18:37 | Session end: 11 writes across 6 files (install_moat.go, install_moat_test_helpers_test.go, install_moat_integration_test.go, hashlint_test.go, actions.go) | 11 reads | ~46330 tok |
+
+## Session: 2026-04-26 18:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 18:48 | Edited cli/internal/tui/install.go | 5→8 lines | ~107 |
+| 18:48 | Edited cli/internal/tui/metapanel.go | pipeline() → isUnstagedRegistryItem() | ~151 |
+| 18:48 | Edited cli/internal/tui/library.go | modified isUnstagedRegistryItem() | ~87 |
+| 18:48 | Edited cli/internal/tui/wizard_invariant_test.go | modified TestInstallWizard_ValidateStep_AcceptsUnstagedMOATItem() | ~302 |
+| 18:50 | Session end: 4 writes across 4 files (install.go, metapanel.go, library.go, wizard_invariant_test.go) | 8 reads | ~39702 tok |
+| 18:56 | Created ../../../../../tmp/verify_item_diag.go | — | ~678 |
+| 18:56 | Edited cli/internal/tui/actions.go | modified formatToastErr() | ~268 |
+| 18:56 | Edited cli/internal/tui/actions.go | Error() → formatToastErr() | ~69 |
+
+## Session: 2026-04-26 18:59
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:02 | Created ../../../.config/pai/.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json | — | ~24 |
+| 19:03 | Session end: 1 writes across 1 files (.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json) | 6 reads | ~4281 tok |
+| 19:07 | Session end: 1 writes across 1 files (.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json) | 7 reads | ~7433 tok |
+| 19:14 | Session end: 1 writes across 1 files (.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json) | 8 reads | ~7433 tok |
+| 19:21 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/learning_moat_dual_attested_verification.md | — | ~865 |
+| 19:21 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 3→4 lines | ~128 |
+| 19:24 | Session end: 3 writes across 3 files (.research-workflow-state-57bab005-0144-4992-b05e-ec741c6bcdbd.json, learning_moat_dual_attested_verification.md, MEMORY.md) | 10 reads | ~15490 tok |
+
+## Session: 2026-04-26 19:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 19:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 19:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:31 | Created cli/internal/moat/publisher_attestation.go | — | ~1740 |
+| 19:31 | Edited cli/internal/moatinstall/fetch.go | modified py() | ~334 |
+| 19:31 | Edited cli/internal/moatinstall/fetch.go | expanded (+6 lines) | ~175 |
+| 19:32 | Edited cli/internal/moatinstall/fetch.go | expanded (+62 lines) | ~1178 |
+| 19:32 | Edited cli/internal/moatinstall/fetch.go | items() → signing_profile() | ~96 |
+| 19:32 | Edited cli/internal/moatinstall/fetch_test.go | modified withVerifyItemStub() | ~322 |
+| 19:32 | Edited cli/internal/moatinstall/fetch_test.go | modified withRekorStub() | ~468 |
+| 19:33 | Edited cli/internal/moatinstall/fetch_test.go | modified TestFetchAndRecord_Happy_DualAttested() | ~887 |
+| 19:33 | Edited cli/internal/moatinstall/fetch_test.go | modified TestFetchAndRecord_Signed_RequiresProfile() | ~1818 |
+| 19:34 | Created cli/internal/moat/publisher_attestation_test.go | — | ~1430 |
+| 19:36 | Session end: 10 writes across 4 files (publisher_attestation.go, fetch.go, fetch_test.go, publisher_attestation_test.go) | 5 reads | ~31334 tok |
+| 19:41 | Session end: 10 writes across 4 files (publisher_attestation.go, fetch.go, fetch_test.go, publisher_attestation_test.go) | 10 reads | ~36592 tok |
+| 19:45 | Edited cli/internal/moat/typemap.go | modified IsMOATEmittable() | ~335 |
+| 19:45 | Created cli/internal/moatinstall/clone.go | — | ~1707 |
+| 19:46 | Edited cli/internal/moatinstall/clone.go | 10→11 lines | ~27 |
+| 19:46 | Edited cli/internal/moatinstall/clone.go | reduced (-12 lines) | ~34 |
+| 19:46 | Edited cli/internal/moatinstall/fetch.go | reduced (-7 lines) | ~67 |
+| 19:46 | Edited cli/internal/moatinstall/fetch.go | 20→16 lines | ~150 |
+| 19:46 | Edited cli/internal/moatinstall/fetch.go | modified model() | ~1139 |
+
+## Session: 2026-04-26 19:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:49 | Edited cli/internal/moatinstall/fetch.go | removed 104 lines | ~20 |
+| 19:52 | Created cli/internal/moatinstall/fetch_test.go | — | ~7415 |
+| 19:53 | Created cli/cmd/syllago/install_moat_test_helpers_test.go | — | ~658 |
+| 19:53 | Edited cli/cmd/syllago/install_moat_integration_test.go | 22→18 lines | ~132 |
+| 19:53 | Edited cli/cmd/syllago/install_moat_integration_test.go | withTLSClient() → stubCloneScratchDir() | ~56 |
+| 19:53 | Edited cli/cmd/syllago/install_moat_integration_test.go | 29→28 lines | ~292 |
+| 19:55 | Edited cli/internal/moatinstall/fetch.go | 8→8 lines | ~83 |
+| 19:55 | Edited cli/internal/moatinstall/fetch_test.go | modified Contains() | ~40 |
+| 19:55 | Edited cli/internal/moatinstall/clone.go | 3→3 lines | ~31 |
+| 19:57 | Created cli/internal/moatinstall/clone_test.go | — | ~1133 |
+| 19:58 | Edited cli/cmd/syllago/install_moat.go | modified parseRegistryItemSyntax() | ~300 |
+| 19:58 | Edited cli/cmd/syllago/install_moat_test.go | 8→12 lines | ~152 |
+| 19:58 | Edited cli/cmd/syllago/install_moat_test.go | inline fix | ~7 |
+| 20:02 | Created ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/learning_moat_source_uri_content_hash.md | — | ~595 |
+
+## Session: 2026-04-26 20:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:04 | Edited ../../../.claude/projects/-home-hhewett--local-src-syllago/memory/MEMORY.md | 2→3 lines | ~176 |
+| 20:08 | Verified full test suite green after MOAT spec-compliance refactor | cli/... | ok | ~3600 |
+| 20:09 | Built + installed binary | cli/syllago → ~/.local/bin/syllago | v0.9.0 | ~50 |
+| 20:10 | Committed b5f1131 fix(moat): clone+tree-hash spec-compliant install (syllago-cvwj5) | 16 files | +1378/-572 | ~140 |
+| 20:11 | Updated cerebrum.md with source_uri/content_hash + parseRegistryItemSyntax learnings | .wolf/cerebrum.md | — | ~340 |
