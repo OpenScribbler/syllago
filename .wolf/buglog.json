@@ -7745,6 +7745,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-26T02:58:43.848Z"
+    },
+    {
+      "id": "bug-480",
+      "timestamp": "2026-04-26T16:47:33.822Z",
+      "error_message": "Wrong reference: materializeMOATItems should be materializeMOATItemsWithCache",
+      "file": "cli/internal/moat/producer.go",
+      "root_cause": "Used \"materializeMOATItems\" instead of \"materializeMOATItemsWithCache\"",
+      "fix": "Changed materializeMOATItems → materializeMOATItemsWithCache",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T16:47:33.822Z"
     }
   ]
 }

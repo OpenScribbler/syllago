@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T03:04:29.282Z
-> Files: 1217 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T17:02:53.537Z
+> Files: 1221 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -1666,7 +1666,7 @@
 - `install_moat_fetch_test.go` — Struct: oversizeRoundTripper (~6696 tok)
 - `install_moat_fetch.go` — Declares moatFetchMaxBytes (~3971 tok)
 - `install_moat_integration_test.go` — Struct: integrationEnv (~3155 tok)
-- `install_moat_test_helpers_test.go` (~658 tok)
+- `install_moat_test_helpers_test.go` (~650 tok)
 - `install_moat_test.go` — TestParseRegistryItemSyntax_Table, TestShortHash_Table, TestRunInstallFromRegistry_RegistryNotFound, (~7557 tok)
 - `install_moat.go` — Declares re (~5284 tok)
 - `install_trust_test.go` — TestInstallTrustLine_DualAttested, TestInstallTrustLine_Signed, TestInstallTrustLine_Recalled, TestI (~2146 tok)
@@ -1933,12 +1933,16 @@
 - `canonical_payload_test.go` — TestCanonicalPayloadFor, TestCanonicalPayloadFor_NormativeDigest, TestCurrentPayloadVersion_IsOne, T (~2116 tok)
 - `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
 - `cert.go` — ExtractIdentityFromRekorRaw (~850 tok)
+- `clone_test.go` — TestValidateSourceURI, TestCopyTree_HappyPath, TestCopyTree_RejectsSymlinks, TestCopyTree_Overwrites (~1150 tok)
+- `clone.go` — ValidateSourceURI, CopyTree (~1659 tok)
+- `contentcache_test.go` — TestContentCachePathFor_HappyPath, TestContentCachePathFor_RejectsInvalidName, TestWriteContentCache (~2532 tok)
+- `contentcache.go` — Struct: CacheReport (~2727 tok)
 - `dev_signer_test.go` — TestSignManifestDev_HappyPath, TestSignManifestDev_DifferentManifestFails, TestSignManifestDev_Wrong (~700 tok)
 - `dev_signer.go` — SignManifestDev (~2358 tok)
-- `enrich_test.go` — TestFindContentEntry_NilManifest, TestFindContentEntry_EmptyContent, TestFindContentEntry_Hit, TestF (~8987 tok)
+- `enrich_test.go` — TestFindContentEntry_NilManifest, TestFindContentEntry_EmptyContent, TestFindContentEntry_Hit, TestF (~10598 tok)
 - `enrich_verify_cache_test.go` — TestVerifyCached_MemoizesWithinProcess, TestVerifyCached_MtimeInvalidation, TestVerifyCached_SizeInv (~4442 tok)
 - `enrich_verify_cache.go` — Struct: verifyCacheKey (~1781 tok)
-- `enrich.go` — FindContentEntry, EnrichCatalog (~2437 tok)
+- `enrich.go` — FindContentEntry, EnrichCatalog (~3270 tok)
 - `fetch_test.go` — TestFetcher_Fetch_Success, TestFetcher_Fetch_NotModified, TestFetcher_Fetch_CustomUserAgent, TestFet (~1984 tok)
 - `fetch.go` — Struct: FetchResult (~1444 tok)
 - `freshness_test.go` — TestCheckStaleness_FreshWithin72h, TestCheckStaleness_StaleAtOrBeyond72h, TestCheckStaleness_ZeroLas (~2015 tok)
@@ -1961,7 +1965,7 @@
 - `noninteractive.go` — — non-interactive failure classification (ADR 0007 G-18). (~1948 tok)
 - `producer_test.go` — TestEnrichFromMOATManifests_NilCatalog, TestEnrichFromMOATManifests_NilConfig, TestEnrichFromMOATMan (~4229 tok)
 - `producer_write_test.go` — TestWriteManifestCache_RoundTrip, TestWriteManifestCache_OverwriteAtomic, TestWriteManifestCache_Val (~2549 tok)
-- `producer.go` — EnrichFromMOATManifests (~5607 tok)
+- `producer.go` — EnrichFromMOATManifests (~5612 tok)
 - `publisher_attestation_test.go` — TestPublisherOwnerRepoFromSourceURI, TestFindPublisherEntry_HappyPath, TestFindPublisherEntry_CaseIn (~1430 tok)
 - `publisher_attestation.go` — PublisherAttestationBaseURLForTest, SetPublisherAttestationBaseURLForTest, FetchPublisherAttestation (~1740 tok)
 - `rekor_fetch_test.go` — TestFetchRekorEntry_RoundTripBytes, TestFetchRekorEntry_PutsLogIndexOnQuery, TestFetchRekorEntry_Sen (~1854 tok)
@@ -1995,8 +1999,8 @@
 
 - `clone_test.go` — TestValidateSourceURI, TestCopyTree_HappyPath, TestCopyTree_RejectsSymlinks, TestCopyTree_Overwrites (~1133 tok)
 - `clone.go` — Declares creates (~1653 tok)
-- `fetch_test.go` — Struct: verifyCall (~7414 tok)
-- `fetch.go` — FetchAndRecord (~3792 tok)
+- `fetch_test.go` — Struct: verifyCall (~7426 tok)
+- `fetch.go` — FetchAndRecord (~3796 tok)
 
 ## cli/internal/output/
 
@@ -2048,9 +2052,9 @@
 ## cli/internal/registryops/
 
 - `add.go` — Struct: AddOpts (~2660 tok)
-- `ops.go` — — registry orchestration shared by CLI and TUI. (~2174 tok)
+- `ops.go` — — registry orchestration shared by CLI and TUI. (~2504 tok)
 - `remove_test.go` — TestRemoveRegistry_PrunesNamedEntry, TestRemoveRegistry_NotFound, TestRemoveRegistry_CloneFailureIsS (~2658 tok)
-- `remove.go` — Struct: RemoveOpts (~2099 tok)
+- `remove.go` — Struct: RemoveOpts (~2295 tok)
 
 ## cli/internal/rulestore/
 

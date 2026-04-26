@@ -4,7 +4,34 @@
     "gemini-cli"
   ],
   "content_root": "content",
+  "registries": [
+    {
+      "name": "mattpocock/skills",
+      "url": "https://github.com/mattpocock/skills",
+      "visibility": "unknown",
+      "visibility_checked_at": "2026-04-26T01:47:53.930676958Z"
+    },
+    {
+      "name": "OpenScribbler/syllago-meta-registry",
+      "url": "https://github.com/OpenScribbler/syllago-meta-registry",
+      "type": "moat",
+      "manifest_uri": "https://raw.githubusercontent.com/OpenScribbler/syllago-meta-registry/moat-registry/registry.json",
+      "signing_profile": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "",
+        "profile_version": 1,
+        "subject_regex": "^https://github\\.com/OpenScribbler/syllago-meta-registry/\\.github/workflows/(moat|moat-publisher|moat-registry)\\.yml@refs/heads/(main|master)$",
+        "repository_id": "1193220959",
+        "repository_owner_id": "263775997"
+      },
+      "last_fetched_at": "2026-04-26T03:00:01.764852374Z",
+      "manifest_etag": "W/\"b61bfb7efd5cfbeebf583ec89c87288d7a736bfe155aacad23f0b25e07d93f96\"",
+      "visibility": "public",
+      "visibility_checked_at": "2026-04-26T02:38:04.619225362Z"
+    }
+  ],
   "preferences": {
     "autoUpdate": "false"
-  }
+  },
+  "sandbox": {}
 }

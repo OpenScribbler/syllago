@@ -4691,3 +4691,66 @@
 | 20:09 | Built + installed binary | cli/syllago → ~/.local/bin/syllago | v0.9.0 | ~50 |
 | 20:10 | Committed b5f1131 fix(moat): clone+tree-hash spec-compliant install (syllago-cvwj5) | 16 files | +1378/-572 | ~140 |
 | 20:11 | Updated cerebrum.md with source_uri/content_hash + parseRegistryItemSyntax learnings | .wolf/cerebrum.md | — | ~340 |
+| 20:08 | Session end: 1 writes across 1 files (MEMORY.md) | 1 reads | ~188 tok |
+
+## Session: 2026-04-26 20:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 20:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 09:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:44 | Created cli/internal/moat/contentcache_test.go | — | ~2527 |
+| 09:44 | Created cli/internal/moat/clone.go | — | ~1659 |
+| 09:45 | Created cli/internal/moat/contentcache.go | — | ~2727 |
+| 09:45 | Session end: 3 writes across 3 files (contentcache_test.go, clone.go, contentcache.go) | 13 reads | ~57887 tok |
+
+## Session: 2026-04-26 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:46 | Edited cli/internal/moat/contentcache_test.go | inline fix | ~23 |
+| 09:46 | Session end: 1 writes across 1 files (contentcache_test.go) | 1 reads | ~12025 tok |
+| 09:46 | Edited cli/internal/moat/enrich_test.go | modified TestMaterializeMOATItemsWithCache_PopulatesPathFromCache() | ~662 |
+| 09:46 | Edited cli/internal/moat/enrich_test.go | 6→8 lines | ~30 |
+| 09:47 | Edited cli/internal/moat/enrich.go | modified materializeMOATItems() | ~1017 |
+| 09:47 | Edited cli/internal/moat/enrich.go | 3→7 lines | ~28 |
+| 09:47 | Edited cli/internal/moat/producer.go | inline fix | ~16 |
+| 09:47 | Edited cli/internal/registryops/ops.go | expanded (+15 lines) | ~315 |
+| 09:48 | Edited cli/internal/registryops/ops.go | expanded (+12 lines) | ~260 |
+| 09:48 | Edited cli/internal/registryops/remove.go | expanded (+8 lines) | ~236 |
+| 09:48 | Edited cli/internal/registryops/remove.go | expanded (+7 lines) | ~173 |
+| 09:48 | Edited cli/internal/moatinstall/fetch.go | inline fix | ~18 |
+| 09:49 | Edited cli/internal/moatinstall/fetch.go | inline fix | ~23 |
+| 09:49 | Edited cli/internal/moatinstall/fetch.go | inline fix | ~16 |
+| 09:49 | Edited cli/internal/moatinstall/fetch_test.go | copyTree() → CopyTree() | ~200 |
+| 09:49 | Created cli/internal/moat/clone_test.go | — | ~1150 |
+| 09:50 | Edited cli/cmd/syllago/install_moat_test_helpers_test.go | modified stubCloneFromFixture() | ~142 |
+
+## Session: 2026-04-26 09:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 09:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 09:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:02 | Edited cli/internal/moat/enrich_test.go | modified TestMaterializeMOATItemsWithCache_EmptyCacheDirEquivalentToCacheMiss() | ~1158 |
+| 10:02 | Edited cli/internal/moat/enrich.go | modified IsDir() | ~115 |
+| 10:02 | Edited cli/internal/moat/enrich.go | modified enrichFromCachedFrontmatter() | ~306 |
+| 10:03 | Session end: 3 writes across 2 files (enrich_test.go, enrich.go) | 8 reads | ~40119 tok |
+| 10:04 | Session end: 3 writes across 2 files (enrich_test.go, enrich.go) | 8 reads | ~40119 tok |
+| 10:10 | feat: sync-time MOAT content cache + frontmatter parity for registry items | cli/internal/moat/{contentcache,clone,enrich}.go | tests green; library + registry drill-in both render skill descriptions from cache | ~40k |
