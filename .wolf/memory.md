@@ -4754,3 +4754,8 @@
 | 10:03 | Session end: 3 writes across 2 files (enrich_test.go, enrich.go) | 8 reads | ~40119 tok |
 | 10:04 | Session end: 3 writes across 2 files (enrich_test.go, enrich.go) | 8 reads | ~40119 tok |
 | 10:10 | feat: sync-time MOAT content cache + frontmatter parity for registry items | cli/internal/moat/{contentcache,clone,enrich}.go | tests green; library + registry drill-in both render skill descriptions from cache | ~40k |
+| 10:06 | Edited cli/internal/moat/clone.go | modified func() | ~126 |
+| 10:07 | Edited cli/internal/moat/publisher_attestation.go | modified func() | ~48 |
+| 10:07 | Edited cli/internal/moat/rekor_fetch.go | modified func() | ~46 |
+| 10:07 | Edited cli/internal/moat/rekor_fetch_test.go | 18→18 lines | ~104 |
+| 10:07 | Edited cli/internal/moat/rekor_fetch_test.go | 10→9 lines | ~25 |

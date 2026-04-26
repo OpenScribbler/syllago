@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T17:02:53.537Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T17:07:39.358Z
 > Files: 1221 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
@@ -1934,7 +1934,7 @@
 - `cert_test.go` — TestExtractCert_AndIdentity (~483 tok)
 - `cert.go` — ExtractIdentityFromRekorRaw (~850 tok)
 - `clone_test.go` — TestValidateSourceURI, TestCopyTree_HappyPath, TestCopyTree_RejectsSymlinks, TestCopyTree_Overwrites (~1150 tok)
-- `clone.go` — ValidateSourceURI, CopyTree (~1659 tok)
+- `clone.go` — ValidateSourceURI, CopyTree (~1668 tok)
 - `contentcache_test.go` — TestContentCachePathFor_HappyPath, TestContentCachePathFor_RejectsInvalidName, TestWriteContentCache (~2532 tok)
 - `contentcache.go` — Struct: CacheReport (~2727 tok)
 - `dev_signer_test.go` — TestSignManifestDev_HappyPath, TestSignManifestDev_DifferentManifestFails, TestSignManifestDev_Wrong (~700 tok)
@@ -1967,9 +1967,9 @@
 - `producer_write_test.go` — TestWriteManifestCache_RoundTrip, TestWriteManifestCache_OverwriteAtomic, TestWriteManifestCache_Val (~2549 tok)
 - `producer.go` — EnrichFromMOATManifests (~5612 tok)
 - `publisher_attestation_test.go` — TestPublisherOwnerRepoFromSourceURI, TestFindPublisherEntry_HappyPath, TestFindPublisherEntry_CaseIn (~1430 tok)
-- `publisher_attestation.go` — PublisherAttestationBaseURLForTest, SetPublisherAttestationBaseURLForTest, FetchPublisherAttestation (~1740 tok)
-- `rekor_fetch_test.go` — TestFetchRekorEntry_RoundTripBytes, TestFetchRekorEntry_PutsLogIndexOnQuery, TestFetchRekorEntry_Sen (~1854 tok)
-- `rekor_fetch.go` — RekorBaseURLForTest, SetRekorBaseURLForTest, FetchRekorEntry (~977 tok)
+- `publisher_attestation.go` — PublisherAttestationBaseURLForTest, SetPublisherAttestationBaseURLForTest, FetchPublisherAttestation (~1744 tok)
+- `rekor_fetch_test.go` — TestFetchRekorEntry_RoundTripBytes, TestFetchRekorEntry_PutsLogIndexOnQuery, TestFetchRekorEntry_Sen (~1848 tok)
+- `rekor_fetch.go` — RekorBaseURLForTest, SetRekorBaseURLForTest, FetchRekorEntry (~981 tok)
 - `rekor_test.go` — TestRekorBody_HashMatchesCanonicalPayload, TestDecodeHashedRekordBody_RejectsWrongKind (~728 tok)
 - `rekor.go` — Struct: rekorEntry (~860 tok)
 - `revocation_test.go` — TestRevocationStatus_String, TestRevocationSet_AddFromManifest_RegistrySourceBlocks, TestRevocationS (~3692 tok)

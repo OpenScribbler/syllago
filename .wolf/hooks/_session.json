@@ -41,6 +41,26 @@
       "count": 3,
       "tokens": 9560,
       "first_read": "2026-04-26T17:01:54.715Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/moat/clone.go": {
+      "count": 1,
+      "tokens": 1659,
+      "first_read": "2026-04-26T17:06:43.422Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/moat/publisher_attestation.go": {
+      "count": 1,
+      "tokens": 1740,
+      "first_read": "2026-04-26T17:06:53.587Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch.go": {
+      "count": 1,
+      "tokens": 977,
+      "first_read": "2026-04-26T17:07:05.406Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go": {
+      "count": 3,
+      "tokens": 1850,
+      "first_read": "2026-04-26T17:07:12.801Z"
     }
   },
   "files_written": [
@@ -61,15 +81,49 @@
       "action": "edit",
       "tokens": 328,
       "at": "2026-04-26T17:02:53.552Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/clone.go",
+      "action": "edit",
+      "tokens": 134,
+      "at": "2026-04-26T17:06:50.603Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/publisher_attestation.go",
+      "action": "edit",
+      "tokens": 51,
+      "at": "2026-04-26T17:07:02.139Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch.go",
+      "action": "edit",
+      "tokens": 50,
+      "at": "2026-04-26T17:07:09.385Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go",
+      "action": "edit",
+      "tokens": 111,
+      "at": "2026-04-26T17:07:21.371Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go",
+      "action": "edit",
+      "tokens": 27,
+      "at": "2026-04-26T17:07:39.371Z"
     }
   ],
   "edit_counts": {
     "cli/internal/moat/enrich_test.go": 1,
-    "cli/internal/moat/enrich.go": 2
+    "cli/internal/moat/enrich.go": 2,
+    "cli/internal/moat/clone.go": 1,
+    "cli/internal/moat/publisher_attestation.go": 1,
+    "cli/internal/moat/rekor_fetch.go": 1,
+    "cli/internal/moat/rekor_fetch_test.go": 2
   },
-  "anatomy_hits": 6,
+  "anatomy_hits": 10,
   "anatomy_misses": 2,
-  "repeated_reads_warned": 2,
+  "repeated_reads_warned": 4,
   "cerebrum_warnings": 0,
   "stop_count": 3
 }
