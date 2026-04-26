@@ -4872,3 +4872,4 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:42 | Restored ~/.syllago/content from content.demo-bak, committed demos/hero.gif + tape files, pushed, closed syllago-tzt9 | demos/hero.tape, demos/hero.gif, docs/vhs/demo-tui-browse.tape | DONE | ~500 |
