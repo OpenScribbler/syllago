@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -8,6 +9,52 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
+
+// TestClineDetect: Cline ships as a VS Code extension. Detection looks for
+// the extension dir at ~/.vscode/extensions/saoudrizwan.claude-dev-*/.
+// ~/.cline/ and ~/.clinerules/ are syllago install paths, not evidence.
+func TestClineDetect(t *testing.T) {
+	t.Run("no .vscode/extensions dir", func(t *testing.T) {
+		home := t.TempDir()
+		if Cline.Detect(home) {
+			t.Error("expected false when ~/.vscode/extensions is absent")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		// Create syllago install paths but NOT the VS Code extension dir.
+		if err := os.MkdirAll(filepath.Join(home, ".cline", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(home, ".clinerules", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Cline.Detect(home) {
+			t.Error("expected false when only syllago paths exist (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("vscode extensions dir but no Cline", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(home, ".vscode", "extensions", "github.copilot-1.0.0"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Cline.Detect(home) {
+			t.Error("expected false when extensions dir lacks Cline")
+		}
+	})
+
+	t.Run("Cline extension installed", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(home, ".vscode", "extensions", "saoudrizwan.claude-dev-3.0.0"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if !Cline.Detect(home) {
+			t.Error("expected true when saoudrizwan.claude-dev extension is present")
+		}
+	})
+}
 
 func TestClineSupportsTypes(t *testing.T) {
 	t.Parallel()

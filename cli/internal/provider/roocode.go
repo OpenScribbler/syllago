@@ -27,9 +27,11 @@ var RooCode = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		// Check for ~/.roo/ global config directory
-		info, err := os.Stat(filepath.Join(homeDir, ".roo"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. Roo Code ships as a VS Code
+		// extension; the only reliable signal is the extension dir at
+		// ~/.vscode/extensions/rooveterinaryinc.roo-cline-*/. ~/.roo/ is a
+		// syllago install path and doesn't count as evidence.
+		return vscodeExtensionInstalled(homeDir, "rooveterinaryinc.roo-cline")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

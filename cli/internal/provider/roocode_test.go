@@ -1,11 +1,57 @@
 package provider
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
+
+// TestRooCodeDetect: Roo Code ships as a VS Code extension. Detection looks
+// for the extension dir at ~/.vscode/extensions/rooveterinaryinc.roo-cline-*/.
+func TestRooCodeDetect(t *testing.T) {
+	t.Run("no .vscode/extensions dir", func(t *testing.T) {
+		home := t.TempDir()
+		if RooCode.Detect(home) {
+			t.Error("expected false when ~/.vscode/extensions is absent")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(home, ".roo", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(home, ".roo", "rules"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if RooCode.Detect(home) {
+			t.Error("expected false when only syllago paths exist (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("vscode extensions dir but no Roo Code", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(home, ".vscode", "extensions", "github.copilot-1.0.0"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if RooCode.Detect(home) {
+			t.Error("expected false when extensions dir lacks Roo Code")
+		}
+	})
+
+	t.Run("Roo Code extension installed", func(t *testing.T) {
+		home := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(home, ".vscode", "extensions", "rooveterinaryinc.roo-cline-3.10.0"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if !RooCode.Detect(home) {
+			t.Error("expected true when rooveterinaryinc.roo-cline extension is present")
+		}
+	})
+}
 
 func TestRooCodeSupportsTypes(t *testing.T) {
 	t.Parallel()

@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,15 +28,11 @@ var CopilotCLI = Provider{
 		}
 		return ""
 	},
-	Detect: func(homeDir string) bool {
-		// Check for .copilot directory
-		info, err := os.Stat(filepath.Join(homeDir, ".copilot"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		// Also check if gh copilot extension exists
-		_, err = exec.LookPath("gh")
-		return err == nil
+	Detect: func(_ string) bool {
+		// Advisory only — see Provider.Detect doc. Copilot CLI ships as a gh
+		// extension (`gh copilot`); query `gh extension list` rather than
+		// trust ~/.copilot/, which syllago also writes into.
+		return ghExtensionInstalled("gh-copilot")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

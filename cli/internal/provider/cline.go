@@ -64,10 +64,11 @@ var Cline = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		// Check for .clinerules/ directory in common project locations
-		// Cline is a VS Code extension; detection is project-level
-		info, err := os.Stat(filepath.Join(homeDir, "Documents", "Cline", "Rules"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. Cline ships as a VS Code
+		// extension, so the only reliable signal is the extension dir at
+		// ~/.vscode/extensions/saoudrizwan.claude-dev-*/. ~/.cline/ and
+		// ~/.clinerules/ are syllago install paths and don't count.
+		return vscodeExtensionInstalled(homeDir, "saoudrizwan.claude-dev")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
