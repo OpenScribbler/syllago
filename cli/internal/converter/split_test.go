@@ -115,13 +115,14 @@ func TestDeriveHookName_EventCommand(t *testing.T) {
 // so each script ends up as its own library item with its own spec-shape
 // hook.json rather than a bundled multi-command blob.
 func TestSplitSettingsHooks_PerHandlerSplit(t *testing.T) {
-	// Four commands under a single (UserPromptSubmit, ".*") pair — the real
-	// shape that Holden's drill-in screenshot showed.
+	// Four commands under a single (UserPromptSubmit, ".*") pair — the
+	// "many small handlers stacked under one matcher" shape we want to split
+	// into one item per command.
 	input := `{"hooks":{"UserPromptSubmit":[{"matcher":".*","hooks":[
-		{"type":"command","command":"bash /home/hhewett/.config/pai/hooks/detect-research-intent.sh"},
-		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/update-tab-titles.ts"},
-		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/capture-rating.ts"},
-		{"type":"command","command":"bun /home/hhewett/.config/pai/hooks/capture-all-events.ts"}
+		{"type":"command","command":"bash ~/.config/example/hooks/detect-research-intent.sh"},
+		{"type":"command","command":"bun ~/.config/example/hooks/update-tab-titles.ts"},
+		{"type":"command","command":"bun ~/.config/example/hooks/capture-rating.ts"},
+		{"type":"command","command":"bun ~/.config/example/hooks/capture-all-events.ts"}
 	]}]}}`
 
 	items, err := SplitSettingsHooks([]byte(input), "claude-code")

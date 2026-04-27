@@ -38,7 +38,7 @@ jobs:
 
       - name: Run capmon check (all providers)
         if: ${{ github.event_name == 'schedule' || github.event.inputs.provider == '' }}
-        run: ./cli/syllago capmon check --all
+        run: ./cli/syllago capmon check --all --providers-json=cli/providers.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -53,4 +53,4 @@ jobs:
           if [ "$CAPMON_DRY_RUN" = "true" ]; then
             FLAGS="--dry-run"
           fi
-          ./cli/syllago capmon check --provider="$CAPMON_PROVIDER" $FLAGS
+          ./cli/syllago capmon check --provider="$CAPMON_PROVIDER" --providers-json=cli/providers.json $FLAGS
