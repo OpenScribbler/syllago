@@ -41,6 +41,7 @@ reviews/
 docs/*
 .capmon-cache/
 !docs/adr/
+!docs/spec/
 !docs/guides/
 !docs/provider-capabilities/
 !docs/provider-formats/
