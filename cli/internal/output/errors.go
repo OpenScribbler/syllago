@@ -63,7 +63,7 @@ const (
 	ErrLoadoutNoItems  = "LOADOUT_005" // no items selected for loadout
 
 	// Privacy: registry privacy gates blocking content flow.
-	ErrPrivacyPublishBlocked = "PRIVACY_001" // private content cannot be published to public registry
+	ErrPrivacyPublishBlocked = "PRIVACY_001" // private content cannot be shared to public registry
 	ErrPrivacyShareBlocked   = "PRIVACY_002" // private content cannot be shared to public repo
 	ErrPrivacyLoadoutWarn    = "PRIVACY_003" // loadout contains private items (warning)
 

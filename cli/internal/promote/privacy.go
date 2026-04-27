@@ -43,7 +43,7 @@ func CheckPrivacyGate(item catalog.ContentItem, targetRegistry, repoRoot string)
 	if !registry.IsPrivate(targetVisibility) {
 		// Target is public, content is private → BLOCK
 		return output.NewStructuredErrorDetail(output.ErrPrivacyPublishBlocked,
-			fmt.Sprintf("cannot publish %q to registry %q", item.Name, targetRegistry),
+			fmt.Sprintf("cannot share %q to registry %q", item.Name, targetRegistry),
 			"Remove the private taint by recreating the content in your library without the private registry association",
 			fmt.Sprintf("Content origin: %s (private)\nTarget registry: %s (public)", item.Meta.SourceRegistry, targetRegistry))
 	}

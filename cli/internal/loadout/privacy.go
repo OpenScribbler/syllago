@@ -40,7 +40,7 @@ func FormatPrivateWarnings(warnings []PrivateItemWarning) string {
 	for _, w := range warnings {
 		msg += fmt.Sprintf("  - %s (%s, from %s)\n", w.Name, w.Type, w.Registry)
 	}
-	msg += "\nThis loadout can be used locally but cannot be published to a public registry."
+	msg += "\nThis loadout can be used locally but cannot be shared to a public registry."
 	return msg
 }
 
@@ -56,11 +56,11 @@ func CheckLoadoutPublishGate(items []catalog.ContentItem, targetRegistryVisibili
 		return nil
 	}
 
-	msg := "cannot publish loadout to public registry\n\n  Contains private content:\n"
+	msg := "cannot share loadout to public registry\n\n  Contains private content:\n"
 	for _, w := range warnings {
 		msg += fmt.Sprintf("    - %s (from %s, private)\n", w.Name, w.Registry)
 	}
-	msg += "\n  Private content cannot be published to public registries.\n"
+	msg += "\n  Private content cannot be shared to public registries.\n"
 	msg += "  Remove private items from the loadout, or recreate them\n"
 	msg += "  without the private registry association."
 	return fmt.Errorf("%s", msg)

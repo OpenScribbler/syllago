@@ -343,8 +343,8 @@ func TestShare_ToRegistryDisplaysPublishMessage(t *testing.T) {
 
 	_ = shareCmd.RunE(shareCmd, []string{"my-skill"})
 
-	if !strings.Contains(stdout.String(), "Publishing to registry") {
-		t.Errorf("expected 'Publishing to registry' message in stdout, got: %s", stdout.String())
+	if !strings.Contains(stdout.String(), "Sharing to registry") {
+		t.Errorf("expected 'Sharing to registry' message in stdout, got: %s", stdout.String())
 	}
 }
 

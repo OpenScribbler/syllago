@@ -38,8 +38,8 @@ func TestCheckPrivacyGate_PrivateToPublic_Blocked(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected G1 gate to block private->public, got nil")
 	}
-	if !strings.Contains(err.Error(), "cannot publish") {
-		t.Errorf("error should contain 'cannot publish', got: %s", err)
+	if !strings.Contains(err.Error(), "cannot share") {
+		t.Errorf("error should contain 'cannot share', got: %s", err)
 	}
 }
 
@@ -288,8 +288,8 @@ rules:
 	if err == nil {
 		t.Fatal("expected G4 to block loadout with private item targeting public registry")
 	}
-	if !strings.Contains(err.Error(), "cannot publish loadout") {
-		t.Errorf("error should mention 'cannot publish loadout', got: %s", err)
+	if !strings.Contains(err.Error(), "cannot share loadout") {
+		t.Errorf("error should mention 'cannot share loadout', got: %s", err)
 	}
 }
 

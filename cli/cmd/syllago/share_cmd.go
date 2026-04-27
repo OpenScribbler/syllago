@@ -89,7 +89,7 @@ func runShare(cmd *cobra.Command, args []string) error {
 	if toRegistry != "" {
 		// Share to named registry
 		if !output.Quiet && !output.JSON {
-			fmt.Fprintf(output.Writer, "Publishing to registry...\n")
+			fmt.Fprintf(output.Writer, "Sharing to registry...\n")
 		}
 
 		result, err := promoteToRegistryFunc(root, toRegistry, *item, noInput)

@@ -79,8 +79,8 @@ func TestCheckLoadoutPublishGate_PrivateItemsToPublic_Blocked(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected G4 gate to block, got nil")
 	}
-	if !strings.Contains(err.Error(), "cannot publish loadout") {
-		t.Errorf("error should mention 'cannot publish loadout', got: %s", err)
+	if !strings.Contains(err.Error(), "cannot share loadout") {
+		t.Errorf("error should mention 'cannot share loadout', got: %s", err)
 	}
 }
 

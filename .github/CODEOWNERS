@@ -1,0 +1,17 @@
+# Code owners for syllago.
+#
+# Each line is a file pattern followed by the owner(s).
+# When a PR modifies a matched path, GitHub requests a review from the listed owner.
+# Branch protection on main may additionally require the owner's review before merge.
+#
+# Order matters: later patterns take precedence over earlier ones.
+# Reference: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+
+# Security-sensitive paths.
+/.github/workflows/        @holdenhewett
+/cli/internal/installer/   @holdenhewett
+/cli/internal/sandbox/     @holdenhewett
+/cli/internal/signing/     @holdenhewett
+/cli/internal/updater/     @holdenhewett
+/cli/internal/registry/    @holdenhewett
+/SECURITY.md               @holdenhewett
