@@ -2,14 +2,14 @@
   "version": 1,
   "created_at": "2026-04-14T17:20:26.414Z",
   "lifetime": {
-    "total_tokens_estimated": 7258470,
-    "total_reads": 2826,
-    "total_writes": 2401,
-    "total_sessions": 359,
-    "anatomy_hits": 1231,
-    "anatomy_misses": 1191,
-    "repeated_reads_blocked": 1094,
-    "estimated_savings_vs_bare_cli": 7307995
+    "total_tokens_estimated": 7552214,
+    "total_reads": 3032,
+    "total_writes": 2668,
+    "total_sessions": 372,
+    "anatomy_hits": 1300,
+    "anatomy_misses": 1261,
+    "repeated_reads_blocked": 1148,
+    "estimated_savings_vs_bare_cli": 7532304
   },
   "sessions": [
     {
@@ -35307,6 +35307,3015 @@
         "writes_count": 3,
         "repeated_reads_blocked": 2,
         "anatomy_lookups": 6
+      }
+    },
+    {
+      "id": "session-2026-04-26-0957",
+      "started": "2026-04-26T16:57:22.654Z",
+      "ended": "2026-04-26T17:12:53.032Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/gallery.go",
+          "tokens_estimated": 3884,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/app_update.go",
+          "tokens_estimated": 6293,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/cards.go",
+          "tokens_estimated": 3683,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich.go",
+          "tokens_estimated": 3007,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/native_scan.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/frontmatter.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/catalog/scanner.go",
+          "tokens_estimated": 12000,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich_test.go",
+          "tokens_estimated": 9560,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/clone.go",
+          "tokens_estimated": 1659,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/publisher_attestation.go",
+          "tokens_estimated": 1740,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch.go",
+          "tokens_estimated": 977,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go",
+          "tokens_estimated": 1850,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich_test.go",
+          "tokens_estimated": 1241,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich.go",
+          "tokens_estimated": 123,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/enrich.go",
+          "tokens_estimated": 328,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/clone.go",
+          "tokens_estimated": 134,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/publisher_attestation.go",
+          "tokens_estimated": 51,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch.go",
+          "tokens_estimated": 50,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go",
+          "tokens_estimated": 111,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/moat/rekor_fetch_test.go",
+          "tokens_estimated": 27,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 44653,
+        "output_tokens_estimated": 2065,
+        "reads_count": 12,
+        "writes_count": 8,
+        "repeated_reads_blocked": 4,
+        "anatomy_lookups": 10
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:41:35.791Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 4257,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:43:03.866Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4257,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 4257,
+        "output_tokens_estimated": 0,
+        "reads_count": 1,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:49:23.529Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4233,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 6691,
+        "output_tokens_estimated": 1057,
+        "reads_count": 2,
+        "writes_count": 10,
+        "repeated_reads_blocked": 2,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:52:20.022Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 6833,
+        "output_tokens_estimated": 3559,
+        "reads_count": 2,
+        "writes_count": 16,
+        "repeated_reads_blocked": 7,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:52:36.437Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 6833,
+        "output_tokens_estimated": 3559,
+        "reads_count": 2,
+        "writes_count": 16,
+        "repeated_reads_blocked": 7,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:54:48.450Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 2401,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 174,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 11189,
+        "output_tokens_estimated": 3760,
+        "reads_count": 4,
+        "writes_count": 18,
+        "repeated_reads_blocked": 7,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:57:34.992Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 2401,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 537,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 391,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 174,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 45,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 39,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 12117,
+        "output_tokens_estimated": 3976,
+        "reads_count": 7,
+        "writes_count": 26,
+        "repeated_reads_blocked": 7,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T17:59:07.371Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 2401,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 537,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 391,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 174,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 45,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 39,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1638,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 12117,
+        "output_tokens_estimated": 5614,
+        "reads_count": 7,
+        "writes_count": 27,
+        "repeated_reads_blocked": 8,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-26-1035",
+      "started": "2026-04-26T17:35:42.446Z",
+      "ended": "2026-04-26T18:01:15.702Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 2458,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 2401,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 1955,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 537,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 391,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 59,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 9,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 189,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 22,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 48,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 37,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 35,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 215,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 181,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 262,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 508,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1016,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 362,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 212,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 150,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 254,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 27,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 174,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 30,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors.go",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/cmd/syllago/registry_signing.go",
+          "tokens_estimated": 24,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/output/errors_test.go",
+          "tokens_estimated": 6,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-001.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/errordocs/docs/moat-002.md",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 45,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/logos/social-preview.svg",
+          "tokens_estimated": 39,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 1638,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 12117,
+        "output_tokens_estimated": 5614,
+        "reads_count": 7,
+        "writes_count": 27,
+        "repeated_reads_blocked": 8,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-26-1104",
+      "started": "2026-04-26T18:04:18.720Z",
+      "ended": "2026-04-26T18:06:05.135Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 382,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 68,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 382,
+        "output_tokens_estimated": 68,
+        "reads_count": 1,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:12:25.474Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [],
+      "totals": {
+        "input_tokens_estimated": 4786,
+        "output_tokens_estimated": 0,
+        "reads_count": 5,
+        "writes_count": 0,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 2
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:15:34.967Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 5966,
+        "output_tokens_estimated": 232,
+        "reads_count": 16,
+        "writes_count": 8,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 3
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:19:21.489Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 13389,
+        "output_tokens_estimated": 993,
+        "reads_count": 20,
+        "writes_count": 10,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 4
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:20:20.066Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/topbar.go",
+          "tokens_estimated": 2914,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16303,
+        "output_tokens_estimated": 993,
+        "reads_count": 21,
+        "writes_count": 10,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:21:25.251Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/topbar.go",
+          "tokens_estimated": 2914,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 481,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 366,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16303,
+        "output_tokens_estimated": 1840,
+        "reads_count": 21,
+        "writes_count": 12,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:25:08.288Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/topbar.go",
+          "tokens_estimated": 2914,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 481,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 366,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 21,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16303,
+        "output_tokens_estimated": 1861,
+        "reads_count": 21,
+        "writes_count": 13,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:27:54.510Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/topbar.go",
+          "tokens_estimated": 2914,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 481,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 366,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 620,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16303,
+        "output_tokens_estimated": 2481,
+        "reads_count": 21,
+        "writes_count": 14,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-26-1111",
+      "started": "2026-04-26T18:11:03.842Z",
+      "ended": "2026-04-26T18:28:58.077Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 411,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/README.md",
+          "tokens_estimated": 4375,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 0,
+          "was_repeated": true,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/import-hooks-mcp.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-cross-provider.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-loadout-apply.tape",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 1180,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ROADMAP.md",
+          "tokens_estimated": 978,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 1285,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/SECURITY.md",
+          "tokens_estimated": 1360,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/ARCHITECTURE.md",
+          "tokens_estimated": 3800,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/cli/internal/tui/topbar.go",
+          "tokens_estimated": 2914,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-coding-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-security-expert.md",
+          "tokens_estimated": 36,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/loadout-ux-ux-expert.md",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/reviews/registry-add-ux.md",
+          "tokens_estimated": 19,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-11-registry-add-ux-plan.md",
+          "tokens_estimated": 28,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/loadout-ux-phase3-continuation.md",
+          "tokens_estimated": 40,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/prompts/registry-add-ux.md",
+          "tokens_estimated": 56,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/plans/2026-03-01-tui-polish-registry-design.md",
+          "tokens_estimated": 11,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 26,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CONTRIBUTING.md",
+          "tokens_estimated": 735,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 481,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/docs/vhs/demo-tui-browse.tape",
+          "tokens_estimated": 366,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.gitignore",
+          "tokens_estimated": 21,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 620,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 16303,
+        "output_tokens_estimated": 2481,
+        "reads_count": 21,
+        "writes_count": 14,
+        "repeated_reads_blocked": 1,
+        "anatomy_lookups": 5
+      }
+    },
+    {
+      "id": "session-2026-04-26-1137",
+      "started": "2026-04-26T18:37:04.951Z",
+      "ended": "2026-04-26T18:41:42.057Z",
+      "reads": [
+        {
+          "file": "/tmp/hero-check-565.png",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/hero-check-590.png",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/hero-check-530.png",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/tmp/hero-check-480.png",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/demos/hero.tape",
+          "tokens_estimated": 512,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 512,
+        "reads_count": 4,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-26-1144",
+      "started": "2026-04-26T18:44:53.131Z",
+      "ended": "2026-04-26T19:38:35.268Z",
+      "reads": [],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.0.md",
+          "tokens_estimated": 2992,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 2992,
+        "reads_count": 0,
+        "writes_count": 1,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
+      }
+    },
+    {
+      "id": "session-2026-04-26-1245",
+      "started": "2026-04-26T19:45:22.166Z",
+      "ended": "2026-04-26T21:45:25.717Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 674,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 836,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CHANGELOG.md",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.1.md",
+          "tokens_estimated": 513,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 35,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2227,
+        "output_tokens_estimated": 2370,
+        "reads_count": 2,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1245",
+      "started": "2026-04-26T19:45:22.166Z",
+      "ended": "2026-04-26T21:55:14.192Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 674,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 836,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CHANGELOG.md",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.1.md",
+          "tokens_estimated": 513,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 35,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2227,
+        "output_tokens_estimated": 2370,
+        "reads_count": 2,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1245",
+      "started": "2026-04-26T19:45:22.166Z",
+      "ended": "2026-04-27T04:45:14.996Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 674,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 836,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CHANGELOG.md",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.1.md",
+          "tokens_estimated": 513,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 35,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2227,
+        "output_tokens_estimated": 2370,
+        "reads_count": 2,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1245",
+      "started": "2026-04-26T19:45:22.166Z",
+      "ended": "2026-04-27T04:48:54.574Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 674,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 836,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CHANGELOG.md",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.1.md",
+          "tokens_estimated": 513,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 35,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2227,
+        "output_tokens_estimated": 2370,
+        "reads_count": 2,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
+      }
+    },
+    {
+      "id": "session-2026-04-26-1245",
+      "started": "2026-04-26T19:45:22.166Z",
+      "ended": "2026-04-27T04:59:11.747Z",
+      "reads": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 2227,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/template.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 16,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 674,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.github/workflows/release.yml",
+          "tokens_estimated": 836,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/VERSION",
+          "tokens_estimated": 2,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/CHANGELOG.md",
+          "tokens_estimated": 294,
+          "action": "edit"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/releases/v0.10.1.md",
+          "tokens_estimated": 513,
+          "action": "create"
+        },
+        {
+          "file": "/home/hhewett/.local/src/syllago/.release-pending.yml",
+          "tokens_estimated": 35,
+          "action": "create"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 2227,
+        "output_tokens_estimated": 2370,
+        "reads_count": 2,
+        "writes_count": 7,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 1
       }
     }
   ],

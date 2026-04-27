@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T18:39:16.866Z
-> Files: 1233 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T21:44:45.363Z
+> Files: 1235 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -183,10 +183,10 @@
 
 - `.gitattributes` — Git attributes (~50 tok)
 - `.gitignore` — Git ignore rules (~415 tok)
-- `.release-pending.yml` (~34 tok)
+- `.release-pending.yml` (~35 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~4534 tok)
-- `CHANGELOG.md` — Changelog (~1660 tok)
+- `CHANGELOG.md` — Changelog (~3031 tok)
 - `CLAUDE.md` — OpenWolf (~1181 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
 - `commands.json` — Declares or (~48402 tok)
@@ -1588,7 +1588,7 @@
 - `codeql.yml` — CI: CodeQL (~264 tok)
 - `moat-trusted-root-check.yml` — CI: MOAT Trusted Root Staleness Check (~1072 tok)
 - `pr-policy.yml` — CI: "Vouch: Check PR" (~182 tok)
-- `release.yml` — CI: Release (~2227 tok)
+- `release.yml` — CI: Release (~2520 tok)
 - `scorecard.yml` — CI: Scorecard (~319 tok)
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
 
@@ -2291,6 +2291,8 @@
 
 ## releases/
 
+- `v0.10.0.md` — v0.10.0 (~2618 tok)
+- `v0.10.1.md` — v0.10.1 (~449 tok)
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
 - `v0.7.2.md` — v0.7.2 (~287 tok)

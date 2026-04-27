@@ -4873,3 +4873,40 @@
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:42 | Restored ~/.syllago/content from content.demo-bak, committed demos/hero.gif + tape files, pushed, closed syllago-tzt9 | demos/hero.tape, demos/hero.gif, docs/vhs/demo-tui-browse.tape | DONE | ~500 |
+
+## Session: 2026-04-26 11:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:38 | Created releases/v0.10.0.md | — | ~2792 |
+| 12:38 | Session end: 1 writes across 1 files (v0.10.0.md) | 0 reads | ~2992 tok |
+| 12:39 | Edited CHANGELOG.md | expanded (+57 lines) | ~1202 |
+| 12:40 | Edited VERSION | 0.9 → 0.10 | ~2 |
+| 12:40 | Created .release-pending.yml | — | ~35 |
+
+## Session: 2026-04-26 12:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-04-26 12:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:43 | Edited .github/workflows/release.yml | 4→5 lines | ~16 |
+| 14:43 | Edited .github/workflows/release.yml | expanded (+20 lines) | ~674 |
+| 14:44 | Edited .github/workflows/release.yml | modified install() | ~836 |
+| 14:44 | Edited VERSION | inline fix | ~2 |
+| 14:44 | Edited CHANGELOG.md | expanded (+12 lines) | ~274 |
+| 14:44 | Created releases/v0.10.1.md | — | ~479 |
+| 14:44 | Created .release-pending.yml | — | ~35 |
+| 14:45 | Session end: 7 writes across 5 files (release.yml, VERSION, CHANGELOG.md, v0.10.1.md, .release-pending.yml) | 2 reads | ~4597 tok |
+| 14:55 | Session end: 7 writes across 5 files (release.yml, VERSION, CHANGELOG.md, v0.10.1.md, .release-pending.yml) | 2 reads | ~4597 tok |
+| 21:45 | Session end: 7 writes across 5 files (release.yml, VERSION, CHANGELOG.md, v0.10.1.md, .release-pending.yml) | 2 reads | ~4597 tok |
+| 21:48 | Session end: 7 writes across 5 files (release.yml, VERSION, CHANGELOG.md, v0.10.1.md, .release-pending.yml) | 2 reads | ~4597 tok |
+| 21:59 | Session end: 7 writes across 5 files (release.yml, VERSION, CHANGELOG.md, v0.10.1.md, .release-pending.yml) | 2 reads | ~4597 tok |
+
+## Session: 2026-04-27 22:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

@@ -7985,6 +7985,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-26T18:31:16.425Z"
+    },
+    {
+      "id": "bug-495",
+      "timestamp": "2026-04-26T21:43:43.429Z",
+      "error_message": "Significant refactor of ",
+      "file": ".github/workflows/release.yml",
+      "root_cause": "12 lines replaced/restructured",
+      "fix": "Rewrote 32→52 lines (12 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-26T21:43:43.429Z"
     }
   ]
 }
