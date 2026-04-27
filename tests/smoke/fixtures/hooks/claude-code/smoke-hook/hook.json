@@ -1,10 +1,13 @@
 {
-  "event": "PreToolUse",
-  "matcher": "Bash",
+  "spec": "hooks/0.1",
   "hooks": [
     {
-      "type": "command",
-      "command": "echo smoke-test-hook"
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "handler": {
+        "type": "command",
+        "command": "echo smoke-test-hook"
+      }
     }
   ]
 }

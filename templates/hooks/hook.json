@@ -1,9 +1,12 @@
 {
-  "event": "event_name",
+  "spec": "hooks/0.1",
   "hooks": [
     {
-      "type": "command",
-      "command": "echo 'hook triggered'"
+      "event": "event_name",
+      "handler": {
+        "type": "command",
+        "command": "echo 'hook triggered'"
+      }
     }
   ]
 }
