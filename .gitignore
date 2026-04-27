@@ -39,23 +39,18 @@ reviews/
 
 # Working docs — ignore all except design specs and the hook spec
 docs/*
+.capmon-cache/
 !docs/adr/
-!docs/design/
-!docs/vhs/
-!docs/spec/
-!docs/workflows/
-!docs/checks/
-!docs/security/
-!docs/blogs/
-!docs/provider-sources/
+!docs/guides/
+!docs/provider-capabilities/
 !docs/provider-formats/
 # Capmon pipeline sidecars (tracking issue URLs, written at runtime by jtafb)
 docs/provider-formats/*.quality.json
-!docs/provider-capabilities/
+!docs/provider-sources/
+!docs/providers/
 !docs/runbooks/
-!docs/guides/
-!docs/reports/
-.capmon-cache/
+!docs/vhs/
+!docs/workflows/
 tmp/
 
 # Development workflow state
