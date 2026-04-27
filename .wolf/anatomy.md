@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-26T21:44:45.363Z
-> Files: 1235 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T16:26:26.682Z
+> Files: 1274 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -43,8 +43,10 @@
 - `learning_hook_event_translation.md` (~430 tok)
 - `learning_moat_dual_attested_verification.md` — Spec-grounded fact (~824 tok)
 - `learning_moat_source_uri_content_hash.md` (~571 tok)
+- `learning_provider_marker_calibration.md` (~446 tok)
+- `learning_resolve_cross_provider_fallback.md` (~439 tok)
 - `learning_tui_add_container_types.md` — Declares whose (~453 tok)
-- `MEMORY.md` — Syllago Project Memory (~2223 tok)
+- `MEMORY.md` — Syllago Project Memory (~2381 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` (~238 tok)
@@ -182,12 +184,12 @@
 ## ./
 
 - `.gitattributes` — Git attributes (~50 tok)
-- `.gitignore` — Git ignore rules (~415 tok)
+- `.gitignore` — Git ignore rules (~465 tok)
 - `.release-pending.yml` (~35 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~4534 tok)
-- `CHANGELOG.md` — Changelog (~3031 tok)
-- `CLAUDE.md` — OpenWolf (~1181 tok)
+- `CHANGELOG.md` — Changelog (~3572 tok)
+- `CLAUDE.md` — Syllago (~1124 tok)
 - `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct (~1370 tok)
 - `commands.json` — Declares or (~48402 tok)
 - `CONTRIBUTING.md` — Contributing to syllago (~1842 tok)
@@ -199,7 +201,7 @@
 - `opencode.json.bak` (~23 tok)
 - `plan.md` — Contribution Model Implementation Plan (~1180 tok)
 - `README.md` — Project documentation (~4375 tok)
-- `ROADMAP.md` — Roadmap (~1295 tok)
+- `ROADMAP.md` — Roadmap (~1281 tok)
 - `SECURITY.md` — Security Policy (~2575 tok)
 - `TUI_MOCKUPS.md` — Syllago TUI: Adaptive Layout Specification (~2438 tok)
 - `VERSION` (~2 tok)
@@ -226,7 +228,7 @@
 - `.gitignore` — Git ignore rules (~279 tok)
 - `.local_version` (~2 tok)
 - `beads.left.meta.json` (~26 tok)
-- `config.yaml` — Beads Configuration File (~668 tok)
+- `config.yaml` — Beads Configuration File (~644 tok)
 - `daemon.pid` (~2 tok)
 - `interactions.jsonl` — Declares added (~2835 tok)
 - `last-touched` (~4 tok)
@@ -1582,8 +1584,13 @@
 - `windsurf-rules.yaml` — Declares alternative (~1967 tok)
 - `zed-rules.yaml` — Declares mode (~1395 tok)
 
+## .github/
+
+- `CODEOWNERS` — Code owners for syllago. (~241 tok)
+
 ## .github/workflows/
 
+- `capmon-check.yml` — CI: capmon — content hash check (~516 tok)
 - `ci.yml` — CI: CI (~848 tok)
 - `codeql.yml` — CI: CodeQL (~264 tok)
 - `moat-trusted-root-check.yml` — CI: MOAT Trusted Root Staleness Check (~1072 tok)
@@ -1690,8 +1697,8 @@
 - `registry_sync_moat.go` (~1374 tok)
 - `registry_verify_test.go` — TestVerifyRegistryForAdd_NilReg, TestVerifyRegistryForAdd_UnpinnedGitRegistry, TestVerifyRegistryFor (~7612 tok)
 - `registry_verify.go` — Struct: verifyOutcome (~3627 tok)
-- `share_cmd_test.go` — TestShareCmdRegisters, TestShareCmdHasToFlag, TestShareCmdValidatesArgs, TestFindLibraryItem_NotFoun (~4275 tok)
-- `share_cmd.go` — Struct: shareResult (~1546 tok)
+- `share_cmd_test.go` — TestShareCmdRegisters, TestShareCmdHasToFlag, TestShareCmdValidatesArgs, TestFindLibraryItem_NotFoun (~4273 tok)
+- `share_cmd.go` — Struct: shareResult (~1545 tok)
 - `sync_and_export_test.go` — TestSyncAndExportCommandRegisters, TestSyncAndExportFlagsDefined, TestRunExportOp_UnknownProvider, T (~7332 tok)
 - `sync_and_export.go` — Struct: exportResult (~4984 tok)
 
@@ -1790,7 +1797,9 @@
 - `seederspec_audit_test.go` — TestSeederSpecs_AllLoad (~508 tok)
 - `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
 - `seederspec.go` — Struct: ProposedMapping (~535 tok)
-- `sourceman_validate.go` — ValidateSources (~446 tok)
+- `sourceman_validate_test.go` — TestValidateSources_AllHaveSources, TestValidateSources_MissingURIs, TestValidateSources_SupportedFa (~1387 tok)
+- `sourceman_validate.go` — ValidateSources (~660 tok)
+- `sourceman.go` — Struct: SourceManifest (~1139 tok)
 - `types.go` — implements the syllago capability monitor pipeline. (~1315 tok)
 
 ## cli/internal/capmon/capyaml/
@@ -1825,8 +1834,9 @@
 - `fileinfo_test.go` — TestPrimaryFileName_Skill, TestPrimaryFileName_SkillCaseInsensitive, TestPrimaryFileName_Hook, TestP (~2816 tok)
 - `fileinfo.go` — PrimaryFileName, ReadFileContent, RemoveLibraryItem, HookSummary, MCPSummary (~1134 tok)
 - `precedence.go` — Struct: key (~603 tok)
+- `scan_real_test.go` — TestScanRealRepo (~428 tok)
 - `scanner_test.go` — TestScan, TestApplyPrecedence (~9598 tok)
-- `scanner.go` — scanRoot, scanFlatLayout (flat-layout repo detection), scanFromIndex, scanUniversal, scanProviderSpecific, scanProviderDir (~12000 tok)
+- `scanner.go` — Struct: manifestItem (~10966 tok)
 - `trust_test.go` — TestTrustTier_String, TestUserFacingBadge, TestTrustBadge_LabelAndGlyph, TestTrustDescription, TestC (~1586 tok)
 - `trust.go` — UserFacingBadge, TrustDescription (~1467 tok)
 - `types.go` — Struct: RegistrySource (~2213 tok)
@@ -1845,6 +1855,7 @@
 - `agents.go` — Struct: factoryDroidAgentMeta (~8580 tok)
 - `commands_test.go` — TestClaudeCommandToGeminiTOML, TestGeminiTOMLToClaudeCommand, TestClaudeCommandBehavioralEmbedding, (~6382 tok)
 - `commands.go` — Struct: CommandMeta (~5750 tok)
+- `converter.go` — Interface: Converter (~896 tok)
 - `derivename_probe_test.go` — TestDeriveNamesProbe (~286 tok)
 - `field_preservation_test.go` — Struct: fieldTest (~17483 tok)
 - `frontmatter_registry_test.go` — Struct: check (~2498 tok)
@@ -1862,7 +1873,7 @@
 - `scripts_test.go` — TestExtractScriptRef, TestBundleHookScripts_InlineCommandUnchanged, TestBundleHookScripts_AbsolutePa (~2552 tok)
 - `scripts.go` — Struct: BundledScript (~1373 tok)
 - `skills.go` — Struct: SkillMeta (~8352 tok)
-- `split_test.go` — TestSplitSettingsHooks_ClaudeCode, TestSplitSettingsHooks_GeminiCLI, TestSplitSettingsHooks_CopilotC (~1588 tok)
+- `split_test.go` — TestSplitSettingsHooks_ClaudeCode, TestSplitSettingsHooks_GeminiCLI, TestSplitSettingsHooks_CopilotC (~1593 tok)
 - `split.go` — SplitSettingsHooks, DeriveHookName (~1313 tok)
 
 ## cli/internal/doctor/
@@ -1915,15 +1926,18 @@
 - `integration_test.go` — TestTryRoundTrip_ApplyAndAutoRevert, TestKeepRoundTrip_ApplyStatusRemove (~6929 tok)
 - `manifest_test.go` — TestParse_Valid, TestParse_MissingKind, TestParse_WrongKind, TestParse_MissingProvider, TestParse_Em (~2007 tok)
 - `manifest.go` — Struct: ItemRef (~1201 tok)
-- `resolve_test.go` — TestResolve_AllFound, TestResolve_MissingRule, TestResolve_MultipleErrors, TestResolve_ProviderScope (~1612 tok)
-- `resolve.go` — Struct: ResolvedRef (~710 tok)
+- `privacy_test.go` — TestCheckPrivateItems, TestFormatPrivateWarnings, TestCheckLoadoutPublishGate_PrivateItemsToPublic_B (~915 tok)
+- `privacy.go` — Struct: PrivateItemWarning (~620 tok)
+- `resolve_test.go` — TestResolve_AllFound, TestResolve_MissingRule, TestResolve_MultipleErrors, TestResolve_ProviderScope (~2204 tok)
+- `resolve.go` — Struct: ResolvedRef (~1020 tok)
 
 ## cli/internal/metadata/
 
 - `metadata_test.go` — TestNewID, TestSaveAndLoad, TestLoadNotFound, TestProviderMetadata, TestMetaCreatedAt (~2737 tok)
-- `metadata.go` — Struct: Dependency (~2379 tok)
+- `metadata.go` — Struct: Dependency (~2378 tok)
 - `schemadoc_test.go` — TestBuildSchemaDoc_ParsesMeta, TestBuildSchemaDoc_NestedTypes, TestBuildSchemaDoc_AllFieldsHaveGroup (~1487 tok)
 - `schemadoc.go` — Struct: FieldDoc (~2314 tok)
+- `validate.go` — Struct: ValidationError (~1030 tok)
 
 ## cli/internal/moat/
 
@@ -2009,26 +2023,51 @@
 
 ## cli/internal/promote/
 
-- `promote_test.go` — TestSharedPath_UniversalType, TestSharedPath_ProviderSpecificType, TestBuildCompareURL_SSHRemote, Te (~6675 tok)
+- `privacy_test.go` — TestCheckPrivacyGate_PrivateToPublic_Blocked, TestCheckPrivacyGate_PrivateToPrivate_Allowed, TestChe (~2473 tok)
+- `privacy.go` — CheckPrivacyGate, CheckSharePrivacyGate (~932 tok)
+- `promote_test.go` — TestSharedPath_UniversalType, TestSharedPath_ProviderSpecificType, TestBuildCompareURL_SSHRemote, Te (~6495 tok)
+- `promote.go` — Struct: Result (~1953 tok)
+- `registry_promote.go` — Struct: RegistryResult (~1794 tok)
 
 ## cli/internal/provider/
 
-- `amp_test.go` — TestAmpSupportsType, TestAmpDetect, TestAmpInstallDir, TestAmpHooksSupport, TestAmpDiscoveryPaths (~1233 tok)
-- `amp.go` (~883 tok)
-- `cline_test.go` — TestClineSupportsTypes, TestClineSkillsSupport, TestClineCommandsSupport, TestClineDiscoveryPaths, T (~2124 tok)
-- `cline.go` — ClineMCPSettingsPath (~1357 tok)
+- `amp_test.go` — TestAmpSupportsType, TestAmpDetect, TestAmpInstallDir, TestAmpHooksSupport, TestAmpDiscoveryPaths (~1361 tok)
+- `amp.go` (~873 tok)
+- `claude_test.go` — TestClaudeCodeDetect (~524 tok)
+- `claude.go` (~771 tok)
+- `cline_test.go` — TestClineDetect, TestClineSupportsTypes, TestClineSkillsSupport, TestClineCommandsSupport, TestCline (~2547 tok)
+- `cline.go` — ClineMCPSettingsPath (~1383 tok)
+- `codex_test.go` — TestCodexDetect (~450 tok)
+- `codex.go` (~682 tok)
+- `copilot_test.go` — TestCopilotDetect (~575 tok)
+- `copilot.go` (~757 tok)
 - `coverage_test.go` — TestCoverageInternalGoConsistency, TestCoverageNoDrift, TestFindRepoRoot (~901 tok)
 - `coverage.go` — Struct: CoverageDrift (~2258 tok)
-- `crush.go` (~558 tok)
-- `cursor.go` (~641 tok)
-- `factory_droid.go` (~696 tok)
-- `pi.go` (~650 tok)
+- `crush_test.go` — TestCrushDetect (~236 tok)
+- `crush.go` (~526 tok)
+- `cursor_test.go` — TestCursorDetect (~444 tok)
+- `cursor.go` (~721 tok)
+- `detect_helpers_for_test.go` — Declares variable (~325 tok)
+- `detect_marker_test.go` — TestHelperAppDataDir, TestHelperBinaryOnPath, TestHelperBinaryOnPath_EmptyPATH, TestHelperFileExists (~1339 tok)
+- `detect_marker.go` (~862 tok)
+- `factory_droid_test.go` — TestFactoryDroidDetect (~256 tok)
+- `factory_droid.go` (~681 tok)
+- `gemini_test.go` — TestGeminiDetect (~267 tok)
+- `gemini.go` (~750 tok)
+- `kiro_test.go` — TestKiroDetect, TestKiroSupportsType, TestKiroDiscoveryPaths, TestKiroInstallDir, TestKiroFileFormat (~1126 tok)
+- `kiro.go` (~803 tok)
+- `opencode_test.go` — TestOpenCodeDetect, TestOpenCodeSupportsType, TestOpenCodeFileFormat, TestOpenCodeDiscoveryPaths, Te (~821 tok)
+- `opencode.go` (~705 tok)
+- `pi_test.go` — TestPiDetect (~224 tok)
+- `pi.go` (~622 tok)
 - `provider_test.go` — TestDiscoveryPaths, TestEmitPath, TestSupportsType, TestDetectedOnly, TestAllProviders_ClosureCovera (~1882 tok)
-- `provider.go` — Struct: Provider (~1084 tok)
-- `roocode_test.go` — TestRooCodeSupportsTypes, TestRooCodeCommandsSupport, TestRooCodeDiscoveryPaths, TestRooCodeEmitPath (~912 tok)
-- `roocode.go` (~831 tok)
-- `windsurf_test.go` — TestWindsurfSupportsTypes, TestWindsurfCommandsSupport, TestWindsurfEmitPath (~519 tok)
-- `windsurf.go` (~725 tok)
+- `provider.go` — Struct: Provider (~1202 tok)
+- `roocode_test.go` — TestRooCodeDetect, TestRooCodeSupportsTypes, TestRooCodeCommandsSupport, TestRooCodeDiscoveryPaths, (~1308 tok)
+- `roocode.go` (~885 tok)
+- `windsurf_test.go` — TestWindsurfDetect, TestWindsurfSupportsTypes, TestWindsurfCommandsSupport, TestWindsurfEmitPath (~912 tok)
+- `windsurf.go` (~809 tok)
+- `zed_test.go` — TestZedDetect, TestZedSupportsTypes, TestZedDiscoveryPaths, TestZedEmitPath, TestZedFileFormat (~853 tok)
+- `zed.go` (~480 tok)
 
 ## cli/internal/provmon/
 
@@ -2203,6 +2242,10 @@
 - `0008-capmon-synthetic-fixtures-correct.md` — ADR 0008: Synthetic Fixtures Are Correct for capmon Extractor Tests (~1516 tok)
 - `INDEX.md` — ADR Index (~566 tok)
 
+## docs/guides/
+
+- `team-setup.md` — Team Setup Guide (~1017 tok)
+
 ## docs/plans/
 
 - `2026-03-01-tui-polish-registry-design.md` — TUI Polish + Registry Experience — Design Document (~3470 tok)
@@ -2256,10 +2299,10 @@
 - `crush.yaml` — Crush — Provider Source Manifest (~1160 tok)
 - `cursor.yaml` — Cursor — Provider Source Manifest (~889 tok)
 - `factory-droid.yaml` — Factory Droid — Provider Source Manifest (~1066 tok)
-- `gemini-cli.yaml` — Gemini CLI — Provider Source Manifest (~1613 tok)
+- `gemini-cli.yaml` — Gemini CLI — Provider Source Manifest (~1624 tok)
 - `kiro.yaml` — Kiro — Provider Source Manifest (~712 tok)
 - `manifest.schema.json` — Declares definitions (~2331 tok)
-- `opencode.yaml` — OpenCode / Crush — Provider Source Manifest (~1287 tok)
+- `opencode.yaml` — OpenCode / Crush — Provider Source Manifest (~1298 tok)
 - `pi.yaml` — Pi (Mario Zechner) — Provider Source Manifest (~1260 tok)
 - `roo-code.yaml` — Roo Code — Provider Source Manifest (~1408 tok)
 - `windsurf.yaml` — Windsurf — Provider Source Manifest (~876 tok)
@@ -2287,12 +2330,13 @@
 
 ## logos/
 
-- `social-preview.svg` (~2457 tok)
+- `social-preview.svg` (~8964 tok)
 
 ## releases/
 
 - `v0.10.0.md` — v0.10.0 (~2618 tok)
 - `v0.10.1.md` — v0.10.1 (~449 tok)
+- `v0.10.2.md` — v0.10.2 (~923 tok)
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
 - `v0.7.2.md` — v0.7.2 (~287 tok)
@@ -2303,9 +2347,13 @@
 
 - `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — Manual smoke fixture for MOAT TUI trust surfacing (~3001 tok)
 
+## templates/hooks/
+
+- `hook.json` (~52 tok)
+
 ## tests/smoke/
 
-- `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2484 tok)
+- `claude-code.sh` — claude-code.sh — E2E smoke tests for syllago + Claude Code integration. (~2501 tok)
 - `gemini-cli.sh` — gemini-cli.sh — E2E smoke tests for syllago + Gemini CLI integration. (~2510 tok)
 - `helpers.sh` — helpers.sh — Shared test framework for syllago provider smoke tests. (~2182 tok)
 - `moat-trust-surfacing.sh` — moat-trust-surfacing.sh — E2E smoke tests for the MOAT signing + verification (~2246 tok)
@@ -2323,7 +2371,7 @@
 ## tests/smoke/fixtures/hooks/claude-code/smoke-hook/
 
 - `.syllago.yaml` (~32 tok)
-- `hook.json` (~42 tok)
+- `hook.json` (~59 tok)
 
 ## tests/smoke/fixtures/loadouts/claude-code/syllago-smoke-test/
 

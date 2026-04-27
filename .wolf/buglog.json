@@ -8001,6 +8001,422 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-04-26T21:43:43.429Z"
+    },
+    {
+      "id": "bug-496",
+      "timestamp": "2026-04-27T05:19:33.644Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/internal/loadout/privacy.go",
+      "root_cause": "Had \"\\nThis loadout can be used locally but cannot be ",
+      "fix": "Changed to \"\\nThis loadout can be used locally but cannot be ",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T05:19:33.644Z"
+    },
+    {
+      "id": "bug-497",
+      "timestamp": "2026-04-27T05:21:05.627Z",
+      "error_message": "Incorrect value in code",
+      "file": "cli/cmd/syllago/share_cmd_test.go",
+      "root_cause": "Had \"Publishing to registry\"",
+      "fix": "Changed to \"Sharing to registry\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T05:21:05.627Z"
+    },
+    {
+      "id": "bug-498",
+      "timestamp": "2026-04-27T05:55:07.614Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/provider/cursor.go",
+      "root_cause": "Was returning: err == nil && info.IsDir()",
+      "fix": "Now returns: true",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T05:55:07.614Z"
+    },
+    {
+      "id": "bug-499",
+      "timestamp": "2026-04-27T05:55:24.694Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/provider/windsurf.go",
+      "root_cause": "Was returning: err == nil && info.IsDir()",
+      "fix": "Now returns: true",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T05:55:24.694Z"
+    },
+    {
+      "id": "bug-500",
+      "timestamp": "2026-04-27T06:50:47.874Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/opencode_test.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 14→28 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:50:47.874Z"
+    },
+    {
+      "id": "bug-501",
+      "timestamp": "2026-04-27T06:51:00.955Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/amp_test.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 11→28 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:51:00.955Z"
+    },
+    {
+      "id": "bug-502",
+      "timestamp": "2026-04-27T06:51:27.074Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/claude.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:51:27.074Z"
+    },
+    {
+      "id": "bug-503",
+      "timestamp": "2026-04-27T06:51:36.515Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/codex.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:51:36.515Z"
+    },
+    {
+      "id": "bug-504",
+      "timestamp": "2026-04-27T06:51:50.066Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/provider/gemini.go",
+      "root_cause": "Was returning: err == nil && info.IsDir()",
+      "fix": "Now returns: binaryOnPath(\"gemini\")",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:51:50.066Z"
+    },
+    {
+      "id": "bug-505",
+      "timestamp": "2026-04-27T06:52:20.788Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/crush.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:52:20.788Z"
+    },
+    {
+      "id": "bug-506",
+      "timestamp": "2026-04-27T06:52:33.872Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/provider/amp.go",
+      "root_cause": "Was returning: err == nil && info.IsDir()",
+      "fix": "Now returns: binaryOnPath(\"amp\")",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:52:33.872Z"
+    },
+    {
+      "id": "bug-507",
+      "timestamp": "2026-04-27T06:52:44.062Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/pi.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 8→4 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:52:44.062Z"
+    },
+    {
+      "id": "bug-508",
+      "timestamp": "2026-04-27T06:57:35.281Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/kiro_test.go",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 23→56 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:57:35.281Z"
+    },
+    {
+      "id": "bug-509",
+      "timestamp": "2026-04-27T06:58:06.906Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/cursor.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:58:06.906Z"
+    },
+    {
+      "id": "bug-510",
+      "timestamp": "2026-04-27T06:58:14.021Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/windsurf.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:58:14.021Z"
+    },
+    {
+      "id": "bug-511",
+      "timestamp": "2026-04-27T06:58:29.774Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/kiro.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:58:29.774Z"
+    },
+    {
+      "id": "bug-512",
+      "timestamp": "2026-04-27T06:58:38.344Z",
+      "error_message": "Wrong operator: == should be ||",
+      "file": "cli/internal/provider/zed.go",
+      "root_cause": "Used \"==\" instead of \"||\"",
+      "fix": "Changed operator == → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T06:58:38.344Z"
+    },
+    {
+      "id": "bug-513",
+      "timestamp": "2026-04-27T07:05:52.334Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/cline.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 6→7 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T07:05:52.334Z"
+    },
+    {
+      "id": "bug-514",
+      "timestamp": "2026-04-27T07:05:57.237Z",
+      "error_message": "Wrong return value",
+      "file": "cli/internal/provider/roocode.go",
+      "root_cause": "Was returning: err == nil && info.IsDir()",
+      "fix": "Now returns: vscodeExtensionInstalled(homeDir, \"rooveterinaryin",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T07:05:57.237Z"
+    },
+    {
+      "id": "bug-515",
+      "timestamp": "2026-04-27T14:07:10.254Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/provider/kiro.go",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→15 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T14:07:10.254Z"
+    },
+    {
+      "id": "bug-516",
+      "timestamp": "2026-04-27T14:23:44.038Z",
+      "error_message": "Wrong reference: $FLAGS should be providers",
+      "file": ".github/workflows/capmon-check.yml",
+      "root_cause": "Used \"$FLAGS\" instead of \"providers\"",
+      "fix": "Changed $FLAGS → providers",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "yml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T14:23:44.038Z"
+    },
+    {
+      "id": "bug-517",
+      "timestamp": "2026-04-27T14:33:59.550Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/sourceman.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 8→14 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T14:33:59.550Z"
+    },
+    {
+      "id": "bug-518",
+      "timestamp": "2026-04-27T14:34:14.092Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/capmon/sourceman_validate.go",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 9→12 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T14:34:14.092Z"
+    },
+    {
+      "id": "bug-519",
+      "timestamp": "2026-04-27T15:24:18.257Z",
+      "error_message": "Significant refactor of ",
+      "file": ".beads/config.yaml",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→3 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "yaml"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T15:24:18.257Z"
+    },
+    {
+      "id": "bug-520",
+      "timestamp": "2026-04-27T16:01:14.775Z",
+      "error_message": "Significant refactor of ",
+      "file": "cli/internal/loadout/resolve.go",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 61→93 lines (9 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "go"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T16:01:14.775Z"
+    },
+    {
+      "id": "bug-521",
+      "timestamp": "2026-04-27T16:22:31.959Z",
+      "error_message": "Significant refactor of ",
+      "file": "docs/guides/team-setup.md",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 18→8 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T16:22:31.959Z"
     }
   ]
 }
