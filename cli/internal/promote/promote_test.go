@@ -256,29 +256,6 @@ func TestCopyForPromote_CopiesFiles(t *testing.T) {
 	}
 }
 
-func TestCopyForPromote_ExcludesLLMPrompt(t *testing.T) {
-	src := t.TempDir()
-	dst := filepath.Join(t.TempDir(), "dest")
-
-	os.WriteFile(filepath.Join(src, "rule.md"), []byte("# Rule"), 0644)
-	os.WriteFile(filepath.Join(src, "LLM-PROMPT.md"), []byte("scaffold"), 0644)
-
-	err := copyForPromote(src, dst)
-	if err != nil {
-		t.Fatalf("copyForPromote() error: %v", err)
-	}
-
-	// rule.md should exist
-	if _, err := os.Stat(filepath.Join(dst, "rule.md")); err != nil {
-		t.Error("rule.md should be copied")
-	}
-
-	// LLM-PROMPT.md should NOT exist
-	if _, err := os.Stat(filepath.Join(dst, "LLM-PROMPT.md")); err == nil {
-		t.Error("LLM-PROMPT.md should be excluded from copy")
-	}
-}
-
 // --- Promote integration test ---
 
 func TestPromote_RejectsDirtyTree(t *testing.T) {

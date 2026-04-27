@@ -58,22 +58,12 @@ syllago share my-coding-rules --to ai-coding-standards
 syllago share security-policy --to ai-coding-standards
 ```
 
-### Create content directly
-
-```bash
-# Create a new rule in your library
-syllago create rule team-conventions
-
-# Edit it, then share
-syllago share team-conventions --to ai-coding-standards
-```
-
 ### Organize with loadouts
 
 Loadouts are curated bundles. Create one for your team's standard setup:
 
 ```bash
-syllago create loadout onboarding --to claude-code
+syllago loadout create onboarding --to claude-code
 # The wizard walks you through selecting which items to include
 ```
 

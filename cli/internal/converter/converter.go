@@ -85,9 +85,9 @@ func ResolveContentFile(item catalog.ContentItem) string {
 		return ""
 	}
 
-	// Look for .md files (excluding README, LLM-PROMPT)
+	// Look for .md files (excluding README)
 	for _, e := range entries {
-		if !e.IsDir() && filepath.Ext(e.Name()) == ".md" && e.Name() != "README.md" && e.Name() != "LLM-PROMPT.md" {
+		if !e.IsDir() && filepath.Ext(e.Name()) == ".md" && e.Name() != "README.md" {
 			return filepath.Join(item.Path, e.Name())
 		}
 	}

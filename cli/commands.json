@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-27T15:31:28Z",
+  "generatedAt": "2026-04-27T16:23:48Z",
   "syllagoVersion": "0.10.2",
   "commands": [
     {
@@ -2378,64 +2378,6 @@
       "seeAlso": [],
       "examples": "  # Convert a Cursor rule to Claude Code format\n  syllago convert ./my-rule.mdc --from cursor --to claude-code\n\n  # Convert a library item to Windsurf format\n  syllago convert my-rule --to windsurf\n\n  # Convert and save to a file\n  syllago convert my-rule --to cursor --output ./cursor-rule.mdc\n\n  # Convert a Copilot instructions file to Cursor\n  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules",
       "source": "cli/cmd/syllago/convert.go"
-    },
-    {
-      "name": "create",
-      "displayName": "Create",
-      "slug": "create",
-      "parent": null,
-      "synopsis": "syllago create \u003ctype\u003e \u003cname\u003e [flags]",
-      "description": "Scaffold a new content item in the global library",
-      "longDescription": "Creates a new content item directory under ~/.syllago/content/ with\n.syllago.yaml metadata.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--provider",
-          "shorthand": "-p",
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Provider slug (required for rules, hooks, commands)"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Create a new skill\n  syllago create skills my-new-skill\n\n  # Create a provider-specific rule\n  syllago create rules my-rule --provider claude-code\n\n  # Create a new agent\n  syllago create agents my-agent",
-      "source": "cli/cmd/syllago/create.go"
     },
     {
       "name": "doctor",

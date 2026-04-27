@@ -417,7 +417,7 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 				if item.Description == "" {
 					entries, _ := os.ReadDir(itemPath)
 					for _, e := range entries {
-						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
 							item.Description = readDescription(filepath.Join(itemPath, e.Name()))
 							break
 						}
@@ -428,7 +428,7 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 				if item.Description == "" {
 					entries, _ := os.ReadDir(itemPath)
 					for _, e := range entries {
-						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+						if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
 							item.Description = readDescription(filepath.Join(itemPath, e.Name()))
 							break
 						}
@@ -784,7 +784,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 			// Try any .md file
 			entries, _ := os.ReadDir(itemDir)
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
 					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
 					break
 				}
@@ -813,7 +813,7 @@ func scanProviderDir(itemDir string, ct ContentType, providerName string, local 
 		if item.Description == "" {
 			entries, _ := os.ReadDir(itemDir)
 			for _, e := range entries {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") && e.Name() != "LLM-PROMPT.md" {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
 					item.Description = readDescription(filepath.Join(itemDir, e.Name()))
 					break
 				}
@@ -1046,9 +1046,6 @@ func scriptBaseName(path string) string {
 // shouldSkip returns true for files/dirs that should always be ignored.
 func shouldSkip(name string) bool {
 	if strings.HasPrefix(name, ".") {
-		return true
-	}
-	if name == "LLM-PROMPT.md" {
 		return true
 	}
 	if name == metadata.FileName {

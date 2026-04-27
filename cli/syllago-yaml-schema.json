@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_at": "2026-04-27T15:31:28Z",
+  "generated_at": "2026-04-27T16:23:48Z",
   "syllago_version": "0.10.2",
   "schema": {
     "struct_name": "Meta",
@@ -110,7 +110,7 @@
         "type": "time.Time",
         "omitempty": true,
         "required": false,
-        "comment": "when item was scaffolded via syllago create",
+        "comment": "when item was first scaffolded locally",
         "group": "lifecycle"
       },
       {

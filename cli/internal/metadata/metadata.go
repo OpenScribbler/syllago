@@ -48,7 +48,7 @@ type Meta struct {
 	Hidden           bool                `yaml:"hidden,omitempty"`
 	Dependencies     []Dependency        `yaml:"dependencies,omitempty"`
 	BundledScripts   []BundledScriptMeta `yaml:"bundled_scripts,omitempty"` // scripts copied into hook dir at add time
-	CreatedAt        *time.Time          `yaml:"created_at,omitempty"`      // when item was scaffolded via syllago create
+	CreatedAt        *time.Time          `yaml:"created_at,omitempty"`      // when item was first scaffolded locally
 	PromotedAt       *time.Time          `yaml:"promoted_at,omitempty"`
 	PRBranch         string              `yaml:"pr_branch,omitempty"`
 	SourceProvider   string              `yaml:"source_provider,omitempty"`   // provider slug content was imported from

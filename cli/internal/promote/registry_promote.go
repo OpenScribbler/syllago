@@ -86,7 +86,7 @@ func PromoteToRegistry(repoRoot string, registryName string, item catalog.Conten
 		_ = gitRun(cloneDir, "checkout", defaultBranch)
 	}
 
-	// 6. Copy content using the shared helper (excludes scaffold artifacts like LLM-PROMPT.md)
+	// 6. Copy content using the shared helper
 	if err := copyForPromote(item.Path, destPath); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("copying content: %w", err)

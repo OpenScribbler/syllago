@@ -72,7 +72,7 @@ func Promote(repoRoot string, item catalog.ContentItem, noInput bool) (*Result, 
 		_ = gitRun(repoRoot, "checkout", defaultBranch)
 	}
 
-	// 6. Copy content (exclude LLM-PROMPT.md)
+	// 6. Copy content
 	if err := copyForPromote(item.Path, sharedDir); err != nil {
 		cleanup()
 		return nil, fmt.Errorf("copying content: %w", err)
@@ -141,7 +141,7 @@ func sharedPath(repoRoot string, item catalog.ContentItem) string {
 	return filepath.Join(repoRoot, string(item.Type), item.Provider, item.Name)
 }
 
-// copyForPromote copies content from local to shared, excluding scaffold artifacts.
+// copyForPromote copies content from local to shared.
 func copyForPromote(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -150,11 +150,6 @@ func copyForPromote(src, dst string) error {
 		relPath, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
-		}
-		// Skip scaffold artifacts
-		base := filepath.Base(relPath)
-		if base == "LLM-PROMPT.md" {
-			return nil
 		}
 		targetPath := filepath.Join(dst, relPath)
 		if d.IsDir() {

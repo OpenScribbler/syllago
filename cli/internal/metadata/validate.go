@@ -71,7 +71,7 @@ func validateFrontmatterFile(itemDir, filename string, requiredFields []string) 
 	filePath := filepath.Join(itemDir, filename)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		errs = append(errs, ValidationError{filename, fmt.Sprintf("Missing. See templates/%s for the expected format.", filename)})
+		errs = append(errs, ValidationError{filename, fmt.Sprintf("Missing. Add a %s file with YAML frontmatter containing %s.", filename, strings.Join(requiredFields, ", "))})
 		return errs
 	}
 
@@ -79,7 +79,7 @@ func validateFrontmatterFile(itemDir, filename string, requiredFields []string) 
 	fm := parseFrontmatterFields(data)
 	for _, field := range requiredFields {
 		if fm[field] == "" {
-			errs = append(errs, ValidationError{filename, fmt.Sprintf("Missing `%s` in frontmatter. See templates/ for the expected format.", field)})
+			errs = append(errs, ValidationError{filename, fmt.Sprintf("Missing `%s` in frontmatter.", field)})
 		}
 	}
 
