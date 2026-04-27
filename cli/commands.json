@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-25T19:08:25Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-04-27T15:31:28Z",
+  "syllagoVersion": "0.10.2",
   "commands": [
     {
       "name": "add",

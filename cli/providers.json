@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-24T15:54:40Z",
-  "syllagoVersion": "0.9.0",
+  "generatedAt": "2026-04-27T15:31:28Z",
+  "syllagoVersion": "0.10.2",
   "providers": [
     {
       "name": "Claude Code",

@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-20T20:45:33Z",
-  "syllagoVersion": "0.9.0",
+  "generatedAt": "2026-04-27T15:31:22Z",
+  "syllagoVersion": "0.10.2",
   "commands": [
     {
       "name": "add",
@@ -10,7 +10,7 @@
       "parent": null,
       "synopsis": "syllago add [\u003ctype\u003e[/\u003cname\u003e]] --from \u003cprovider\u003e [flags]",
       "description": "Add content to your library from a provider",
-      "longDescription": "Discovers content from a provider and adds it to your library (~/.syllago/content/).\n\nWithout a positional argument, shows what content is available (discovery mode).\nProvide a type or type/name to add content.\n\nSyllago handles format conversion automatically. Once added, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".\n\nAfter adding, use \"syllago install\" to activate content in a provider.\n\nHooks-specific flags (--exclude, --scope) are only meaningful when adding hooks.",
+      "longDescription": "Discovers content from a provider and adds it to your library (~/.syllago/content/).\n\nWithout a positional argument, shows what content is available (discovery mode).\nProvide a type or type/name to add content.\n\nSyllago handles format conversion automatically. Once added, content can be\ninstalled to any supported provider with \"syllago install --to \u003cprovider\u003e\".",
       "aliases": [],
       "flags": [
         {
@@ -43,7 +43,7 @@
           "type": "stringArray",
           "default": null,
           "required": false,
-          "description": "Skip hooks by auto-derived name (hooks only)"
+          "description": "Skip hooks by auto-derived name (hooks and MCP only)"
         },
         {
           "name": "--force",
@@ -56,10 +56,10 @@
         {
           "name": "--from",
           "shorthand": null,
-          "type": "string",
+          "type": "stringArray",
           "default": null,
           "required": true,
-          "description": "Provider to add from (required)"
+          "description": "Provider to add from, or path to a monolithic rule file (repeatable for files)"
         },
         {
           "name": "--name",
@@ -83,7 +83,7 @@
           "type": "string",
           "default": "all",
           "required": false,
-          "description": "Settings scope to read from: global, project, or all (hooks/mcp only)"
+          "description": "Settings scope to read from: global, project, or all (hooks and MCP only)"
         },
         {
           "name": "--source-registry",
@@ -100,6 +100,14 @@
           "default": null,
           "required": false,
           "description": "Source registry visibility (public, private, unknown)"
+        },
+        {
+          "name": "--split",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Splitter heuristic: h2|h3|h4|marker:\u003cliteral\u003e|single|llm (monolithic --from only)"
         },
         {
           "name": "--trusted-root",
@@ -194,6 +202,7 @@
         }
       ],
       "subcommands": [
+        "backfill",
         "check",
         "derive",
         "diff",
@@ -209,6 +218,95 @@
         "verify"
       ],
       "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/capmon_cmd.go"
+    },
+    {
+      "name": "capmon backfill",
+      "displayName": "Capmon Backfill",
+      "slug": "capmon-backfill",
+      "parent": "capmon",
+      "synopsis": "syllago capmon backfill [flags]",
+      "description": "Populate missing content_hash values in a provider format doc",
+      "longDescription": "Fetch each source URI in the provider's FormatDoc and write the SHA-256 hash back into the file, preserving comments and key order. By default only sources whose content_hash is empty are fetched; use --force to re-baseline every source. Sources with fetch_method: chromedp are fetched via a headless browser.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Re-fetch and overwrite existing content_hash values"
+        },
+        {
+          "name": "--formats-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": "docs/provider-formats",
+          "required": false,
+          "description": "Directory containing provider format docs"
+        },
+        {
+          "name": "--provider",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Provider slug to backfill (required)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "capmon",
+        "capmon check",
+        "capmon derive",
+        "capmon diff",
+        "capmon extract",
+        "capmon fetch",
+        "capmon generate",
+        "capmon onboard",
+        "capmon run",
+        "capmon seed",
+        "capmon test-fixtures",
+        "capmon validate-format-doc",
+        "capmon validate-sources",
+        "capmon verify"
+      ],
       "examples": null,
       "source": "cli/cmd/syllago/capmon_cmd.go"
     },
@@ -324,6 +422,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon derive",
         "capmon diff",
         "capmon extract",
@@ -420,6 +519,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon diff",
         "capmon extract",
@@ -500,6 +600,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon extract",
@@ -572,6 +673,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -644,6 +746,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -707,6 +810,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -811,6 +915,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -899,6 +1004,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -987,6 +1093,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1067,6 +1174,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1155,6 +1263,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1235,6 +1344,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -1331,6 +1441,7 @@
       "subcommands": [],
       "seeAlso": [
         "capmon",
+        "capmon backfill",
         "capmon check",
         "capmon derive",
         "capmon diff",
@@ -2376,6 +2487,80 @@
       "source": "cli/cmd/syllago/doctor.go"
     },
     {
+      "name": "edit",
+      "displayName": "Edit",
+      "slug": "edit",
+      "parent": null,
+      "synopsis": "syllago edit \u003cname\u003e [flags]",
+      "description": "Edit a content item's display name or description",
+      "longDescription": "Updates display name and/or description stored in the item's .syllago.yaml metadata.\n\nOnly the metadata file is changed — the directory name, install paths, and all\nreferences remain exactly as they are.\n\nThe display name and description appear in the TUI, list output, and anywhere\nitems are presented to users.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--description",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "New description for the item"
+        },
+        {
+          "name": "--name",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "New display name for the item"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Content type to disambiguate (skills, hooks, mcp, etc.)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Set a display name for a hook\n  syllago edit my-hook --name \"Pre-commit Linter\"\n\n  # Set a description\n  syllago edit my-hook --description \"Runs ESLint before every commit\"\n\n  # Update both at once\n  syllago edit my-hook --name \"Pre-commit Linter\" --description \"Runs ESLint before every commit\"\n\n  # Disambiguate by type when name exists in multiple types\n  syllago edit my-item --name \"Better Name\" --type hooks",
+      "source": "cli/cmd/syllago/edit.go"
+    },
+    {
       "name": "explain",
       "displayName": "Explain",
       "slug": "explain",
@@ -2434,63 +2619,11 @@
       "source": "cli/cmd/syllago/explain.go"
     },
     {
-      "name": "info",
-      "displayName": "Info",
-      "slug": "info",
+      "name": "formats",
+      "displayName": "Formats",
+      "slug": "formats",
       "parent": null,
-      "synopsis": "syllago info",
-      "description": "Show syllago capabilities",
-      "longDescription": "Machine-readable capability manifest. Useful for agents discovering syllago's features.",
-      "aliases": [],
-      "flags": [],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [
-        "formats",
-        "providers"
-      ],
-      "seeAlso": [],
-      "examples": "  # Show capabilities summary\n  syllago info\n\n  # JSON output for agent consumption\n  syllago info --json",
-      "source": "cli/cmd/syllago/info_cmd.go"
-    },
-    {
-      "name": "info formats",
-      "displayName": "Info Formats",
-      "slug": "info-formats",
-      "parent": "info",
-      "synopsis": "syllago info formats",
+      "synopsis": "syllago formats",
       "description": "List supported file formats",
       "longDescription": null,
       "aliases": [],
@@ -2530,21 +2663,18 @@
         }
       ],
       "subcommands": [],
-      "seeAlso": [
-        "info",
-        "info providers"
-      ],
-      "examples": "  syllago info formats",
-      "source": "cli/cmd/syllago/info_cmd.go"
+      "seeAlso": [],
+      "examples": "  syllago formats",
+      "source": "cli/cmd/syllago/formats.go"
     },
     {
-      "name": "info providers",
-      "displayName": "Info Providers",
-      "slug": "info-providers",
-      "parent": "info",
-      "synopsis": "syllago info providers [slug]",
-      "description": "List providers or show data quality for a specific slug",
-      "longDescription": null,
+      "name": "info",
+      "displayName": "Info",
+      "slug": "info",
+      "parent": null,
+      "synopsis": "syllago info",
+      "description": "Show machine-readable capability manifest",
+      "longDescription": "Outputs a structured summary of syllago's version, detected providers, registries, and supported content types. Useful for agents and CI scripts discovering syllago's features.",
       "aliases": [],
       "flags": [],
       "inheritedFlags": [
@@ -2582,12 +2712,9 @@
         }
       ],
       "subcommands": [],
-      "seeAlso": [
-        "info",
-        "info formats"
-      ],
-      "examples": "  # List providers and their supported types\n  syllago info providers\n\n  # JSON output\n  syllago info providers --json\n\n  # Data quality summary for one provider\n  syllago info providers claude-code\n  syllago info providers claude-code --json",
-      "source": "cli/cmd/syllago/info_cmd.go"
+      "seeAlso": [],
+      "examples": "  # Show capabilities summary\n  syllago info\n\n  # JSON output for agent consumption\n  syllago info --json",
+      "source": "cli/cmd/syllago/info.go"
     },
     {
       "name": "init",
@@ -2744,7 +2871,7 @@
       "parent": null,
       "synopsis": "syllago install [name] [flags]",
       "description": "Activate library content in a provider",
-      "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.",
+      "longDescription": "Install content from your library into a provider's location.\n\nBy default uses a symlink so edits in your library are reflected immediately.\nUse --method copy to place a standalone copy instead.\n\nHooks and MCP configs are merged into the provider's settings file rather than linked.",
       "aliases": [],
       "flags": [
         {
@@ -2793,7 +2920,7 @@
           "type": "string",
           "default": "symlink",
           "required": false,
-          "description": "Install method: symlink (default) or copy"
+          "description": "Install method: symlink (default), copy, or append (monolithic-file rules)"
         },
         {
           "name": "--no-input",
@@ -2802,6 +2929,22 @@
           "default": null,
           "required": false,
           "description": "Disable interactive prompts, use defaults"
+        },
+        {
+          "name": "--on-clean",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Action when rule is already installed cleanly: replace|skip"
+        },
+        {
+          "name": "--on-modified",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Action when install record is stale: drop-record|append-fresh|keep"
         },
         {
           "name": "--to",
@@ -2994,8 +3137,8 @@
       "slug": "loadout-apply",
       "parent": "loadout",
       "synopsis": "syllago loadout apply [name] [flags]",
-      "description": "Apply a loadout",
-      "longDescription": "Apply a loadout to configure the current project for Claude Code.\n\nDefault mode (no flags): preview what would happen without making changes.\n--try: apply temporarily; reverts automatically when the session ends.\n--keep: apply permanently; run \"syllago loadout remove\" to undo.",
+      "description": "Preview or apply a loadout (default: preview; use --try or --keep to apply)",
+      "longDescription": "Apply a loadout to configure the current project for one or more providers.\n\nRunning with no flags is always safe: it previews planned changes without\nmodifying anything. Use --try or --keep to actually apply the loadout.\n\n--try:  apply temporarily; reverts automatically when the session ends.\n--keep: apply permanently; run \"syllago loadout remove\" to undo.\n--to:   target a specific provider (overrides the provider declared in the manifest).",
       "aliases": [],
       "flags": [
         {
@@ -3021,14 +3164,6 @@
           "default": "symlink",
           "required": false,
           "description": "Install method: symlink (default) or copy"
-        },
-        {
-          "name": "--preview",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Dry run: show planned actions without applying"
         },
         {
           "name": "--to",
@@ -3509,10 +3644,112 @@
         }
       ],
       "subcommands": [
+        "sign",
         "trust"
       ],
       "seeAlso": [],
       "examples": null,
+      "source": "cli/cmd/syllago/moat_cmd.go"
+    },
+    {
+      "name": "moat sign",
+      "displayName": "Moat Sign",
+      "slug": "moat-sign",
+      "parent": "moat",
+      "synopsis": "syllago moat sign [flags]",
+      "description": "Produce a signature.bundle from a manifest (online or dev-offline mode)",
+      "longDescription": "Assemble a sigstore v0.3 bundle for a manifest.json.\n\nOnline mode (--rekor-raw required):\n  Assembles a bundle from a raw Rekor API response captured from a real\n  Publisher Action run. The Rekor entry must have signed sha256(manifest.json).\n  The bundle is verified against the trusted root before being written.\n\nDev/offline mode (--dev-trusted-root \u003cdir\u003e):\n  Uses an ephemeral offline CA to sign the manifest without any network calls.\n  Writes both signature.bundle (at --out) and trusted_root.json (in \u003cdir\u003e).\n  The resulting trusted root is development-only — never use it in production.\n\nThe --identity flag (online mode only) accepts a JSON file with\n{\"issuer\": \"...\", \"subject\": \"...\"} matching the expected signing identity.\nWhen omitted, the identity is auto-extracted from the Rekor entry cert.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dev-trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Directory for dev-mode: writes trusted_root.json here and signs with an offline CA (mutually exclusive with --rekor-raw)"
+        },
+        {
+          "name": "--identity",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to signing identity JSON {\"issuer\":\"...\",\"subject\":\"...\"} (online mode, auto-extracted when omitted)"
+        },
+        {
+          "name": "--manifest",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": true,
+          "description": "Path to manifest.json (required)"
+        },
+        {
+          "name": "--out",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Output path for signature.bundle (default: \u003cmanifest\u003e.sigstore)"
+        },
+        {
+          "name": "--rekor-raw",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to raw Rekor API response JSON (online mode)"
+        },
+        {
+          "name": "--trusted-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to trusted-root.json for round-trip verify (online mode, default: bundled root)"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "moat",
+        "moat trust"
+      ],
+      "examples": "  # Online: sign with a real Rekor raw response\n  syllago moat sign \\\n    --manifest ./registry/manifest.json \\\n    --rekor-raw ./ci-artifacts/rekor-response.json \\\n    --out ./registry/manifest.json.sigstore\n\n  # Dev/offline: generate a smoke fixture bundle + dev trusted root\n  syllago moat sign \\\n    --manifest ./test-registry/manifest.json \\\n    --dev-trusted-root ./test-registry \\\n    --out ./test-registry/manifest.json.sigstore",
       "source": "cli/cmd/syllago/moat_cmd.go"
     },
     {
@@ -3563,7 +3800,8 @@
         "status"
       ],
       "seeAlso": [
-        "moat"
+        "moat",
+        "moat sign"
       ],
       "examples": null,
       "source": "cli/cmd/syllago/moat_cmd.go"
@@ -3619,6 +3857,129 @@
       ],
       "examples": null,
       "source": "cli/cmd/syllago/trust_cmd.go"
+    },
+    {
+      "name": "providers",
+      "displayName": "Providers",
+      "slug": "providers",
+      "parent": null,
+      "synopsis": "syllago providers [slug]",
+      "description": "List providers or show data quality for a specific slug",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # List providers and their supported types\n  syllago providers\n\n  # JSON output\n  syllago providers --json\n\n  # Data quality summary for one provider\n  syllago providers claude-code\n  syllago providers claude-code --json",
+      "source": "cli/cmd/syllago/providers.go"
+    },
+    {
+      "name": "refresh",
+      "displayName": "Refresh",
+      "slug": "refresh",
+      "parent": null,
+      "synopsis": "syllago refresh [name] [flags]",
+      "description": "Check for and apply content updates from registries",
+      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--all",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Refresh all installed items"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would be updated without changing anything"
+        },
+        {
+          "name": "--registry",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Only refresh items from this registry"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Refresh a specific item\n  syllago refresh my-skill\n\n  # Check and refresh all installed items\n  syllago refresh --all\n\n  # Dry-run: show what would be updated\n  syllago refresh --all --dry-run\n\n  # Only refresh items from a specific registry\n  syllago refresh --all --registry team-rules",
+      "source": "cli/cmd/syllago/refresh.go"
     },
     {
       "name": "registry",
@@ -3741,6 +4102,14 @@
           "default": null,
           "required": false,
           "description": "GitHub numeric repository-owner ID (required for GitHub Actions issuer)"
+        },
+        {
+          "name": "--yes",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Auto-accept TOFU during the chained post-add sync (required for MOAT registries that self-declare via registry.yaml without an allowlist match)"
         }
       ],
       "inheritedFlags": [
@@ -4201,72 +4570,6 @@
       "seeAlso": [],
       "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
       "source": "cli/cmd/syllago/remove.go"
-    },
-    {
-      "name": "rename",
-      "displayName": "Rename",
-      "slug": "rename",
-      "parent": null,
-      "synopsis": "syllago rename \u003cname\u003e [flags]",
-      "description": "Set a human-readable display name for a content item",
-      "longDescription": "Updates the display name stored in the item's .syllago.yaml metadata.\nThis is especially useful for hooks and MCP servers where the directory\nname alone isn't descriptive enough.\n\nThe display name is shown in the TUI, list output, and anywhere items\nare presented to users. The directory name (used for install paths and\nreferences) is not changed.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--name",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": true,
-          "description": "The new display name (required)"
-        },
-        {
-          "name": "--type",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Content type to disambiguate (skills, hooks, mcp, etc.)"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Name a hook\n  syllago rename my-hook --name \"Pre-commit Linter\"\n\n  # Name an MCP server\n  syllago rename postgres --name \"Local Postgres Dev\" --type mcp\n\n  # Disambiguate by type when name exists in multiple types\n  syllago rename my-item --name \"Better Name\" --type hooks",
-      "source": "cli/cmd/syllago/rename.go"
     },
     {
       "name": "sandbox",
@@ -5198,13 +5501,13 @@
       "source": "cli/cmd/syllago/share.go"
     },
     {
-      "name": "sync-and-export",
-      "displayName": "Sync-and-export",
-      "slug": "sync-and-export",
+      "name": "sync-install",
+      "displayName": "Sync-install",
+      "slug": "sync-install",
       "parent": null,
-      "synopsis": "syllago sync-and-export [flags]",
-      "description": "Sync registries then export content to a provider",
-      "longDescription": "Convenience command that syncs all registries then installs.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
+      "synopsis": "syllago sync-install [flags]",
+      "description": "Sync registries then install content to a provider",
+      "longDescription": "Convenience command that syncs all registries then installs content.\n\nEquivalent to running:\n  syllago registry sync \u0026\u0026 syllago install --to \u003cprovider\u003e\n\nThis is useful in CI/CD or automation where you want a single command\nto ensure registries are up-to-date before installing.",
       "aliases": [],
       "flags": [
         {
@@ -5213,7 +5516,7 @@
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Show what would be exported without making changes"
+          "description": "Show what would be installed without making changes"
         },
         {
           "name": "--llm-hooks",
@@ -5237,7 +5540,7 @@
           "type": "string",
           "default": "local",
           "required": false,
-          "description": "Which items to export: local (default), shared, registry, builtin, all"
+          "description": "Which items to install: local (default), shared, registry, builtin, all"
         },
         {
           "name": "--to",
@@ -5245,7 +5548,7 @@
           "type": "string",
           "default": null,
           "required": true,
-          "description": "Provider slug to export to, or \"all\" for every provider (required)"
+          "description": "Provider slug to install to, or \"all\" for every provider (required)"
         },
         {
           "name": "--type",
@@ -5292,8 +5595,8 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Sync registries and export to Cursor\n  syllago sync-and-export --to cursor\n\n  # Export to all providers\n  syllago sync-and-export --to all --type skills\n\n  # Export only registry content to Kiro\n  syllago sync-and-export --to kiro --source registry",
-      "source": "cli/cmd/syllago/sync-and-export.go"
+      "examples": "  # Sync registries and install to Cursor\n  syllago sync-install --to cursor\n\n  # Install to all providers\n  syllago sync-install --to all --type skills\n\n  # Install only registry content to Kiro\n  syllago sync-install --to kiro --source registry",
+      "source": "cli/cmd/syllago/sync-install.go"
     },
     {
       "name": "telemetry",
@@ -5654,80 +5957,6 @@
       "seeAlso": [],
       "examples": "  # Uninstall from a specific provider\n  syllago uninstall my-skill --from claude-code\n\n  # Uninstall from all providers\n  syllago uninstall my-agent\n\n  # Skip confirmation prompt\n  syllago uninstall my-rule --from cursor --force\n\n  # Preview what would happen\n  syllago uninstall my-skill --dry-run",
       "source": "cli/cmd/syllago/uninstall.go"
-    },
-    {
-      "name": "update",
-      "displayName": "Update",
-      "slug": "update",
-      "parent": null,
-      "synopsis": "syllago update [name] [flags]",
-      "description": "Check for and apply content updates from registries",
-      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--all",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Update all installed items"
-        },
-        {
-          "name": "--dry-run",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show what would be updated without changing anything"
-        },
-        {
-          "name": "--registry",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Only update items from this registry"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Update a specific item\n  syllago update my-skill\n\n  # Check and update all installed items\n  syllago update --all\n\n  # Dry-run: show what would be updated\n  syllago update --all --dry-run\n\n  # Only update items from a specific registry\n  syllago update --all --registry team-rules",
-      "source": "cli/cmd/syllago/update.go"
     },
     {
       "name": "update",

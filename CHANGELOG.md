@@ -5,6 +5,26 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.10.2] - 2026-04-27
+
+### Fixed
+
+- Provider detection across all 15 providers. Replaced the legacy "is the provider's config dir present?" check with heterogeneous host-tool signals — binary on PATH, app-only marker files (e.g. `~/.claude.json`, `~/.codex/auth.json`), VS Code extension globs (`~/.vscode/extensions/<id>-*/`), and `gh extension list`. The old check produced false positives whenever syllago wrote content into a provider's config directory (e.g. `~/.claude/skills/`, `~/.cursor/skills/`).
+- Kiro detection on Linux. The installer ships `kiro-cli` (not `kiro`) and writes its sqlite store to `~/.local/share/kiro-cli/`. Detection now matches the actual layout; the legacy `kiro` binary check is kept as a defensive fallback.
+- `capmon-check` workflow's `--providers-json` path. The workflow runs from repo root but the file lives at `cli/providers.json`; the path is now passed explicitly to both invocations.
+- `capmon` source manifest validator now accepts a `convention:` field on `ContentTypeSource` for content types implemented purely via cross-provider convention. Two manifests (`gemini-cli/agents`, `opencode/skills`) document syllago-only patterns with no upstream URL to monitor; the validator was rejecting them as missing source URIs. Allowed values: `cross-provider-agents-md`, `cross-provider-skill-md`. Unknown conventions still fail with a descriptive error.
+- CLI privacy wording. Replaced `publish`/`published` with `share`/`shared` across privacy gates, error messages, comments, and tests for consistency with the public `share` verb.
+
+### Added
+
+- `CODEOWNERS` covering security-sensitive paths (workflows, installer, sandbox, signing, updater, registry, `SECURITY.md`).
+
+### Internal
+
+- Documented `Provider.Detect` as advisory — heuristic only, never a correctness gate. Explicit `--to` always works regardless of detection.
+- Added detection helper primitives (`binaryOnPath`, `fileExists`, `dirExists`, `vscodeExtensionInstalled`, `ghExtensionInstalled`) reused by every `Provider.Detect` implementation. The `gh` helper uses package-level overrides for testability.
+- Removed the dead `dirHasUnmanagedEntry` helper.
+
 ## [0.10.1] - 2026-04-26
 
 ### Fixed
