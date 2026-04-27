@@ -3,9 +3,34 @@
   "started": "2026-04-27T17:59:30.926Z",
   "files_read": {
     "/home/hhewett/.local/src/syllago/.github/workflows/scorecard.yml": {
-      "count": 2,
+      "count": 3,
       "tokens": 325,
       "first_read": "2026-04-27T18:15:52.709Z"
+    },
+    "/home/hhewett/.local/src/syllago/.github/workflows/pr-policy.yml": {
+      "count": 1,
+      "tokens": 182,
+      "first_read": "2026-04-27T18:38:29.891Z"
+    },
+    "/home/hhewett/.local/src/syllago/.github/VOUCHED.td": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-27T18:38:35.469Z"
+    },
+    "/home/hhewett/.local/src/syllago/.github/vouch-pr-response.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-27T18:38:35.525Z"
+    },
+    "/home/hhewett/.local/src/syllago/README.md": {
+      "count": 1,
+      "tokens": 4375,
+      "first_read": "2026-04-27T18:59:28.565Z"
+    },
+    "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml": {
+      "count": 1,
+      "tokens": 264,
+      "first_read": "2026-04-27T19:02:33.450Z"
     }
   },
   "files_written": [
@@ -14,14 +39,35 @@
       "action": "edit",
       "tokens": 25,
       "at": "2026-04-27T18:16:03.013Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/.github/workflows/claude.yml",
+      "action": "edit",
+      "tokens": 98,
+      "at": "2026-04-27T18:31:01.881Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/.github/workflows/claude-code-review.yml",
+      "action": "edit",
+      "tokens": 108,
+      "at": "2026-04-27T18:31:02.396Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/.github/workflows/codeql.yml",
+      "action": "edit",
+      "tokens": 40,
+      "at": "2026-04-27T19:02:41.429Z"
     }
   ],
   "edit_counts": {
-    ".github/workflows/scorecard.yml": 1
+    ".github/workflows/scorecard.yml": 1,
+    ".github/workflows/claude.yml": 1,
+    ".github/workflows/claude-code-review.yml": 1,
+    ".github/workflows/codeql.yml": 1
   },
-  "anatomy_hits": 1,
-  "anatomy_misses": 0,
-  "repeated_reads_warned": 1,
+  "anatomy_hits": 4,
+  "anatomy_misses": 1,
+  "repeated_reads_warned": 2,
   "cerebrum_warnings": 0,
-  "stop_count": 2
+  "stop_count": 15
 }

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T18:16:02.997Z
-> Files: 1276 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T19:02:41.416Z
+> Files: 1278 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -1597,7 +1597,9 @@
 
 - `capmon-check.yml` — CI: capmon — content hash check (~516 tok)
 - `ci.yml` — CI: CI (~848 tok)
-- `codeql.yml` — CI: CodeQL (~264 tok)
+- `claude-code-review.yml` — /*.ts" (~484 tok)
+- `claude.yml` — CI: Claude Code (~578 tok)
+- `codeql.yml` — CI: CodeQL (~278 tok)
 - `moat-trusted-root-check.yml` — CI: MOAT Trusted Root Staleness Check (~1072 tok)
 - `pr-policy.yml` — CI: "Vouch: Check PR" (~182 tok)
 - `release.yml` — CI: Release (~2520 tok)
