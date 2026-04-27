@@ -35,6 +35,13 @@ type Provider struct {
 	// Returns empty string if the provider doesn't support that content type.
 	InstallDir func(homeDir string, ct catalog.ContentType) string
 	// Detect returns true if the provider is installed on the system.
+	//
+	// Detect is advisory only. Callers must not use Detect() as a correctness
+	// gate; explicit --to should always work even when Detect() returns false.
+	// Signals are heuristic (binary on PATH, host-tool extension state, OS
+	// app-data dirs) and may legitimately miss installs in WSL, custom PATH
+	// setups, or sandboxed environments. See the post-public-flip checklist
+	// for the call-site audit that softens filtering to warnings.
 	Detect func(homeDir string) bool
 
 	// Phase 1: discovery and emit fields

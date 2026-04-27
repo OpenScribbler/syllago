@@ -8,30 +8,6 @@ import (
 	"strings"
 )
 
-// dirHasUnmanagedEntry returns true iff dir exists, is a directory, and contains
-// at least one entry whose name is NOT in the managed set. Used by Detect functions
-// to distinguish "the app is installed" from "syllago wrote subdirectories here".
-//
-// Why: provider config dirs like ~/.cursor, ~/.codeium/windsurf, ~/.codex,
-// ~/.config/opencode can exist purely because syllago installed content into them
-// (skills/, rules/, etc.). The app being absent then produces a false positive.
-// An entry outside the managed set is evidence the app — or the user — created it.
-//
-// Deprecated: superseded by binaryOnPath/fileExists/dirExists/etc. Slated for
-// removal once all providers adopt the new advisory-detection helpers.
-func dirHasUnmanagedEntry(dir string, managed map[string]bool) bool {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
-	}
-	for _, e := range entries {
-		if !managed[e.Name()] {
-			return true
-		}
-	}
-	return false
-}
-
 // binaryOnPath returns true if name resolves to an executable on PATH.
 // Used by provider Detect() functions as the primary "is the app installed"
 // signal for CLI tools.
