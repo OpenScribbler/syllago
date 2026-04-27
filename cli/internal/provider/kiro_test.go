@@ -40,6 +40,29 @@ func TestKiroDetect(t *testing.T) {
 		}
 	})
 
+	t.Run("kiro-cli binary on PATH", func(t *testing.T) {
+		// Kiro's Linux installer ships kiro-cli (not kiro). This is the
+		// real-world signal observed on a fresh install.
+		home := t.TempDir()
+		makeFakeBinary(t, "kiro-cli")
+		if !Kiro.Detect(home) {
+			t.Error("expected true when kiro-cli binary is on PATH")
+		}
+	})
+
+	t.Run("kiro-cli data dir present", func(t *testing.T) {
+		// ~/.local/share/kiro-cli/ holds the CLI's sqlite store; syllago
+		// never writes there, so it's a clean app-only marker.
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".local", "share", "kiro-cli"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if !Kiro.Detect(home) {
+			t.Error("expected true when ~/.local/share/kiro-cli/ exists")
+		}
+	})
+
 	t.Run("app-data dir present", func(t *testing.T) {
 		if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 			t.Skipf("app-data dir test only runs on linux/darwin (got %s)", runtime.GOOS)

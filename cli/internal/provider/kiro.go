@@ -28,10 +28,18 @@ var Kiro = Provider{
 	},
 	Detect: func(homeDir string) bool {
 		// Advisory only — see Provider.Detect doc. ~/.kiro/ is shared with
-		// syllago install paths (agents/), so trust the kiro binary on PATH
-		// or the Electron app-data dir (~/.config/Kiro on Linux,
-		// ~/Library/Application Support/Kiro on macOS).
-		return binaryOnPath("kiro") || dirExists(appDataDir(homeDir, "Kiro"))
+		// syllago install paths (agents/), so trust signals syllago never
+		// writes:
+		//   - kiro-cli on PATH (the actual Linux CLI binary name; ships with
+		//     kiro-cli-chat and kiro-cli-term alongside)
+		//   - kiro on PATH (defensive fallback for future renames)
+		//   - ~/.local/share/kiro-cli/ (CLI sqlite data dir)
+		//   - Electron app-data dir (~/.config/Kiro on Linux,
+		//     ~/Library/Application Support/Kiro on macOS) for the desktop IDE
+		return binaryOnPath("kiro-cli") ||
+			binaryOnPath("kiro") ||
+			dirExists(filepath.Join(homeDir, ".local", "share", "kiro-cli")) ||
+			dirExists(appDataDir(homeDir, "Kiro"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
