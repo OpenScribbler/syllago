@@ -1,7 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T16:26:26.682Z
-> Files: 1274 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T18:16:02.997Z
+> Files: 1276 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../
+
+- `.gitconfig-personal` (~18 tok)
+- `.gitconfig-work` (~17 tok)
 
 ## ../../../../../mnt/c/Users/hhewe/hhewett-vault/Notes/Active-Projects/
 
@@ -49,7 +54,7 @@
 - `MEMORY.md` — Syllago Project Memory (~2381 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
-- `user_commit_email.md` (~238 tok)
+- `user_commit_email.md` — Global git config (as of 2026-04-27) (~478 tok)
 
 ## ../../../.claude/skills/bead-chain/
 
@@ -1596,7 +1601,7 @@
 - `moat-trusted-root-check.yml` — CI: MOAT Trusted Root Staleness Check (~1072 tok)
 - `pr-policy.yml` — CI: "Vouch: Check PR" (~182 tok)
 - `release.yml` — CI: Release (~2520 tok)
-- `scorecard.yml` — CI: Scorecard (~319 tok)
+- `scorecard.yml` — CI: Scorecard (~325 tok)
 - `smoke-test-providers.yml` — CI: Provider Smoke Tests (~828 tok)
 
 ## .panels/recognizer-api-evolution/
