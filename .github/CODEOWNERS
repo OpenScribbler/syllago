@@ -8,10 +8,10 @@
 # Reference: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
 
 # Security-sensitive paths.
-/.github/workflows/        @holdenhewett
-/cli/internal/installer/   @holdenhewett
-/cli/internal/sandbox/     @holdenhewett
-/cli/internal/signing/     @holdenhewett
-/cli/internal/updater/     @holdenhewett
-/cli/internal/registry/    @holdenhewett
-/SECURITY.md               @holdenhewett
+/.github/workflows/        @holdenhewett @Open-Scribbler
+/cli/internal/installer/   @holdenhewett @Open-Scribbler
+/cli/internal/sandbox/     @holdenhewett @Open-Scribbler
+/cli/internal/signing/     @holdenhewett @Open-Scribbler
+/cli/internal/updater/     @holdenhewett @Open-Scribbler
+/cli/internal/registry/    @holdenhewett @Open-Scribbler
+/SECURITY.md               @holdenhewett @Open-Scribbler
