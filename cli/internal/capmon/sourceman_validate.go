@@ -14,6 +14,15 @@ var KnownHealingStrategies = map[string]bool{
 	"variant":       true,
 }
 
+// KnownConventions is the set of cross-provider convention names accepted
+// as a substitute for source URIs. A content type with one of these names
+// in its `convention:` field passes validation even with empty sources —
+// the convention itself is the spec, and there is no upstream URL to monitor.
+var KnownConventions = map[string]bool{
+	"cross-provider-agents-md": true,
+	"cross-provider-skill-md":  true,
+}
+
 // ValidateSources validates that a provider's source manifest has at least one
 // source URI for each content type, unless the content type is explicitly marked
 // as not supported (supported: false). It also validates healing configuration
@@ -31,8 +40,11 @@ func ValidateSources(sourcesDir, provider string) error {
 		if ctSource.Supported != nil && !*ctSource.Supported {
 			continue
 		}
-		if len(ctSource.Sources) == 0 {
-			errs = append(errs, fmt.Sprintf("content_types.%s: no source URIs and not marked as supported: false", ct))
+		if ctSource.Convention != "" && !KnownConventions[ctSource.Convention] {
+			errs = append(errs, fmt.Sprintf("content_types.%s: unknown convention %q (valid: cross-provider-agents-md, cross-provider-skill-md)", ct, ctSource.Convention))
+		}
+		if len(ctSource.Sources) == 0 && ctSource.Convention == "" {
+			errs = append(errs, fmt.Sprintf("content_types.%s: no source URIs and not marked as supported: false (use convention: cross-provider-agents-md or cross-provider-skill-md if implemented via cross-provider convention)", ct))
 		}
 		for i, src := range ctSource.Sources {
 			if src.Healing == nil {

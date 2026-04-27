@@ -107,6 +107,7 @@ content_types:
 
   agents:
     supported: true
+    convention: cross-provider-agents-md
     # Gemini CLI has no native agent file format. Syllago implements agents via
     # the cross-provider AGENTS.md convention at .gemini/agents/ (project) and
     # ~/.gemini/agents/ (user). No provider-specific documentation URL to monitor.

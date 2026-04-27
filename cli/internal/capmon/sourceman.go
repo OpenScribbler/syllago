@@ -23,9 +23,15 @@ type SourceManifest struct {
 // Supported is a pointer to distinguish "not specified" from explicitly false.
 // When Supported is explicitly false, the content type is not supported by this provider
 // and source URI checks are skipped.
+//
+// Convention names a cross-provider implementation pattern (e.g. cross-provider-agents-md,
+// cross-provider-skill-md) when the provider has no native upstream documentation
+// to monitor. Setting Convention satisfies the validator's "must have sources"
+// requirement for content types implemented purely via convention.
 type ContentTypeSource struct {
-	Supported *bool         `yaml:"supported,omitempty"`
-	Sources   []SourceEntry `yaml:"sources"`
+	Supported  *bool         `yaml:"supported,omitempty"`
+	Convention string        `yaml:"convention,omitempty"`
+	Sources    []SourceEntry `yaml:"sources"`
 }
 
 // SourceEntry is one source URL with its selector and extraction hints.

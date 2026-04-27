@@ -134,6 +134,45 @@ content_types:
 	}
 }
 
+func TestValidateSources_KnownConventionWithoutSources(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTestSourceManifest(t, dir, "test-provider", `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+content_types:
+  agents:
+    supported: true
+    convention: cross-provider-agents-md
+  skills:
+    supported: true
+    convention: cross-provider-skill-md
+`)
+	if err := ValidateSources(dir, "test-provider"); err != nil {
+		t.Errorf("expected no error when convention is set on a content type with no sources, got: %v", err)
+	}
+}
+
+func TestValidateSources_UnknownConvention(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeTestSourceManifest(t, dir, "test-provider", `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+content_types:
+  agents:
+    supported: true
+    convention: not-a-real-convention
+`)
+	err := ValidateSources(dir, "test-provider")
+	if err == nil {
+		t.Fatal("expected validation error for unknown convention")
+	}
+	if !strings.Contains(err.Error(), "not-a-real-convention") {
+		t.Errorf("error should name the unknown convention; got: %v", err)
+	}
+}
+
 func TestValidateSources_HealingEnabledFalse_StrategyUnchecked(t *testing.T) {
 	// enabled: false still leaves Strategies visible; we still validate them
 	// because operators should be able to spot typos. But no strategies

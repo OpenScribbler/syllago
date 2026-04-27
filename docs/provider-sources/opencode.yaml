@@ -87,6 +87,7 @@ content_types:
 
   skills:
     supported: true
+    convention: cross-provider-skill-md
     # OpenCode has no native skill documentation to monitor. Syllago installs
     # skills using the cross-provider Agent Skills convention (SKILL.md with
     # YAML frontmatter) at .opencode/skills/ (project) and ~/.config/opencode/skills/
