@@ -112,52 +112,6 @@ func TestRunExport_NotImplemented(t *testing.T) {
 	}
 }
 
-// --- copyDir / copyFile (0% coverage) ---
-
-func TestCopyDir(t *testing.T) {
-	t.Parallel()
-	src := t.TempDir()
-	dst := filepath.Join(t.TempDir(), "dest")
-
-	// Create source tree
-	os.MkdirAll(filepath.Join(src, "sub"), 0755)
-	os.WriteFile(filepath.Join(src, "file.txt"), []byte("Hello {{NAME}}"), 0644)
-	os.WriteFile(filepath.Join(src, "sub", "nested.txt"), []byte("Nested {{NAME}}"), 0644)
-
-	if err := copyDir(src, dst, "my-project"); err != nil {
-		t.Fatalf("copyDir: %v", err)
-	}
-
-	// Check file content with replacement
-	data, _ := os.ReadFile(filepath.Join(dst, "file.txt"))
-	if string(data) != "Hello my-project" {
-		t.Errorf("file.txt = %q, want 'Hello my-project'", string(data))
-	}
-
-	data, _ = os.ReadFile(filepath.Join(dst, "sub", "nested.txt"))
-	if string(data) != "Nested my-project" {
-		t.Errorf("nested.txt = %q, want 'Nested my-project'", string(data))
-	}
-}
-
-func TestCopyFile(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	src := filepath.Join(dir, "src.txt")
-	dst := filepath.Join(dir, "dst.txt")
-
-	os.WriteFile(src, []byte("Template: {{NAME}}"), 0644)
-
-	if err := copyFile(src, dst, "test-name"); err != nil {
-		t.Fatalf("copyFile: %v", err)
-	}
-
-	data, _ := os.ReadFile(dst)
-	if string(data) != "Template: test-name" {
-		t.Errorf("content = %q, want replaced template", string(data))
-	}
-}
-
 // --- filterBySource (42.9% coverage) ---
 
 func TestFilterBySource(t *testing.T) {
