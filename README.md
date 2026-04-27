@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml/badge.svg)](https://github.com/OpenScribbler/syllago/actions/workflows/ci.yml)
 [![GitHub Release](https://img.shields.io/github/v/release/OpenScribbler/syllago)](https://github.com/OpenScribbler/syllago/releases/latest)
-[![Go Report Card](https://goreportcard.com/badge/github.com/OpenScribbler/syllago/cli)](https://goreportcard.com/report/github.com/OpenScribbler/syllago/cli)
+[![Go Report Card](https://goreportcard.com/badge/github.com/OpenScribbler/syllago/cli?cb=1)](https://goreportcard.com/report/github.com/OpenScribbler/syllago/cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/OpenScribbler/syllago/badge)](https://scorecard.dev/viewer/?uri=github.com/OpenScribbler/syllago)
 
