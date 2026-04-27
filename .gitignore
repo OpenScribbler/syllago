@@ -81,3 +81,9 @@ tmp/
 # bv (beads viewer) local config and caches
 .bv/
 .beads/.bv.lock
+
+# Local-only session/runtime state (large, contains absolute paths and
+# personal session metadata that should not ship to a public repo)
+.beads/daemon.log
+.wolf/memory.md
+.wolf/token-ledger.json
