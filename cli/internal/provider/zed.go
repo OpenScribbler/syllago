@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -22,12 +20,11 @@ var Zed = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".config", "zed"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		_, err = exec.LookPath("zed")
-		return err == nil
+		// Advisory only — see Provider.Detect doc. Zed writes
+		// ~/.config/zed/settings.json on first launch; syllago does not
+		// create that file (Zed Rules go to project root). Trust the zed
+		// binary on PATH or that marker file.
+		return binaryOnPath("zed") || fileExists(filepath.Join(homeDir, ".config", "zed", "settings.json"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

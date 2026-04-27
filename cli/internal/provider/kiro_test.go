@@ -3,23 +3,56 @@ package provider
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
+// TestKiroDetect: Kiro is an Electron IDE (AWS-built). ~/.kiro/ is shared
+// with syllago install paths (agents/), so trust the kiro binary on PATH
+// or the Electron app-data dir.
 func TestKiroDetect(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	if Kiro.Detect(dir) {
-		t.Fatal("expected no detection in empty temp dir")
-	}
-	if err := os.MkdirAll(filepath.Join(dir, ".kiro"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if !Kiro.Detect(dir) {
-		t.Fatal("expected detection when ~/.kiro/ exists")
-	}
+	t.Run("empty home + no binary", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if Kiro.Detect(home) {
+			t.Error("expected false on empty home with no kiro binary")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".kiro", "agents"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Kiro.Detect(home) {
+			t.Error("expected false when ~/.kiro/ contains only syllago content (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("binary on PATH", func(t *testing.T) {
+		home := t.TempDir()
+		makeFakeBinary(t, "kiro")
+		if !Kiro.Detect(home) {
+			t.Error("expected true when kiro binary is on PATH")
+		}
+	})
+
+	t.Run("app-data dir present", func(t *testing.T) {
+		if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+			t.Skipf("app-data dir test only runs on linux/darwin (got %s)", runtime.GOOS)
+		}
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(appDataDir(home, "Kiro"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if !Kiro.Detect(home) {
+			t.Errorf("expected true when %s exists", appDataDir(home, "Kiro"))
+		}
+	})
 }
 
 func TestKiroSupportsType(t *testing.T) {

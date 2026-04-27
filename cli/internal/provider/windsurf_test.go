@@ -1,12 +1,60 @@
 package provider
 
 import (
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
+
+// TestWindsurfDetect: Windsurf is an Electron IDE. ~/.codeium/windsurf/ is
+// shared with syllago install paths (skills/, global_workflows/), so trust
+// the windsurf binary on PATH or the Electron app-data dir.
+func TestWindsurfDetect(t *testing.T) {
+	t.Run("empty home + no binary", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if Windsurf.Detect(home) {
+			t.Error("expected false on empty home with no windsurf binary")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".codeium", "windsurf", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Windsurf.Detect(home) {
+			t.Error("expected false when ~/.codeium/windsurf/ contains only syllago content (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("binary on PATH", func(t *testing.T) {
+		home := t.TempDir()
+		makeFakeBinary(t, "windsurf")
+		if !Windsurf.Detect(home) {
+			t.Error("expected true when windsurf binary is on PATH")
+		}
+	})
+
+	t.Run("app-data dir present", func(t *testing.T) {
+		if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+			t.Skipf("app-data dir test only runs on linux/darwin (got %s)", runtime.GOOS)
+		}
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(appDataDir(home, "Windsurf"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if !Windsurf.Detect(home) {
+			t.Errorf("expected true when %s exists", appDataDir(home, "Windsurf"))
+		}
+	})
+}
 
 func TestWindsurfSupportsTypes(t *testing.T) {
 	t.Parallel()

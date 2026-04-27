@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -59,6 +60,25 @@ func dirExists(path string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+// appDataDir returns the OS-specific application data directory for the
+// named app, joined under homeDir. Used by Electron-based provider Detect
+// functions (Cursor, Windsurf, Kiro) to find paths the IDE itself creates
+// — distinct from ~/.<slug>/ which syllago also writes into.
+//
+//   - Linux:   <homeDir>/.config/<appName>
+//   - macOS:   <homeDir>/Library/Application Support/<appName>
+//   - other:   "" (Windows + WSL host detection deferred — see syllago-rh3u4)
+func appDataDir(homeDir, appName string) string {
+	switch runtime.GOOS {
+	case "linux":
+		return filepath.Join(homeDir, ".config", appName)
+	case "darwin":
+		return filepath.Join(homeDir, "Library", "Application Support", appName)
+	default:
+		return ""
+	}
 }
 
 // vscodeExtensionInstalled returns true if homeDir contains an installed

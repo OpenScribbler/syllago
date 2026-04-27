@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -28,8 +27,12 @@ var Cursor = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".cursor"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. ~/.cursor/ is shared with
+		// syllago install paths (skills/, agents/, mcp.json), so trust the
+		// cursor binary on PATH or the Electron app-data dir
+		// (~/.config/Cursor on Linux, ~/Library/Application Support/Cursor on
+		// macOS) — that path is created by Cursor itself.
+		return binaryOnPath("cursor") || dirExists(appDataDir(homeDir, "Cursor"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

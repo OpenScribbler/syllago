@@ -28,8 +28,12 @@ var Windsurf = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".codeium", "windsurf"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. ~/.codeium/windsurf/ is
+		// shared with syllago install paths (skills/, global_workflows/), so
+		// trust the windsurf binary on PATH or the Electron app-data dir
+		// (~/.config/Windsurf on Linux, ~/Library/Application Support/Windsurf
+		// on macOS) — that path is created by Windsurf itself.
+		return binaryOnPath("windsurf") || dirExists(appDataDir(homeDir, "Windsurf"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

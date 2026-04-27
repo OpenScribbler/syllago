@@ -3,8 +3,29 @@ package provider
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+func TestHelperAppDataDir(t *testing.T) {
+	got := appDataDir("/home/u", "Cursor")
+	switch runtime.GOOS {
+	case "linux":
+		want := filepath.Join("/home/u", ".config", "Cursor")
+		if got != want {
+			t.Errorf("appDataDir on linux = %q, want %q", got, want)
+		}
+	case "darwin":
+		want := filepath.Join("/home/u", "Library", "Application Support", "Cursor")
+		if got != want {
+			t.Errorf("appDataDir on darwin = %q, want %q", got, want)
+		}
+	default:
+		if got != "" {
+			t.Errorf("appDataDir on %s = %q, want empty (deferred)", runtime.GOOS, got)
+		}
+	}
+}
 
 func TestHelperBinaryOnPath(t *testing.T) {
 	// /bin/sh is required to exist on any POSIX-y system.

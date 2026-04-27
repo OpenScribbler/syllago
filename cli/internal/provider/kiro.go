@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -28,8 +27,11 @@ var Kiro = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".kiro"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. ~/.kiro/ is shared with
+		// syllago install paths (agents/), so trust the kiro binary on PATH
+		// or the Electron app-data dir (~/.config/Kiro on Linux,
+		// ~/Library/Application Support/Kiro on macOS).
+		return binaryOnPath("kiro") || dirExists(appDataDir(homeDir, "Kiro"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

@@ -1,11 +1,64 @@
 package provider
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
+
+// TestZedDetect: Zed stores its config at ~/.config/zed/settings.json (Linux)
+// — that file is created by Zed on first launch and syllago never writes
+// inside ~/.config/zed/. Trust the zed binary on PATH or the settings.json
+// marker file.
+func TestZedDetect(t *testing.T) {
+	t.Run("empty home + no binary", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if Zed.Detect(home) {
+			t.Error("expected false on empty home with no zed binary")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		// Zed has no global syllago install path under ~/.config/zed (rules go
+		// to project root only), but exercise the regression case by creating
+		// a sibling syllago-shaped dir to confirm Detect doesn't match it.
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".config", "zed-syllago-fake"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Zed.Detect(home) {
+			t.Error("expected false when only unrelated dirs exist (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("binary on PATH", func(t *testing.T) {
+		home := t.TempDir()
+		makeFakeBinary(t, "zed")
+		if !Zed.Detect(home) {
+			t.Error("expected true when zed binary is on PATH")
+		}
+	})
+
+	t.Run("settings.json marker present", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		dir := filepath.Join(home, ".config", "zed")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte("{}"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if !Zed.Detect(home) {
+			t.Error("expected true when ~/.config/zed/settings.json exists")
+		}
+	})
+}
 
 func TestZedSupportsTypes(t *testing.T) {
 	t.Parallel()
