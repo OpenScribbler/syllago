@@ -41,7 +41,6 @@ reviews/
 docs/*
 !docs/adr/
 !docs/design/
-!docs/plans/
 !docs/vhs/
 !docs/spec/
 !docs/workflows/

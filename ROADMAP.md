@@ -1,6 +1,6 @@
 # Roadmap
 
-Status reflects shipped state as of `VERSION` 0.9.0. For the running list of recent changes see [`CHANGELOG.md`](CHANGELOG.md). For active design work see [`docs/plans/`](docs/plans/).
+Status reflects shipped state as of `VERSION` 0.9.0. For the running list of recent changes see [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Trust and Supply Chain (MOAT)
 
