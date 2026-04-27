@@ -1,6 +1,8 @@
-
-# Use bd merge for beads JSONL files
+# Merge drivers
 .beads/issues.jsonl merge=beads
 
-# Golden test files: normalize line endings, keep text diffs in git
-cli/internal/tui/testdata/*.golden text eol=lf
+# Line endings — only files where bytes matter
+# Shell scripts: must be LF to execute on Unix systems regardless of contributor platform.
+# Golden test files: byte-exact comparison, must not vary by platform.
+*.sh                                  text eol=lf
+cli/internal/tui/testdata/*.golden    text eol=lf
