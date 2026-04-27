@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -29,14 +27,10 @@ var OpenCode = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		// Check for ~/.config/opencode/ directory
-		info, err := os.Stat(filepath.Join(homeDir, ".config", "opencode"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		// Also check if opencode command exists
-		_, err = exec.LookPath("opencode")
-		return err == nil
+		// Advisory only — see Provider.Detect doc. ~/.config/opencode/ is shared
+		// with syllago's content install paths, so we trust the opencode binary
+		// on PATH instead.
+		return binaryOnPath("opencode")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

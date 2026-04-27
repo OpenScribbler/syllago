@@ -9,18 +9,32 @@ import (
 )
 
 func TestOpenCodeDetect(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	if OpenCode.Detect(dir) {
-		t.Fatal("expected no detection in empty temp dir")
-	}
+	t.Run("empty home + no binary", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if OpenCode.Detect(home) {
+			t.Error("expected false on empty home with no opencode binary")
+		}
+	})
 
-	if err := os.MkdirAll(filepath.Join(dir, ".config", "opencode"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if !OpenCode.Detect(dir) {
-		t.Fatal("expected detection when ~/.config/opencode/ exists")
-	}
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".config", "opencode", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if OpenCode.Detect(home) {
+			t.Error("expected false when ~/.config/opencode/ contains only syllago content (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("binary on PATH", func(t *testing.T) {
+		home := t.TempDir()
+		makeFakeBinary(t, "opencode")
+		if !OpenCode.Detect(home) {
+			t.Error("expected true when opencode binary is on PATH")
+		}
+	})
 }
 
 func TestOpenCodeSupportsType(t *testing.T) {

@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,13 +28,9 @@ var Pi = Provider{
 		}
 		return ""
 	},
-	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".pi"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		_, err = exec.LookPath("pi")
-		return err == nil
+	Detect: func(_ string) bool {
+		// Advisory only — see Provider.Detect doc.
+		return binaryOnPath("pi")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

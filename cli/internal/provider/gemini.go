@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,8 +29,10 @@ var GeminiCLI = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".gemini"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. ~/.gemini/ is shared with
+		// syllago's content install paths, so we trust the gemini binary on
+		// PATH instead.
+		return binaryOnPath("gemini")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

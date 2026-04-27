@@ -23,15 +23,32 @@ func TestAmpSupportsType(t *testing.T) {
 }
 
 func TestAmpDetect(t *testing.T) {
-	t.Parallel()
-	home := t.TempDir()
-	if Amp.Detect(home) {
-		t.Error("should not detect without .config/amp")
-	}
-	os.MkdirAll(filepath.Join(home, ".config", "amp"), 0755)
-	if !Amp.Detect(home) {
-		t.Error("should detect with .config/amp")
-	}
+	t.Run("empty home + no binary", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if Amp.Detect(home) {
+			t.Error("expected false on empty home with no amp binary")
+		}
+	})
+
+	t.Run("syllago-content-only home", func(t *testing.T) {
+		home := t.TempDir()
+		scrubPATH(t)
+		if err := os.MkdirAll(filepath.Join(home, ".config", "amp", "skills"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if Amp.Detect(home) {
+			t.Error("expected false when ~/.config/amp/ contains only syllago content (regression for syllago-a6ibm)")
+		}
+	})
+
+	t.Run("binary on PATH", func(t *testing.T) {
+		home := t.TempDir()
+		makeFakeBinary(t, "amp")
+		if !Amp.Detect(home) {
+			t.Error("expected true when amp binary is on PATH")
+		}
+	})
 }
 
 func TestAmpInstallDir(t *testing.T) {

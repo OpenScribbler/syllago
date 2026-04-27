@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,13 +28,10 @@ var FactoryDroid = Provider{
 		}
 		return ""
 	},
-	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".factory"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		_, err = exec.LookPath("droid")
-		return err == nil
+	Detect: func(_ string) bool {
+		// Advisory only — see Provider.Detect doc. Factory ships its CLI as
+		// `droid`, not `factory`.
+		return binaryOnPath("droid")
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

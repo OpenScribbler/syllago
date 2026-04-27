@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,8 +29,11 @@ var ClaudeCode = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		info, err := os.Stat(filepath.Join(homeDir, ".claude"))
-		return err == nil && info.IsDir()
+		// Advisory only — see Provider.Detect doc. Trust the claude binary on
+		// PATH or the ~/.claude.json marker file (Claude Code writes it on
+		// first launch; syllago never does). The bare ~/.claude/ directory is
+		// not evidence — syllago itself populates it with skills/, rules/, etc.
+		return binaryOnPath("claude") || fileExists(filepath.Join(homeDir, ".claude.json"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {

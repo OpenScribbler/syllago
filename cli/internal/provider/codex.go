@@ -1,8 +1,6 @@
 package provider
 
 import (
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -30,14 +28,11 @@ var Codex = Provider{
 		return ""
 	},
 	Detect: func(homeDir string) bool {
-		// Check for .codex directory
-		info, err := os.Stat(filepath.Join(homeDir, ".codex"))
-		if err == nil && info.IsDir() {
-			return true
-		}
-		// Also check if codex command exists
-		_, err = exec.LookPath("codex")
-		return err == nil
+		// Advisory only — see Provider.Detect doc. Codex writes
+		// ~/.codex/auth.json on authentication; syllago never does.
+		// Bare ~/.codex/ is not evidence: syllago installs rules/agents
+		// directly into it.
+		return binaryOnPath("codex") || fileExists(filepath.Join(homeDir, ".codex", "auth.json"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {
 		switch ct {
