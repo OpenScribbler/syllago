@@ -20,10 +20,6 @@ on:
     - cron: '0 12 * * 1'
   workflow_dispatch: {}
 
-permissions:
-  contents: read
-  issues: write
-
 concurrency:
   group: moat-trusted-root-check
   cancel-in-progress: false
@@ -32,6 +28,9 @@ jobs:
   check:
     name: Check bundled trusted-root staleness
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
