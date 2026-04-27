@@ -37,13 +37,13 @@ func TestScanRealRepo(t *testing.T) {
 	}
 
 	if counts[Hooks] == 0 {
-		t.Error("expected at least 1 hook after restructuring")
+		t.Error("expected at least 1 hook in content/hooks/benchmark/")
 	}
 	if counts[Rules] == 0 {
-		t.Error("expected at least 1 rule after restructuring")
+		t.Error("expected at least 1 rule in content/rules/")
 	}
-	if counts[Commands] == 0 {
-		t.Error("expected at least 1 command after restructuring")
+	if counts[Skills] == 0 {
+		t.Error("expected at least 1 skill in content/skills/")
 	}
 
 	// Verify all provider-specific items have descriptions
