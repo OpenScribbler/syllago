@@ -260,7 +260,8 @@ run_test "claude mcp list (introspection)" test_claude_mcp_list
 
 test_preview_mode() {
   local output
-  output=$(syllago loadout apply "$LOADOUT_NAME" --preview 2>&1)
+  # Apply with no mode flag — that IS preview mode (no --try, no --keep).
+  output=$(syllago loadout apply "$LOADOUT_NAME" 2>&1)
 
   # Preview should show planned actions
   assert_contains "$output" "Preview" "should indicate preview mode"

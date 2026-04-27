@@ -216,3 +216,68 @@ func TestResolve_MultiProviderSlugOverride(t *testing.T) {
 		t.Errorf("expected gemini-cli rule, got provider %q", ruleRef.Item.Provider)
 	}
 }
+
+// TestResolve_CrossProviderFallback verifies that when a single-source loadout
+// (declares manifest.Provider = "claude-code") is applied --to a different
+// target (e.g. gemini-cli) and the target has no flavored copy of the content,
+// resolution falls back to the manifest's source provider. This enables the
+// cross-provider apply workflow: read claude-code content, convert at install
+// time to the gemini-cli target paths.
+func TestResolve_CrossProviderFallback(t *testing.T) {
+	t.Parallel()
+
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "smoke-rules", Type: catalog.Rules, Provider: "claude-code"},
+			{Name: "smoke-hook", Type: catalog.Hooks, Provider: "claude-code"},
+		},
+	}
+	manifest := &Manifest{
+		Provider: "claude-code",
+		Rules:    []ItemRef{{Name: "smoke-rules"}},
+		Hooks:    []ItemRef{{Name: "smoke-hook"}},
+	}
+
+	refs, err := Resolve(manifest, cat, "gemini-cli")
+	if err != nil {
+		t.Fatalf("expected fallback resolution to succeed, got: %v", err)
+	}
+	if len(refs) != 2 {
+		t.Fatalf("expected 2 refs, got %d", len(refs))
+	}
+	for _, r := range refs {
+		if r.Item.Provider != "claude-code" {
+			t.Errorf("ref %s: expected provider claude-code (fallback), got %q", r.Name, r.Item.Provider)
+		}
+	}
+}
+
+// TestResolve_TargetWinsOverFallback verifies that when the target provider
+// has its own flavored copy of the content, resolution prefers it over the
+// manifest's source-provider fallback. Without this, multi-provider loadouts
+// with both flavors present would resolve to the wrong copy.
+func TestResolve_TargetWinsOverFallback(t *testing.T) {
+	t.Parallel()
+
+	cat := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "shared", Type: catalog.Rules, Provider: "claude-code"},
+			{Name: "shared", Type: catalog.Rules, Provider: "gemini-cli"},
+		},
+	}
+	manifest := &Manifest{
+		Provider: "claude-code",
+		Rules:    []ItemRef{{Name: "shared"}},
+	}
+
+	refs, err := Resolve(manifest, cat, "gemini-cli")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("expected 1 ref, got %d", len(refs))
+	}
+	if refs[0].Item.Provider != "gemini-cli" {
+		t.Errorf("expected target gemini-cli to win, got provider %q", refs[0].Item.Provider)
+	}
+}
