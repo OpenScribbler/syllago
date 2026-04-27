@@ -48,7 +48,6 @@ docs/*
 # Capmon pipeline sidecars (tracking issue URLs, written at runtime by jtafb)
 docs/provider-formats/*.quality.json
 !docs/provider-sources/
-!docs/providers/
 !docs/runbooks/
 !docs/vhs/
 !docs/workflows/
@@ -82,3 +81,4 @@ tmp/
 .beads/daemon.log
 .wolf/memory.md
 .wolf/token-ledger.json
+.wolf/buglog.json
