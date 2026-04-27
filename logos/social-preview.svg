@@ -141,7 +141,7 @@
 
   <!-- Central tagline -->
   <text x="640" y="469" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="32" font-weight="400" fill="#e2e8f0">
-    Add once, install anywhere: rules, skills, agents, and configs.
+    Add once, install anywhere: rules, skills, agents, hooks, and MCP configs.
   </text>
 
   <!-- Horizontal divider -->
