@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generated_at": "2026-04-27T16:23:48Z",
-  "syllago_version": "0.10.2",
+  "generated_at": "2026-04-27T16:46:18Z",
+  "syllago_version": "0.10.3",
   "enums": {
     "effort": [
       "low",

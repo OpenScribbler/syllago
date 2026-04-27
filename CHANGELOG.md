@@ -5,6 +5,18 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.10.3] - 2026-04-27
+
+### Fixed
+
+- `syllago loadout apply <name> --to <other>` for single-source loadouts. Reference resolution now falls back to the manifest's source provider when the target has no flavored copy of a hook, rule, or command. Regression introduced in v0.10.0 by the multi-provider loadout work; cross-provider conversion (read source → convert to target on install) had stopped resolving refs entirely. Pinned by `TestResolve_CrossProviderFallback` and `TestResolve_TargetWinsOverFallback`.
+- `templates/hooks/hook.json` parse error. The shipped template used the legacy flat shape (top-level `event`/`matcher`, flat `hooks: [{type, command}]`). `Manifest.ParseManifest` rejects any manifest missing `spec: "hooks/0.1"`, so anyone scaffolding from the template hit `missing spec field`. Template now matches the canonical shape with top-level `spec` and nested `handler{}`.
+
+### Internal
+
+- Smoke fixture `tests/smoke/fixtures/hooks/claude-code/smoke-hook/hook.json` conformed to canonical `hooks/0.1`. Same parse error had been failing the Claude Code and Gemini provider smoke workflows since v0.10.0.
+- `Preview mode` smoke test no longer passes the removed `--preview` flag; running `syllago loadout apply <name>` with no mode flag is the canonical preview invocation.
+
 ## [0.10.2] - 2026-04-27
 
 ### Fixed
