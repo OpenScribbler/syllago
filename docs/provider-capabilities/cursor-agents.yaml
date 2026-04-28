@@ -1,0 +1,46 @@
+provider: cursor
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: 'Two scopes: project (.cursor/agents/) and user-global (~/.cursor/agents/).'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: Markdown files with YAML frontmatter in .cursor/agents/ (project) or ~/.cursor/agents/ (user); the frontmatter declares name, description, model, readonly, and is_background, and the Markdown body becomes the agent's system prompt.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: Custom agents are invoked through the Cursor IDE agent picker; background-enabled agents can also run concurrently via the background agents UI.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: model_selection
+      supported: true
+      mechanism: model frontmatter field selects a specific model for the agent, overriding the session default.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: false
+      mechanism: Cursor custom agents do not document a per-agent mcpServers field; they inherit the workspace MCP configuration.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: false
+      mechanism: Cursor custom agent files do not document spawning additional subagents from a user-defined agent; the three built-in subagents (Explore, Bash, Browser) are harness-provided, not file-overridable.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: readonly frontmatter flag restricts an agent to read-only tools; fine-grained per-tool allow/deny lists are not documented.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

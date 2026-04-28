@@ -1,0 +1,34 @@
+provider: opencode
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: No organization-level MCP management documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: true
+      mechanism: 'env_variable_expansion: environment variables configured in server env blocks'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: No OAuth 2.0 authentication for remote MCP servers documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: No per-server tool allowlist/blocklist documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'transport_types: OpenCode documents stdio transport; remote transports (http/sse) are available on sst/opencode depending on version'
+      source_field: ""
+      source_value: ""
+      confidence: inferred

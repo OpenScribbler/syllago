@@ -1,0 +1,58 @@
+provider: pi
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Pi hooks run synchronously; no async execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Pi hooks cannot inject context into the agent session via hook output
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: false
+      mechanism: Pi hooks are observational; no mechanism to block, allow, or modify tool invocations documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: handler_types
+      supported: true
+      mechanism: 'pi_extension_typescript_native: Pi hooks support TypeScript/native extension handler type beyond shell commands'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: false
+      mechanism: Pi hooks are project-scoped; no multi-scope configuration documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: input_modification
+      supported: true
+      mechanism: 'pi_extension_tool_call_blocking: Pi extensions can intercept and modify tool call inputs before execution'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: json_io_protocol
+      supported: false
+      mechanism: Pi hooks communicate via TypeScript extension API; no JSON stdin/stdout protocol for shell hooks
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: matcher_patterns
+      supported: false
+      mechanism: Pi hooks fire on configured lifecycle events; no per-tool filtering documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Pi hooks cannot make permission decisions about tool availability
+      source_field: ""
+      source_value: ""
+      confidence: inferred

@@ -1,0 +1,16 @@
+provider: windsurf
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: false
+      mechanism: Cascade Workflows are plain Markdown prompt templates; no `{{args}}` or equivalent placeholder syntax is documented for user-provided arguments
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: builtin_commands
+      supported: true
+      mechanism: Cascade exposes its own built-in chat slash commands (e.g. for conversation control) independently of user-authored Workflows; the `/<workflow-name>` namespace is reserved for user files
+      source_field: ""
+      source_value: ""
+      confidence: inferred

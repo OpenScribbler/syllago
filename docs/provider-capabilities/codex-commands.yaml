@@ -1,0 +1,16 @@
+provider: codex
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: false
+      mechanism: no implementation details captured; only source is a redirect stub to external docs — cannot confirm argument substitution support
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: no implementation details captured; slash commands feature exists but format and capabilities are undocumented in cached sources
+      source_field: ""
+      source_value: ""
+      confidence: unknown

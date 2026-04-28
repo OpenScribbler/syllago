@@ -1,0 +1,52 @@
+provider: kiro
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: true
+      mechanism: 'kiro_mcp_auto_approve: Kiro supports per-server or per-tool auto-approval configuration to suppress confirmation prompts'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Kiro does not document organization-level MCP management
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: false
+      mechanism: Kiro MCP configuration does not document environment variable expansion
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: false
+      mechanism: Kiro does not have an in-IDE MCP marketplace
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Kiro MCP does not document OAuth 2.0 authentication
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Kiro does not document MCP resource referencing
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: true
+      mechanism: 'kiro_mcp_disabled_tools: Kiro supports per-server tool disable configuration to control which MCP tools are available to the agent'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: transport_types
+      supported: false
+      mechanism: Kiro MCP transport types not documented beyond basic MCP support
+      source_field: ""
+      source_value: ""
+      confidence: inferred

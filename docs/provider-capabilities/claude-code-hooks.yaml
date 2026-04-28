@@ -1,0 +1,58 @@
+provider: claude-code
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: true
+      mechanism: 'hook_async_execution: async: true on command handlers runs hook in background without blocking; decisions ignored; systemMessage delivered on next turn'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: context_injection
+      supported: true
+      mechanism: Hooks return systemMessage field in JSON output to inject context into agent's active session
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'block: exit code 2 or decision=block; allow: permissionDecision=allow in hookSpecificOutput; modify: updatedInput replaces tool input before execution'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: true
+      mechanism: 'Four types: command (shell), http (POST to URL), prompt (LLM evaluation), agent (subagent with tools); prompt/agent restricted to subset of events'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: 'Six scopes: user (~/.claude/settings.json), project (.claude/settings.json), local (.claude/settings.local.json), managed policy, plugin (hooks/hooks.json), component frontmatter'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: true
+      mechanism: 'hook_input_modification: PreToolUse returns updatedInput in hookSpecificOutput; entire input object replaced; compatible with all permissionDecision values except defer'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: json_io_protocol
+      supported: true
+      mechanism: 'Command hooks receive event JSON on stdin; respond with JSON on stdout (exit 0); structured fields: continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: 'hook_matcher_patterns: exact string, pipe-separated list, or JavaScript regex; matches on tool_name or event-specific fields'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: true
+      mechanism: 'hook_permission_update_entries: PermissionRequest hooks return updatedPermissions with addRules/replaceRules/removeRules/setMode entries'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

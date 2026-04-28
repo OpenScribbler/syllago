@@ -1,0 +1,46 @@
+provider: roo-code
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: 'Two scopes: project (.roomodes at the project root) and global (custom_modes.yaml in Roo Code''s settings dir); project entries override global entries with the same slug'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: YAML file (.roomodes for project scope, custom_modes.yaml for global scope) containing an array of custom mode entries with slug, name, roleDefinition, groups, and optional whenToUse, description, customInstructions fields
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: Users switch modes via the mode selector or /mode command; each mode is a distinct operating persona with its own roleDefinition and tool groups
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: false
+      mechanism: No per-mode model selection field documented in the mode schema
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: per_agent_mcp
+      supported: false
+      mechanism: Custom modes do not declare their own MCP server lists — MCP configuration is global per the .roo/mcp.json and global MCP settings
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: false
+      mechanism: Custom modes are switched-to by the user rather than spawned as subagents; Roo Code's orchestrator mode delegates to other modes at runtime but mode files themselves do not spawn peers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: groups array declares which tool groups (e.g., read, edit, browser, command, mcp) the mode may use; group entries may be strings or objects with fileRegex restrictions
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

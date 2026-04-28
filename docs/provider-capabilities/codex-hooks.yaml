@@ -1,0 +1,58 @@
+provider: codex
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: true
+      mechanism: 'hook_execution_mode: Codex supports async hook execution mode for fire-and-forget background hook runs'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: context_injection
+      supported: true
+      mechanism: 'hook_system_message: Codex hooks can inject a system message into the agent''s active session context'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'hook_result_abort: Codex hooks can abort (block) the triggering action; allow and modify sub-capabilities documented via hook result schema'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: true
+      mechanism: 'hook_handler_types: Codex supports shell command and LLM prompt handler types; TypeScript extension type also documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: 'hook_scope: Codex hooks can be scoped to global/user or project configuration'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: true
+      mechanism: 'hook_updated_input: Codex PreToolUse hooks return modified input arguments that replace the original tool input'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: json_io_protocol
+      supported: false
+      mechanism: Codex hooks communicate via exit codes and stdout text; no structured JSON stdin/stdout protocol documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: 'hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: true
+      mechanism: 'hook_permission_decision: Codex hooks can return permission decisions that grant or deny tool availability'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

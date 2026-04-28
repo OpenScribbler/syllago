@@ -1,0 +1,16 @@
+provider: opencode
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: Named arguments via $VAR tokens substituted from user input at invocation (pattern observed in custom_commands.go — e.g. $ISSUE_NUMBER).
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: OpenCode documentation describes only user-authored slash commands loaded from .opencode/commands/ and ~/.config/opencode/commands/; no built-in commands are documented for this namespace.
+      source_field: ""
+      source_value: ""
+      confidence: inferred

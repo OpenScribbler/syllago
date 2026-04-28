@@ -1,0 +1,52 @@
+provider: factory-droid
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Factory Droid does not document pre-configured auto-approval for MCP tools
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Factory Droid does not document organization-level MCP management
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: false
+      mechanism: Factory Droid MCP configuration does not document environment variable expansion
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: false
+      mechanism: Factory Droid does not have an in-IDE MCP marketplace
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Factory Droid MCP does not document OAuth 2.0 authentication
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Factory Droid does not document MCP resource referencing
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: Factory Droid does not document per-server MCP tool filtering
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: false
+      mechanism: Factory Droid MCP transport types not documented beyond basic MCP support
+      source_field: ""
+      source_value: ""
+      confidence: inferred

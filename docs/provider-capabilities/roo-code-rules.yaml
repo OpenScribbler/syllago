@@ -1,0 +1,34 @@
+provider: roo-code
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: true
+      mechanism: 'mode_partitioned_activation: rule files in mode-specific directories (.roo/rules-<mode-slug>/) activate only when that mode is active; files in .roo/rules/ activate for all modes'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: No auto-append or persistent memory command documented for rule content
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: cross_provider_recognition
+      supported: true
+      mechanism: 'legacy_clinerules_fallback: Roo Code reads .clinerules/ as a backward-compatibility fallback when native .roo/rules/ is absent'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: file_imports
+      supported: false
+      mechanism: No import directive syntax documented — rule files are loaded as plain markdown bodies
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hierarchical_loading
+      supported: true
+      mechanism: 'mode_scoped_loading: files under .roo/rules/ load universally; files under .roo/rules-<mode>/ load conditionally based on the active mode'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

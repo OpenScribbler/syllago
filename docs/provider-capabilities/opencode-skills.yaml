@@ -1,10 +1,10 @@
-provider: kiro
+provider: opencode
 content_type: skills
 format: ""
 proposed_mappings:
     - canonical_key: canonical_filename
       supported: true
-      mechanism: Fixed filename POWER.md (required, all caps)
+      mechanism: Fixed filename SKILL.md inside skill directory (Agent Skills spec)
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -14,33 +14,21 @@ proposed_mappings:
       source_field: ""
       source_value: ""
       confidence: confirmed
-    - canonical_key: custom_filename
-      supported: false
-      mechanism: Not observed — POWER.md is fixed
-      source_field: ""
-      source_value: ""
-      confidence: confirmed
     - canonical_key: description
       supported: true
       mechanism: 'yaml frontmatter key: description (required)'
       source_field: ""
       source_value: ""
       confidence: confirmed
-    - canonical_key: disable_model_invocation
-      supported: false
-      mechanism: ""
-      source_field: ""
-      source_value: ""
-      confidence: confirmed
     - canonical_key: display_name
       supported: true
-      mechanism: 'yaml frontmatter key: name (required, slug-style identifier)'
+      mechanism: 'yaml frontmatter key: name (required)'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: global_scope
-      supported: false
-      mechanism: ""
+      supported: true
+      mechanism: cross-provider convention at ~/.config/opencode/skills/<name>/SKILL.md
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -58,19 +46,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: project_scope
       supported: true
-      mechanism: Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)
-      source_field: ""
-      source_value: ""
-      confidence: confirmed
-    - canonical_key: shared_scope
-      supported: false
-      mechanism: ""
-      source_field: ""
-      source_value: ""
-      confidence: confirmed
-    - canonical_key: user_invocable
-      supported: false
-      mechanism: ""
+      mechanism: cross-provider SKILL.md convention at .opencode/skill/<name>/SKILL.md
       source_field: ""
       source_value: ""
       confidence: confirmed

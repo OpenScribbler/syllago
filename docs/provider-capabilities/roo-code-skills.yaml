@@ -1,0 +1,76 @@
+provider: roo-code
+content_type: skills
+format: ""
+proposed_mappings:
+    - canonical_key: canonical_filename
+      supported: true
+      mechanism: SKILL.md (required, fixed name per Agent Skills standard)
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: compatibility
+      supported: false
+      mechanism: No compatibility frontmatter field observed in Roo Code skill examples
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: custom_filename
+      supported: false
+      mechanism: Filename is fixed as SKILL.md — no alternate filenames observed
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: description
+      supported: true
+      mechanism: 'yaml frontmatter key: description (required); documents what the skill does and when Roo should load it'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: disable_model_invocation
+      supported: false
+      mechanism: No disable-model-invocation frontmatter field observed
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: display_name
+      supported: true
+      mechanism: 'yaml frontmatter key: name (required); identifies the skill and typically matches the directory name'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: global_scope
+      supported: true
+      mechanism: ~/.roo/skills/<slug>/SKILL.md
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: license
+      supported: false
+      mechanism: No license frontmatter field observed in Roo Code skill examples
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: metadata_map
+      supported: false
+      mechanism: No metadata frontmatter key observed in Roo Code skill examples
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: project_scope
+      supported: true
+      mechanism: .roo/skills/<slug>/SKILL.md
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: shared_scope
+      supported: true
+      mechanism: .agents/skills/<slug>/SKILL.md cross-provider convention directory read alongside .roo/skills/
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: user_invocable
+      supported: false
+      mechanism: No user-invocation flag observed — skills are auto-loaded based on description matching
+      source_field: ""
+      source_value: ""
+      confidence: inferred

@@ -1,0 +1,52 @@
+provider: windsurf
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Windsurf does not support pre-configured auto-approval for specific MCP tools
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: true
+      mechanism: 'enterprise_whitelist_and_registry: Windsurf supports organization-level MCP server allowlists and enterprise registries'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: env_var_expansion
+      supported: true
+      mechanism: 'config_interpolation: Windsurf MCP configuration supports ${VAR} interpolation for environment variables'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: marketplace
+      supported: true
+      mechanism: 'mcp_marketplace: Windsurf has an in-IDE MCP server discovery and one-click installation experience'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Windsurf MCP does not document OAuth 2.0 authentication for remote servers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Windsurf does not document @-mention or equivalent access to MCP resources
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: Windsurf exposes all tools from connected MCP servers; no per-server tool allowlist or blocklist documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'three_transport_types: Windsurf supports stdio, SSE, and HTTP/streamable-HTTP transports'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

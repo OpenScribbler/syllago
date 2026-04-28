@@ -49,7 +49,7 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: unknown
+      confidence: confirmed
     - canonical_key: user_invocable
       supported: true
       mechanism: 'yaml frontmatter key: user-invocable (optional bool, default: true)'

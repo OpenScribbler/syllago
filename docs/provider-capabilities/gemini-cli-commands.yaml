@@ -1,0 +1,16 @@
+provider: gemini-cli
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: '{{args}} placeholder injects all user-provided arguments; processed before shell injection (!{...}) and other substitutions; default argument handling collapses newlines'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: builtin_commands
+      supported: true
+      mechanism: built-in slash commands include /commands reload (reload command files without restart) and /help; user-defined commands supplement but do not replace built-ins
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

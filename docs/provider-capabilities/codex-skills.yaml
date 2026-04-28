@@ -49,4 +49,4 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: unknown
+      confidence: confirmed

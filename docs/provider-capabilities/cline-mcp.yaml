@@ -1,0 +1,52 @@
+provider: cline
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: true
+      mechanism: 'always_allow_tools (execution-gating scope): Cline''s always_allow list suppresses per-invocation confirmation prompts for listed tools that are already visible'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Cline does not document organization-level MCP configuration management
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: false
+      mechanism: Cline MCP configuration does not document environment variable expansion syntax
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: true
+      mechanism: 'mcp_marketplace: Cline has an in-IDE MCP server discovery and installation experience'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Cline MCP does not document OAuth 2.0 authentication for remote servers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Cline does not document @-mention or equivalent access to MCP resources
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: true
+      mechanism: 'always_allow_tools (visibility scope): Cline''s always_allow list controls which MCP tools are exposed in the agent''s available tool set without per-invocation prompts'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'sse_transport_support: Cline supports SSE transport alongside stdio; HTTP transport support follows MCP protocol adoption'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

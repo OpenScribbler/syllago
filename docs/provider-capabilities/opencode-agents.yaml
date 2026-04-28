@@ -1,0 +1,46 @@
+provider: opencode
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: 'Two scopes: project (.opencode/agents/) and user-global (~/.config/opencode/agents/). Both scopes are loaded and coexist.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: Markdown files with YAML frontmatter loaded from .opencode/agents/*.md (project) and ~/.config/opencode/agents/*.md (global). The loader glob accepts both agent/ and agents/ directory names and recurses. Frontmatter declares description (required), mode, model, permission, steps, temperature, top_p, color, and hidden; the markdown body becomes the system prompt.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: 'Agent name derives from the filename (configEntryNameFromPath). Agents with mode: primary can be selected as the session agent; agents with mode: subagent are invoked by other agents via description-driven matching; mode: all allows both.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: true
+      mechanism: Frontmatter model field selects a specific model alias or full model string for the agent, overriding the session default.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: false
+      mechanism: OpenCode agent frontmatter does not document a per-agent mcpServers field; agents inherit the workspace MCP configuration.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: true
+      mechanism: 'Agents with mode: subagent (or mode: all) can be invoked from other agents; delegation is driven by the callee''s description field.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: The permission frontmatter map configures ask/allow/deny per tool, replacing the deprecated tools allow/deny map.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

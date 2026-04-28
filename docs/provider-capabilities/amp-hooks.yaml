@@ -1,0 +1,58 @@
+provider: amp
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Amp hooks run synchronously; no async execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Amp hooks cannot inject context into the agent session beyond the pre-execute 'send-user-message' action that cancels the tool call
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: true
+      mechanism: Pre-execute 'send-user-message' action cancels the pending tool call and injects a user message; exit code 0 = allow, non-zero = block
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: true
+      mechanism: 'command-only: hook ''action'' field runs a shell command; no HTTP, LLM, or agent handler types documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: false
+      mechanism: 'Project only: hooks live in a single ''amp.hooks'' array inside ''.amp/settings.json'' (or user-scope settings); no multi-scope layering documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Amp hooks cannot modify tool input before execution; only substring match and cancel-with-message are documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: false
+      mechanism: Amp hooks signal decisions via exit codes and declarative action types; no JSON stdin/stdout protocol documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: Amp hooks filter firing via 'input.contains' — exact literal substring match against tool input
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: true
+      mechanism: 'permissions_system: Amp has a permissions system that hooks interact with to make tool availability decisions'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

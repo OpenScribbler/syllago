@@ -1,0 +1,34 @@
+provider: copilot-cli
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: false
+      mechanism: Copilot CLI rules load unconditionally at session start; no conditional or manual activation modes documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: Copilot CLI does not have an AI-generated persistent memory system for rules
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: cross_provider_recognition
+      supported: true
+      mechanism: 'agents_md_instructions: Copilot CLI reads AGENTS.md files following the multi-provider shared format'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: file_imports
+      supported: false
+      mechanism: No @-import or file inclusion syntax documented for Copilot CLI rule files
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hierarchical_loading
+      supported: true
+      mechanism: Copilot CLI supports repo-wide instructions plus path-specific and personal instruction layers with defined precedence
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

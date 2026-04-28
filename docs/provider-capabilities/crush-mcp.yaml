@@ -1,0 +1,52 @@
+provider: crush
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Crush does not document pre-configured auto-approval for specific MCP tools
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Crush does not document organization-level MCP management
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: true
+      mechanism: 'env_variable_expansion: Crush MCP configuration supports environment variable references in server env blocks'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: false
+      mechanism: Crush does not have an in-app MCP marketplace
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Crush MCP does not document OAuth 2.0 authentication for remote servers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: MCP resource referencing (as distinct from tool calls) not documented in Crush
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: Per-server tool allow/block list not documented in the Crush MCP schema
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'transport_types: Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

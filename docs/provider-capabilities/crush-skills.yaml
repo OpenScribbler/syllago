@@ -1,46 +1,46 @@
-provider: gemini-cli
+provider: crush
 content_type: skills
 format: ""
 proposed_mappings:
     - canonical_key: canonical_filename
       supported: true
-      mechanism: SKILL.md (required, fixed name)
+      mechanism: SKILL.md (required, fixed name per the Agent Skills standard)
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: custom_filename
       supported: false
-      mechanism: not observed — filename is fixed as SKILL.md
+      mechanism: filename is fixed as SKILL.md per the Agent Skills standard
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: description
       supported: true
-      mechanism: 'yaml frontmatter key: description (required); documents what the skill does and when Gemini should use it — drives auto-invocation decisions'
+      mechanism: 'yaml frontmatter key: description (required); documents what the skill does and when Crush should invoke it'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: disable_model_invocation
-      supported: false
-      mechanism: ""
+      supported: true
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional boolean) per the Agent Skills standard'
       source_field: ""
       source_value: ""
-      confidence: confirmed
+      confidence: inferred
     - canonical_key: display_name
       supported: true
-      mechanism: 'yaml frontmatter key: name (required); value should match the skill''s directory name'
+      mechanism: 'yaml frontmatter key: name (required); follows the Anthropic Agent Skills standard'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: global_scope
       supported: true
-      mechanism: ~/.gemini/skills/<name>/SKILL.md
+      mechanism: ~/.config/crush/skills/<name>/SKILL.md (XDG-compliant native path) and ~/.agents/skills/<name>/SKILL.md (cross-provider convention)
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: project_scope
       supported: true
-      mechanism: .gemini/skills/<name>/SKILL.md
+      mechanism: .crush/skills/<name>/SKILL.md (native) and .agents/skills/<name>/SKILL.md (cross-provider convention)
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -49,10 +49,10 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: confirmed
+      confidence: inferred
     - canonical_key: user_invocable
       supported: false
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: confirmed
+      confidence: inferred

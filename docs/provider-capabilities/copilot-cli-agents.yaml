@@ -1,0 +1,46 @@
+provider: copilot-cli
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: project scope (.github/agents/ or .claude/agents/), personal (~/.copilot/agents/), plugin (agents/); personal takes precedence over project
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: .agent.md files with YAML frontmatter (description required); up to 30,000 chars of Markdown instructions as agent system prompt
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: /agent slash command, natural language instruction, auto-inference (suppressible with disable-model-invocation), or --agent flag; 4 patterns
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: true
+      mechanism: model field in frontmatter overrides default model for that agent
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: true
+      mechanism: mcp-servers inline config in frontmatter; available for cloud agent only; workspace MCP config shared by default
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: true
+      mechanism: agents run as subagents with isolated context windows; Git-SHA-based versioning ensures consistency across PR interactions
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: tools field with cross-provider alias system (execute/shell/Bash, read/Read, edit/Edit, etc.); ["*"] grants all tools; unrecognized names silently ignored
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

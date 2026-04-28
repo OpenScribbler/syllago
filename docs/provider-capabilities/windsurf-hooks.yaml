@@ -1,0 +1,58 @@
+provider: windsurf
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Windsurf hooks run synchronously; no async/background execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Windsurf hooks cannot inject context into the agent's active session
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: false
+      mechanism: Windsurf hooks are observational; no mechanism to block, allow, or modify the triggering action documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: handler_types
+      supported: false
+      mechanism: Windsurf hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: 'three_config_scopes: global (user-wide), workspace, and managed/enterprise hook configuration scopes'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Windsurf hooks cannot modify tool input arguments before execution
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: true
+      mechanism: 'json_stdin_context: Windsurf hooks receive event context as JSON on stdin'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: matcher_patterns
+      supported: false
+      mechanism: Windsurf hooks fire on all events of their configured type; no per-tool or regex matching documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Windsurf hooks do not participate in permission decisions
+      source_field: ""
+      source_value: ""
+      confidence: inferred

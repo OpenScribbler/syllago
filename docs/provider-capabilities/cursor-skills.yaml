@@ -1,64 +1,64 @@
-provider: kiro
+provider: cursor
 content_type: skills
 format: ""
 proposed_mappings:
     - canonical_key: canonical_filename
       supported: true
-      mechanism: Fixed filename POWER.md (required, all caps)
+      mechanism: SKILL.md (required, fixed name per Agent Skills convention).
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: compatibility
       supported: true
-      mechanism: 'yaml frontmatter key: compatibility (optional)'
+      mechanism: 'yaml frontmatter key: compatibility (optional).'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: custom_filename
       supported: false
-      mechanism: Not observed — POWER.md is fixed
+      mechanism: Not observed — the skill filename is fixed as SKILL.md.
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: description
       supported: true
-      mechanism: 'yaml frontmatter key: description (required)'
+      mechanism: 'yaml frontmatter key: description (required); documents what the skill does and when to use it.'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: disable_model_invocation
-      supported: false
-      mechanism: ""
+      supported: true
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false).'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: display_name
       supported: true
-      mechanism: 'yaml frontmatter key: name (required, slug-style identifier)'
+      mechanism: 'yaml frontmatter key: name (required); matches the skill directory name per the Agent Skills convention.'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: global_scope
-      supported: false
-      mechanism: ""
+      supported: true
+      mechanism: ~/.agents/skills/<name>/SKILL.md for user-global scope via the cross-provider Agent Skills convention.
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: license
       supported: true
-      mechanism: 'yaml frontmatter key: license (optional)'
+      mechanism: 'yaml frontmatter key: license (optional).'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: metadata_map
       supported: true
-      mechanism: 'yaml frontmatter key: metadata (optional map)'
+      mechanism: 'yaml frontmatter key: metadata (optional map of arbitrary key/value pairs).'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: project_scope
       supported: true
-      mechanism: Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)
+      mechanism: .cursor/skills/<name>/SKILL.md for Cursor-native project scope; .agents/skills/<name>/SKILL.md is also recognized via the cross-provider Agent Skills convention.
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -67,10 +67,10 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: confirmed
+      confidence: inferred
     - canonical_key: user_invocable
       supported: false
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: confirmed
+      confidence: inferred
