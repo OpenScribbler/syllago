@@ -32,39 +32,57 @@ func runTelemetryStatus(cmd *cobra.Command, args []string) error {
 
 	if output.JSON {
 		type statusOut struct {
-			Enabled     bool   `json:"enabled"`
-			AnonymousID string `json:"anonymousId"`
-			Endpoint    string `json:"endpoint,omitempty"`
+			Enabled         bool   `json:"enabled"`
+			ConsentRecorded bool   `json:"consentRecorded"`
+			AnonymousID     string `json:"anonymousId"`
+			Endpoint        string `json:"endpoint,omitempty"`
 		}
 		endpoint := cfg.Endpoint
 		if endpoint == "" {
 			endpoint = "https://us.i.posthog.com/capture/"
 		}
 		data, _ := json.MarshalIndent(statusOut{
-			Enabled:     cfg.Enabled,
-			AnonymousID: cfg.AnonymousID,
-			Endpoint:    endpoint,
+			Enabled:         cfg.Enabled,
+			ConsentRecorded: cfg.ConsentRecorded,
+			AnonymousID:     cfg.AnonymousID,
+			Endpoint:        endpoint,
 		}, "", "  ")
 		fmt.Fprintln(output.Writer, string(data))
 		return nil
 	}
 
-	state := "disabled"
-	if cfg.Enabled {
-		state = "enabled"
+	state := "disabled (opt-in)"
+	switch {
+	case cfg.Enabled && cfg.ConsentRecorded:
+		state = "enabled (you opted in)"
+	case !cfg.Enabled && cfg.ConsentRecorded:
+		state = "disabled (you opted out)"
+	case !cfg.ConsentRecorded:
+		state = "disabled (awaiting your decision)"
 	}
 	fmt.Fprintf(output.Writer, "Telemetry: %s\n", state)
-	fmt.Fprintf(output.Writer, "Anonymous ID: %s\n\n", cfg.AnonymousID)
-	fmt.Fprintf(output.Writer, "Events tracked:\n")
-	fmt.Fprintf(output.Writer, "  command_executed    Command name, provider, content type, count,\n")
-	fmt.Fprintf(output.Writer, "                      success, dry-run, version, OS, architecture\n")
-	fmt.Fprintf(output.Writer, "  tui_session_started TUI session completed (no interaction details)\n\n")
-	fmt.Fprintf(output.Writer, "Never tracked:\n")
-	fmt.Fprintf(output.Writer, "  File contents, paths, usernames, hostnames, registry URLs,\n")
-	fmt.Fprintf(output.Writer, "  hook commands, MCP configs, or any content you manage.\n\n")
+	id := cfg.AnonymousID
+	if id == "" {
+		id = "(not yet generated)"
+	}
+	fmt.Fprintf(output.Writer, "Anonymous ID: %s\n\n", id)
+	fmt.Fprintf(output.Writer, "Telemetry is opt-in. Nothing is sent unless you have explicitly\n")
+	fmt.Fprintf(output.Writer, "agreed via the consent prompt or `syllago telemetry on`.\n\n")
+	fmt.Fprintf(output.Writer, "What we collect (only with your consent):\n")
+	for _, item := range telemetry.CollectedItems() {
+		fmt.Fprintf(output.Writer, "  - %s\n", item)
+	}
+	fmt.Fprintln(output.Writer)
+	fmt.Fprintf(output.Writer, "What we never collect:\n")
+	for _, item := range telemetry.NeverItems() {
+		fmt.Fprintf(output.Writer, "  - %s\n", item)
+	}
+	fmt.Fprintln(output.Writer)
+	fmt.Fprintf(output.Writer, "Enable:   syllago telemetry on\n")
 	fmt.Fprintf(output.Writer, "Disable:  syllago telemetry off\n")
 	fmt.Fprintf(output.Writer, "Reset ID: syllago telemetry reset\n")
-	fmt.Fprintf(output.Writer, "Docs:     https://syllago.dev/telemetry\n")
+	fmt.Fprintf(output.Writer, "Docs:     %s\n", telemetry.DocsURL)
+	fmt.Fprintf(output.Writer, "Code:     %s\n", telemetry.CodeURL)
 	return nil
 }
 

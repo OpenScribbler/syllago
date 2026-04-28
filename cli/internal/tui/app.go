@@ -75,19 +75,20 @@ type App struct {
 	projectRoot     string
 
 	// Sub-models
-	topBar         topBarModel
-	library        libraryModel  // Library tab: table + drill-in
-	explorer       explorerModel // Content/Loadout tabs: items list + preview
-	gallery        galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
-	helpBar        helpBarModel
-	modal          editModal           // reusable edit overlay (name + description)
-	confirm        confirmModal        // reusable confirm overlay (uninstall + simple confirms)
-	remove         removeModal         // multi-step remove overlay (library item removal)
-	help           helpOverlay         // keyboard shortcut reference (? key)
-	toast          toastModel          // bottom-right notification overlay
-	registryAdd    registryAddModal    // registry add overlay
-	tofu           tofuModal           // MOAT trust-on-first-use approval overlay
-	trustInspector trustInspectorModel // reusable trust inspector (library + registries)
+	topBar           topBarModel
+	library          libraryModel  // Library tab: table + drill-in
+	explorer         explorerModel // Content/Loadout tabs: items list + preview
+	gallery          galleryModel  // Loadouts/Registries tabs: card grid + contents sidebar
+	helpBar          helpBarModel
+	modal            editModal             // reusable edit overlay (name + description)
+	confirm          confirmModal          // reusable confirm overlay (uninstall + simple confirms)
+	remove           removeModal           // multi-step remove overlay (library item removal)
+	help             helpOverlay           // keyboard shortcut reference (? key)
+	toast            toastModel            // bottom-right notification overlay
+	registryAdd      registryAddModal      // registry add overlay
+	tofu             tofuModal             // MOAT trust-on-first-use approval overlay
+	trustInspector   trustInspectorModel   // reusable trust inspector (library + registries)
+	telemetryConsent telemetryConsentModal // first-run opt-in disclosure
 
 	// Config group sub-models
 	configSettings settingsModel
@@ -135,7 +136,6 @@ type App struct {
 	galleryDrillIn       bool   // true when viewing card contents as a library
 	galleryDrillCard     string // name of the card we drilled into (for breadcrumbs)
 	registryOpInProgress bool   // true during async registry operation (add/sync/remove)
-	telemetryNotice      bool   // true if first-run telemetry notice should be shown as toast
 
 	// D16 rule-append verification state — populated by rescanCatalog and
 	// consumed by library (Installed column is binary from MatchSet) and
@@ -155,44 +155,40 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		cat = &catalog.Catalog{}
 	}
 
-	// Check if first-run telemetry notice should display as a TUI toast.
-	// PersistentPreRun already called telemetry.Init() which sets noticeSeen=true
-	// on the CLI path, so this will only be true if noticeSeen was already false
-	// before Init() ran (i.e., first-ever launch).
-	showTelemetryNotice := false
-	telemetryCfg := telemetry.Status()
-	if !telemetryCfg.NoticeSeen && telemetryCfg.Enabled {
-		showTelemetryNotice = true
+	// Telemetry is opt-in; if the user has not yet recorded a consent
+	// decision the modal opens before any other UI is reachable.
+	consent := newTelemetryConsentModal()
+	if telemetry.NeedsConsent() {
+		consent.Open()
 	}
 
 	a := App{
-		catalog:         cat,
-		providers:       providers,
-		version:         version,
-		autoUpdate:      autoUpdate,
-		isReleaseBuild:  isReleaseBuild,
-		registrySources: registrySources,
-		cfg:             cfg,
-		contentRoot:     contentRoot,
-		projectRoot:     projectRoot,
-		topBar:          newTopBar(),
-		library:         newLibraryModel(cat.Items, providers, projectRoot),
-		explorer:        newExplorerModel(nil, false, providers, projectRoot),
-		gallery:         newGalleryModel(),
-		helpBar:         newHelpBar(version),
-		modal:           newEditModal(),
-		confirm:         newConfirmModal(),
-		remove:          newRemoveModal(),
-		help:            newHelpOverlay(),
-		toast:           newToastModel(),
-		registryAdd:     newRegistryAddModal(),
-		tofu:            newTOFUModal(),
-		trustInspector:  newTrustInspectorModel(),
+		catalog:          cat,
+		providers:        providers,
+		version:          version,
+		autoUpdate:       autoUpdate,
+		isReleaseBuild:   isReleaseBuild,
+		registrySources:  registrySources,
+		cfg:              cfg,
+		contentRoot:      contentRoot,
+		projectRoot:      projectRoot,
+		topBar:           newTopBar(),
+		library:          newLibraryModel(cat.Items, providers, projectRoot),
+		explorer:         newExplorerModel(nil, false, providers, projectRoot),
+		gallery:          newGalleryModel(),
+		helpBar:          newHelpBar(version),
+		modal:            newEditModal(),
+		confirm:          newConfirmModal(),
+		remove:           newRemoveModal(),
+		help:             newHelpOverlay(),
+		toast:            newToastModel(),
+		registryAdd:      newRegistryAddModal(),
+		tofu:             newTOFUModal(),
+		trustInspector:   newTrustInspectorModel(),
+		telemetryConsent: consent,
 
 		moatSession: moat.NewSession(),
 		moatMinTier: moat.TrustTierUnsigned,
-
-		telemetryNotice: showTelemetryNotice,
 	}
 
 	// Extract registry names for settings display
@@ -207,14 +203,8 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 	return a
 }
 
-// telemetryNoticeMsg triggers the first-run telemetry toast in Update().
-type telemetryNoticeMsg struct{}
-
 // Init implements tea.Model.
 func (a App) Init() tea.Cmd {
-	if a.telemetryNotice {
-		return func() tea.Msg { return telemetryNoticeMsg{} }
-	}
 	return nil
 }
 

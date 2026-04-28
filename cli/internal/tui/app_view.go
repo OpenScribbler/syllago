@@ -43,6 +43,13 @@ func (a App) View() string {
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
 	}
+	// Consent modal overlays all other modals/wizards on first run. It is
+	// placed last (just before the toast layer) so nothing visually leaks
+	// through; Update routes input to it before any other component, so
+	// what the user sees and what they can interact with stay in sync.
+	if a.telemetryConsent.Active() {
+		content = overlayModal(content, a.telemetryConsent.View(), a.width, a.contentHeight())
+	}
 	if a.toast.visible {
 		content = overlayToast(content, a.toast.View(), a.width, a.contentHeight())
 	}
