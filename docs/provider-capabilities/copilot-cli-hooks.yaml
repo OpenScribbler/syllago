@@ -1,0 +1,58 @@
+provider: copilot-cli
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Copilot CLI hooks run synchronously; no async execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Copilot CLI hooks cannot inject context into the agent session
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'pre_tool_use_deny: Copilot CLI PreToolUse hooks can deny (block) the tool invocation; no allow or modify documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: false
+      mechanism: Copilot CLI hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hook_scopes
+      supported: false
+      mechanism: Copilot CLI hooks are configured at a single scope level; no multi-scope configuration documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Copilot CLI hooks cannot modify tool input before execution
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: false
+      mechanism: Copilot CLI hooks communicate via exit codes; no JSON stdin/stdout protocol documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: matcher_patterns
+      supported: false
+      mechanism: Copilot CLI hooks fire on all events of their configured type; no per-tool filtering documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Copilot CLI hooks can deny tool invocations (decision_control) but do not govern tool availability
+      source_field: ""
+      source_value: ""
+      confidence: inferred

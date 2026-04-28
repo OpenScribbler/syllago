@@ -1,0 +1,52 @@
+provider: zed
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Zed does not document a pre-approved MCP tools list
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Zed does not document org-level MCP management
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: false
+      mechanism: no automatic environment variable expansion documented in Zed MCP env blocks
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: true
+      mechanism: Zed exposes an in-app MCP server gallery where servers can be browsed and installed
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Zed MCP configuration does not document OAuth 2.0 authentication for MCP servers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: MCP resource referencing via @-style syntax is not documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: no per-server include/exclude tool filter documented in Zed MCP configuration
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: true
+      mechanism: MCP servers are configured with a stdio command under context_servers in settings.json
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

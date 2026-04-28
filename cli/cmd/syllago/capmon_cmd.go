@@ -78,6 +78,15 @@ var capmonVerifyCmd = &cobra.Command{
 				continue
 			}
 			path := filepath.Join(dir, e.Name())
+			// Skip per-content-type seeder specs (e.g. amp-skills.yaml). Those use
+			// `provider:` at the top level instead of `slug:` and have no
+			// schema_version field. They are an internal capmon artifact, not a
+			// canonical capability YAML, so schema validation does not apply.
+			// Mirrors the Slug=="" pattern in internal/capmon/generate.go.
+			caps, err := capyaml.LoadCapabilityYAML(path)
+			if err == nil && caps.Slug == "" {
+				continue
+			}
 			if err := capyaml.ValidateAgainstSchema(path, migrationWindow); err != nil {
 				return fmt.Errorf("validate %s: %w", e.Name(), err)
 			}

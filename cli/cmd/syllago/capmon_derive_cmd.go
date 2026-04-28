@@ -50,17 +50,18 @@ Content types with status=unsupported are omitted from output.`,
 			return fmt.Errorf("load format doc: %w", err)
 		}
 
-		spec, err := capmon.DeriveSeederSpec(doc, canonicalKeys)
+		specs, err := capmon.DeriveSeederSpecs(doc, canonicalKeys)
 		if err != nil {
 			return err
 		}
 
-		outPath := capmon.SeederSpecPath(outputDir, provider, spec.ContentType)
-		if err := capmon.WriteSeederSpec(spec, outPath); err != nil {
-			return fmt.Errorf("write seeder spec: %w", err)
+		for _, spec := range specs {
+			outPath := capmon.SeederSpecPath(outputDir, provider, spec.ContentType)
+			if err := capmon.WriteSeederSpec(spec, outPath); err != nil {
+				return fmt.Errorf("write seeder spec for %q: %w", spec.ContentType, err)
+			}
+			fmt.Printf("✓ Derived seeder spec for %q (%s) → %s\n", provider, spec.ContentType, outPath)
 		}
-
-		fmt.Printf("✓ Derived seeder spec for %q → %s\n", provider, outPath)
 		return nil
 	},
 }

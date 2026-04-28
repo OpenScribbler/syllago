@@ -1,0 +1,16 @@
+provider: factory-droid
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: $ARGUMENTS substitution in Markdown-type commands; equivalent to Claude Code's $ARGUMENTS pattern; Executable commands receive args via shell process stdin/args
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: no built-in slash commands documented; Factory commands are user-defined Markdown templates or executables
+      source_field: ""
+      source_value: ""
+      confidence: inferred

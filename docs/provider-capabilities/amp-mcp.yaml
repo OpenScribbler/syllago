@@ -1,0 +1,52 @@
+provider: amp
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Amp does not document pre-configured auto-approval for specific MCP tools separate from tool filtering
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: true
+      mechanism: 'enterprise_registry_allowlist: Amp supports organization-level MCP configuration with an enterprise registry and allowlist'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: env_var_expansion
+      supported: false
+      mechanism: Amp MCP configuration does not document environment variable expansion
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: false
+      mechanism: Amp does not have an in-IDE MCP marketplace
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: oauth_support
+      supported: true
+      mechanism: 'oauth_support: Amp supports OAuth 2.0 authentication for remote MCP servers'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Amp does not document MCP resource referencing
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: true
+      mechanism: 'per_tool_enable_disable: Amp supports per-tool enable/disable configuration to control which MCP tools are exposed to the agent'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: transport_types
+      supported: false
+      mechanism: Amp MCP transport types not documented beyond basic MCP support
+      source_field: ""
+      source_value: ""
+      confidence: inferred

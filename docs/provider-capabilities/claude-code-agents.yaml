@@ -1,0 +1,46 @@
+provider: claude-code
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: '5 scopes (highest-first): managed settings (org-wide), CLI --agents flag (session), project (.claude/agents/), user (~/.claude/agents/), plugin; highest-priority wins on name collision'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: Markdown files with YAML frontmatter in .claude/agents/ (project) or ~/.claude/agents/ (user); file body becomes system prompt
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: natural language (Claude auto-delegates), @agent-<name> @-mention, or --agent flag at startup for session-wide agent; 3 patterns
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: true
+      mechanism: model frontmatter field accepts sonnet/opus/haiku alias, full model ID, or inherit (default); per-agent override
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: true
+      mechanism: 'mcpServers frontmatter field: list of server names referencing already-configured workspace servers or inline server definitions'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: subagent_spawning
+      supported: true
+      mechanism: main-thread agents spawn subagents via Agent tool; subagents cannot spawn further subagents; Agent(type) in tools allowlist restricts which subagent types are allowed
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: tools allowlist and disallowedTools denylist in frontmatter; Agent(type) syntax restricts which subagent types a main-thread agent can spawn
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

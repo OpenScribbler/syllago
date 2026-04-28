@@ -1,0 +1,46 @@
+provider: codex
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: built-in roles always available; user-defined roles in config.toml [agents] section; user-defined roles override built-in roles of same name
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: TOML role config files referenced from config.toml [agents] section; built-in roles (default/explorer/worker) always available without user config
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: spawn-agent tool at LLM discretion; LLM selects role from dynamically-built role descriptions combining built-in and user-defined roles
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: true
+      mechanism: role config_file can override model and model_reasoning_effort; caller's current profile and model_provider preserved unless explicitly overridden
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: false
+      mechanism: MCP configuration is workspace-wide; no per-role MCP scoping mechanism
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: true
+      mechanism: multi-agent V2 feature flag; max_threads controls concurrent agent count, max_depth controls nesting depth; spawn-agent tool initiates delegation
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: tool_restrictions
+      supported: false
+      mechanism: role config layers override model/settings but no explicit tool allowlist or denylist in role definitions
+      source_field: ""
+      source_value: ""
+      confidence: inferred

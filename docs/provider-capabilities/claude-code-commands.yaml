@@ -1,0 +1,16 @@
+provider: claude-code
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: $ARGUMENTS (all args), $ARGUMENTS[N] (Nth arg), $N (positional), ${CLAUDE_SESSION_ID} and other env vars; shared with skills argument substitution
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: builtin_commands
+      supported: true
+      mechanism: extensive set of built-in slash commands (/help, /clear, /compact, /config, /model, /mcp, /memory, /plan, etc.) plus bundled-skill commands (/batch, /debug, /loop); not user-modifiable
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

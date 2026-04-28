@@ -1,0 +1,34 @@
+provider: cline
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: true
+      mechanism: 'conditional_rules_paths: Cline supports path-conditional rules alongside always-on rules; conditions use glob patterns'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: Cline does not have an AI-generated auto-memory system distinct from user-authored rules
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: cross_provider_recognition
+      supported: true
+      mechanism: 'multi_source_rule_detection: Cline reads .clinerules/, .cursorrules, CLAUDE.md, and other provider rule files automatically'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: file_imports
+      supported: false
+      mechanism: No file import/include syntax documented for Cline rule files
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hierarchical_loading
+      supported: false
+      mechanism: Cline rules are project-scoped or global; no per-subdirectory loading hierarchy documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred

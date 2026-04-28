@@ -1,0 +1,34 @@
+provider: cursor
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: true
+      mechanism: 'Four activation modes documented: Always (alwaysApply: true injects rule into every prompt), Auto-Attached (globs frontmatter matches edited files), Agent Requested (description frontmatter triggers model to pull in the rule), and Manual (no frontmatter triggers, referenced explicitly with @ruleName).'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: Cursor does not document an AI-generated auto-memory system distinct from user-authored rules.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: cross_provider_recognition
+      supported: false
+      mechanism: Cursor reads its own .cursor/rules/*.mdc and legacy .cursorrules file; no documented recognition of other providers' rule files.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: file_imports
+      supported: true
+      mechanism: MDC rule bodies may reference other files via @path syntax that inlines the referenced file into the rule context.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hierarchical_loading
+      supported: true
+      mechanism: Rules can live in nested .cursor/rules/ directories within a project; rules in a subtree apply when working with files under that subtree, enabling monorepo-style scoping.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

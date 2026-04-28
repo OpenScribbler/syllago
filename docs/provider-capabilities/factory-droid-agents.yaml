@@ -1,0 +1,46 @@
+provider: factory-droid
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: project (.factory/droids/) overrides personal (~/.factory/droids/) on name collision — reverse of skills precedence
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: .md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); single-file with system prompt, model preference, and tooling policy
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: exposed as subagent_type targets for the Task tool; droids enabled by default with live progress reporting in UI
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: model_selection
+      supported: true
+      mechanism: per-droid model preference field independent of global model setting; enables mixed-model agent compositions
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: false
+      mechanism: no per-droid MCP configuration documented; MCP is workspace-wide
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: subagent_spawning
+      supported: true
+      mechanism: droids exposed as subagent_type targets for Task tool delegation; /import-subagent converts Claude Code .claude/agents/*.md to droid format
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch); differs from per-tool allowlists used by other providers
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

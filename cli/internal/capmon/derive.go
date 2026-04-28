@@ -9,43 +9,51 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DeriveSeederSpec produces a SeederSpec from a FormatDoc deterministically.
-// Identical inputs always produce identical outputs (no timestamps, no UUIDs).
-// Content types with status "unsupported" are skipped.
-// Returns an error if any canonical_mappings key is not in canonical-keys.yaml.
-func DeriveSeederSpec(doc *FormatDoc, canonicalKeysPath string) (*SeederSpec, error) {
+// DeriveSeederSpecs produces one SeederSpec per supported content_type from a
+// FormatDoc, deterministically. Identical inputs always produce identical
+// outputs (no timestamps, no UUIDs). Content types with status "unsupported"
+// are skipped entirely (no spec emitted). Returns an error if any
+// canonical_mappings key is not in canonical-keys.yaml.
+//
+// The returned slice is sorted by ContentType so callers can rely on stable
+// ordering when writing per-content-type files to disk.
+func DeriveSeederSpecs(doc *FormatDoc, canonicalKeysPath string) ([]*SeederSpec, error) {
 	canonicalKeys, err := loadCanonicalKeys(canonicalKeysPath)
 	if err != nil {
-		return nil, fmt.Errorf("derive seeder spec: %w", err)
+		return nil, fmt.Errorf("derive seeder specs: %w", err)
 	}
 
-	spec := &SeederSpec{
-		Provider:    doc.Provider,
-		ContentType: "skills",
+	contentTypes := make([]string, 0, len(doc.ContentTypes))
+	for ct := range doc.ContentTypes {
+		contentTypes = append(contentTypes, ct)
 	}
+	sort.Strings(contentTypes)
 
-	// Collect all proposed mappings across content types, skipping unsupported ones.
-	// Sort canonical keys for determinism.
-	for ct, ctDoc := range doc.ContentTypes {
+	var specs []*SeederSpec
+	for _, ct := range contentTypes {
+		ctDoc := doc.ContentTypes[ct]
 		if ctDoc.Status == "unsupported" {
 			continue
 		}
 
 		validKeys := canonicalKeys[ct]
 
-		// Sort canonical mapping keys for deterministic output.
 		keys := make([]string, 0, len(ctDoc.CanonicalMappings))
 		for k := range ctDoc.CanonicalMappings {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 
+		spec := &SeederSpec{
+			Provider:    doc.Provider,
+			ContentType: ct,
+		}
+
 		for _, key := range keys {
 			mapping := ctDoc.CanonicalMappings[key]
 
-			// Unknown key — hard error.
 			if validKeys != nil && !validKeys[key] {
-				return nil, fmt.Errorf("derive seeder spec for %q: canonical_mappings key %q not in canonical-keys.yaml", doc.Provider, key)
+				return nil, fmt.Errorf("derive seeder specs for %q: canonical_mappings key %q not in canonical-keys.yaml for content_type %q", doc.Provider, key, ct)
 			}
 
 			spec.ProposedMappings = append(spec.ProposedMappings, ProposedMapping{
@@ -55,9 +63,11 @@ func DeriveSeederSpec(doc *FormatDoc, canonicalKeysPath string) (*SeederSpec, er
 				Confidence:   mapping.Confidence,
 			})
 		}
+
+		specs = append(specs, spec)
 	}
 
-	return spec, nil
+	return specs, nil
 }
 
 // WriteSeederSpec writes a SeederSpec to the given path using an atomic

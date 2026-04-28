@@ -1,0 +1,16 @@
+provider: copilot-cli
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: false
+      mechanism: command file format undocumented; no evidence of argument substitution in plugin.json schema or available sources
+      source_field: ""
+      source_value: ""
+      confidence: unknown
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: Copilot CLI has no standalone slash-command mechanism; extensibility is via plugins that bundle agents/skills/hooks; command format within plugins is undocumented
+      source_field: ""
+      source_value: ""
+      confidence: inferred

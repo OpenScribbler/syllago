@@ -40,7 +40,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: user_invocable
       supported: true
-      mechanism: Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility. Skills can also be created via Cascade UI (three dots → Skills → + Workspace / + Global).
+      mechanism: Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility.
       source_field: ""
       source_value: ""
       confidence: confirmed

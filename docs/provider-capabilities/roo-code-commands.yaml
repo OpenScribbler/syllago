@@ -1,0 +1,16 @@
+provider: roo-code
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: argument-hint frontmatter field documents expected arguments; user-supplied arguments are appended to the command body at invocation time
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: Roo Code commands are user-defined Markdown files in .roo/commands/ — no user-overridable built-in slash-command layer documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred

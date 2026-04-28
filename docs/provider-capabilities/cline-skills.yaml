@@ -25,7 +25,7 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: unknown
+      confidence: confirmed
     - canonical_key: display_name
       supported: true
       mechanism: 'yaml frontmatter key: name (required) — must exactly match the directory name'
@@ -49,10 +49,10 @@ proposed_mappings:
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: unknown
+      confidence: confirmed
     - canonical_key: user_invocable
       supported: false
       mechanism: ""
       source_field: ""
       source_value: ""
-      confidence: unknown
+      confidence: confirmed

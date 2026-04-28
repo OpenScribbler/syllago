@@ -1,0 +1,52 @@
+provider: roo-code
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: true
+      mechanism: 'always_allow_list: alwaysAllow tool names bypass confirmation prompts for that server'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: No organization-level MCP management documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: true
+      mechanism: 'env_variable_expansion: server env blocks accept environment variables so secrets can be referenced from the shell environment'
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: marketplace
+      supported: false
+      mechanism: No in-app MCP marketplace documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: No OAuth 2.0 authentication flow documented for Roo Code MCP servers
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: MCP resource referencing is not documented as a first-class feature in Roo Code
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: true
+      mechanism: 'per_server_tool_filtering: alwaysAllow and disabledTools arrays on each server entry filter which MCP tools are exposed and which bypass confirmation'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'transport_types: stdio, sse, and streamable-http are supported and selected via the type field on each server entry'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

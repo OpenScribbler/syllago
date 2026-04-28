@@ -1,0 +1,16 @@
+provider: cline
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: false
+      mechanism: Workflow markdown files are plain prompt templates with no documented argument-substitution placeholder (no {{args}} or equivalent)
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: builtin_commands
+      supported: true
+      mechanism: Built-in slash commands (e.g., /newtask, /smol alias /compact, /newrule, /deep-planning, /explain-changes in VS Code, /reportbug) are hardcoded and not user-modifiable; user-authored workflows are additive, invoked alongside built-ins
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

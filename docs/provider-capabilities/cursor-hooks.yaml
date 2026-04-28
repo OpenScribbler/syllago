@@ -1,0 +1,58 @@
+provider: cursor
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Hooks run synchronously; no async/background flag documented.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Cursor hooks do not document a mechanism to inject additional context into the agent session.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'Exit codes drive decisions: non-zero blocks the action and surfaces stderr, zero allows it to proceed; JSON on stdout can also return structured decision fields.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: false
+      mechanism: 'Cursor hooks execute shell commands only (type: command); no HTTP, LLM prompt, or agent handler types documented.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: Project-scope hooks live under .cursor/hooks/ and are wired through .cursor/settings.json; user-global hooks live under ~/.cursor/ using the same shape.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Cursor hooks are not documented to rewrite tool input before execution.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: true
+      mechanism: Command hooks receive event data as JSON on stdin and may return structured JSON on stdout to signal decisions and supply output fields.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: Hook entries accept a matcher string that filters which tool or event fires the hook (for example a specific shell command or tool name).
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Cursor hooks control allow/block via exit codes but do not govern tool availability through permission rule updates.
+      source_field: ""
+      source_value: ""
+      confidence: inferred

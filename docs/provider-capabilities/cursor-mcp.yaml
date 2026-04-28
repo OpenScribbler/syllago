@@ -1,0 +1,52 @@
+provider: cursor
+content_type: mcp
+format: ""
+proposed_mappings:
+    - canonical_key: auto_approve
+      supported: false
+      mechanism: Cursor does not document pre-configured auto-approval for specific MCP tools.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: enterprise_management
+      supported: false
+      mechanism: Cursor does not document organization-level managed MCP policy controls.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: env_var_expansion
+      supported: true
+      mechanism: Server env blocks reference environment variables so secrets can be read from the shell environment rather than hardcoded.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: marketplace
+      supported: true
+      mechanism: Cursor ships an in-IDE MCP directory for discovering and installing community MCP servers.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: oauth_support
+      supported: false
+      mechanism: Cursor's MCP documentation does not describe OAuth 2.0 flows for remote servers.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: resource_referencing
+      supported: false
+      mechanism: Cursor's MCP documentation does not describe referencing MCP resources by URI.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: tool_filtering
+      supported: false
+      mechanism: Cursor does not document per-server tool allowlists or blocklists for MCP servers.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: transport_types
+      supported: true
+      mechanism: 'Cursor documents three MCP transports: stdio for local processes, sse for Server-Sent Events, and streamable-http for HTTP-based remote servers.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

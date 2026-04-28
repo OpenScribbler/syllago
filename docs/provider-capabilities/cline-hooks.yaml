@@ -1,0 +1,58 @@
+provider: cline
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Cline hooks run synchronously before/after tool events; no async execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: true
+      mechanism: 'context_modification_output: Cline hooks can inject additional context into the agent''s session via hook output'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'pre_tool_use_cancellation: PreToolUse hooks can cancel (block) the tool invocation; no allow or modify sub-capabilities documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: false
+      mechanism: Cline hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: 'global_and_project_hooks: Cline supports global (user-wide) and project-level hook configuration'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: true
+      mechanism: 'context_modification_output: Cline PreToolUse hooks can return modified context/input before tool execution'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: json_io_protocol
+      supported: false
+      mechanism: Cline hooks communicate via exit codes and output text; no structured JSON stdin/stdout protocol documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: matcher_patterns
+      supported: false
+      mechanism: Cline hooks fire on configured lifecycle events; no per-tool pattern matching documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Cline hooks can cancel tool invocations (decision_control) but cannot grant/deny tool availability
+      source_field: ""
+      source_value: ""
+      confidence: inferred

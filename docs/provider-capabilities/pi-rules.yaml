@@ -1,0 +1,34 @@
+provider: pi
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: false
+      mechanism: Pi rule files load unconditionally; no conditional or model-decision activation documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: Pi does not have an AI-generated auto-memory system
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: cross_provider_recognition
+      supported: false
+      mechanism: Pi reads its own rule format; no cross-provider rule file recognition documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: file_imports
+      supported: false
+      mechanism: No file import syntax documented for Pi rule files
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hierarchical_loading
+      supported: false
+      mechanism: Pi rule files are not documented as supporting multi-level directory loading
+      source_field: ""
+      source_value: ""
+      confidence: inferred

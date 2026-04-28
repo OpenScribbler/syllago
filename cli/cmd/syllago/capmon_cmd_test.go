@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
@@ -15,6 +17,54 @@ func TestCapmonVerify_EmptyDir(t *testing.T) {
 	err := capmonVerifyCmd.RunE(capmonVerifyCmd, []string{})
 	if err != nil {
 		t.Errorf("verify on empty dir: %v", err)
+	}
+}
+
+// TestCapmonVerify_SkipsSeederSpecs is a regression test for the bug where
+// `syllago capmon verify` failed on per-content-type seeder specs in
+// docs/provider-capabilities/. Seeder specs use `provider:` not `slug:` and
+// have no `schema_version` field, so the schema validator rejects them.
+// Verify must skip them (mirrors the Slug=="" pattern in
+// internal/capmon/generate.go).
+func TestCapmonVerify_SkipsSeederSpecs(t *testing.T) {
+	dir := t.TempDir()
+
+	// Valid canonical capability YAML — has slug + schema_version.
+	canonicalYAML := `schema_version: "1"
+slug: test-provider
+display_name: Test Provider
+last_verified: "2026-04-28"
+content_types:
+  hooks:
+    supported: true
+`
+	if err := os.WriteFile(filepath.Join(dir, "test-provider.yaml"), []byte(canonicalYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Seeder spec — has provider + content_type but no slug or schema_version.
+	seederSpec := `provider: test-provider
+content_type: skills
+format: ""
+proposed_mappings:
+  - canonical_key: display_name
+    supported: true
+    mechanism: "yaml key: name"
+    source_field: ""
+    source_value: ""
+    confidence: confirmed
+`
+	if err := os.WriteFile(filepath.Join(dir, "test-provider-skills.yaml"), []byte(seederSpec), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	orig := capmonCapabilitiesDirOverride
+	capmonCapabilitiesDirOverride = dir
+	t.Cleanup(func() { capmonCapabilitiesDirOverride = orig })
+
+	err := capmonVerifyCmd.RunE(capmonVerifyCmd, []string{})
+	if err != nil {
+		t.Errorf("verify on dir with seeder spec should succeed (skipping seeder), got: %v", err)
 	}
 }
 

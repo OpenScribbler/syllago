@@ -1,0 +1,16 @@
+provider: pi
+content_type: commands
+format: ""
+proposed_mappings:
+    - canonical_key: argument_substitution
+      supported: true
+      mechanism: 'positional expansion: $1, $2 (specific positions), $@ or $ARGUMENTS (all args joined), ${@:N} (args from position N), ${@:N:L} (L args starting at N); richer syntax than most providers'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: builtin_commands
+      supported: false
+      mechanism: pi prompt templates are entirely user-defined; no built-in slash commands documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred

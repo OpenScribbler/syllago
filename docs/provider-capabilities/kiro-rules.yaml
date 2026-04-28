@@ -1,0 +1,34 @@
+provider: kiro
+content_type: rules
+format: ""
+proposed_mappings:
+    - canonical_key: activation_mode
+      supported: true
+      mechanism: 'kiro_steering_inclusion_mode: Kiro steering files support always, conditional, and manual inclusion modes'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: auto_memory
+      supported: false
+      mechanism: Kiro does not have an AI-generated auto-memory system separate from user-authored steering files
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: cross_provider_recognition
+      supported: true
+      mechanism: 'kiro_agents_md_recognition: Kiro reads AGENTS.md files from other providers in addition to its own steering files'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: file_imports
+      supported: true
+      mechanism: 'kiro_steering_file_references: Kiro steering files can reference other files using @file syntax'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hierarchical_loading
+      supported: false
+      mechanism: Kiro steering files are project-scoped; no multi-level subdirectory hierarchy documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred

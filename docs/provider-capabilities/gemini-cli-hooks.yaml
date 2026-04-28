@@ -1,0 +1,58 @@
+provider: gemini-cli
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Gemini CLI hooks run synchronously; no async execution documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: context_injection
+      supported: false
+      mechanism: Gemini CLI hooks cannot inject context into the agent session
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'exit_code_semantics: Gemini CLI uses exit codes to signal block (non-zero) or allow (zero) decisions; no modify sub-capability documented'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: false
+      mechanism: Gemini CLI hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: hook_scopes
+      supported: false
+      mechanism: Gemini CLI hooks are project-scoped; no multi-scope configuration documented
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Gemini CLI hooks cannot modify tool input before execution
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: true
+      mechanism: 'hook_io_protocol: Gemini CLI hooks receive event data as JSON on stdin and return structured JSON responses on stdout'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: 'hook_matchers: Gemini CLI hooks support event and tool name matching to filter when hooks fire'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: false
+      mechanism: Gemini CLI hooks control invocation flow via exit codes but do not govern tool availability
+      source_field: ""
+      source_value: ""
+      confidence: inferred
