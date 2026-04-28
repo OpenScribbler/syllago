@@ -121,9 +121,7 @@ func (m telemetryConsentModal) View() string {
 	lines = append(lines, titleStyle.Render("syllago needs your help"))
 	lines = append(lines, "")
 
-	for _, line := range wrapPlain(telemetry.MaintainerAppeal, innerW) {
-		lines = append(lines, line)
-	}
+	lines = append(lines, wrapPlain(telemetry.MaintainerAppeal, innerW)...)
 	lines = append(lines, "")
 	lines = append(lines, emphasisStyle.Render("Telemetry is OFF by default. Nothing is sent unless you choose Yes."))
 	lines = append(lines, "")
