@@ -2163,26 +2163,11 @@ func TestApp_AddWizardWindowResize(t *testing.T) {
 
 // --- Coverage boost: pure helpers + Init ---
 
-func TestApp_Init_NoTelemetryNotice_ReturnsNil(t *testing.T) {
+func TestApp_Init_ReturnsNil(t *testing.T) {
 	t.Parallel()
 	app := testApp(t)
-	app.telemetryNotice = false
 	if cmd := app.Init(); cmd != nil {
-		t.Errorf("expected nil cmd when telemetryNotice=false, got %v", cmd)
-	}
-}
-
-func TestApp_Init_WithTelemetryNotice_ReturnsCmd(t *testing.T) {
-	t.Parallel()
-	app := testApp(t)
-	app.telemetryNotice = true
-	cmd := app.Init()
-	if cmd == nil {
-		t.Fatal("expected non-nil cmd when telemetryNotice=true")
-	}
-	msg := cmd()
-	if _, ok := msg.(telemetryNoticeMsg); !ok {
-		t.Errorf("expected telemetryNoticeMsg, got %T", msg)
+		t.Errorf("expected nil cmd from App.Init, got %v", cmd)
 	}
 }
 

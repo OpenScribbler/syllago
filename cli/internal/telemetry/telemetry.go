@@ -48,8 +48,11 @@ func SetVersion(v string) {
 	sysBuildVersion = v
 }
 
-// NoticeWriter is where the first-run notice is written. Defaults to os.Stderr.
-// Override in tests to capture notice output.
+// NoticeWriter is retained for back-compat with tests and command-line code
+// that may still write status messages to stderr. The opt-out-era first-run
+// notice is no longer printed; consent is collected via the consent modal
+// (CLI prompt + TUI overlay). See cli/internal/telemetry/prompt.go and
+// cli/internal/tui/telemetry_consent.go.
 var NoticeWriter io.Writer = os.Stderr
 
 // enrichedProps stores command-specific properties set via Enrich().
@@ -92,14 +95,19 @@ func ResetEnrichment() {
 // Init initializes the telemetry subsystem. Must be called once per process,
 // early in the command lifecycle (PersistentPreRun).
 //
+// Telemetry is opt-in: events fire only when the user has explicitly recorded
+// consent (Config.ConsentRecorded == true) AND chosen to enable
+// (Config.Enabled == true). Init never prompts; the consent modal is invoked
+// separately by the CLI (cmd/syllago) and TUI (internal/tui).
+//
 // Order of operations:
 //  1. If apiKey is empty (dev build), return immediately.
 //  2. If DO_NOT_TRACK is truthy, return immediately.
 //  3. If /etc/syllago/telemetry.json has enabled:false, return immediately.
 //  4. Attempt to load user config. If unreadable/unwritable, disable for session.
-//  5. If config missing, create with defaults (enabled:true, new ID, noticeSeen:false).
-//  6. If noticeSeen:false, print first-run notice to NoticeWriter, set noticeSeen:true.
-//  7. If enabled:false, return without initializing HTTP client.
+//  5. If config missing, create with safe defaults (Enabled=false, ConsentRecorded=false).
+//  6. Migrate legacy opt-out-era configs in memory and on disk.
+//  7. If user has not recorded consent OR has disabled telemetry, return without firing.
 //  8. Initialize HTTP client.
 func Init() {
 	state.mu.Lock()
@@ -142,23 +150,25 @@ func Init() {
 		created = true
 	}
 
-	// Step 6 — first-run notice.
-	if !cfg.NoticeSeen {
-		fmt.Fprint(NoticeWriter, firstRunNotice)
-		cfg.NoticeSeen = true
-		if err := saveUserConfig(cfg); err != nil {
-			state.disabled = true
-			return
-		}
-	} else if created {
+	// Step 6 — migrate legacy opt-out-era configs (only when loaded from disk).
+	// Anyone who installed before the opt-in switch has Enabled=true with no
+	// recorded consent; force them off until they explicitly re-opt-in. Users
+	// who had previously run `syllago telemetry off` are preserved as opted-out
+	// without re-prompt. Fresh configs are left as-is so the consent modal
+	// appears on first interactive launch.
+	migrated := false
+	if !created {
+		migrated = migrateConfig(cfg)
+	}
+	if created || migrated {
 		if err := saveUserConfig(cfg); err != nil {
 			state.disabled = true
 			return
 		}
 	}
 
-	// Step 7 — check enabled flag.
-	if !cfg.Enabled {
+	// Step 7 — must have explicit consent AND be enabled.
+	if !cfg.ConsentRecorded || !cfg.Enabled {
 		state.disabled = true
 		return
 	}
@@ -171,6 +181,92 @@ func Init() {
 		state.endpoint = defaultEndpoint
 	}
 	state.client = &http.Client{Timeout: 2 * time.Second}
+}
+
+// migrateConfig rewrites legacy opt-out-era configs in place. Returns true if
+// the config changed and needs to be saved. Designed to run only against
+// configs loaded from disk — fresh configs created by newConfig() should not
+// be passed in, since their (Enabled=false, ConsentRecorded=false) state is
+// the same shape as a legacy explicit-off without the NoticeSeen marker.
+//
+// Migration rules:
+//
+//   - Already has ConsentRecorded=true: nothing to do.
+//   - Has Enabled=true with no recorded consent: force Enabled=false and
+//     clear NoticeSeen. The consent modal will run on the next interactive
+//     launch and let the user make a real, informed choice.
+//   - Has NoticeSeen=true with Enabled=false: user previously ran
+//     `syllago telemetry off`. Preserve the opted-out state and mark
+//     consent as recorded so we don't re-prompt them. Clear NoticeSeen
+//     so migration is idempotent across loads.
+//
+// NoticeSeen is cleared in both branches so a second migration pass (e.g.
+// from NeedsConsent reloading the persisted post-migration config) does
+// not re-fire the explicit-off branch.
+func migrateConfig(cfg *Config) bool {
+	if cfg.ConsentRecorded {
+		return false
+	}
+	if cfg.Enabled {
+		cfg.Enabled = false
+		cfg.NoticeSeen = false
+		return true
+	}
+	if cfg.NoticeSeen {
+		cfg.ConsentRecorded = true
+		cfg.NoticeSeen = false
+		return true
+	}
+	return false
+}
+
+// NeedsConsent reports whether the user has not yet recorded an explicit
+// consent decision. Callers (CLI prompt, TUI modal) use this to decide
+// whether to show the consent UI before any work runs.
+//
+// Returns false in any condition where the consent modal should not appear:
+// dev builds (no API key), DO_NOT_TRACK set, system-level disable, missing
+// home dir, or unreadable config.
+func NeedsConsent() bool {
+	if apiKey == "" {
+		return false
+	}
+	if isDNTSet() {
+		return false
+	}
+	if sc, err := loadSysConfig(); err == nil && sc != nil && !sc.Enabled {
+		return false
+	}
+	cfg, err := loadUserConfig()
+	if err != nil {
+		return false
+	}
+	if cfg == nil {
+		return true
+	}
+	// Apply migration so callers see post-migration state.
+	migrateConfig(cfg)
+	return !cfg.ConsentRecorded
+}
+
+// RecordConsent persists the user's explicit choice. Sets both Enabled and
+// ConsentRecorded so that future runs respect the decision and never re-prompt.
+// Call this from the consent UI (CLI prompt or TUI modal) once the user has
+// answered Yes or No.
+func RecordConsent(enabled bool) error {
+	cfg, err := loadUserConfig()
+	if err != nil {
+		return fmt.Errorf("loading telemetry config: %w", err)
+	}
+	if cfg == nil {
+		cfg, err = newConfig()
+		if err != nil {
+			return err
+		}
+	}
+	cfg.Enabled = enabled
+	cfg.ConsentRecorded = true
+	return saveUserConfig(cfg)
 }
 
 // Track fires an event to PostHog asynchronously. Returns immediately — the POST
@@ -245,21 +341,6 @@ func sendEvent(client *http.Client, endpoint string, payload postHogPayload) {
 	_, _ = io.Copy(io.Discard, resp.Body)
 }
 
-// firstRunNotice is the exact first-run notice text printed to stderr.
-const firstRunNotice = `
-syllago collects anonymous usage data (commands run, provider
-types, error codes) to help prioritize development. No file
-contents, paths, or identifying information is collected.
-
-To opt out, run any of the following:
-
-  syllago telemetry off       Turn off telemetry
-  export DO_NOT_TRACK=1       Disable via environment variable
-
-Learn more: https://syllago.dev/telemetry
-
-`
-
 // Reset generates a new anonymous ID, saves it, and returns the new ID.
 func Reset() (string, error) {
 	cfg, err := loadUserConfig()
@@ -283,7 +364,10 @@ func Reset() (string, error) {
 	return newID, nil
 }
 
-// SetEnabled sets the enabled flag in the user config and saves it.
+// SetEnabled sets the enabled flag in the user config and saves it. Running
+// `syllago telemetry on` or `syllago telemetry off` is itself an explicit
+// consent decision, so we also mark ConsentRecorded=true to suppress any
+// future consent prompt.
 func SetEnabled(enabled bool) error {
 	cfg, err := loadUserConfig()
 	if err != nil {
@@ -296,6 +380,7 @@ func SetEnabled(enabled bool) error {
 		}
 	}
 	cfg.Enabled = enabled
+	cfg.ConsentRecorded = true
 	return saveUserConfig(cfg)
 }
 

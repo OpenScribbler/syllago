@@ -19,12 +19,23 @@ const (
 )
 
 // Config is the user-level telemetry config stored at ~/.syllago/telemetry.json.
+//
+// Telemetry is opt-in. Events fire only when both Enabled=true AND
+// ConsentRecorded=true. ConsentRecorded is only ever set as the result of an
+// explicit user action (the consent modal, or `syllago telemetry on/off`).
 type Config struct {
-	Enabled     bool      `json:"enabled"`
-	AnonymousID string    `json:"anonymousId"`
-	NoticeSeen  bool      `json:"noticeSeen"`
-	Endpoint    string    `json:"endpoint,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	Enabled     bool   `json:"enabled"`
+	AnonymousID string `json:"anonymousId"`
+	// ConsentRecorded is true once the user has made an explicit choice
+	// (yes or no). When false, no events fire and the consent modal will
+	// appear on the next interactive launch.
+	ConsentRecorded bool `json:"consentRecorded"`
+	// NoticeSeen is the legacy flag from the opt-out era. Retained for
+	// migration compatibility — see migrateConfig in telemetry.go. Not used
+	// for new gating logic.
+	NoticeSeen bool      `json:"noticeSeen,omitempty"`
+	Endpoint   string    `json:"endpoint,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 // SysConfig is the system-level config at /etc/syllago/telemetry.json.
@@ -134,16 +145,19 @@ func checkWritable(dir string) error {
 	return nil
 }
 
-// newConfig creates a default config with a fresh pseudonymous ID and the current time.
+// newConfig creates a default config with a fresh pseudonymous ID and the
+// current time. Defaults to Enabled=false and ConsentRecorded=false: nothing
+// is sent until the user explicitly opts in via the consent modal or
+// `syllago telemetry on`.
 func newConfig() (*Config, error) {
 	id, err := generateID()
 	if err != nil {
 		return nil, err
 	}
 	return &Config{
-		Enabled:     true,
-		AnonymousID: id,
-		NoticeSeen:  false,
-		CreatedAt:   time.Now().UTC(),
+		Enabled:         false,
+		AnonymousID:     id,
+		ConsentRecorded: false,
+		CreatedAt:       time.Now().UTC(),
 	}, nil
 }

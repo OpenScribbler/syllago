@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
 // Update implements tea.Model.
@@ -35,6 +36,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.tofu.width = msg.Width
 		a.tofu.height = ch
 		a.trustInspector.SetSize(msg.Width, ch)
+		a.telemetryConsent.SetSize(msg.Width, ch)
 		a.configSettings.SetSize(msg.Width, ch)
 		a.configSystem.SetSize(msg.Width, ch)
 		a.configSandbox.SetSize(msg.Width, ch)
@@ -61,6 +63,15 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.MouseMsg:
+		// First-run telemetry consent modal blocks all interaction until
+		// the user records a choice. It must precede every other routing
+		// path so consent cannot be skipped by clicking outside or
+		// triggering a wizard hotkey.
+		if a.telemetryConsent.Active() {
+			var cmd tea.Cmd
+			a.telemetryConsent, cmd = a.telemetryConsent.Update(msg)
+			return a, cmd
+		}
 		// Wizard mode: topbar [?] button and help overlay still work
 		if a.wizardMode != wizardNone {
 			if a.help.active {
@@ -121,6 +132,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a.routeMouse(msg)
 
 	case tea.KeyMsg:
+		// First-run telemetry consent modal blocks every other key path
+		// (except ctrl+c) until the user records a choice.
+		if a.telemetryConsent.Active() {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.telemetryConsent, cmd = a.telemetryConsent.Update(msg)
+			return a, cmd
+		}
 		// Toast dismissal takes priority over modals — Esc dismisses toast first.
 		if a.toast.visible && msg.Type == tea.KeyEsc {
 			cmd := a.toast.Dismiss()
@@ -377,12 +398,24 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.routeKey(msg)
 		}
 
-	case telemetryNoticeMsg:
-		const noticeText = "Syllago collects anonymous usage data to help prioritize\n" +
-			"development. No file contents or identifying info is collected.\n" +
-			"Run \"syllago telemetry off\" to disable.\n" +
-			"syllago.dev/telemetry"
-		cmd := a.toast.Push(noticeText, toastWarning)
+	case telemetryConsentDoneMsg:
+		// Persist the user's explicit choice. RecordConsent is best-effort
+		// — if it fails (read-only home, etc.) we still close the modal and
+		// surface a toast rather than blocking the TUI.
+		if err := telemetry.RecordConsent(msg.Enabled); err != nil {
+			cmd := a.toast.Push("Telemetry choice could not be saved: "+err.Error(), toastError)
+			return a, cmd
+		}
+		var label string
+		var level toastLevel
+		if msg.Enabled {
+			label = "Telemetry enabled. Thank you. Disable any time with `syllago telemetry off`."
+			level = toastSuccess
+		} else {
+			label = "Telemetry stays off. Opt in any time with `syllago telemetry on`."
+			level = toastSuccess
+		}
+		cmd := a.toast.Push(label, level)
 		return a, cmd
 
 	case toastTickMsg:

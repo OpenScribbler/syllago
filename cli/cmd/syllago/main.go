@@ -26,6 +26,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // Set at build time via -ldflags.
@@ -84,9 +85,27 @@ func init() {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		output.Verbose = verbose
 
-		// Initialize telemetry after output flags are set so the first-run
-		// notice (if any) respects --no-color via lipgloss profile above.
 		telemetry.Init()
+
+		// Telemetry is opt-in. If the user has not yet recorded a consent
+		// decision, show the disclosure and prompt before any work runs.
+		// Skip prompting in contexts where it would be inappropriate:
+		//   - the TUI takes responsibility for its own consent modal
+		//     (running `syllago` with no args lands here, then NewApp
+		//     handles consent).
+		//   - telemetry subcommands (`telemetry on/off/status/reset`) are
+		//     themselves the consent surface; prompting on top of them
+		//     would be circular and confusing.
+		//   - --json or --quiet imply non-interactive scripting.
+		//   - non-TTY stdin/stderr cannot prompt usefully; leave disabled.
+		if telemetry.NeedsConsent() && shouldPromptConsent(cmd, quiet) {
+			enabled, err := telemetry.PromptCLIConsent(os.Stderr, os.Stdin)
+			if err == nil {
+				if rcErr := telemetry.RecordConsent(enabled); rcErr == nil && enabled {
+					telemetry.Init() // pick up the new consent state
+				}
+			}
+		}
 
 		return nil
 	}
@@ -206,6 +225,53 @@ func main() {
 		printExecuteError(err)
 		os.Exit(output.ExitError)
 	}
+}
+
+// isInteractiveStdinStderrFn reports whether both stdin and stderr are
+// connected to a terminal. Indirected through a function variable so tests
+// can simulate a real TTY without spawning a pty.
+var isInteractiveStdinStderrFn = func() bool {
+	return term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stderr.Fd()))
+}
+
+// shouldPromptConsent reports whether the current invocation is an
+// appropriate place to ask the user for telemetry consent. The CLI must
+// never silently background a prompt or interrupt scripted output, so we
+// suppress prompting in any context that doesn't have a real human at the
+// terminal.
+//
+// The TUI is excluded here because it shows its own integrated modal — see
+// cli/internal/tui/telemetry_consent.go. The telemetry subcommands are
+// excluded because they are themselves the consent surface.
+func shouldPromptConsent(cmd *cobra.Command, quiet bool) bool {
+	if cmd == nil {
+		return false
+	}
+	// Root command with no args runs the TUI, which has its own consent modal.
+	if cmd == rootCmd {
+		return false
+	}
+	// Skip any telemetry subcommand (on/off/status/reset).
+	for c := cmd; c != nil; c = c.Parent() {
+		if c.Name() == "telemetry" {
+			return false
+		}
+	}
+	// Skip purely-informational commands.
+	switch cmd.Name() {
+	case "version", "help":
+		return false
+	}
+	// Scripted output paths.
+	if output.JSON || quiet {
+		return false
+	}
+	// Need an interactive terminal on both ends — the user has to read the
+	// disclosure on stderr and type a y/N answer on stdin.
+	if !isInteractiveStdinStderrFn() {
+		return false
+	}
+	return true
 }
 
 // printExecuteError prints err to the error writer unless it's a SilentError

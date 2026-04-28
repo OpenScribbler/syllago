@@ -23,7 +23,7 @@ func TestLoadUserConfig_Valid(t *testing.T) {
 	overrideHome(t, home)
 	dir := filepath.Join(home, ".syllago")
 	os.MkdirAll(dir, 0755)
-	body := `{"enabled":true,"anonymousId":"syl_aabbccdd1122","noticeSeen":true,"createdAt":"2026-04-02T00:00:00Z"}`
+	body := `{"enabled":true,"anonymousId":"syl_aabbccdd1122","consentRecorded":true,"createdAt":"2026-04-02T00:00:00Z"}`
 	os.WriteFile(filepath.Join(dir, "telemetry.json"), []byte(body), 0644)
 
 	cfg, err := loadUserConfig()
@@ -36,8 +36,8 @@ func TestLoadUserConfig_Valid(t *testing.T) {
 	if cfg.AnonymousID != "syl_aabbccdd1122" {
 		t.Errorf("unexpected ID: %s", cfg.AnonymousID)
 	}
-	if !cfg.NoticeSeen {
-		t.Error("expected noticeSeen true")
+	if !cfg.ConsentRecorded {
+		t.Error("expected consentRecorded true")
 	}
 }
 
@@ -59,10 +59,10 @@ func TestSaveUserConfig_Roundtrip(t *testing.T) {
 	overrideHome(t, home)
 
 	want := &Config{
-		Enabled:     true,
-		AnonymousID: "syl_aabbccdd1122",
-		NoticeSeen:  false,
-		CreatedAt:   time.Now().UTC().Truncate(time.Second),
+		Enabled:         true,
+		AnonymousID:     "syl_aabbccdd1122",
+		ConsentRecorded: true,
+		CreatedAt:       time.Now().UTC().Truncate(time.Second),
 	}
 	if err := saveUserConfig(want); err != nil {
 		t.Fatalf("save failed: %v", err)
@@ -95,11 +95,12 @@ func TestNewConfig_DefaultsAndID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !cfg.Enabled {
-		t.Error("expected enabled true by default")
+	// Opt-in default: nothing fires until the user explicitly opts in.
+	if cfg.Enabled {
+		t.Error("expected enabled false by default (telemetry is opt-in)")
 	}
-	if cfg.NoticeSeen {
-		t.Error("expected noticeSeen false by default")
+	if cfg.ConsentRecorded {
+		t.Error("expected consentRecorded false by default")
 	}
 	if len(cfg.AnonymousID) == 0 {
 		t.Error("expected non-empty anonymous ID")

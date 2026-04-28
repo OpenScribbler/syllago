@@ -70,7 +70,7 @@ func TestInit_UnreadableConfig_DisabledForSession(t *testing.T) {
 	}
 }
 
-func TestInit_FirstRun_NoticeWritten(t *testing.T) {
+func TestInit_FirstRun_DisabledNoNotice(t *testing.T) {
 	origKey := apiKey
 	apiKey = "phc_test"
 	t.Cleanup(func() { apiKey = origKey; resetState() })
@@ -82,29 +82,253 @@ func TestInit_FirstRun_NoticeWritten(t *testing.T) {
 	t.Cleanup(func() { NoticeWriter = os.Stderr })
 
 	Init()
-	if !strings.Contains(notice.String(), "To opt out") {
-		t.Errorf("first-run notice not written; got: %q", notice.String())
+
+	// Opt-in: a fresh install must not auto-enable telemetry and must not
+	// print any inline notice. The consent UI (CLI prompt + TUI modal) is
+	// responsible for any disclosure.
+	if !state.disabled {
+		t.Error("expected telemetry disabled on first run when consent has not been recorded")
+	}
+	if notice.Len() != 0 {
+		t.Errorf("Init must not write any inline notice on first run; got: %q", notice.String())
+	}
+	if !NeedsConsent() {
+		t.Error("NeedsConsent should report true on first run")
 	}
 }
 
-func TestInit_NoticeWrittenOnce(t *testing.T) {
+func TestInit_LegacyOptOut_PreservedNoPrompt(t *testing.T) {
+	// Users who previously ran `syllago telemetry off` end up with
+	// Enabled=false and ConsentRecorded=false (legacy schema). Migration
+	// must preserve the opted-out state without re-prompting them.
 	origKey := apiKey
 	apiKey = "phc_test"
 	t.Cleanup(func() { apiKey = origKey; resetState() })
 	home := t.TempDir()
 	overrideHome(t, home)
 
-	var notice strings.Builder
-	NoticeWriter = &notice
-	t.Cleanup(func() { NoticeWriter = os.Stderr })
+	dir := filepath.Join(home, ".syllago")
+	os.MkdirAll(dir, 0755)
+	body := `{"enabled":false,"anonymousId":"syl_legacyoff","noticeSeen":true,"createdAt":"2026-04-02T00:00:00Z"}`
+	os.WriteFile(filepath.Join(dir, "telemetry.json"), []byte(body), 0644)
 
 	Init()
-	resetState()
-	Init() // second call
 
-	count := strings.Count(notice.String(), "To opt out")
-	if count != 1 {
-		t.Errorf("expected notice exactly once, got %d occurrences", count)
+	if !state.disabled {
+		t.Error("legacy opted-out user must remain disabled")
+	}
+	cfg, _ := loadUserConfig()
+	if cfg == nil || !cfg.ConsentRecorded {
+		t.Error("legacy opted-out user should have ConsentRecorded=true after migration")
+	}
+	if cfg != nil && cfg.Enabled {
+		t.Error("legacy opted-out user must remain Enabled=false after migration")
+	}
+	if NeedsConsent() {
+		t.Error("legacy opted-out user must not be re-prompted")
+	}
+}
+
+func TestInit_LegacySilentOptIn_ForcedOff(t *testing.T) {
+	// Users on the previous opt-out scheme had Enabled=true with no real
+	// recorded consent. Migration must force them off and leave consent
+	// unrecorded so the modal appears on the next interactive launch.
+	origKey := apiKey
+	apiKey = "phc_test"
+	t.Cleanup(func() { apiKey = origKey; resetState() })
+	home := t.TempDir()
+	overrideHome(t, home)
+
+	dir := filepath.Join(home, ".syllago")
+	os.MkdirAll(dir, 0755)
+	body := `{"enabled":true,"anonymousId":"syl_legacyon","noticeSeen":true,"createdAt":"2026-04-02T00:00:00Z"}`
+	os.WriteFile(filepath.Join(dir, "telemetry.json"), []byte(body), 0644)
+
+	Init()
+
+	if !state.disabled {
+		t.Error("legacy opt-out-era user must be force-disabled until they re-opt-in")
+	}
+	cfg, _ := loadUserConfig()
+	if cfg == nil {
+		t.Fatal("config should still exist after migration")
+	}
+	if cfg.Enabled {
+		t.Error("Enabled must be forced to false during migration")
+	}
+	if cfg.ConsentRecorded {
+		t.Error("ConsentRecorded must remain false so the modal re-prompts")
+	}
+	if !NeedsConsent() {
+		t.Error("NeedsConsent must be true so the consent modal appears")
+	}
+}
+
+// TestMigrateConfig_TableDriven exercises every documented migration branch
+// directly against the migrateConfig function, without going through Init().
+// This is the regression layer for the "ambiguity after migration" bug fixed
+// alongside the opt-in switchover: the silent-opt-in case (Enabled=true,
+// NoticeSeen=true) and the explicit-off case (Enabled=false, NoticeSeen=true)
+// share the same shape post-migration if NoticeSeen isn't cleared, which let
+// a second migration call mis-classify them.
+func TestMigrateConfig_TableDriven(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		in         Config
+		wantChange bool
+		wantOut    Config
+	}{
+		{
+			name: "fresh_install_untouched",
+			// newConfig() shape: ConsentRecorded=false, Enabled=false,
+			// NoticeSeen=false. Must NOT migrate — the consent modal will
+			// appear naturally on next launch.
+			in:         Config{Enabled: false, ConsentRecorded: false, NoticeSeen: false},
+			wantChange: false,
+			wantOut:    Config{Enabled: false, ConsentRecorded: false, NoticeSeen: false},
+		},
+		{
+			name: "already_consented_yes",
+			// Modern config with explicit yes — never re-touched.
+			in:         Config{Enabled: true, ConsentRecorded: true, NoticeSeen: false},
+			wantChange: false,
+			wantOut:    Config{Enabled: true, ConsentRecorded: true, NoticeSeen: false},
+		},
+		{
+			name: "already_consented_no",
+			// Modern config with explicit no — never re-touched.
+			in:         Config{Enabled: false, ConsentRecorded: true, NoticeSeen: false},
+			wantChange: false,
+			wantOut:    Config{Enabled: false, ConsentRecorded: true, NoticeSeen: false},
+		},
+		{
+			name: "legacy_silent_opt_in_forced_off",
+			// Opt-out era default: Enabled=true, NoticeSeen=true, no consent.
+			// Force off and clear NoticeSeen so a second migration pass is
+			// a no-op. ConsentRecorded stays false → consent modal shows.
+			in:         Config{Enabled: true, ConsentRecorded: false, NoticeSeen: true},
+			wantChange: true,
+			wantOut:    Config{Enabled: false, ConsentRecorded: false, NoticeSeen: false},
+		},
+		{
+			name: "legacy_explicit_opt_out_preserved",
+			// User previously ran `syllago telemetry off`: Enabled=false,
+			// NoticeSeen=true, no consent. Preserve the off state, mark
+			// consent recorded so they aren't re-prompted, clear NoticeSeen.
+			in:         Config{Enabled: false, ConsentRecorded: false, NoticeSeen: true},
+			wantChange: true,
+			wantOut:    Config{Enabled: false, ConsentRecorded: true, NoticeSeen: false},
+		},
+		{
+			name: "legacy_silent_opt_in_with_id_preserved",
+			// Anonymous ID and timestamp are out-of-scope for migration —
+			// only the three flags should change. Verifies migrate doesn't
+			// stomp unrelated fields.
+			in: Config{
+				Enabled: true, ConsentRecorded: false, NoticeSeen: true,
+				AnonymousID: "syl_legacyABC", Endpoint: "https://custom/",
+			},
+			wantChange: true,
+			wantOut: Config{
+				Enabled: false, ConsentRecorded: false, NoticeSeen: false,
+				AnonymousID: "syl_legacyABC", Endpoint: "https://custom/",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := tt.in
+			gotChange := migrateConfig(&cfg)
+			if gotChange != tt.wantChange {
+				t.Errorf("migrateConfig changed=%v, want %v", gotChange, tt.wantChange)
+			}
+			if cfg.Enabled != tt.wantOut.Enabled {
+				t.Errorf("Enabled=%v, want %v", cfg.Enabled, tt.wantOut.Enabled)
+			}
+			if cfg.ConsentRecorded != tt.wantOut.ConsentRecorded {
+				t.Errorf("ConsentRecorded=%v, want %v", cfg.ConsentRecorded, tt.wantOut.ConsentRecorded)
+			}
+			if cfg.NoticeSeen != tt.wantOut.NoticeSeen {
+				t.Errorf("NoticeSeen=%v, want %v", cfg.NoticeSeen, tt.wantOut.NoticeSeen)
+			}
+			if cfg.AnonymousID != tt.wantOut.AnonymousID {
+				t.Errorf("AnonymousID=%q, want %q", cfg.AnonymousID, tt.wantOut.AnonymousID)
+			}
+			if cfg.Endpoint != tt.wantOut.Endpoint {
+				t.Errorf("Endpoint=%q, want %q", cfg.Endpoint, tt.wantOut.Endpoint)
+			}
+		})
+	}
+}
+
+// TestMigrateConfig_Idempotent is the regression test for the bug fixed
+// during the opt-in conversion: running migrateConfig twice must produce the
+// same result as running it once. The original implementation flipped
+// silent-opt-in (Enabled=true, NoticeSeen=true) to (Enabled=false,
+// NoticeSeen=true) — but that output shape matched the legacy explicit-off
+// case, so a second call would silently flip ConsentRecorded to true and
+// suppress the consent modal that the migration was supposed to trigger.
+func TestMigrateConfig_Idempotent(t *testing.T) {
+	t.Parallel()
+	startStates := []struct {
+		name string
+		cfg  Config
+	}{
+		{"fresh_install", Config{}},
+		{"legacy_silent_opt_in", Config{Enabled: true, NoticeSeen: true}},
+		{"legacy_explicit_off", Config{Enabled: false, NoticeSeen: true}},
+		{"already_consented_yes", Config{Enabled: true, ConsentRecorded: true}},
+		{"already_consented_no", Config{Enabled: false, ConsentRecorded: true}},
+	}
+	for _, s := range startStates {
+		t.Run(s.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := s.cfg
+			migrateConfig(&cfg)
+			afterFirst := cfg
+
+			changed := migrateConfig(&cfg)
+			if changed {
+				t.Errorf("second migrateConfig call must be a no-op, but reported changed=true")
+			}
+			if cfg != afterFirst {
+				t.Errorf("second call mutated config:\n  after first:  %+v\n  after second: %+v", afterFirst, cfg)
+			}
+		})
+	}
+}
+
+func TestRecordConsent_Yes(t *testing.T) {
+	home := t.TempDir()
+	overrideHome(t, home)
+
+	if err := RecordConsent(true); err != nil {
+		t.Fatalf("RecordConsent(true): %v", err)
+	}
+	cfg, _ := loadUserConfig()
+	if cfg == nil || !cfg.Enabled || !cfg.ConsentRecorded {
+		t.Errorf("expected enabled=true, consentRecorded=true; got %+v", cfg)
+	}
+	if NeedsConsent() {
+		t.Error("NeedsConsent must be false after RecordConsent")
+	}
+}
+
+func TestRecordConsent_No(t *testing.T) {
+	home := t.TempDir()
+	overrideHome(t, home)
+
+	if err := RecordConsent(false); err != nil {
+		t.Fatalf("RecordConsent(false): %v", err)
+	}
+	cfg, _ := loadUserConfig()
+	if cfg == nil || cfg.Enabled || !cfg.ConsentRecorded {
+		t.Errorf("expected enabled=false, consentRecorded=true; got %+v", cfg)
+	}
+	if NeedsConsent() {
+		t.Error("a recorded No is still a recorded decision")
 	}
 }
 
@@ -128,9 +352,10 @@ func TestTrack_SendsEvent(t *testing.T) {
 	home := t.TempDir()
 	overrideHome(t, home)
 
-	var notice strings.Builder
-	NoticeWriter = &notice
-	t.Cleanup(func() { NoticeWriter = os.Stderr })
+	// Simulate explicit user opt-in so Init activates the HTTP path.
+	if err := RecordConsent(true); err != nil {
+		t.Fatalf("RecordConsent: %v", err)
+	}
 
 	Init()
 	// Override endpoint to the test server after Init().
@@ -194,9 +419,9 @@ func TestTrack_Offline_SilentDrop(t *testing.T) {
 	home := t.TempDir()
 	overrideHome(t, home)
 
-	var notice strings.Builder
-	NoticeWriter = &notice
-	t.Cleanup(func() { NoticeWriter = os.Stderr })
+	if err := RecordConsent(true); err != nil {
+		t.Fatalf("RecordConsent: %v", err)
+	}
 
 	Init()
 	// Point at a guaranteed-unreachable address.
@@ -279,10 +504,6 @@ func TestInit_UnwritableConfigDir_DisabledForSession(t *testing.T) {
 	os.Chmod(dir, 0555) // read-only
 	t.Cleanup(func() { os.Chmod(dir, 0755) })
 
-	var notice strings.Builder
-	NoticeWriter = &notice
-	t.Cleanup(func() { NoticeWriter = os.Stderr })
-
 	Init()
 	if !state.disabled {
 		t.Error("expected disabled when config dir is not writable")
@@ -322,10 +543,10 @@ func TestStatus_MissingConfig(t *testing.T) {
 	}
 }
 
-// TestEndToEnd_FullLifecycle exercises the complete telemetry lifecycle as a
-// user would experience it: fresh install → first-run notice → events sent →
-// second run (no notice) → off → on → reset. Uses httptest to verify events
-// actually arrive at the ingest endpoint with correct payloads.
+// TestEndToEnd_FullLifecycle exercises the complete opt-in telemetry
+// lifecycle: fresh install (disabled, awaiting consent) → user opts in →
+// events sent → second run (still on, no prompt) → off → on → reset.
+// Uses httptest to verify events arrive with the correct payloads.
 func TestEndToEnd_FullLifecycle(t *testing.T) {
 	// --- Setup: capture HTTP events ---
 	var received []postHogPayload
@@ -361,34 +582,46 @@ func TestEndToEnd_FullLifecycle(t *testing.T) {
 	home := t.TempDir()
 	overrideHome(t, home)
 
-	var notice strings.Builder
-	NoticeWriter = &notice
-	t.Cleanup(func() { NoticeWriter = os.Stderr })
-
-	// --- Phase 1: First run (fresh install) ---
+	// --- Phase 1: First run (fresh install) — must stay disabled until consent ---
 	Init()
+	if !state.disabled {
+		t.Fatal("fresh install must leave telemetry disabled until the user opts in")
+	}
+	if !NeedsConsent() {
+		t.Error("NeedsConsent must report true on first run")
+	}
 
-	// Config file should exist now.
+	// Track on a fresh install must be a no-op even with the test server up.
+	state.mu.Lock()
+	state.endpoint = srv.URL
+	state.mu.Unlock()
+	Track("should_not_send_pre_consent", nil)
+	Shutdown()
+	mu.Lock()
+	if len(received) != 0 {
+		t.Errorf("no events should fire pre-consent; got %d", len(received))
+	}
+	mu.Unlock()
+
+	// --- Phase 2: User opts in via the consent UI ---
+	if err := RecordConsent(true); err != nil {
+		t.Fatalf("RecordConsent(true): %v", err)
+	}
 	cfgPath := filepath.Join(home, ".syllago", "telemetry.json")
 	if _, err := os.Stat(cfgPath); err != nil {
 		t.Fatalf("config file not created: %v", err)
 	}
 
-	// First-run notice should have been written.
-	if !strings.Contains(notice.String(), "To opt out") {
-		t.Errorf("first-run notice missing; got: %q", notice.String())
-	}
-
-	// State should be active with a valid anonymous ID.
+	resetState()
+	Init()
 	if state.disabled {
-		t.Fatal("telemetry should be enabled after first Init()")
+		t.Fatal("telemetry should be enabled after RecordConsent(true)")
 	}
 	if !isValidID(state.anonymousID) {
-		t.Errorf("invalid anonymous ID after Init(): %s", state.anonymousID)
+		t.Errorf("invalid anonymous ID: %s", state.anonymousID)
 	}
 	firstID := state.anonymousID
 
-	// Override endpoint to our test server.
 	state.mu.Lock()
 	state.endpoint = srv.URL
 	state.mu.Unlock()
@@ -446,16 +679,14 @@ func TestEndToEnd_FullLifecycle(t *testing.T) {
 	}
 	mu.Unlock()
 
-	// --- Phase 3: Second run (no notice) ---
+	// --- Phase 3: Second run — consent already recorded, no re-prompt ---
 	resetState()
-	notice.Reset()
-
 	Init()
-	if notice.Len() > 0 {
-		t.Errorf("notice should not appear on second run; got: %q", notice.String())
-	}
 	if state.disabled {
-		t.Error("telemetry should still be enabled on second run")
+		t.Error("telemetry should still be enabled on second run after a recorded yes")
+	}
+	if NeedsConsent() {
+		t.Error("NeedsConsent must return false once consent has been recorded")
 	}
 	Shutdown()
 
@@ -564,6 +795,13 @@ func setupEnrichTestServer(t *testing.T) (*[]postHogPayload, *sync.Mutex) {
 	var notice strings.Builder
 	NoticeWriter = &notice
 	t.Cleanup(func() { NoticeWriter = os.Stderr })
+
+	// Simulate explicit user opt-in so Init activates the HTTP path. Under
+	// the new opt-in semantics, Init leaves state.disabled=true unless the
+	// config has both Enabled=true and ConsentRecorded=true.
+	if err := RecordConsent(true); err != nil {
+		t.Fatalf("RecordConsent: %v", err)
+	}
 
 	Init()
 	state.mu.Lock()
