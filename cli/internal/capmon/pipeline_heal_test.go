@@ -62,6 +62,39 @@ func TestTryHealSource_FailureRecordsCounter(t *testing.T) {
 	}
 }
 
+func TestTryHealSource_PropagatesCandidateOutcomes(t *testing.T) {
+	// HealEvent on the run manifest must carry CandidateOutcomes from the
+	// AttemptHeal result so reviewers reading capmon-run.json see the same
+	// diagnostic table that lands on the escalation issue.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL:     srv.URL + "/docs/foo-bar.md",
+		Healing: &HealingConfig{Strategies: []string{"variant"}},
+	}
+	opts := PipelineOptions{CacheRoot: t.TempDir(), RepoRoot: t.TempDir()}
+	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, errors.New("404"), "run-prop")
+	if evt == nil {
+		t.Fatal("expected event, got nil")
+	}
+	if len(evt.CandidateOutcomes) == 0 {
+		t.Fatal("CandidateOutcomes should be populated when probes ran")
+	}
+	for _, o := range evt.CandidateOutcomes {
+		if o.URL == "" {
+			t.Errorf("outcome missing URL: %+v", o)
+		}
+		if o.Outcome == "" {
+			t.Errorf("outcome missing kind: %+v", o)
+		}
+	}
+}
+
 func TestTryHealSource_DryRunDoesNotOpenPR(t *testing.T) {
 	// Set up a variant that succeeds, but DryRun should short-circuit PR open.
 	mux := http.NewServeMux()

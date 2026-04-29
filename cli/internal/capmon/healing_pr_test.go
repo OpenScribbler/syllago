@@ -108,11 +108,14 @@ func TestBuildHealPRBody(t *testing.T) {
 		RunID:       "run-123",
 		OldURL:      "https://example.com/old.md",
 		Heal: HealResult{
-			Success:   true,
-			NewURL:    "https://example.com/new.md",
-			Strategy:  "redirect",
-			Proof:     "followed 1 permanent redirect",
-			TriedURLs: []string{"https://example.com/old.md", "https://example.com/new.md"},
+			Success:  true,
+			NewURL:   "https://example.com/new.md",
+			Strategy: "redirect",
+			Proof:    "followed 1 permanent redirect",
+			CandidateOutcomes: []CandidateOutcome{
+				{URL: "https://example.com/old.md", Strategy: "redirect", Outcome: OutcomeHTTPError, StatusCode: 404},
+				{URL: "https://example.com/new.md", Strategy: "redirect", Outcome: OutcomeSuccess, StatusCode: 200},
+			},
 		},
 	}
 	body := BuildHealPRBody(in)
@@ -170,6 +173,44 @@ func TestFindOpenCapmonHealPR_Miss(t *testing.T) {
 	}
 	if found {
 		t.Error("expected no match")
+	}
+}
+
+func TestBuildHealPRBody_RendersCandidatesTable(t *testing.T) {
+	// On a multi-candidate success, the PR body must include the markdown
+	// table from RenderCandidatesTable so reviewers see what was probed
+	// before the chosen URL won.
+	in := HealPRInputs{
+		Provider:    "claude-code",
+		ContentType: "skills",
+		SourceIndex: 0,
+		RunID:       "run-42",
+		OldURL:      "https://example.com/old.md",
+		Heal: HealResult{
+			Success:  true,
+			NewURL:   "https://example.com/new.md",
+			Strategy: "variant",
+			Proof:    "rename _ → -",
+			CandidateOutcomes: []CandidateOutcome{
+				{URL: "https://example.com/missing.md", Strategy: "variant", Outcome: OutcomeHTTPError, StatusCode: 404, Detail: "status 404"},
+				{URL: "https://example.com/new.md", Strategy: "variant", Outcome: OutcomeSuccess, StatusCode: 200, ContentType: "text/markdown", BodySize: 2048},
+			},
+		},
+	}
+	body := BuildHealPRBody(in)
+	for _, want := range []string{
+		"| Strategy | Candidate URL | Outcome | Status | Final URL | Detail |",
+		"|---|---|---|---|---|---|",
+		"https://example.com/missing.md",
+		"http_error",
+		"404",
+		"https://example.com/new.md",
+		"success",
+		"200",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("PR body missing %q\n\nFull body:\n%s", want, body)
+		}
 	}
 }
 

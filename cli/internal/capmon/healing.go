@@ -11,15 +11,16 @@ import (
 
 // HealResult captures the outcome of an AttemptHeal call. Success is true
 // only when a candidate URL was found AND its content passed
-// ValidateContentResponse. NewURL is the healed URL the orchestrator
-// should record in the manifest PR.
+// ValidateContentResponse with zero redirects observed during the fetch.
+// CandidateOutcomes records every probe in order so humans triaging drift
+// can see what each strategy turned up.
 type HealResult struct {
-	Success    bool
-	NewURL     string
-	Strategy   string
-	Proof      string   // short human-readable explanation for PR body
-	TriedURLs  []string // every candidate URL probed (for audit/debug)
-	FailReason string   // populated when Success=false — why each strategy declined
+	Success           bool
+	NewURL            string
+	Strategy          string
+	Proof             string             // short human-readable explanation for PR body
+	CandidateOutcomes []CandidateOutcome // every probed candidate, in attempt order
+	FailReason        string             // populated when Success=false — derived summary or strategy-level decline
 }
 
 // AttemptHeal runs the configured healing strategies in order for a
@@ -44,7 +45,9 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 		return result, nil
 	}
 
-	var reasons []string
+	// Strategy-level decline reasons (e.g., redirect chain non-permanent).
+	// Used only for FailReason when no candidates were probed.
+	var declineReasons []string
 	for _, strategy := range strategies {
 		var candidates []string
 		var proofs map[string]string
@@ -52,7 +55,7 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 		case "redirect":
 			cand, proof, ok := runRedirectStrategy(ctx, src.URL)
 			if !ok {
-				reasons = append(reasons, "redirect: "+proof)
+				declineReasons = append(declineReasons, "redirect: "+proof)
 				continue
 			}
 			candidates = []string{cand}
@@ -60,11 +63,11 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 		case "github-rename":
 			ranked, err := DetectGitHubRename(ctx, src.URL)
 			if err != nil {
-				reasons = append(reasons, "github-rename: "+err.Error())
+				declineReasons = append(declineReasons, "github-rename: "+err.Error())
 				continue
 			}
 			if len(ranked) == 0 {
-				reasons = append(reasons, "github-rename: no candidates above score floor")
+				declineReasons = append(declineReasons, "github-rename: no candidates above score floor")
 				continue
 			}
 			proofs = map[string]string{}
@@ -75,7 +78,7 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 		case "variant":
 			variants := GenerateVariants(src.URL)
 			if len(variants) == 0 {
-				reasons = append(reasons, "variant: no candidates generated")
+				declineReasons = append(declineReasons, "variant: no candidates generated")
 				continue
 			}
 			proofs = map[string]string{}
@@ -84,32 +87,31 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 				proofs[v.URL] = v.Reason
 			}
 		default:
-			reasons = append(reasons, fmt.Sprintf("%s: unknown strategy (ignored)", strategy))
+			declineReasons = append(declineReasons, fmt.Sprintf("%s: unknown strategy (ignored)", strategy))
 			continue
 		}
 
-		// Validate each candidate by fetching and running the content gate.
 		for _, cand := range candidates {
-			result.TriedURLs = append(result.TriedURLs, cand)
-			if err := validateHealCandidate(ctx, src.URL, cand); err != nil {
-				var invalid *ErrContentInvalid
-				if errors.As(err, &invalid) {
-					reasons = append(reasons, fmt.Sprintf("%s %q: %s", strategy, cand, invalid.Reason))
-					continue
-				}
-				reasons = append(reasons, fmt.Sprintf("%s %q: %v", strategy, cand, err))
-				continue
+			outcome := validateHealCandidate(ctx, src.URL, cand, strategy)
+			result.CandidateOutcomes = append(result.CandidateOutcomes, outcome)
+			if outcome.Outcome == OutcomeSuccess {
+				result.Success = true
+				result.NewURL = cand
+				result.Strategy = strategy
+				result.Proof = proofs[cand]
+				return result, nil
 			}
-			result.Success = true
-			result.NewURL = cand
-			result.Strategy = strategy
-			result.Proof = proofs[cand]
-			return result, nil
 		}
 	}
 
-	if len(reasons) > 0 {
-		result.FailReason = joinReasons(reasons)
+	// Failure path. Prefer the structured summary when any candidate was
+	// probed; otherwise fall back to strategy-level decline reasons so
+	// e.g. "redirect chain contains a temporary redirect" still surfaces
+	// when no other strategies were configured.
+	if len(result.CandidateOutcomes) > 0 {
+		result.FailReason = summarizeCandidateOutcomes(result.CandidateOutcomes)
+	} else if len(declineReasons) > 0 {
+		result.FailReason = joinReasons(declineReasons)
 	} else if fetchErr != nil {
 		result.FailReason = "no healing strategy produced a candidate"
 	}
@@ -137,46 +139,129 @@ func runRedirectStrategy(ctx context.Context, rawURL string) (string, string, bo
 	return chain.FinalURL, fmt.Sprintf("followed %d permanent redirects", len(chain.Hops)), true
 }
 
-// validateHealCandidate GETs a candidate URL, passes the response body
-// through ValidateContentResponse, and returns nil only if every gate
-// passes. The orchestrator calls this for each candidate regardless of
-// the strategy that produced it — we never trust a HEAD-only match.
-func validateHealCandidate(ctx context.Context, originalURL, candidateURL string) error {
-	// Short per-candidate timeout. The outer context bounds the total
-	// healing budget; this bounds each individual fetch so one stalled
-	// server can't consume the whole budget.
-	client := &http.Client{Timeout: 15 * time.Second}
+// validateHealCandidate GETs a candidate URL and reports a structured
+// outcome describing what happened. Any redirect during the fetch is
+// drift signal — the chain is captured but the candidate is rejected
+// regardless of where it lands. Body content checks run only when the
+// fetch resolved with zero redirects to a 2xx response.
+func validateHealCandidate(ctx context.Context, originalURL, candidateURL, strategy string) CandidateOutcome {
+	out := CandidateOutcome{
+		URL:      candidateURL,
+		Strategy: strategy,
+	}
+	var hops []RedirectHop
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if req.Response != nil && req.Response.Request != nil && req.Response.Request.URL != nil {
+				hops = append(hops, RedirectHop{
+					From:   req.Response.Request.URL.String(),
+					To:     req.URL.String(),
+					Status: req.Response.StatusCode,
+				})
+			}
+			if len(via) >= maxRedirectHops {
+				return fmt.Errorf("stopped after %d redirects", maxRedirectHops)
+			}
+			return nil
+		},
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, candidateURL, nil)
 	if err != nil {
-		return fmt.Errorf("create heal GET: %w", err)
+		out.Outcome = OutcomeConnectError
+		out.Detail = fmt.Sprintf("create heal GET: %v", err)
+		return out
 	}
 	req.Header.Set("User-Agent", "syllago-capmon/1.0")
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("heal GET %q: %w", candidateURL, err)
+		out.Outcome = OutcomeConnectError
+		out.Detail = err.Error()
+		// Redirect-cap or loop errors still produced hops worth recording.
+		if len(hops) > 0 {
+			out.Redirects = hops
+			if last := hops[len(hops)-1]; last.To != "" {
+				out.FinalURL = last.To
+			}
+		}
+		return out
 	}
 	defer resp.Body.Close() //nolint:errcheck // nothing actionable on close failure of a drained body
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("heal GET %q: status %d", candidateURL, resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read heal body: %w", err)
-	}
-	// resp.Request.URL reflects the final URL after Go's automatic
-	// redirect following (default client follows); pass that as the
-	// final URL to the eTLD+1 check.
+
+	// resp.Request.URL reflects where the chain landed (after default
+	// CheckRedirect followed each hop). When hops were captured, that's
+	// the FinalURL; otherwise it's the candidate URL itself.
 	finalURL := candidateURL
 	if resp.Request != nil && resp.Request.URL != nil {
 		finalURL = resp.Request.URL.String()
 	}
-	return ValidateContentResponse(body, resp.Header.Get("Content-Type"), originalURL, finalURL)
+
+	if len(hops) > 0 {
+		out.Outcome = OutcomeRedirected
+		out.Redirects = hops
+		out.FinalURL = finalURL
+		out.StatusCode = resp.StatusCode
+		// Drain the body to free the connection but do not validate it —
+		// any redirect already disqualifies the candidate.
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return out
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		out.Outcome = OutcomeHTTPError
+		out.StatusCode = resp.StatusCode
+		out.Detail = fmt.Sprintf("status %d", resp.StatusCode)
+		return out
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		out.Outcome = OutcomeConnectError
+		out.Detail = fmt.Sprintf("read heal body: %v", err)
+		return out
+	}
+	out.StatusCode = resp.StatusCode
+	out.ContentType = resp.Header.Get("Content-Type")
+	out.BodySize = len(body)
+	out.FinalURL = finalURL
+
+	if vErr := ValidateContentResponse(body, out.ContentType, originalURL, finalURL); vErr != nil {
+		var invalid *ErrContentInvalid
+		if errors.As(vErr, &invalid) {
+			out.Outcome = invalidKindToOutcome(invalid.Kind)
+			out.Detail = invalid.Reason
+			return out
+		}
+		// Non-content-validity error (URL parse, etc.).
+		out.Outcome = OutcomeConnectError
+		out.Detail = vErr.Error()
+		return out
+	}
+
+	out.Outcome = OutcomeSuccess
+	return out
+}
+
+// invalidKindToOutcome maps content-invalidity kinds onto the heal
+// outcome enum 1:1.
+func invalidKindToOutcome(k InvalidKind) CandidateOutcomeKind {
+	switch k {
+	case InvalidBinaryContent:
+		return OutcomeBinaryContent
+	case InvalidBodyTooSmall:
+		return OutcomeBodyTooSmall
+	case InvalidDomainMismatch:
+		return OutcomeDomainMismatch
+	default:
+		// Unknown kinds shouldn't reach here, but treat as a generic
+		// connect_error rather than crashing.
+		return OutcomeConnectError
+	}
 }
 
 func joinReasons(reasons []string) string {
-	// Keep failure reasons on one line so issue bodies don't balloon. The
-	// orchestrator emits the full list; this is the summary stored in
-	// HealResult.
+	// Keep failure reasons on one line so issue bodies don't balloon. Used
+	// only as a fallback FailReason when no candidates were probed.
 	if len(reasons) == 0 {
 		return ""
 	}

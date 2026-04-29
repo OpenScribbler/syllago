@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-27T19:02:41.416Z
-> Files: 1278 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-29T23:02:38.351Z
+> Files: 1297 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -50,15 +50,25 @@
 - `learning_moat_source_uri_content_hash.md` (~571 tok)
 - `learning_provider_marker_calibration.md` (~446 tok)
 - `learning_resolve_cross_provider_fallback.md` (~439 tok)
+- `learning_signing_public_key_var_not_secret.md` (~388 tok)
 - `learning_tui_add_container_types.md` — Declares whose (~453 tok)
-- `MEMORY.md` — Syllago Project Memory (~2381 tok)
+- `MEMORY.md` — Syllago Project Memory (~2813 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` — Global git config (as of 2026-04-27) (~478 tok)
+- `user_local_go_broken.md` (~272 tok)
 
 ## ../../../.claude/skills/bead-chain/
 
 - `SKILL.md` — Bead Chain — Gated Development Workflow (~3436 tok)
+
+## ../../../.claude/skills/syllago-capmon-process/
+
+- `SKILL.md` — syllago-capmon-process (~1466 tok)
+
+## ../../../.claude/skills/syllago-capmon-process/workflows/
+
+- `process-issues.md` — Process Issues Workflow (~3101 tok)
 
 ## ../../../.config/pai/
 
@@ -190,7 +200,7 @@
 
 - `.gitattributes` — Git attributes (~50 tok)
 - `.gitignore` — Git ignore rules (~465 tok)
-- `.release-pending.yml` (~35 tok)
+- `.release-pending.yml` (~34 tok)
 - `AGENTS.md` — Agent Instructions (~332 tok)
 - `ARCHITECTURE.md` — Syllago Architecture (~4534 tok)
 - `CHANGELOG.md` — Changelog (~3572 tok)
@@ -1742,19 +1752,30 @@
 - `extract_test.go` — TestFixtures_ClaudeCodeHooksHTML, TestFixtures_WindsurfLLMSTxt, TestFixtures_LiveNetwork (~937 tok)
 - `fetch_chromedp_test.go` — TestChromedpURLWiring, TestRealisticUA_NotHeadless (~306 tok)
 - `fetch_chromedp.go` — ChromedpRemoteURL, FetchChromedp (~836 tok)
+- `fetch_validity_test.go` — TestValidateContentResponse_Valid, TestValidateContentResponse_TooSmall, TestValidateContentResponse (~1321 tok)
+- `fetch_validity.go` — Struct: ErrContentInvalid (~1275 tok)
 - `formatdoc_test.go` — TestLoadFormatDoc_RoundTrip, TestFormatDocPath, TestLoadFormatDoc_FileNotFound, TestValidateAllForma (~2073 tok)
 - `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~5126 tok)
 - `formatdoc_validate.go` — Struct: ValidationWarning (~3183 tok)
 - `formatdoc.go` — Struct: FormatDoc (~1614 tok)
 - `generate_hooks_test.go` — TestGenerateHooksSpecTables_BasicOutput, TestGenerateHooksSpecTables_MissingBanner, TestReplaceGener (~1955 tok)
 - `generate.go` — Struct: providerInfo (~1761 tok)
+- `healing_diagnostics_test.go` — TestRenderCandidatesTable_Empty, TestRenderCandidatesTable_Success, TestRenderCandidatesTable_MixedO (~1612 tok)
+- `healing_diagnostics.go` — Struct: CandidateOutcome (~1202 tok)
 - `healing_github.go` — Struct: RenameCandidate (~2092 tok)
-- `healing.go` — Struct: HealResult (~1690 tok)
-- `pipeline.go` — Struct: PipelineOptions (~4164 tok)
+- `healing_issue_test.go` — TestHealFailureAnchor, TestRecordConsecutiveHealFailure_UnderThreshold, TestRecordConsecutiveHealFai (~2433 tok)
+- `healing_issue.go` — HealFailureAnchor, RecordConsecutiveHealFailure, ResolveHealFailure (~1867 tok)
+- `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~2656 tok)
+- `healing_pr.go` — Struct: HealPRInputs (~2538 tok)
+- `healing_redirect.go` — Struct: RedirectChain (~1055 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~4297 tok)
+- `healing.go` — Struct: HealResult (~2397 tok)
+- `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Pro (~1718 tok)
+- `pipeline.go` — Struct: PipelineOptions (~4175 tok)
 - `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
 - `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
 - `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
-- `recognize_amp.go` — Declares contexts (~2477 tok)
+- `recognize_amp.go` — Declares contexts (~2545 tok)
 - `recognize_claude_code_test.go` — TestRecognizeClaudeCode_RealLandmarks, TestRecognizeClaudeCode_AnchorsMissing, TestRecognizeClaudeCo (~4350 tok)
 - `recognize_claude_code.go` — Declares doc (~4732 tok)
 - `recognize_cline_test.go` — TestRecognizeCline_RealLandmarks, TestRecognizeCline_NonSkillsLandmarks, TestRecognizeCline_AnchorsM (~4356 tok)
@@ -1807,7 +1828,8 @@
 - `sourceman_validate_test.go` — TestValidateSources_AllHaveSources, TestValidateSources_MissingURIs, TestValidateSources_SupportedFa (~1387 tok)
 - `sourceman_validate.go` — ValidateSources (~660 tok)
 - `sourceman.go` — Struct: SourceManifest (~1139 tok)
-- `types.go` — implements the syllago capability monitor pipeline. (~1315 tok)
+- `types_test.go` — TestExtractedSource_ZeroValue, TestRunManifest_ExitClasses, TestSelectorConfig_Fields, TestRunManife (~1067 tok)
+- `types.go` — implements the syllago capability monitor pipeline. (~1378 tok)
 
 ## cli/internal/capmon/capyaml/
 
@@ -2125,8 +2147,8 @@
 
 ## cli/internal/tui/
 
-- `actions_test.go` — TestActions_HandleRemoveDone_Success, TestActions_HandleRemoveDone_Error, TestActions_HandleUninstal (~4877 tok)
-- `actions.go` — Struct: removeDoneMsg (~10188 tok)
+- `actions_test.go` — TestHandleInstall_AcceptsUndetectedProviders, TestActions_HandleRemoveDone_Success, TestActions_Hand (~5527 tok)
+- `actions.go` — Struct: removeDoneMsg (~10267 tok)
 - `add_probe_tmp_test.go` — TestProbe_DiscoverPai (~280 tok)
 - `add_wizard_hook_preview_test.go` — TestBuildHookPreviewFiles_NoScripts, TestBuildHookPreviewFiles_IncludesReferencedScripts, TestBuildH (~3131 tok)
 - `add_wizard_hook_write_test.go` — TestWriteHookToLibrary_WritesManifestHookJSON, TestWriteHookToLibrary_SkipsExisting (~942 tok)
@@ -2140,10 +2162,10 @@
 - `add_wizard_rename_test.go` — TestHandleRenameSaved_UpdatesDisplayNameAndDescription, TestHandleRenameSaved_OutOfBoundsIsNoop, Tes (~6129 tok)
 - `add_wizard_review_test.go` — TestAddWizard_ReviewRendersCandidatesPerSource (~891 tok)
 - `add_wizard_split_detect_test.go` — TestAddWizard_DiscoveryFlagsSplittableRules, TestAddWizard_ReviewShowsSplittableHint (~1064 tok)
-- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_Open_4Step, TestAddWizard_Open_NoProviders, TestAddWizard_So (~16535 tok)
+- `add_wizard_test.go` — TestAddWizard_Open_5Step, TestAddWizard_AcceptsUndetectedProviders, TestAddWizard_SourceProviderOpti (~17253 tok)
 - `add_wizard_update.go` (~9467 tok)
-- `add_wizard_view.go` — Struct: sourceOption (~10176 tok)
-- `add_wizard.go` — Struct: addConfirmItem (~23862 tok)
+- `add_wizard_view.go` — Struct: sourceOption (~10260 tok)
+- `add_wizard.go` — Struct: addConfirmItem (~23963 tok)
 - `app_test.go` — TestApp_WindowSizeMsg, TestApp_NotReadyBeforeWindowSize, TestApp_TooSmall, TestApp_QuitOnCtrlC, Test (~17391 tok)
 - `app_update.go` — Declares checkbox (~6293 tok)
 - `app_view.go` (~1067 tok)
@@ -2178,18 +2200,18 @@
 - `help_test.go` — TestHelpOverlay_ToggleOnOff, TestHelpOverlay_EscCloses, TestHelpOverlay_QuestionMarkCloses, TestHelp (~1306 tok)
 - `help.go` — Struct: helpOverlay (~1463 tok)
 - `install_mouse_test.go` — TestInstallMouse_ProviderRowSelectsProvider, TestInstallMouse_ProviderAllSelectsAll, TestInstallMous (~4562 tok)
-- `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21272 tok)
+- `install_test.go` — TestInstallWizard_Open, TestInstallWizard_OpenDisplayName, TestInstallWizard_OpenSingleProvider, Tes (~21687 tok)
 - `install_update.go` (~4511 tok)
-- `install_view.go` — Struct: conflictOpt (~5496 tok)
-- `install.go` — Struct: installResultMsg (~4986 tok)
+- `install_view.go` — Struct: conflictOpt (~6067 tok)
+- `install.go` — Struct: installResultMsg (~5092 tok)
 - `items_test.go` — TestItems_CursorDown_Wraps, TestItems_CursorDown_AdjustsOffset, TestItems_CursorDown_EmptyListNoop, (~1104 tok)
 - `items.go` — Struct: itemsModel (~2269 tok)
 - `keys.go` (~190 tok)
 - `library_test.go` — TestLibrary_DrillIn_UnstagedRegistryItem_ShowsExplanation, TestLibrary_SetDetailFocus_TogglesFocusFi (~3730 tok)
-- `library.go` — Struct: libraryDrillMsg (~6994 tok)
+- `library.go` — Struct: libraryDrillMsg (~7049 tok)
 - `local_dir_probe_test.go` — TestProbe_LocalDirDiscovery (~610 tok)
 - `metapanel_test.go` — TestMetaBarLinesFor, TestRenderMetaPanel_HeightContract, TestRenderMetaPanel_TrustLine, TestRenderMe (~2249 tok)
-- `metapanel.go` — Struct: ruleTargetStatus (~3469 tok)
+- `metapanel.go` — Struct: ruleTargetStatus (~3543 tok)
 - `moat_install_test.go` — TestDoMOATInstallCmd_RegistryMissingFromConfig, TestDoMOATInstallCmd_ManifestEntryNotFound, TestDoIn (~1179 tok)
 - `moat_sync_test.go` — TestRegistryIsMOAT_True, TestRegistryIsMOAT_FalseForGit, TestRegistryIsMOAT_FalseForUnknown, TestHan (~2154 tok)
 - `moat_sync.go` — Struct: moatSyncDoneMsg (~1146 tok)
@@ -2267,6 +2289,8 @@
 - `2026-04-21-provmon-drift-detection-design.md` — provmon drift detection — Design Document (~10908 tok)
 - `2026-04-21-provmon-drift-detection-implementation.md` — provmon drift detection — Implementation Plan (~17530 tok)
 - `2026-04-24-provider-auto-split-design.md` — Provider-Flow Auto-Detect Split — Design (~789 tok)
+- `2026-04-28-detect-soften-filters-design.md` — Soften Detect() Filters to Warnings — Design (~2218 tok)
+- `2026-04-29-capmon-heal-diagnostics-design.md` — Capmon Heal Diagnostics — Design (~3066 tok)
 
 ## docs/prompts/
 
@@ -2279,7 +2303,7 @@
 
 ## docs/provider-formats/
 
-- `amp.yaml` (~7367 tok)
+- `amp.yaml` (~8339 tok)
 - `claude-code.yaml` (~13518 tok)
 - `cline.yaml` (~7011 tok)
 - `codex.yaml` (~12085 tok)
@@ -2298,7 +2322,7 @@
 ## docs/provider-sources/
 
 - `_template.yaml` — {Provider Name} — Provider Source Manifest (~1466 tok)
-- `amp.yaml` — Amp — Provider Source Manifest (~1081 tok)
+- `amp.yaml` — Amp — Provider Source Manifest (~1104 tok)
 - `claude-code.yaml` — Claude Code — Provider Source Manifest (~1146 tok)
 - `cline.yaml` — Cline — Provider Source Manifest (~1050 tok)
 - `codex.yaml` — Codex (OpenAI) — Provider Source Manifest (~2476 tok)
@@ -2344,6 +2368,7 @@
 - `v0.10.0.md` — v0.10.0 (~2618 tok)
 - `v0.10.1.md` — v0.10.1 (~449 tok)
 - `v0.10.2.md` — v0.10.2 (~923 tok)
+- `v0.11.0.md` — v0.11.0 (~683 tok)
 - `v0.7.0.md` — v0.7.0 (~2536 tok)
 - `v0.7.1.md` — v0.7.1 (~1011 tok)
 - `v0.7.2.md` — v0.7.2 (~287 tok)

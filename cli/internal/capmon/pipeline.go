@@ -238,10 +238,11 @@ func tryHealSource(ctx context.Context, opts PipelineOptions, providerSlug, cont
 		event.FailReason = "heal orchestrator error: " + err.Error()
 		return event
 	}
+	event.CandidateOutcomes = result.CandidateOutcomes
 	if !result.Success {
 		event.FailReason = result.FailReason
 		if !opts.DryRun {
-			if issueNum, ierr := RecordConsecutiveHealFailure(opts.CacheRoot, providerSlug, contentType, sourceIndex, result.FailReason); ierr == nil {
+			if issueNum, ierr := RecordConsecutiveHealFailure(opts.CacheRoot, providerSlug, contentType, sourceIndex, result); ierr == nil {
 				event.IssueNumber = issueNum
 			}
 		}
