@@ -12,7 +12,7 @@ import (
 // fetch_method=chromedp + format=html for docs.factory.ai pages (Mintlify SPA).
 //
 // Mintlify landmarks have a leading zero-width space prefix (e.g.
-// "​Skill file format") which substring matchers handle transparently.
+// "\u200bSkill file format") which substring matchers handle transparently.
 // Update this fixture when the upstream doc evolves.
 var realFactoryDroidLandmarks = []string{
 	"Skills",
@@ -366,30 +366,30 @@ func TestRecognizeFactoryDroid_CommandsAnchorsMissing(t *testing.T) {
 // fetched via chromedp).
 //
 // Mintlify landmarks have a leading zero-width space prefix (e.g.
-// "​3 · File locations & discovery hierarchy"); substring matchers handle
+// "\u200b3 · File locations & discovery hierarchy"); substring matchers handle
 // this transparently. Update this fixture when the upstream doc evolves.
 var realFactoryDroidRulesLandmarks = []string{
 	"AGENTS.md",
-	"​1 · What is AGENTS.md?",
-	"​Why AGENTS.md?",
-	"​What it contains:",
-	"​2 · One AGENTS.md works across many agents",
-	"​3 · File locations & discovery hierarchy",
-	"​4 · File structure & syntax",
-	"​5 · Common sections",
-	"​6 · Templates & examples",
-	"​Factory-style comprehensive example",
-	"​Node + React monorepo",
-	"​Python microservice",
-	"​7 · Best practices",
-	"​8 · How agents use AGENTS.md",
-	"​9 · When things go wrong",
-	"​Warning signs of agent drift:",
-	"​Recovery playbook:",
-	"​10 · Getting started",
+	"\u200b1 · What is AGENTS.md?",
+	"\u200bWhy AGENTS.md?",
+	"\u200bWhat it contains:",
+	"\u200b2 · One AGENTS.md works across many agents",
+	"\u200b3 · File locations & discovery hierarchy",
+	"\u200b4 · File structure & syntax",
+	"\u200b5 · Common sections",
+	"\u200b6 · Templates & examples",
+	"\u200bFactory-style comprehensive example",
+	"\u200bNode + React monorepo",
+	"\u200bPython microservice",
+	"\u200b7 · Best practices",
+	"\u200b8 · How agents use AGENTS.md",
+	"\u200b9 · When things go wrong",
+	"\u200bWarning signs of agent drift:",
+	"\u200bRecovery playbook:",
+	"\u200b10 · Getting started",
 	"Specification Mode",
 	"Auto-Run",
-	"​Summary",
+	"\u200bSummary",
 }
 
 // TestRecognizeFactoryDroid_RealRulesLandmarks proves rules recognition fires
@@ -452,7 +452,7 @@ func TestRecognizeFactoryDroid_RealRulesLandmarks(t *testing.T) {
 func TestRecognizeFactoryDroid_RulesAnchorsMissing(t *testing.T) {
 	mutated := make([]string, 0, len(realFactoryDroidRulesLandmarks))
 	for _, lm := range realFactoryDroidRulesLandmarks {
-		if lm == "​1 · What is AGENTS.md?" {
+		if lm == "\u200b1 · What is AGENTS.md?" {
 			continue
 		}
 		mutated = append(mutated, lm)
@@ -474,28 +474,28 @@ func TestRecognizeFactoryDroid_RulesAnchorsMissing(t *testing.T) {
 // (a 19-landmark Mintlify SPA fetched via chromedp).
 //
 // Mintlify landmarks have a leading zero-width space prefix on H2/H3 entries
-// (e.g. "​Adding HTTP Servers"); substring matchers handle this transparently.
+// (e.g. "\u200bAdding HTTP Servers"); substring matchers handle this transparently.
 // Update this fixture when the upstream doc evolves.
 var realFactoryDroidMcpLandmarks = []string{
 	"Model Context Protocol (MCP)",
-	"​Quick Start: Add from Registry",
-	"​Interactive Manager (/mcp)",
-	"​Adding Servers via CLI",
-	"​Adding HTTP Servers",
-	"​Popular HTTP MCP Servers",
-	"​Development & Testing",
-	"​Project Management & Documentation",
-	"​Payments & Commerce",
-	"​Design & Media",
-	"​Infrastructure & DevOps",
-	"​Adding Stdio Servers",
-	"​Popular Stdio MCP Servers",
-	"​Removing Servers",
-	"​Managing Servers",
-	"​Configuration",
-	"​How Layering Works",
-	"​OAuth Tokens",
-	"​Configuration Schema",
+	"\u200bQuick Start: Add from Registry",
+	"\u200bInteractive Manager (/mcp)",
+	"\u200bAdding Servers via CLI",
+	"\u200bAdding HTTP Servers",
+	"\u200bPopular HTTP MCP Servers",
+	"\u200bDevelopment & Testing",
+	"\u200bProject Management & Documentation",
+	"\u200bPayments & Commerce",
+	"\u200bDesign & Media",
+	"\u200bInfrastructure & DevOps",
+	"\u200bAdding Stdio Servers",
+	"\u200bPopular Stdio MCP Servers",
+	"\u200bRemoving Servers",
+	"\u200bManaging Servers",
+	"\u200bConfiguration",
+	"\u200bHow Layering Works",
+	"\u200bOAuth Tokens",
+	"\u200bConfiguration Schema",
 }
 
 // TestRecognizeFactoryDroid_RealMcpLandmarks proves MCP recognition fires from
@@ -557,7 +557,7 @@ func TestRecognizeFactoryDroid_RealMcpLandmarks(t *testing.T) {
 func TestRecognizeFactoryDroid_McpAnchorsMissing(t *testing.T) {
 	mutated := make([]string, 0, len(realFactoryDroidMcpLandmarks))
 	for _, lm := range realFactoryDroidMcpLandmarks {
-		if lm == "​Configuration Schema" {
+		if lm == "\u200bConfiguration Schema" {
 			continue
 		}
 		mutated = append(mutated, lm)
