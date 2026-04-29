@@ -433,3 +433,10 @@ content_types:
         conversion: not-portable
     loading_model: "Custom agents are JSON config files in .kiro/agents/ (project/local scope) or ~/.kiro/agents/ (global scope). Global agents override local agents with the same name — same precedence model as skills. Each agent config declares its system prompt (inline or file URI), available tools (exact names, wildcards, or MCP patterns), optional inline MCP servers, resource attachments, and optional IDE metadata (keyboard shortcut, welcome message). The agent's effective tool set is resolved from its 'tools' array plus any MCP servers (inline and/or workspace .kiro/mcp.json depending on includeMcpJson)."
     notes: "Kiro custom agents are JSON files, not Markdown. The file URI prompt pattern enables prompt reuse across agents. Global scope overrides local scope (unlike most content types where workspace overrides global). Tool patterns support wildcards (computer_*) and MCP-namespaced references (mcp:serverName:toolName). The 'model' field allows per-agent model selection, overriding the workspace default."
+
+  commands:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Kiro does not document a user-definable slash-command or custom-command system. Custom workflows are expressed via skills and custom agents instead — there is no on-disk command file format for users to author."

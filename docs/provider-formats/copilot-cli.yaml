@@ -493,30 +493,20 @@ content_types:
   commands:
     status: supported
     sources:
-      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md"
-        type: documentation
-        fetch_method: http
-        content_hash: "sha256:8c01ef1983e4c225ac3e88255b72bf00252baa7c9a69e3fa1b08353243fbe77e"
-        fetched_at: "2026-04-11T21:50:21.135764955Z"
-      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-plugin-reference.md"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
         type: reference
         fetch_method: http
-        content_hash: "sha256:88c16e48e1f8c3c714ec110fb1d8b467a218fce6b04cb17f77d78e7a6ec2fe78"
-        fetched_at: "2026-04-11T21:50:21.389196848Z"
-      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating.md"
-        type: documentation
-        fetch_method: http
-        content_hash: "sha256:cc5ffef7b6e12ac8a91049779c9bc99ff690ae25d86a34b4394db972a697cbbf"
-        fetched_at: "2026-04-11T21:50:21.588936107Z"
+        content_hash: ""
+        fetched_at: "2026-04-28T00:00:00Z"
     canonical_mappings:
       argument_substitution:
         supported: false
-        mechanism: "command file format undocumented; no evidence of argument substitution in plugin.json schema or available sources"
-        confidence: unknown
-      builtin_commands:
-        supported: false
-        mechanism: "Copilot CLI has no standalone slash-command mechanism; extensibility is via plugins that bundle agents/skills/hooks; command format within plugins is undocumented"
+        mechanism: "built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /init suppress) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)"
         confidence: inferred
+      builtin_commands:
+        supported: true
+        mechanism: "~50 built-in slash commands documented under the 'Slash commands in the interactive interface' heading of the CLI command reference (e.g. /help, /mcp, /init, /clear, /agent, /delegate, /review, /add-dir, /fleet, /research, /plugin); 'Command-line commands' heading covers the top-level `copilot` subcommands"
+        confidence: confirmed
     provider_extensions:
       - id: plugin_system
         name: Plugin System as Commands Distribution Mechanism

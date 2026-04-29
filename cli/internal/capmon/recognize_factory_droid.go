@@ -47,6 +47,52 @@ func factoryDroidLandmarkOptions() LandmarkOptions {
 	}
 }
 
+// factoryDroidRulesLandmarkOptions returns the landmark patterns for Factory
+// Droid's AGENTS.md cross-provider rules doc. Anchors derived from
+// .capmon-cache/factory-droid/rules.0/extracted.json
+// (https://docs.factory.ai/cli/configuration — Mintlify SPA fetched via
+// chromedp).
+//
+// Mintlify landmarks have a leading zero-width space prefix (e.g.
+// "​3 · File locations & discovery hierarchy"); substring matchers handle
+// this transparently.
+//
+// Maps 2 of 5 canonical rules keys at heading-level evidence:
+//   - cross_provider_recognition.agents_md → "One AGENTS.md works across many
+//     agents" heading; the AGENTS.md page itself is the cross-provider
+//     standard (OpenAI/Codex origin) that Factory Droid implements.
+//   - hierarchical_loading → "File locations & discovery hierarchy" heading;
+//     ~/AGENTS.md (global) → repo-root AGENTS.md → subdir AGENTS.md
+//     (innermost wins), three-tier discovery.
+//
+// Three keys are intentionally unmapped per the curated YAML
+// (docs/provider-formats/factory-droid.yaml):
+//   - activation_mode: curator marks unsupported (no conditional or
+//     model-decision activation; AGENTS.md files always load).
+//   - file_imports: curator marks unsupported (no @-import or include syntax
+//     documented for AGENTS.md).
+//   - auto_memory: curator marks unsupported (no AI-managed memory layer).
+//
+// Required anchors are unique to rules.0:
+//   - "1 · What is AGENTS.md?"          — H2, AGENTS.md-doc-specific
+//   - "File locations & discovery hierarchy" — H2, AGENTS.md-doc-specific
+//
+// Verified absent from factory-droid's skills.0, hooks.{0,1}, agents.0,
+// commands.0, and mcp.0 caches — so cross-content-type landmark merging
+// cannot trigger a false positive.
+func factoryDroidRulesLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "1 · What is AGENTS.md?", CaseInsensitive: true},
+		{Kind: "substring", Value: "File locations & discovery hierarchy", CaseInsensitive: true},
+	}
+	return RulesLandmarkOptions(
+		RulesLandmarkPattern("cross_provider_recognition.agents_md", "One AGENTS.md works across many agents",
+			"AGENTS.md cross-provider rules format (OpenAI/Codex origin) implemented by Factory Droid; documented under '2 · One AGENTS.md works across many agents' heading", required),
+		RulesLandmarkPattern("hierarchical_loading", "File locations & discovery hierarchy",
+			"three-tier discovery: ~/AGENTS.md (global) → repo-root AGENTS.md → subdir AGENTS.md (innermost wins) documented under '3 · File locations & discovery hierarchy' heading", required),
+	)
+}
+
 // factoryDroidHooksLandmarkOptions returns the landmark patterns for Factory
 // Droid's hooks reference doc. Anchors derived from
 // .capmon-cache/factory-droid/hooks.1/extracted.json
@@ -127,26 +173,58 @@ func factoryDroidAgentsLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// MCP recognition is intentionally NOT wired for factory-droid.
+// factoryDroidMcpLandmarkOptions returns the landmark patterns for Factory
+// Droid's MCP doc. Anchors derived from
+// .capmon-cache/factory-droid/mcp.0/extracted.json
+// (https://docs.factory.ai/cli/configuration/mcp — Mintlify SPA fetched via
+// chromedp).
 //
-// The cached MCP source (.capmon-cache/factory-droid/mcp.0/extracted.json)
-// is the docs.factory.ai/llms.txt index — a flat list of links whose
-// landmarks array contains only 4 generic entries: "Factory Documentation",
-// "Docs", "OpenAPI Specs", "Optional". None of these can anchor canonical
-// MCP keys via substring matching.
+// The source URL switched 2026-04-28 from docs.factory.ai/llms.txt (a flat
+// 4-entry navigation index that could not anchor canonical keys) to the real
+// MCP docs page (19 H1/H2/H3 landmarks). Mintlify landmarks have a leading
+// zero-width space prefix on H2/H3 entries (e.g. "​OAuth Tokens"); substring
+// matchers handle this transparently.
 //
-// Per docs/provider-formats/factory-droid.yaml, all 8 canonical MCP keys
-// are curated as unsupported (inferred). The curator's notes confirm the
-// gap: "Full MCP config details require the /cli/configuration/mcp.md page
-// (not fetched — source here is the llms.txt index only)." The provider
-// extensions list two MCP-related features (mcp_manager_ui,
-// factory_as_mcp_server) but those are non-portable extensions, not
-// canonical MCP-protocol capabilities.
+// Maps 4 of 8 canonical MCP keys at heading-level evidence:
+//   - transport_types  → "Adding HTTP Servers" + "Adding Stdio Servers"
+//     section structure documents both http and stdio transports.
+//   - oauth_support    → "OAuth Tokens" heading documents Factory's
+//     OS-keyring OAuth-token storage flow for HTTP MCP servers.
+//   - tool_filtering   → "Configuration Schema" heading exposes the
+//     `disabledTools` field for per-server tool allowlisting.
+//   - marketplace      → "Quick Start: Add from Registry" heading documents
+//     the 40+ pre-configured server catalog (Linear, GitHub, Stripe, etc.).
 //
-// Recognizer silence is the right move — emitting "supported" for any
-// canonical key based on llms.txt nav landmarks would be a false positive.
-// MCP recognition can be wired once the Mintlify SPA mcp.md page is in
-// the cache and yields heading-level evidence.
+// Four canonical keys are intentionally unmapped per the curated YAML
+// (docs/provider-formats/factory-droid.yaml) — the live MCP docs page does
+// not document them:
+//   - env_var_expansion: no ${VAR} expansion syntax documented.
+//   - auto_approve: no auto-approve / trust-list capability documented.
+//   - resource_referencing: no @-mention or resource-pinning syntax
+//     documented for MCP server outputs.
+//   - enterprise_management: no fleet/policy/admin-controlled MCP server
+//     management documented.
+//
+// Required anchors are unique to mcp.0:
+//   - "Configuration Schema" — H2; mcp-doc-specific, absent from skills,
+//     hooks.{0,1}, agents, commands, and rules caches.
+//   - "OAuth Tokens"         — H2; mcp-doc-specific, absent everywhere else.
+func factoryDroidMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Configuration Schema", CaseInsensitive: true},
+		{Kind: "substring", Value: "OAuth Tokens", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(
+		McpLandmarkPattern("transport_types", "Adding HTTP Servers",
+			"http and stdio transports documented under 'Adding HTTP Servers' and 'Adding Stdio Servers' headings", required),
+		McpLandmarkPattern("oauth_support", "OAuth Tokens",
+			"OS-keyring OAuth-token storage for HTTP MCP servers documented under 'OAuth Tokens' heading", required),
+		McpLandmarkPattern("tool_filtering", "Configuration Schema",
+			"per-server tool allowlisting via the `disabledTools` field documented under 'Configuration Schema' heading", required),
+		McpLandmarkPattern("marketplace", "Quick Start: Add from Registry",
+			"40+ pre-configured MCP servers (Linear, GitHub, Stripe, etc.) documented under 'Quick Start: Add from Registry' heading", required),
+	)
+}
 
 // factoryDroidCommandsLandmarkOptions returns the landmark patterns for
 // Factory Droid's "Custom Slash Commands" doc. Anchors derived from
@@ -185,12 +263,11 @@ func factoryDroidCommandsLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeFactoryDroid recognizes skills + hooks + agents + commands
-// capabilities for the Factory Droid provider. Source for all four is
+// recognizeFactoryDroid recognizes skills + rules + hooks + agents + commands
+// + mcp capabilities for the Factory Droid provider. Source for all six is
 // markdown documentation (Mintlify SPA); recognition uses landmark matching.
 // Static facts merge in at "confirmed" confidence after a successful skills
-// landmark match. MCP recognition is intentionally absent — see the comment
-// block immediately above this function for rationale.
+// landmark match.
 func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, factoryDroidLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -199,9 +276,11 @@ func recognizeFactoryDroid(ctx RecognitionContext) RecognitionResult {
 		mergeInto(skillsResult.Capabilities, capabilityDotPaths("skills", "canonical_filename", "SKILL.md (skill.mdx also accepted)", "confirmed"))
 	}
 
+	rulesResult := recognizeLandmarks(ctx, factoryDroidRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, factoryDroidHooksLandmarkOptions())
 	agentsResult := recognizeLandmarks(ctx, factoryDroidAgentsLandmarkOptions())
 	commandsResult := recognizeLandmarks(ctx, factoryDroidCommandsLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, factoryDroidMcpLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, hooksResult, agentsResult, commandsResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, agentsResult, commandsResult, mcpResult)
 }

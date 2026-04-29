@@ -1,0 +1,46 @@
+provider: gemini-cli
+content_type: agents
+format: ""
+proposed_mappings:
+    - canonical_key: agent_scopes
+      supported: true
+      mechanism: 'Two scopes: project (.gemini/agents/*.md) and user/global (~/.gemini/agents/*.md). Both directories are scanned at session start and merged into a single registry; explicit collision-precedence behavior is not documented upstream.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: definition_format
+      supported: true
+      mechanism: Markdown files with YAML frontmatter (delimited by ---) in .gemini/agents/*.md (project) or ~/.gemini/agents/*.md (user/global); the file body becomes the subagent's system prompt.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: invocation_patterns
+      supported: true
+      mechanism: 'Two patterns: (1) automatic delegation by the main agent based on task relevance and the subagent''s description, (2) explicit @-mention at the start of a prompt (e.g., ''@codebase_investigator review this''); /agents list/enable/disable/configure manages the registry.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: model_selection
+      supported: true
+      mechanism: model frontmatter field (string); accepts a specific model id (e.g., 'gemini-3-preview') or 'inherit' (default) which uses the parent session's model. Optional 'temperature' field (0.0-2.0, default 1) sets per-subagent sampling temperature.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: per_agent_mcp
+      supported: true
+      mechanism: mcpServers object in frontmatter; declares inline MCP server configurations scoped to this subagent. Each entry follows the same shape as the global mcpServers config and is isolated to the subagent's invocation.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: subagent_spawning
+      supported: false
+      mechanism: Recursion is explicitly prevented — subagents cannot invoke other subagents even when granted the '*' tool wildcard. The documentation states this is to avoid infinite loops and excessive token usage.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: tool_restrictions
+      supported: true
+      mechanism: 'tools array in frontmatter; supports wildcards: ''*'' for all built-in and MCP tools, ''mcp_*'' for all MCP tools, ''mcp_<server-name>_*'' for tools from a single MCP server. If omitted, the subagent inherits the full tool set from the parent session.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

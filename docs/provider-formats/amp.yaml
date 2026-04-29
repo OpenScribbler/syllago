@@ -442,3 +442,17 @@ content_types:
       stated clearly in surrounding prose. The skill-bundled MCP approach described here
       is the same mechanism documented in the skills section under the mcp_bundling
       provider_extension — the two sections are complementary.
+
+  commands:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Amp does not document a user-definable slash-command or custom-command system. The closest analogues — Skills, AGENTS.md rules, and MCP servers — live under their own content types. There is no on-disk command file format for users to author."
+
+  agents:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Amp's stated position is that user-definable custom subagents are 'not yet implemented' (https://ampcode.com/agents-for-the-agent). Built-in subagents (Oracle, Librarian, Painter, Code-Review) ship in the binary and are not user-overridable. The only user-definable agent-shaped surface is '.agents/checks/<name>.md' — code-review-only review subagents — which is too narrow to satisfy syllago's general-purpose agents content type. Per syllago's provider-eligibility rule, narrow code-review-only checks do not count as native agents support."

@@ -445,3 +445,127 @@ func TestRecognizeGeminiCli_CommandsAnchorsMissing(t *testing.T) {
 		t.Error("commands.supported should NOT be present when 'Handling arguments' anchor is missing")
 	}
 }
+
+// realGeminiCliAgentsLandmarks is a snapshot of the merged headings from
+// .capmon-cache/gemini-cli/agents.{0,1}/extracted.json (docs/core/subagents.md
+// and docs/core/remote-agents.md) as of 2026-04-28. agents.0 is the primary
+// source with 41 headings covering automatic delegation, @-mention invocation,
+// agent definition files, tool wildcards, recursion protection, and
+// /agents management. agents.1 adds remote-subagent specific headings (Agent
+// Card, auth schemes, Agent2Agent transport).
+var realGeminiCliAgentsLandmarks = []string{
+	// agents.0 — subagents.md (41 headings)
+	"Subagents",
+	"What are subagents?",
+	"How to use subagents",
+	"Automatic delegation",
+	"Forcing a subagent (@ syntax)",
+	"Built-in subagents",
+	"Codebase Investigator",
+	"CLI Help Agent",
+	"Generalist Agent",
+	"Browser Agent (experimental)",
+	"Creating custom subagents",
+	"Agent definition files",
+	"File format",
+	"Tool wildcards",
+	"Isolation and recursion protection",
+	"Subagent tool isolation",
+	"Configuring isolated tools and servers",
+	"Subagent-specific policies",
+	"Managing subagents",
+	"Interactive management (/agents)",
+	"Persistent configuration (settings.json)",
+	"Optimizing your subagent",
+	"Remote subagents (Agent2Agent)",
+	"Extension subagents",
+	"Disabling subagents",
+	// agents.1 — remote-agents.md (29 headings)
+	"Remote Subagents",
+	"Defining remote subagents",
+	"Single-subagent example",
+	"Multi-subagent example",
+	"Inline Agent Card JSON",
+}
+
+// TestRecognizeGeminiCli_RealAgentsLandmarks proves agents recognition fires
+// on the merged rules+hooks+mcp+commands+agents fixture. Per the curated
+// format doc (docs/provider-formats/gemini-cli.yaml), 4 of the 7 canonical
+// agents keys have direct heading-level evidence in the docs cache:
+// definition_format, invocation_patterns, tool_restrictions, per_agent_mcp.
+// The remaining keys (agent_scopes, model_selection, subagent_spawning) are
+// confirmed in the format doc but lack their own heading anchors —
+// agent_scopes and model_selection are described inside config tables, and
+// subagent_spawning is a *negative* feature (recursion explicitly prevented).
+// Recognizer stays silent on those rather than emit false-positive heading
+// claims.
+func TestRecognizeGeminiCli_RealAgentsLandmarks(t *testing.T) {
+	merged := append([]string{}, realGeminiCliRulesLandmarks...)
+	merged = append(merged, realGeminiCliHooksLandmarks...)
+	merged = append(merged, realGeminiCliMcpLandmarks...)
+	merged = append(merged, realGeminiCliCommandsLandmarks...)
+	merged = append(merged, realGeminiCliAgentsLandmarks...)
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["agents.supported"] != "true" {
+		t.Error("agents.supported missing")
+	}
+	agentsInferred := []string{
+		"definition_format",
+		"invocation_patterns",
+		"tool_restrictions",
+		"per_agent_mcp",
+	}
+	for _, c := range agentsInferred {
+		key := "agents.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["agents.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("agents.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	// agent_scopes, model_selection have no heading-level evidence (config
+	// table fields). subagent_spawning is a negative feature (recursion
+	// prevented) and recognizers do not emit "supported: true" for absences.
+	for _, absent := range []string{
+		"agents.capabilities.agent_scopes.supported",
+		"agents.capabilities.model_selection.supported",
+		"agents.capabilities.subagent_spawning.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be emitted by landmark recognizer (no heading evidence; curated only in format doc)", absent)
+		}
+	}
+}
+
+// TestRecognizeGeminiCli_AgentsAnchorsMissing proves the required-anchor
+// guard suppresses agents emission when the unique "Creating custom
+// subagents" anchor is absent — preventing agents patterns from firing on
+// contexts that include "Tool wildcards" or "Automatic delegation" alone but
+// lack the agents-doc anchor.
+func TestRecognizeGeminiCli_AgentsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realGeminiCliAgentsLandmarks))
+	for _, lm := range realGeminiCliAgentsLandmarks {
+		if lm == "Creating custom subagents" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("gemini-cli", capmon.RecognitionContext{
+		Provider:  "gemini-cli",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["agents.supported"]; has {
+		t.Error("agents.supported should NOT be present when 'Creating custom subagents' anchor is missing")
+	}
+}

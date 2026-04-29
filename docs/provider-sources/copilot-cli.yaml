@@ -105,19 +105,17 @@ content_types:
         extracts: [config_examples, features]
 
   commands:
-    # No dedicated commands type. "Plugins" serve a similar role.
+    # Built-in slash-command reference. The interactive interface ships ~50
+    # built-in slash commands (/help, /mcp, /init, /clear, /agent, /delegate,
+    # /review, /add-dir, /fleet, etc.). The plugin pages previously listed
+    # here describe Copilot CLI's plugin packaging surface — that's a
+    # separate distribution mechanism, not a commands surface, and now lives
+    # only in provider_extensions of the format YAML.
+    # URL switched 2026-04-28 from the 3 plugin pages (zero canonical-key
+    # evidence for commands) to the slash-command reference (50+ documented
+    # built-in commands; 19 H2 anchors).
     sources:
-      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-cli-plugins.md
+      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md
         type: docs
         format: markdown
-        extracts: [file_format, features]
-
-      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-plugin-reference.md
-        type: docs
-        format: markdown
-        extracts: [config_fields, file_format]
-
-      - url: https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating.md
-        type: docs
-        format: markdown
-        extracts: [config_examples, file_format]
+        extracts: [builtin_commands, file_format, features]

@@ -4,49 +4,49 @@ format: ""
 proposed_mappings:
     - canonical_key: auto_approve
       supported: false
-      mechanism: Factory Droid does not document pre-configured auto-approval for MCP tools
+      mechanism: no auto-approve / always-allow field documented in Configuration Schema
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: enterprise_management
       supported: false
-      mechanism: Factory Droid does not document organization-level MCP management
+      mechanism: only user-level and project-level configuration scopes documented; no organization/enterprise admin layer
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: env_var_expansion
       supported: false
-      mechanism: Factory Droid MCP configuration does not document environment variable expansion
+      mechanism: Configuration schema shows env field for stdio servers but no expansion syntax (e.g. ${VAR}) is documented
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: marketplace
-      supported: false
-      mechanism: Factory Droid does not have an in-IDE MCP marketplace
+      supported: true
+      mechanism: 'Quick Start: Add from Registry — 40+ pre-configured servers organized into categories (Development & Testing, Project Management, Payments, Design, Infrastructure)'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: oauth_support
-      supported: false
-      mechanism: Factory Droid MCP does not document OAuth 2.0 authentication
+      supported: true
+      mechanism: OAuth tokens documented under 'OAuth Tokens' heading; most HTTP servers support OAuth with token storage in system keyring
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: resource_referencing
       supported: false
-      mechanism: Factory Droid does not document MCP resource referencing
+      mechanism: no @-mention or resource referencing syntax for MCP resources documented
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: tool_filtering
-      supported: false
-      mechanism: Factory Droid does not document per-server MCP tool filtering
+      supported: true
+      mechanism: per-server tool disable via disabledTools field in Configuration Schema
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: transport_types
-      supported: false
-      mechanism: Factory Droid MCP transport types not documented beyond basic MCP support
+      supported: true
+      mechanism: 'two transports documented: http (remote endpoints) and stdio (local processes); ''Adding HTTP Servers'' and ''Adding Stdio Servers'' headings'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed

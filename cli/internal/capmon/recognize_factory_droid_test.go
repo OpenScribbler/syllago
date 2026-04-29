@@ -12,7 +12,7 @@ import (
 // fetch_method=chromedp + format=html for docs.factory.ai pages (Mintlify SPA).
 //
 // Mintlify landmarks have a leading zero-width space prefix (e.g.
-// "​Skill file format") which substring matchers handle transparently.
+// "\u200bSkill file format") which substring matchers handle transparently.
 // Update this fixture when the upstream doc evolves.
 var realFactoryDroidLandmarks = []string{
 	"Skills",
@@ -356,5 +356,218 @@ func TestRecognizeFactoryDroid_CommandsAnchorsMissing(t *testing.T) {
 	})
 	if _, has := result.Capabilities["commands.supported"]; has {
 		t.Error("commands.supported should NOT be present when 'Markdown commands' anchor is missing")
+	}
+}
+
+// realFactoryDroidRulesLandmarks is a snapshot of the headings extracted from
+// Factory Droid's rules doc (.capmon-cache/factory-droid/rules.0/extracted.json)
+// as of 2026-04-17. The source URL (docs.factory.ai/cli/configuration) is the
+// AGENTS.md cross-provider rules format documentation page (Mintlify SPA
+// fetched via chromedp).
+//
+// Mintlify landmarks have a leading zero-width space prefix (e.g.
+// "\u200b3 · File locations & discovery hierarchy"); substring matchers handle
+// this transparently. Update this fixture when the upstream doc evolves.
+var realFactoryDroidRulesLandmarks = []string{
+	"AGENTS.md",
+	"\u200b1 · What is AGENTS.md?",
+	"\u200bWhy AGENTS.md?",
+	"\u200bWhat it contains:",
+	"\u200b2 · One AGENTS.md works across many agents",
+	"\u200b3 · File locations & discovery hierarchy",
+	"\u200b4 · File structure & syntax",
+	"\u200b5 · Common sections",
+	"\u200b6 · Templates & examples",
+	"\u200bFactory-style comprehensive example",
+	"\u200bNode + React monorepo",
+	"\u200bPython microservice",
+	"\u200b7 · Best practices",
+	"\u200b8 · How agents use AGENTS.md",
+	"\u200b9 · When things go wrong",
+	"\u200bWarning signs of agent drift:",
+	"\u200bRecovery playbook:",
+	"\u200b10 · Getting started",
+	"Specification Mode",
+	"Auto-Run",
+	"\u200bSummary",
+}
+
+// TestRecognizeFactoryDroid_RealRulesLandmarks proves rules recognition fires
+// from the AGENTS.md doc and emits the two supported canonical-key signals
+// (cross_provider_recognition.agents_md, hierarchical_loading) at inferred
+// confidence. The other three canonical rules keys (activation_mode,
+// file_imports, auto_memory) are curated as unsupported and must NOT be
+// emitted.
+func TestRecognizeFactoryDroid_RealRulesLandmarks(t *testing.T) {
+	merged := append([]string{}, realFactoryDroidLandmarks...)
+	merged = append(merged, realFactoryDroidHooksLandmarks...)
+	merged = append(merged, realFactoryDroidAgentsLandmarks...)
+	merged = append(merged, realFactoryDroidCommandsLandmarks...)
+	merged = append(merged, realFactoryDroidRulesLandmarks...)
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["rules.supported"] != "true" {
+		t.Errorf("rules.supported = %q, want %q", caps["rules.supported"], "true")
+	}
+	for _, key := range []string{
+		"rules.capabilities.cross_provider_recognition.agents_md.supported",
+		"rules.capabilities.cross_provider_recognition.agents_md.mechanism",
+		"rules.capabilities.cross_provider_recognition.agents_md.confidence",
+		"rules.capabilities.hierarchical_loading.supported",
+		"rules.capabilities.hierarchical_loading.mechanism",
+		"rules.capabilities.hierarchical_loading.confidence",
+	} {
+		if _, ok := caps[key]; !ok {
+			t.Errorf("%s missing", key)
+		}
+	}
+	for _, c := range []string{"cross_provider_recognition.agents_md", "hierarchical_loading"} {
+		if got := caps["rules.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("rules.capabilities.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"rules.capabilities.activation_mode.supported",
+		"rules.capabilities.file_imports.supported",
+		"rules.capabilities.auto_memory.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (curated as unsupported)", absent)
+		}
+	}
+}
+
+// TestRecognizeFactoryDroid_RulesAnchorsMissing proves the required-anchor
+// guard suppresses rules emission when "1 · What is AGENTS.md?" is absent —
+// preventing patterns from firing on contexts that mention AGENTS.md only
+// in passing (e.g. agents docs that mention AGENTS.md interop).
+func TestRecognizeFactoryDroid_RulesAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realFactoryDroidRulesLandmarks))
+	for _, lm := range realFactoryDroidRulesLandmarks {
+		if lm == "\u200b1 · What is AGENTS.md?" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["rules.supported"]; has {
+		t.Error("rules.supported should NOT be present when '1 · What is AGENTS.md?' anchor is missing")
+	}
+}
+
+// realFactoryDroidMcpLandmarks is a snapshot of the headings extracted from
+// Factory Droid's MCP doc (.capmon-cache/factory-droid/mcp.0/extracted.json)
+// as of 2026-04-28. The source URL switched from docs.factory.ai/llms.txt
+// (a 4-landmark navigation index) to docs.factory.ai/cli/configuration/mcp
+// (a 19-landmark Mintlify SPA fetched via chromedp).
+//
+// Mintlify landmarks have a leading zero-width space prefix on H2/H3 entries
+// (e.g. "\u200bAdding HTTP Servers"); substring matchers handle this transparently.
+// Update this fixture when the upstream doc evolves.
+var realFactoryDroidMcpLandmarks = []string{
+	"Model Context Protocol (MCP)",
+	"\u200bQuick Start: Add from Registry",
+	"\u200bInteractive Manager (/mcp)",
+	"\u200bAdding Servers via CLI",
+	"\u200bAdding HTTP Servers",
+	"\u200bPopular HTTP MCP Servers",
+	"\u200bDevelopment & Testing",
+	"\u200bProject Management & Documentation",
+	"\u200bPayments & Commerce",
+	"\u200bDesign & Media",
+	"\u200bInfrastructure & DevOps",
+	"\u200bAdding Stdio Servers",
+	"\u200bPopular Stdio MCP Servers",
+	"\u200bRemoving Servers",
+	"\u200bManaging Servers",
+	"\u200bConfiguration",
+	"\u200bHow Layering Works",
+	"\u200bOAuth Tokens",
+	"\u200bConfiguration Schema",
+}
+
+// TestRecognizeFactoryDroid_RealMcpLandmarks proves MCP recognition fires from
+// the real docs page and emits 4 of 8 canonical MCP keys at "inferred"
+// confidence: transport_types, oauth_support, tool_filtering, marketplace.
+// The other 4 (env_var_expansion, auto_approve, resource_referencing,
+// enterprise_management) are curated as unsupported on the live page and must
+// NOT be emitted.
+//
+// Test merges all five other content-type fixtures to mirror real-world cache
+// merging — the MCP recognizer must distinguish its capabilities from rules,
+// hooks, agents, commands, and skills via the required-anchor uniqueness gate.
+func TestRecognizeFactoryDroid_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realFactoryDroidLandmarks...)
+	merged = append(merged, realFactoryDroidHooksLandmarks...)
+	merged = append(merged, realFactoryDroidAgentsLandmarks...)
+	merged = append(merged, realFactoryDroidCommandsLandmarks...)
+	merged = append(merged, realFactoryDroidRulesLandmarks...)
+	merged = append(merged, realFactoryDroidMcpLandmarks...)
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Error("mcp.supported missing")
+	}
+	for _, c := range []string{"transport_types", "oauth_support", "tool_filtering", "marketplace"} {
+		key := "mcp.capabilities." + c + ".supported"
+		if caps[key] != "true" {
+			t.Errorf("%s missing", key)
+		}
+		if got := caps["mcp.capabilities."+c+".confidence"]; got != "inferred" {
+			t.Errorf("mcp.%s.confidence = %q, want inferred", c, got)
+		}
+	}
+	for _, absent := range []string{
+		"mcp.capabilities.env_var_expansion.supported",
+		"mcp.capabilities.auto_approve.supported",
+		"mcp.capabilities.resource_referencing.supported",
+		"mcp.capabilities.enterprise_management.supported",
+	} {
+		if _, has := caps[absent]; has {
+			t.Errorf("%s should NOT be present (curated as unsupported on the live page)", absent)
+		}
+	}
+}
+
+// TestRecognizeFactoryDroid_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "Configuration Schema" is absent — preventing
+// patterns from firing on contexts that mention "OAuth Tokens" or
+// "Adding HTTP Servers" in passing (e.g. a hooks doc snippet) without the MCP
+// page's structural anchor.
+func TestRecognizeFactoryDroid_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realFactoryDroidMcpLandmarks))
+	for _, lm := range realFactoryDroidMcpLandmarks {
+		if lm == "\u200bConfiguration Schema" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("factory-droid", capmon.RecognitionContext{
+		Provider:  "factory-droid",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'Configuration Schema' anchor is missing")
 	}
 }
