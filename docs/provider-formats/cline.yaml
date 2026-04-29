@@ -431,3 +431,10 @@ content_types:
       and none is required. Invocation includes the .md extension (e.g., /deploy.md, not
       /deploy). Project workflows take precedence over global workflows on name collision.
       Built-in slash commands are not user-modifiable; /explain-changes is VS Code-only.
+
+  agents:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Cline ships read-only research subagents inside the harness but exposes no user-definable agent file format — there is no on-disk way to author custom agents with their own system prompts, tool restrictions, or scopes. Per syllago's provider-eligibility rule, harness-owned subagents do not count as native support for the agents content type. See docs/providers/cline/skills-agents.md for the full caveat."
