@@ -67,18 +67,22 @@ func ampRulesLandmarkOptions() LandmarkOptions {
 }
 
 // ampHooksLandmarkOptions returns the landmark patterns for Amp's hooks
-// capabilities. Evidence is split across two cache sources:
-//   - hooks.0 (hooks.md): only one landmark "Hooks" — too thin to anchor on
-//   - hooks.1 (permissions-reference.md): rich landmarks describing match
+// capabilities. Evidence comes from a single cache source:
+//   - hooks.0 (permissions-reference.md): rich landmarks describing match
 //     conditions, regex patterns, and rule management
+//
+// The previous /manual/hooks.md page was retired in early 2026 (drift
+// detection issue #92, 2026-04-29) and the runtime hooks feature is now
+// documented inline at https://ampcode.com/manual?internal#hooks. That page
+// only carries one "Hooks" heading — too thin to anchor on — so recognition
+// continues to be driven entirely by the permissions reference doc.
 //
 // Per the curated format YAML (docs/provider-formats/amp.yaml), 2 of the 9
 // canonical hooks keys are supported: matcher_patterns
 // (hook_match_input_contains via "Match Conditions" + "Regular Expression
 // Patterns") and permission_control (permissions_system via "How Permissions
-// Work" + "Add Rules"). Both pieces of evidence live in the permissions
-// reference doc — amp's hooks integrate with the permission system rather
-// than expose a hook-specific protocol.
+// Work" + "Add Rules"). Amp's hooks integrate with the permission system
+// rather than expose a hook-specific protocol.
 //
 // Required anchors are unique to the permissions doc:
 //   - "Permissions Reference" — H1 of permissions-reference.md
@@ -142,9 +146,10 @@ func ampMcpLandmarkOptions() LandmarkOptions {
 // documentation; recognition uses landmark (heading) matching. Static facts
 // merge in at "confirmed" confidence after a successful skills landmark match.
 //
-// Amp's hooks doc itself (hooks.0) has only a single H1 landmark, so hooks
-// recognition is anchored against the permissions reference doc (hooks.1)
-// where the matcher_patterns and permission_control evidence lives.
+// Hooks recognition runs against the permissions reference doc (the only
+// fetched hooks source) where the matcher_patterns and permission_control
+// evidence lives. See ampHooksLandmarkOptions for context on the retired
+// /manual/hooks.md page.
 func recognizeAmp(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, ampLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
