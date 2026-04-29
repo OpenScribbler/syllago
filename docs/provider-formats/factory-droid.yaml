@@ -238,59 +238,64 @@ content_types:
   mcp:
     status: supported
     sources:
-      - uri: "https://docs.factory.ai/llms.txt"
-        type: index
-        fetch_method: http
-        content_hash: "sha256:ff0d835edd7e77e1253a53976aaabc0b4c1eb7dfec570f02810b1648a7f68855"
-        fetched_at: "2026-04-11T21:50:30.239613273Z"
+      - uri: "https://docs.factory.ai/cli/configuration/mcp"
+        type: documentation
+        fetch_method: chromedp
+        fetched_at: "2026-04-28T00:00:00Z"
     canonical_mappings:
       transport_types:
-        supported: false
-        mechanism: "Factory Droid MCP transport types not documented beyond basic MCP support"
-        confidence: inferred
+        supported: true
+        mechanism: "two transports documented: http (remote endpoints) and stdio (local processes); 'Adding HTTP Servers' and 'Adding Stdio Servers' headings"
+        confidence: confirmed
       oauth_support:
-        supported: false
-        mechanism: "Factory Droid MCP does not document OAuth 2.0 authentication"
-        confidence: inferred
+        supported: true
+        mechanism: "OAuth tokens documented under 'OAuth Tokens' heading; most HTTP servers support OAuth with token storage in system keyring"
+        confidence: confirmed
       env_var_expansion:
         supported: false
-        mechanism: "Factory Droid MCP configuration does not document environment variable expansion"
+        mechanism: "Configuration schema shows env field for stdio servers but no expansion syntax (e.g. ${VAR}) is documented"
         confidence: inferred
       tool_filtering:
-        supported: false
-        mechanism: "Factory Droid does not document per-server MCP tool filtering"
-        confidence: inferred
+        supported: true
+        mechanism: "per-server tool disable via disabledTools field in Configuration Schema"
+        confidence: confirmed
       auto_approve:
         supported: false
-        mechanism: "Factory Droid does not document pre-configured auto-approval for MCP tools"
+        mechanism: "no auto-approve / always-allow field documented in Configuration Schema"
         confidence: inferred
       marketplace:
-        supported: false
-        mechanism: "Factory Droid does not have an in-IDE MCP marketplace"
-        confidence: inferred
+        supported: true
+        mechanism: "Quick Start: Add from Registry — 40+ pre-configured servers organized into categories (Development & Testing, Project Management, Payments, Design, Infrastructure)"
+        confidence: confirmed
       resource_referencing:
         supported: false
-        mechanism: "Factory Droid does not document MCP resource referencing"
+        mechanism: "no @-mention or resource referencing syntax for MCP resources documented"
         confidence: inferred
       enterprise_management:
         supported: false
-        mechanism: "Factory Droid does not document organization-level MCP management"
+        mechanism: "only user-level and project-level configuration scopes documented; no organization/enterprise admin layer"
         confidence: inferred
     provider_extensions:
       - id: mcp_manager_ui
-        name: MCP Manager UI
-        summary: "Dedicated MCP Manager UI introduced in release 1.10 for connecting and managing MCP servers graphically without manual JSON editing."
-        source_ref: "https://docs.factory.ai/llms.txt"
+        name: Interactive MCP Manager (/mcp)
+        summary: "Interactive Manager invoked via /mcp slash command for connecting and managing MCP servers without manual JSON editing."
+        source_ref: "https://docs.factory.ai/cli/configuration/mcp"
         graduation_candidate: false
         conversion: not-portable
       - id: factory_as_mcp_server
         name: Factory as MCP Server
         summary: "The Factory CLI can itself run as an MCP server, exposing its capabilities to other tools that speak the MCP client protocol."
-        source_ref: "https://docs.factory.ai/llms.txt"
+        source_ref: "https://docs.factory.ai/cli/configuration/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: registry_categories
+        name: Categorized server registry
+        summary: "Pre-configured servers organized into categories (Development & Testing, Project Management & Documentation, Payments & Commerce, Design & Media, Infrastructure & DevOps) for discovery via Quick Start: Add from Registry."
+        source_ref: "https://docs.factory.ai/cli/configuration/mcp"
         graduation_candidate: false
         conversion: not-portable
     loading_model: ""
-    notes: "Full MCP config details require the /cli/configuration/mcp.md page (not fetched — source here is the llms.txt index only). MCP server support is also present in Factory's Zed editor integration."
+    notes: "MCP server support is also present in Factory's Zed editor integration. Configuration Schema documents the stdio fields (command, args, env) and http fields (url, headers); per-server disabledTools enables tool-level filtering. OAuth tokens are stored in the system keyring."
 
   agents:
     status: supported
