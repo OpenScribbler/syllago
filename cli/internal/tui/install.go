@@ -197,6 +197,17 @@ func openInstallWizard(item catalog.ContentItem, providers []provider.Provider, 
 
 	shell := newWizardShell("Install", stepLabels)
 
+	// Default cursor lands on the first detected provider so the common case
+	// (some detected, some not) starts focused on a known-good target. Falls
+	// back to 0 when no provider is detected — the user can still pick any.
+	defaultCursor := 0
+	for i, prov := range providers {
+		if prov.Detected && !providerInstalled[i] {
+			defaultCursor = i
+			break
+		}
+	}
+
 	m := &installWizardModel{
 		shell:             shell,
 		step:              installStepProvider,
@@ -204,6 +215,7 @@ func openInstallWizard(item catalog.ContentItem, providers []provider.Provider, 
 		itemName:          itemName,
 		providers:         providers,
 		providerInstalled: providerInstalled,
+		providerCursor:    defaultCursor,
 		isJSONMerge:       isJSONMerge,
 		projectRoot:       projectRoot,
 		buttonCursor:      -1, // no button focused initially

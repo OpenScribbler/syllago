@@ -154,7 +154,7 @@ func (m *addWizardModel) viewSource() string {
 	}
 
 	options := []sourceOption{
-		{"Provider", "Import from a detected provider", len(m.providers) == 0},
+		{"Provider", "Import from a provider", len(m.providers) == 0},
 		{"Registry", "Import from a configured registry", len(m.registries) == 0},
 		{"Local Path", "Import from a local directory", false},
 		{"Git URL", "Clone a git repository", false},
@@ -170,7 +170,7 @@ func (m *addWizardModel) viewSource() string {
 		if opt.disabled {
 			var reason string
 			if i == 0 {
-				reason = "(no providers detected)"
+				reason = "(no providers configured)"
 			} else {
 				reason = "(no registries configured)"
 			}
@@ -209,11 +209,19 @@ func (m *addWizardModel) viewProviderSubList(pad string) []string {
 			cursor = "  > "
 		}
 		name := prov.Name
+		// Detection is advisory: undetected providers stay selectable but
+		// labeled so the user knows which is which.
+		label := " (detected)"
+		if !prov.Detected {
+			label = " (not detected)"
+		}
 		var row string
 		if i == m.providerCursor {
-			row = pad + lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name)
+			row = pad + lipgloss.NewStyle().Bold(true).Foreground(primaryColor).Render(cursor+name) +
+				lipgloss.NewStyle().Foreground(mutedColor).Render(label)
 		} else {
-			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name)
+			row = pad + lipgloss.NewStyle().Foreground(primaryText).Render(cursor+name) +
+				lipgloss.NewStyle().Foreground(mutedColor).Render(label)
 		}
 		lines = append(lines, zone.Mark(fmt.Sprintf("add-prov-%d", i), row))
 	}

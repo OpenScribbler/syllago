@@ -1801,6 +1801,23 @@ func TestComputeMetaPanelData_CanInstallNoProviders(t *testing.T) {
 	}
 }
 
+// TestComputeMetaPanelData_CanInstallUndetectedProvider pins the slice 4 contract:
+// Detect() is advisory (provider/provider.go:39). The metapanel install hint
+// must surface whenever any configured provider supports the type and is not
+// already installed — regardless of whether that provider was auto-detected
+// on disk. Filtering on prov.Detected hid the [i] Install affordance for users
+// running providers from custom paths or via portable installs.
+func TestComputeMetaPanelData_CanInstallUndetectedProvider(t *testing.T) {
+	t.Parallel()
+	prov := testInstallProvider("Claude Code", "claude-code", false) // undetected
+	item := testInstallItem("my-rule", catalog.Rules, filepath.Join(t.TempDir(), "rules", "my-rule"))
+
+	data := computeMetaPanelData(item, []provider.Provider{prov}, t.TempDir())
+	if !data.canInstall {
+		t.Error("expected canInstall=true for undetected provider that supports the type — Detect() is advisory, must not gate install affordance")
+	}
+}
+
 func TestApp_LibraryInstallMsg(t *testing.T) {
 	app := testAppWithLibraryItem(t)
 

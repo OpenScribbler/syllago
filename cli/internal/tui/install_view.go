@@ -82,6 +82,13 @@ func (m *installWizardModel) viewProvider() string {
 	lines = append(lines, title, "")
 
 	for i, prov := range m.providers {
+		// Detection is advisory: undetected providers are still selectable so
+		// users with custom paths or detection misses can install. Label
+		// reflects the actual state.
+		detectionLabel := "(detected)"
+		if !prov.Detected {
+			detectionLabel = "(not detected)"
+		}
 		var row string
 		switch {
 		case m.providerInstalled[i]:
@@ -91,11 +98,11 @@ func (m *installWizardModel) viewProvider() string {
 		case i == m.providerCursor:
 			// Selected (cursor): bold accent with arrow
 			row = pad + lipgloss.NewStyle().Bold(true).Foreground(accentColor).Render(
-				"> "+prov.Name) + " " + lipgloss.NewStyle().Foreground(mutedColor).Render("(detected)")
+				"> "+prov.Name) + " " + lipgloss.NewStyle().Foreground(mutedColor).Render(detectionLabel)
 		default:
 			// Normal: primary text
 			row = pad + "  " + lipgloss.NewStyle().Foreground(primaryText).Render(
-				prov.Name) + " " + lipgloss.NewStyle().Foreground(mutedColor).Render("(detected)")
+				prov.Name) + " " + lipgloss.NewStyle().Foreground(mutedColor).Render(detectionLabel)
 		}
 		lines = append(lines, zone.Mark(fmt.Sprintf("inst-prov-%d", i), row))
 	}

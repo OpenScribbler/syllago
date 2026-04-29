@@ -317,31 +317,37 @@ func openAddWizard(
 	contentRoot string,
 	preFilterType catalog.ContentType,
 ) *addWizardModel {
-	// Filter to detected providers
-	var detected []provider.Provider
-	for _, p := range providers {
+	// Detect() is advisory only (provider.go:39) — keep every provider in the
+	// list so the user can still pick an undetected one (custom paths,
+	// detection misses). The provider sub-list labels undetected entries.
+	// Default cursor lands on the first detected provider; if none are
+	// detected, falls back to index 0 so the picker still functions.
+	defaultProviderCursor := 0
+	for i, p := range providers {
 		if p.Detected {
-			detected = append(detected, p)
+			defaultProviderCursor = i
+			break
 		}
 	}
 
-	// Default source cursor: Provider if any detected, else Local
+	// Default source cursor: Provider if any provider exists, else Local.
 	sourceCursor := 2 // Local
-	if len(detected) > 0 {
+	if len(providers) > 0 {
 		sourceCursor = 0 // Provider
 	}
 
 	m := &addWizardModel{
-		step:          addStepSource,
-		providers:     detected,
-		registries:    registries,
-		cfg:           cfg,
-		projectRoot:   projectRoot,
-		contentRoot:   contentRoot,
-		preFilterType: preFilterType,
-		sourceCursor:  sourceCursor,
-		buttonCursor:  2, // default to [Back] (0=Add, 1=Rename, 2=Back, 3=Cancel)
-		renameModal:   newEditModal(),
+		step:           addStepSource,
+		providers:      providers,
+		providerCursor: defaultProviderCursor,
+		registries:     registries,
+		cfg:            cfg,
+		projectRoot:    projectRoot,
+		contentRoot:    contentRoot,
+		preFilterType:  preFilterType,
+		sourceCursor:   sourceCursor,
+		buttonCursor:   2, // default to [Back] (0=Add, 1=Rename, 2=Back, 3=Cancel)
+		renameModal:    newEditModal(),
 	}
 	m.shell = newWizardShell("Add", m.buildShellLabels())
 

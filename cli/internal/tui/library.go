@@ -720,10 +720,13 @@ func (l libraryModel) renderMetadataContent(width int) string {
 		return renderMetaPanel(nil, metaPanelData{}, width)
 	}
 	row := l.table.rows[l.table.cursor]
+	// Detect() is advisory (provider/provider.go:39); show install affordance
+	// for any provider that supports the type and is not already installed,
+	// regardless of detection state. Mirrors metapanel.computeMetaPanelData.
 	canInstall := false
 	if item.Library || item.Registry == "" || isUnstagedRegistryItem(item) {
 		for _, prov := range l.table.providers {
-			if prov.Detected && installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
+			if installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
 				canInstall = true
 				break
 			}

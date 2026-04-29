@@ -100,6 +100,72 @@ func TestAddWizard_Open_5Step(t *testing.T) {
 	}
 }
 
+// TestAddWizard_AcceptsUndetectedProviders verifies the add wizard preserves
+// undetected providers in its provider list (per provider.go:39 advisory-only
+// contract) and labels them in the picker. Cursor defaults to the first
+// detected provider so the common case stays fast.
+func TestAddWizard_AcceptsUndetectedProviders(t *testing.T) {
+	t.Parallel()
+	// Order matters: undetected first. Correct cursor default must skip past
+	// it to the detected one (index 1).
+	providers := []provider.Provider{
+		testInstallProvider("Windsurf", "windsurf", false),
+		testInstallProvider("Claude Code", "claude-code", true),
+	}
+	m := openAddWizard(providers, testAddRegistries(), testAddConfig(), "/tmp/project", "/tmp/content", "")
+	m.width = 80
+	m.height = 30
+	m.shell.SetWidth(80)
+
+	if got := len(m.providers); got != 2 {
+		t.Errorf("expected 2 providers in wizard (detected + undetected), got %d — undetected provider was filtered out", got)
+	}
+	if m.providerCursor != 1 {
+		t.Errorf("expected providerCursor=1 (lands on detected), got %d", m.providerCursor)
+	}
+
+	// Render the provider sub-list directly. The view must label the undetected
+	// provider so the user can tell which is which.
+	subListLines := m.viewProviderSubList("  ")
+	combined := ""
+	for _, l := range subListLines {
+		combined += l + "\n"
+	}
+	if !contains(combined, "Windsurf") {
+		t.Error("provider sub-list should include Windsurf even when undetected")
+	}
+	if !contains(combined, "(not detected)") {
+		t.Error("provider sub-list should label undetected providers with '(not detected)'")
+	}
+}
+
+// TestAddWizard_SourceProviderOption_EnabledWithUndetected verifies the
+// "Provider" source option stays enabled when at least one provider exists,
+// even if none are Detected. The previous behavior disabled the option with
+// "(no providers detected)" reason text, hard-blocking the import path for
+// users whose detection has misses.
+func TestAddWizard_SourceProviderOption_EnabledWithUndetected(t *testing.T) {
+	t.Parallel()
+	providers := []provider.Provider{
+		testInstallProvider("Windsurf", "windsurf", false),
+		testInstallProvider("Cursor", "cursor", false),
+	}
+	m := openAddWizard(providers, testAddRegistries(), testAddConfig(), "/tmp/project", "/tmp/content", "")
+	m.width = 80
+	m.height = 30
+	m.shell.SetWidth(80)
+
+	view := m.viewSource()
+	if contains(view, "(no providers detected)") {
+		t.Error("source step should not show '(no providers detected)' when at least one provider exists")
+	}
+	// Provider should be the default source option (cursor 0) because
+	// providers is non-empty.
+	if m.sourceCursor != 0 {
+		t.Errorf("expected sourceCursor=0 (Provider) when providers exist, got %d", m.sourceCursor)
+	}
+}
+
 func TestAddWizard_Open_4Step(t *testing.T) {
 	t.Parallel()
 	m := testOpenAddWizardPreFiltered(t, catalog.Rules)

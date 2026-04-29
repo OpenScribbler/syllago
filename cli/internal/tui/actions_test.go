@@ -69,6 +69,66 @@ func testAppWithInstalledRule(t *testing.T) (App, catalog.ContentItem, provider.
 	return m.(App), item, prov
 }
 
+// TestHandleInstall_AcceptsUndetectedProviders verifies that the install wizard
+// opens with all providers visible — including undetected ones — and that the
+// default cursor lands on the first detected provider. The previous behavior
+// hard-blocked the wizard with a "No providers detected" toast when the
+// detected list was empty, contradicting the advisory-only contract documented
+// at provider.go:39.
+func TestHandleInstall_AcceptsUndetectedProviders(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+	itemDir := filepath.Join(home, "lib", "rules", "my-rule")
+	if err := os.MkdirAll(itemDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Rule"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{
+		Name:    "my-rule",
+		Type:    catalog.Rules,
+		Path:    itemDir,
+		Files:   []string{"rule.md"},
+		Library: true,
+	}
+	cat := &catalog.Catalog{Items: []catalog.ContentItem{item}}
+
+	// Order matters: undetected first, detected second. A correct implementation
+	// must default the cursor to the detected provider (index 1), not index 0.
+	undetected := testInstallProvider("Cursor", "cursor", false)
+	detected := testInstallProvider("Claude Code", "claude-code", true)
+
+	app := NewApp(cat, []provider.Provider{undetected, detected}, "0.0.0-test", false, nil, testConfig(), false, "", t.TempDir())
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	a := m.(App)
+
+	m2, _ := a.handleInstall()
+	a2 := m2.(App)
+
+	if a2.wizardMode != wizardInstall {
+		t.Fatalf("expected install wizard to open, wizardMode=%v (likely blocked by 'No providers detected' toast)", a2.wizardMode)
+	}
+	if a2.installWizard == nil {
+		t.Fatal("expected installWizard to be non-nil")
+	}
+	if got := len(a2.installWizard.providers); got != 2 {
+		t.Errorf("expected 2 providers in install wizard, got %d (undetected provider was filtered out)", got)
+	}
+	if a2.installWizard.providerCursor != 1 {
+		t.Errorf("expected providerCursor=1 (lands on detected provider), got %d", a2.installWizard.providerCursor)
+	}
+
+	// View must label the undetected provider so the user knows.
+	view := a2.installWizard.View()
+	if !strings.Contains(view, "Cursor") {
+		t.Error("install wizard view should list the undetected provider 'Cursor'")
+	}
+	if !strings.Contains(view, "(not detected)") {
+		t.Error("install wizard view should label undetected providers with '(not detected)'")
+	}
+}
+
 func TestActions_HandleRemoveDone_Success(t *testing.T) {
 	t.Parallel()
 	app := testApp(t)

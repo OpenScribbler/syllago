@@ -706,19 +706,22 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 		return a, cmd
 	}
 
-	// Filter to detected providers only.
-	var detected []provider.Provider
+	// Detect() is advisory only (provider.go:39) — pass every provider that
+	// supports the item's type. Undetected providers are labeled in the
+	// wizard's provider picker so the user can still pick them (e.g. for
+	// custom-path installs that detection misses).
+	var supporting []provider.Provider
 	for _, prov := range a.providers {
-		if prov.Detected {
-			detected = append(detected, prov)
+		if prov.SupportsType != nil && prov.SupportsType(item.Type) {
+			supporting = append(supporting, prov)
 		}
 	}
-	if len(detected) == 0 {
-		cmd := a.toast.Push("No providers detected", toastWarning)
+	if len(supporting) == 0 {
+		cmd := a.toast.Push("No providers support this content type", toastWarning)
 		return a, cmd
 	}
 
-	a.installWizard = openInstallWizard(*item, detected, a.projectRoot)
+	a.installWizard = openInstallWizard(*item, supporting, a.projectRoot)
 	a.installWizard.width = a.width
 	a.installWizard.height = a.contentHeight()
 	a.installWizard.shell.SetWidth(a.width)

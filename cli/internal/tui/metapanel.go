@@ -47,10 +47,15 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 	// MOAT items — for those the TUI install path fetches the blob from the
 	// registry at install time via doMOATInstallCmd. Pure registry-only items
 	// without MOAT provenance still require an explicit Add step.
+	//
+	// Detect() is advisory only (provider/provider.go:39). A provider that
+	// failed detection may still be usable (custom paths, portable installs),
+	// so we surface the install affordance for any provider that is not
+	// already installed — the install wizard handles undetected targets.
 	canInstall := false
 	if item.Library || item.Registry == "" || isUnstagedRegistryItem(&item) {
 		for _, prov := range providers {
-			if prov.Detected && installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
+			if installer.CheckStatus(item, prov, repoRoot) != installer.StatusInstalled {
 				canInstall = true
 				break
 			}
