@@ -346,11 +346,11 @@ content_types:
   agents:
     status: supported
     sources:
-      - uri: "https://cursor.com/docs/agent/overview"
+      - uri: "https://cursor.com/docs/subagents"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:bfb72fd9879d8da99ffd8a6e4a8ed07ea8830bfe7109ff6766f8b59c6c10bb02"
-        fetched_at: "2026-04-22T04:38:00Z"
+        content_hash: ""
+        fetched_at: "2026-04-28T23:45:00Z"
     canonical_mappings:
       definition_format:
         supported: true
@@ -378,41 +378,48 @@ content_types:
         mechanism: "Cursor custom agents do not document a per-agent mcpServers field; they inherit the workspace MCP configuration."
         confidence: inferred
       subagent_spawning:
-        supported: false
-        mechanism: "Cursor custom agent files do not document spawning additional subagents from a user-defined agent; the three built-in subagents (Explore, Bash, Browser) are harness-provided, not file-overridable."
-        confidence: inferred
+        supported: true
+        mechanism: "Since Cursor 2.5, subagents can launch child subagents to create a tree of coordinated work. Nested launches require Task tool access and can be restricted by hooks or tool policies."
+        confidence: confirmed
     provider_extensions:
       - id: agent_file_format
         name: Markdown + YAML frontmatter agent files
         summary: "Custom agents are .md files with YAML frontmatter (name, description, model, readonly, is_background) and a Markdown system-prompt body."
-        source_ref: "https://cursor.com/docs/agent/overview"
+        source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: true
         conversion: translated
       - id: readonly_flag
         name: readonly frontmatter flag
         summary: "readonly: true restricts the agent to read-only tools so it cannot edit files or run mutating commands."
-        source_ref: "https://cursor.com/docs/agent/overview"
+        source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: true
         conversion: embedded
         provider_field: readonly
       - id: is_background_flag
         name: is_background frontmatter flag
         summary: "is_background: true marks the agent as eligible to run in Cursor's background agents queue for concurrent execution."
-        source_ref: "https://cursor.com/docs/agent/overview"
+        source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: false
         conversion: embedded
         provider_field: is_background
       - id: builtin_subagents
         name: Built-in Explore, Bash, and Browser subagents
         summary: "Cursor ships three built-in subagents (Explore, Bash, Browser) that are harness-provided and not overridable via files; only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable."
-        source_ref: "https://cursor.com/docs/agent/overview"
+        source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: false
         conversion: not-portable
       - id: agent_scopes
         name: Project and user-global agent scopes
         summary: "Custom agents live in .cursor/agents/ at the project root or ~/.cursor/agents/ for user-global scope, following the same layout as Cursor's other content types."
-        source_ref: "https://cursor.com/docs/agent/overview"
+        source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: false
         conversion: translated
     loading_model: "Custom agents load at session start from .cursor/agents/ within the project and from ~/.cursor/agents/ for user-global scope. Each agent is a Markdown file whose name (minus the extension) is the agent identifier; its frontmatter declares name, description, an optional model override, a readonly flag, and an is_background flag, while the Markdown body becomes the agent's system prompt. Custom agents are invoked through the Cursor agent picker in the IDE. Cursor's three built-in subagents (Explore, Bash, Browser) are shipped with the harness and coexist with user-authored agents; they are not file-overridable."
     notes: "File-based custom agents were added in Cursor 2.4. Only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable; the three built-in subagents (Explore, Bash, Browser) are harness-owned and cannot be replaced with a file. Frontmatter fields beyond those documented (name, description, model, readonly, is_background) are not observed."
+
+  commands:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Cursor 1.6 introduced custom slash commands at .cursor/commands/<name>.md, but Cursor 2.4 deprecated this surface and shipped a built-in /migrate-to-skills command that converts existing commands into skills. The canonical commands docs URL (cursor.com/docs/context/commands) now serves the Skills page. Cursor's user-definable workflow surface is therefore skills, not commands; the legacy .cursor/commands/ path has no current docs and is not supported."

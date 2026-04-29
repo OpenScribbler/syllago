@@ -33,11 +33,11 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: subagent_spawning
-      supported: false
-      mechanism: Cursor custom agent files do not document spawning additional subagents from a user-defined agent; the three built-in subagents (Explore, Bash, Browser) are harness-provided, not file-overridable.
+      supported: true
+      mechanism: Since Cursor 2.5, subagents can launch child subagents to create a tree of coordinated work. Nested launches require Task tool access and can be restricted by hooks or tool policies.
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: tool_restrictions
       supported: true
       mechanism: readonly frontmatter flag restricts an agent to read-only tools; fine-grained per-tool allow/deny lists are not documented.
