@@ -35,10 +35,10 @@ config_schema:
 
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
-  # Gemini CLI supports: rules, skills, commands, mcp, hooks
-  # Not supported: agents (no user-definable agent file format; internal subagent support only)
-  # Syllago: rules ✓, skills ✓, agents ✓ (via cross-provider AGENTS.md convention at .gemini/agents/), commands ✓, mcp ✓, hooks ✓
-  #   Gemini CLI has no native agent format — syllago uses cross-provider AGENTS.md convention for .gemini/agents/. No documentation URL to monitor for agents.
+  # Gemini CLI supports: rules, skills, commands, mcp, hooks, agents
+  # Native agents support landed in upstream via the /agents subcommand and
+  # subagents.md / remote-agents.md documentation. Files live at
+  # .gemini/agents/<name>.md (project) and ~/.gemini/agents/<name>.md (user).
   # ─────────────────────────────────────────────────────────────────────
 
   rules:
@@ -106,11 +106,19 @@ content_types:
     # Note: directory paths sourced from codebase, not the linked docs page.
 
   agents:
-    supported: true
-    convention: cross-provider-agents-md
-    # Gemini CLI has no native agent file format. Syllago implements agents via
-    # the cross-provider AGENTS.md convention at .gemini/agents/ (project) and
-    # ~/.gemini/agents/ (user). No provider-specific documentation URL to monitor.
+    sources:
+      - url: https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, file_locations, invocation_patterns, tool_restrictions, model_selection, per_agent_mcp]
+      - url: https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/remote-agents.md
+        type: docs
+        format: markdown
+        extracts: [file_format, frontmatter_fields, remote_kind, transport_options]
+    # Format: Markdown files with YAML frontmatter at .gemini/agents/<name>.md
+    # (project) and ~/.gemini/agents/<name>.md (user/global). Frontmatter fields:
+    # name, description, kind (local|remote), model, temperature, tools[], mcpServers{}.
+    # Recursion is explicitly prevented — subagents cannot spawn other subagents.
 
   commands:
     sources:

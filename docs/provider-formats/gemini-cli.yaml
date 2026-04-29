@@ -1,7 +1,7 @@
 provider: gemini-cli
 docs_url: "https://github.com/google-gemini/gemini-cli"
 category: cli
-last_fetched_at: "2026-04-11T21:50:41Z"
+last_fetched_at: "2026-04-28T22:02:38Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: subagent
 
@@ -413,3 +413,102 @@ content_types:
         conversion: not-portable
     loading_model: "Commands are TOML files in ~/.gemini/commands/ (user/global scope) or <project>/.gemini/commands/ (project scope). The command name is derived from the file path relative to the commands/ directory, with path separators converted to colons. Project commands override user commands of the same name. Commands are invoked in the CLI with a leading slash (e.g., /git:commit). Use /commands reload to pick up changes without restarting."
     notes: "Command files must use the .toml extension. The description field is optional but recommended — if omitted, a generic description is auto-generated from the filename and shown in the /help menu. Shell injection (!{...}) requires balanced braces inside the block; unbalanced-brace commands should be wrapped in an external script."
+
+  agents:
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:cd6dadc846e123d1b8b5fd66c65027b9463b16246c0cb3ebdc32d63b22c03d76"
+        fetched_at: "2026-04-28T22:02:38Z"
+      - uri: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/remote-agents.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:8dd736d4ad31ffdb3ef8736746da31935b00fffaa37de07408827bf36d6fc2aa"
+        fetched_at: "2026-04-28T22:02:38Z"
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "Markdown files with YAML frontmatter (delimited by ---) in .gemini/agents/*.md (project) or ~/.gemini/agents/*.md (user/global); the file body becomes the subagent's system prompt."
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        mechanism: "tools array in frontmatter; supports wildcards: '*' for all built-in and MCP tools, 'mcp_*' for all MCP tools, 'mcp_<server-name>_*' for tools from a single MCP server. If omitted, the subagent inherits the full tool set from the parent session."
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "Two patterns: (1) automatic delegation by the main agent based on task relevance and the subagent's description, (2) explicit @-mention at the start of a prompt (e.g., '@codebase_investigator review this'); /agents list/enable/disable/configure manages the registry."
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "Two scopes: project (.gemini/agents/*.md) and user/global (~/.gemini/agents/*.md). Both directories are scanned at session start and merged into a single registry; explicit collision-precedence behavior is not documented upstream."
+        confidence: confirmed
+      model_selection:
+        supported: true
+        mechanism: "model frontmatter field (string); accepts a specific model id (e.g., 'gemini-3-preview') or 'inherit' (default) which uses the parent session's model. Optional 'temperature' field (0.0-2.0, default 1) sets per-subagent sampling temperature."
+        confidence: confirmed
+      per_agent_mcp:
+        supported: true
+        mechanism: "mcpServers object in frontmatter; declares inline MCP server configurations scoped to this subagent. Each entry follows the same shape as the global mcpServers config and is isolated to the subagent's invocation."
+        confidence: confirmed
+      subagent_spawning:
+        supported: false
+        mechanism: "Recursion is explicitly prevented — subagents cannot invoke other subagents even when granted the '*' tool wildcard. The documentation states this is to avoid infinite loops and excessive token usage."
+        confidence: confirmed
+    provider_extensions:
+      - id: agent_kind_local_remote
+        name: Local vs remote subagent kind
+        summary: "Optional 'kind' frontmatter field (string) accepts 'local' (default) or 'remote'; remote subagents are documented separately and support a list format that allows multiple remote subagents per file."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/remote-agents.md"
+        provider_field: "kind"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_max_turns
+        name: Per-subagent turn limit
+        summary: "max_turns frontmatter field (number, default 30) caps the number of conversation turns a subagent may take before it must return to the main agent."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        provider_field: "max_turns"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_timeout_mins
+        name: Per-subagent execution timeout
+        summary: "timeout_mins frontmatter field (number, default 10) caps the wall-clock execution time of a subagent invocation."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        provider_field: "timeout_mins"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_temperature
+        name: Per-subagent model temperature
+        summary: "temperature frontmatter field (number 0.0-2.0, default 1) sets the model sampling temperature for the subagent independently of the parent session."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        provider_field: "temperature"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_tool_wildcards
+        name: Tool wildcard patterns
+        summary: "Tool allowlists support wildcards: '*' (all tools), 'mcp_*' (all MCP tools), 'mcp_<server>_*' (per-server). Wildcards apply to the subagent's effective tool set at invocation time."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        provider_field: "tools"
+        graduation_candidate: true
+        conversion: translated
+      - id: agent_builtin_experts
+        name: Built-in expert subagents
+        summary: "Gemini CLI ships built-in subagents alongside user-authored ones: @codebase_investigator (codebase analysis), @cli_help (CLI docs), @generalist (multi-file operations), @browser_agent (experimental web automation)."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_management_command
+        name: /agents management command
+        summary: "/agents list, enable, disable, configure, and reload manages the subagent registry; /agents reload rescans both ~/.gemini/agents and .gemini/agents without restarting the CLI."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/subagents.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: agent_remote_subagents
+        name: Remote subagents
+        summary: "Remote subagents (kind: remote) are also Markdown files with YAML frontmatter at the same locations; a list format permits multiple remote subagents in a single file (mixed local+remote or multiple local agents in one file is not supported)."
+        source_ref: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/core/remote-agents.md"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Custom subagents load at session start from .gemini/agents/*.md (project scope) and ~/.gemini/agents/*.md (user/global scope). Each file is a Markdown document beginning with YAML frontmatter (--- delimiters) declaring at minimum a 'name' and 'description'; the Markdown body becomes the subagent's system prompt. Both scope directories are scanned and merged into a single registry. Built-in subagents (codebase_investigator, cli_help, generalist, browser_agent) ship in the binary and coexist with user-authored subagents. The /agents reload command rescans both directories without restarting the CLI. Subagents cannot invoke other subagents — recursion is prevented to avoid infinite loops and excessive token usage. Tool inheritance: if 'tools' is omitted, the subagent inherits all tools from the parent session, including any MCP-discovered tools."
+    notes: "Subagents shipped officially in Gemini CLI v0.38.1 and are default-enabled at v0.36+. The @-mention syntax (e.g., '@codebase_investigator review this PR') bypasses main-agent decision-making and routes directly to the named subagent. Explicit project-vs-user collision-precedence behavior is not documented in the canonical reference. Remote subagents (kind: remote) are documented separately and support a multi-agent list format only for the remote variant."
