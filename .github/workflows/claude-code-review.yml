@@ -43,7 +43,7 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@4e5d8b13ca281a6d163cdb287d8917b216e00d6f # v1
+        uses: anthropics/claude-code-action@ef50f123a3a9be95b60040d042717517407c7256 # v1
         with:
           claude_code_oauth_token: ${{ steps.aembit.outputs.api-key }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
