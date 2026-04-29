@@ -148,70 +148,117 @@ func copilotCliAgentsLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// MCP recognition is intentionally NOT wired for copilot-cli.
+// copilotCliMcpLandmarkOptions returns the landmark patterns for Copilot
+// CLI's MCP doc. Anchors derived from
+// .capmon-cache/copilot-cli/mcp.0/extracted.json (add-mcp-servers.md).
 //
-// Copilot CLI's MCP evidence (.capmon-cache/copilot-cli/mcp.0 + mcp.1) is
-// procedural body text rather than heading-level structure. The mcp.0 doc
-// (add-mcp-servers.md) walks through the interactive `/mcp add` form via
-// numbered list items: "Next to Server Type, select... Local or STDIO...
-// HTTP or SSE..." and "Next to Tools, specify which tools...". Transport
-// types and tool filtering are mentioned, but as inline list options inside
-// a single procedure — not as discrete H1/H2 anchors that the substring
-// matcher can use to distinguish capabilities.
+// Per docs/provider-formats/copilot-cli.yaml (lines 313-345), the curator
+// has individually mapped all 8 canonical MCP keys: tool_filtering is
+// supported confirmed via the --allow-tool/--deny-tool CLI flag mechanism,
+// and the other 7 keys (transport_types, oauth_support, env_var_expansion,
+// auto_approve, marketplace, resource_referencing, enterprise_management)
+// are curated as unsupported. The mcp.0 cache contains heading-level
+// landmarks ("Adding an MCP server", "Using the /mcp add command",
+// "Editing the configuration file", "Managing MCP servers", "Using MCP
+// servers"), but these are procedural section headings — none aligns
+// cleanly with a canonical-key semantic the curator has not already
+// adjudicated.
 //
-// Per docs/provider-formats/copilot-cli.yaml, only 1 of 8 canonical MCP keys
-// (tool_filtering, mechanism: --allow-tool/--deny-tool CLI flags) is curated
-// as supported, at "confirmed" confidence. The other 7 are curated as
-// unsupported. The doc-source landmark approach would either:
-//   - Be redundant (recognizer "inferred" loses to curator "confirmed" for
-//     tool_filtering, and the doc evidence is the config-form Tools field —
-//     a different mechanism than the curated --allow-tool flags).
-//   - Contradict the curator (e.g. emitting transport_types as inferred-true
-//     against curator's explicit unsupported assertion based on procedural
-//     body text rather than heading evidence).
+// The mcp.1 cache (concepts/context/mcp.md) has product-overview headings
+// ("Remote access", "Toolset customization", "About the GitHub MCP
+// Registry") that could superficially anchor canonical keys, but the
+// curator has explicitly marked transport_types/marketplace as unsupported
+// despite this evidence — the headings describe corporate-network access
+// scenarios, built-in tool toggling, and GitHub's server-side registry
+// rather than the canonical-key semantics (per-server transport choice,
+// per-server tool allowlist, in-CLI marketplace browsing). Emitting
+// per-key signals from those headings would contradict curator judgment.
 //
-// Recognizer silence preserves the curator's higher-confidence data and
-// avoids surfacing false-positive heading inferences from list-item body
-// text. mcp.1 (concepts/context/mcp.md) is the GitHub-wide MCP discovery
-// page covering chat/IDE/cloud-agent variants — its landmarks describe
-// extension and integration concepts, not consumer-side capability
-// vocabulary specific to the CLI.
+// This recognizer therefore emits ONLY mcp.supported=true via an
+// empty-Capability pattern — confirming Copilot CLI documents an MCP
+// surface without overriding curator-extracted per-key claims. The
+// curator's per-key flags in the format YAML stay authoritative.
+//
+// Required anchors are unique to mcp.0:
+//   - "Adding an MCP server"      — H1, MCP-specific
+//   - "Using the /mcp add command" — H2, MCP-specific
+//
+// Verified absent from copilot-cli's skills.{0,1}, rules.0, hooks.0,
+// agents.{0,1}, and commands.{0,1,2} caches. Note that agents.0 contains
+// "MCP server configurations" (per-agent MCP scoping), but neither of the
+// required anchors above appears there — so cross-content-type landmark
+// merging cannot trigger a false positive against agents.0.
+func copilotCliMcpLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Adding an MCP server", CaseInsensitive: true},
+		{Kind: "substring", Value: "Using the /mcp add command", CaseInsensitive: true},
+	}
+	return McpLandmarkOptions(LandmarkPattern{
+		Capability: "",
+		Required:   required,
+		Matchers:   []StringMatcher{{Kind: "substring", Value: "MCP server", CaseInsensitive: true}},
+	})
+}
 
-// Commands recognition is intentionally NOT wired for copilot-cli.
+// copilotCliCommandsLandmarkOptions returns the landmark patterns for Copilot
+// CLI's CLI command reference. Anchors derived from
+// .capmon-cache/copilot-cli/commands.0/extracted.json
+// (https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md
+// — the unified reference for the interactive interface, ~50 built-in slash
+// commands plus command-line flags, environment variables, and configuration).
 //
-// All three cached commands sources describe the PLUGIN system, not slash
-// commands:
-//   - commands.0 (about-copilot-cli-plugins.md) — overview of "what is a
-//     plugin", landmarks "What is a plugin?" / "What plugins contain" / "Why
-//     use plugins?". No slash-command vocabulary.
-//   - commands.1 (copilot-cli-plugin-specification.md) — plugin.json schema
-//     reference, landmarks "Plugin specification for install command" /
-//     "marketplace.json" / "Component path fields". The "CLI commands"
-//     landmark refers to plugin-management CLI commands (install/uninstall),
-//     not user-invokable slash commands.
-//   - commands.2 (creating-copilot-cli-plugin.md) — plugin-author tutorial,
-//     landmarks "Plugin structure" / "Creating a plugin" / "Distributing
-//     your plugin". Again no slash-command surface.
+// The source URL switched 2026-04-28 from three plugin pages
+// (about-cli-plugins.md, cli-plugin-reference.md, plugins-creating.md) — which
+// described Copilot CLI's plugin packaging surface, not slash commands — to
+// the cli-command-reference.md page that explicitly documents Copilot CLI's
+// built-in slash-command surface. The plugin pages remain referenced from the
+// format YAML's provider_extensions block (the plugin system is a real but
+// non-canonical extension surface that bundles agents/skills/hooks/MCP).
 //
-// Per docs/provider-formats/copilot-cli.yaml, copilot-cli has NO user-
-// invokable slash commands — the /-prefix surface is reserved for built-in
-// CLI features (/help, /reset, /quit) that are not documented as a custom-
-// command authoring API. The plugin system is a parallel extension surface
-// covered by the existing skills + agents recognizers. Both canonical
-// commands keys (argument_substitution, builtin_commands) are curated as
-// unsupported.
+// Maps 1 of 2 canonical commands keys at heading-level evidence:
+//   - builtin_commands → "Slash commands in the interactive interface" + the
+//     "Command-line commands" H2; together these document ~50 built-in slash
+//     commands (/help, /mcp, /init, /clear, /agent, /delegate, /review,
+//     /add-dir, /fleet, /research, /plugin) plus the top-level `copilot`
+//     subcommands (login, completion).
 //
-// Recognizer silence preserves the curator's "unsupported" assertion.
-// Emitting any commands.* key from plugin landmarks would conflate plugins
-// (a packaging mechanism) with slash commands (an invocation mechanism) —
-// two unrelated capability surfaces.
+// argument_substitution is intentionally NOT mapped. Copilot CLI's built-in
+// slash commands accept literal positional arguments (e.g. /add-dir PATH,
+// /init suppress) but the reference does not document a user-authored
+// custom-command authoring mechanism with template-substitution syntax — no
+// $ARGUMENTS, no $1/$2 positional substitution, no {{args}} interpolation.
+// The format YAML curator marks argument_substitution unsupported on this
+// basis.
+//
+// Required anchors are unique to commands.0:
+//   - "Slash commands in the interactive interface" — H2; the slash-command
+//     taxonomy heading, absent from skills.{0,1}, rules.{0,1,2}, hooks.{0,1,2},
+//     agents.{0,1}, and mcp.{0,1} caches.
+//   - "Command-line commands" — H2; the top-level `copilot` subcommand
+//     reference, also unique to commands.0.
+//
+// Together these gate against false positives both ways: a future drift in
+// the cli-command-reference page that drops either heading will block
+// commands recognition, and a doc that mentions "slash commands" or
+// "command-line commands" only in passing won't carry both anchors.
+func copilotCliCommandsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Slash commands in the interactive interface", CaseInsensitive: true},
+		{Kind: "substring", Value: "Command-line commands", CaseInsensitive: true},
+	}
+	return CommandsLandmarkOptions(
+		CommandsLandmarkPattern("builtin_commands", "Slash commands in the interactive interface",
+			"~50 built-in slash commands documented under 'Slash commands in the interactive interface' (e.g. /help, /mcp, /init, /clear, /agent, /delegate, /review, /add-dir); 'Command-line commands' covers top-level `copilot` subcommands (login, completion)", required),
+	)
+}
 
-// recognizeCopilotCli recognizes skills + rules + hooks + agents capabilities
-// for the Copilot CLI provider. Source for all four content types is markdown
-// documentation; recognition uses landmark (heading) matching. Static facts
-// merge in at "confirmed" confidence after a successful skills landmark match.
-// MCP and commands recognition are intentionally absent — see the comment
-// blocks above for rationale.
+// recognizeCopilotCli recognizes skills + rules + hooks + agents + mcp +
+// commands capabilities for the Copilot CLI provider. Source for all six
+// content types is markdown documentation; recognition uses landmark
+// (heading) matching. Static facts merge in at "confirmed" confidence after
+// a successful skills landmark match. MCP recognition emits only
+// mcp.supported=true (empty-Capability pattern) since the curator owns
+// all per-key signals.
 func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	skillsResult := recognizeLandmarks(ctx, copilotCliLandmarkOptions())
 	if len(skillsResult.Capabilities) > 0 {
@@ -223,6 +270,8 @@ func recognizeCopilotCli(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, copilotCliRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, copilotCliHooksLandmarkOptions())
 	agentsResult := recognizeLandmarks(ctx, copilotCliAgentsLandmarkOptions())
+	mcpResult := recognizeLandmarks(ctx, copilotCliMcpLandmarkOptions())
+	commandsResult := recognizeLandmarks(ctx, copilotCliCommandsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, agentsResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, agentsResult, mcpResult, commandsResult)
 }

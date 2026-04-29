@@ -355,3 +355,177 @@ func TestRecognizeCopilotCli_RealHooksLandmarks(t *testing.T) {
 		}
 	}
 }
+
+// realCopilotCliMcpLandmarks is a snapshot of the headings from Copilot CLI's
+// MCP doc (.capmon-cache/copilot-cli/mcp.0/extracted.json — add-mcp-servers.md
+// procedural walkthrough). Update this fixture when the upstream doc evolves.
+var realCopilotCliMcpLandmarks = []string{
+	"Adding an MCP server",
+	"Using the /mcp add command",
+	"Editing the configuration file",
+	"Managing MCP servers",
+	"Using MCP servers",
+	"Further reading",
+}
+
+// TestRecognizeCopilotCli_RealMcpLandmarks proves MCP recognition emits only
+// the top-level mcp.supported=true signal (empty-Capability pattern) without
+// any per-key emission. Per docs/provider-formats/copilot-cli.yaml, all 8
+// canonical MCP keys are individually curated (1 supported confirmed via CLI
+// flags + 7 unsupported); the recognizer adds no per-key signal that the
+// curator has not already captured. The empty-Capability pattern confirms
+// "this provider documents an MCP surface" without contradicting curator
+// judgments on individual capabilities.
+func TestRecognizeCopilotCli_RealMcpLandmarks(t *testing.T) {
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliRulesLandmarks...)
+	merged = append(merged, realCopilotCliHooksLandmarks...)
+	merged = append(merged, realCopilotCliAgentsLandmarks...)
+	merged = append(merged, realCopilotCliMcpLandmarks...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["mcp.supported"] != "true" {
+		t.Errorf("mcp.supported = %q, want %q", caps["mcp.supported"], "true")
+	}
+	for k := range caps {
+		if len(k) > len("mcp.capabilities.") && k[:len("mcp.capabilities.")] == "mcp.capabilities." {
+			t.Errorf("mcp.capabilities.* should NOT be emitted (curator owns per-key signals): %s = %q", k, caps[k])
+		}
+	}
+}
+
+// TestRecognizeCopilotCli_McpAnchorsMissing proves the required-anchor guard
+// suppresses MCP emission when "Adding an MCP server" is absent — preventing
+// the pattern from firing on agents.0 (which has "MCP server configurations"
+// in its landmarks for per-agent MCP scoping).
+func TestRecognizeCopilotCli_McpAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realCopilotCliMcpLandmarks))
+	for _, lm := range realCopilotCliMcpLandmarks {
+		if lm == "Adding an MCP server" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliAgentsLandmarks...)
+	merged = append(merged, mutated...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+	if _, has := result.Capabilities["mcp.supported"]; has {
+		t.Error("mcp.supported should NOT be present when 'Adding an MCP server' anchor is missing (agents.0 'MCP server configurations' landmark must not trigger MCP recognition)")
+	}
+}
+
+// realCopilotCliCommandsLandmarks is a snapshot of the headings extracted from
+// Copilot CLI's CLI command reference (.capmon-cache/copilot-cli/commands.0/
+// extracted.json) as of 2026-04-28. The source URL switched from three plugin
+// docs (which described plugin packaging, not slash commands) to
+// raw.githubusercontent.com/.../cli-command-reference.md — the unified
+// reference for the interactive interface (~50 built-in slash commands,
+// command-line flags, environment variables, hooks/MCP/skills/agents
+// subsections).
+//
+// The fixture intentionally omits the page's hooks/MCP/skills/agents
+// subsections — those are documented separately in their own caches and
+// would invite cross-content-type false positives if blanket-included here.
+// The recognizer's required-anchor uniqueness gate ("Slash commands in the
+// interactive interface" + "Command-line commands") protects against drift
+// in either direction.
+var realCopilotCliCommandsLandmarks = []string{
+	"Command-line commands",
+	"copilot login options",
+	"Using copilot completion",
+	"Usage examples",
+	"Global shortcuts in the interactive interface",
+	"Timeline shortcuts in the interactive interface",
+	"Navigation shortcuts in the interactive interface",
+	"Slash commands in the interactive interface",
+	"Command-line options",
+	"Tool availability values",
+	"Shell tools",
+	"File operation tools",
+	"Agent and task delegation tools",
+	"Other tools",
+	"Tool permission patterns",
+	"Environment variables",
+	"Configuration file settings",
+}
+
+// TestRecognizeCopilotCli_RealCommandsLandmarks proves commands recognition
+// fires from the unified CLI command reference and emits builtin_commands at
+// "inferred" confidence (heading-evidence tier — the curator owns "confirmed"
+// at the format YAML layer). argument_substitution must NOT be emitted: the
+// reference documents how built-in slash commands accept literal positional
+// arguments (e.g. /add-dir PATH, /init suppress) but does not document a
+// user-authored custom-command mechanism with template-substitution syntax
+// (no $ARGUMENTS, $1/$2, or {{args}} interpolation).
+//
+// Test merges all six other content-type fixtures to mirror real-world cache
+// merging — the commands recognizer must distinguish its capabilities from
+// skills, rules, hooks, agents, and mcp via the required-anchor uniqueness
+// gate.
+func TestRecognizeCopilotCli_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realCopilotCliSkillsLandmarks...)
+	merged = append(merged, realCopilotCliNonSkillsLandmarks...)
+	merged = append(merged, realCopilotCliRulesLandmarks...)
+	merged = append(merged, realCopilotCliHooksLandmarks...)
+	merged = append(merged, realCopilotCliAgentsLandmarks...)
+	merged = append(merged, realCopilotCliMcpLandmarks...)
+	merged = append(merged, realCopilotCliCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Error("commands.supported missing")
+	}
+	if caps["commands.capabilities.builtin_commands.supported"] != "true" {
+		t.Error("commands.capabilities.builtin_commands.supported missing")
+	}
+	if got := caps["commands.capabilities.builtin_commands.confidence"]; got != "inferred" {
+		t.Errorf("commands.builtin_commands.confidence = %q, want inferred", got)
+	}
+	if _, has := caps["commands.capabilities.argument_substitution.supported"]; has {
+		t.Error("commands.capabilities.argument_substitution.supported should NOT be present (Copilot CLI does not document a user-authored custom-command authoring mechanism with template-substitution syntax)")
+	}
+}
+
+// TestRecognizeCopilotCli_CommandsAnchorsMissing proves the required-anchor
+// guard suppresses commands emission when "Slash commands in the interactive
+// interface" is absent — preventing patterns from firing on contexts that
+// only mention "Command-line commands" without the slash-command taxonomy
+// heading.
+func TestRecognizeCopilotCli_CommandsAnchorsMissing(t *testing.T) {
+	mutated := make([]string, 0, len(realCopilotCliCommandsLandmarks))
+	for _, lm := range realCopilotCliCommandsLandmarks {
+		if lm == "Slash commands in the interactive interface" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("copilot-cli", capmon.RecognitionContext{
+		Provider:  "copilot-cli",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when 'Slash commands in the interactive interface' anchor is missing")
+	}
+}
