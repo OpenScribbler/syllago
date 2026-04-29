@@ -206,35 +206,41 @@ func claudeCodeAgentsLandmarkOptions() LandmarkOptions {
 
 // Commands recognition is intentionally NOT wired for claude-code.
 //
-// The cached commands source (.capmon-cache/claude-code/commands.0/extracted.json,
-// fetched from code.claude.com/docs/en/slash-commands.md) yields only 4
-// landmarks: "Documentation Index", "Commands", "MCP prompts", and "See
-// also". Two problems:
+// The structural reason — beyond landmark sparseness — is that claude-code
+// has unified user-authored slash commands into the skills system. The
+// cached commands.md source (.capmon-cache/claude-code/commands.0/) literally
+// says: "To add your own commands, see [skills]" and the See also section
+// reads "[Skills](/en/skills): create your own commands". The format-doc
+// (docs/provider-formats/claude-code.yaml) records the same fact: "Custom
+// commands and skills are the same mechanism under different names". This
+// has two practical consequences for the landmark recognizer:
 //
-//  1. Required-anchor uniqueness fails. "Commands" is too generic for a
-//     required gate (it appears in mcp.0's "MCP commands" body context and
-//     would self-trigger elsewhere). "MCP prompts" overlaps with the MCP
-//     content type's vocabulary (claude-code mcp.0 mentions MCP prompts in
-//     body text under the resource-referencing section). Substring matching
-//     cannot scope cleanly.
-//  2. Anchor evidence is body-text-rooted. The /-commands catalog and
-//     $ARGUMENTS substitution syntax both live in tables and code blocks,
-//     not as discrete H2/H3 anchors. The markdown extractor surfaces row
-//     contents as fields (row_*_col_*) rather than landmarks — a layer the
-//     landmark recognizer cannot read.
+//  1. argument_substitution evidence lives in skills.md, not commands.md.
+//     The format-doc's argument_substitution.mechanism cites $ARGUMENTS /
+//     $N / ${CLAUDE_SESSION_ID} as "shared with skills argument
+//     substitution" — i.e. the heading "Pass arguments to skills" already
+//     captured by claudeCodeLandmarkOptions() above. Emitting the same
+//     signal a second time under commands.* would double-count, not
+//     improve recognition.
+//  2. builtin_commands evidence is a table in commands.md, not a heading.
+//     The markdown extractor surfaces table rows as row_*_col_* fields,
+//     never as landmark headings. The four landmarks the cache does
+//     surface ("Documentation Index", "Commands", "MCP prompts", "See
+//     also") are either too generic to anchor on or already covered by
+//     the MCP recognizer.
 //
 // Per docs/provider-formats/claude-code.yaml, both canonical commands keys
 // (argument_substitution and builtin_commands) are curated as supported at
-// "confirmed" confidence — the curator has reviewed the slash-commands.md
-// source's body and confirmed claude-code ships built-in /-commands and
-// supports $ARGUMENTS / $1 / $2 / $@ substitution. The recognizer staying
-// silent here preserves that higher-confidence curated data; emitting an
-// "inferred" downgrade from weak landmarks would be lossy noise.
+// "confirmed" confidence. The recognizer staying silent here preserves that
+// higher-confidence curated data; emitting an "inferred" downgrade from
+// weak landmarks — or duplicating the skills.arguments signal — would be
+// lossy noise.
 //
 // Wiring claude-code commands recognition would require either a field-
 // extractor pass over commands.0 row data or a typed-source extractor
 // reading the SlashCommand registry from claude-code's binary (out of
-// scope — claude-code is closed-source).
+// scope — claude-code is closed-source). Neither is justified while the
+// format-doc curation is already at "confirmed" confidence.
 
 // recognizeClaudeCode recognizes skills + rules + hooks + mcp + agents
 // capabilities for the Claude Code provider. Source for all five content
