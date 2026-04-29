@@ -31,10 +31,16 @@ jobs:
         working-directory: cli
         env:
           SYLLAGO_POSTHOG_KEY: ${{ secrets.SYLLAGO_POSTHOG_KEY }}
+          SYLLAGO_SIGNING_PUBLIC_KEY: ${{ vars.SYLLAGO_SIGNING_PUBLIC_KEY }}
         run: |
           LDFLAGS="-X main.version=${VERSION}"
           if [ -n "$SYLLAGO_POSTHOG_KEY" ]; then
             LDFLAGS="$LDFLAGS -X github.com/OpenScribbler/syllago/cli/internal/telemetry.apiKey=$SYLLAGO_POSTHOG_KEY"
+          fi
+          if [ -n "$SYLLAGO_SIGNING_PUBLIC_KEY" ]; then
+            LDFLAGS="$LDFLAGS -X github.com/OpenScribbler/syllago/cli/internal/updater.SigningPublicKey=$SYLLAGO_SIGNING_PUBLIC_KEY"
+          else
+            echo "::warning::SYLLAGO_SIGNING_PUBLIC_KEY not set — release binaries will skip self-update signature verification with a warning."
           fi
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o syllago-linux-amd64 ./cmd/syllago
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" -o syllago-linux-arm64 ./cmd/syllago
@@ -80,6 +86,28 @@ jobs:
         working-directory: cli
         run: cosign sign-blob --yes checksums.txt --bundle checksums.txt.bundle
 
+      - name: Get Ed25519 signing key from Aembit
+        id: aembit-signing
+        continue-on-error: true
+        uses: Aembit/get-credentials@652c3288eba4b0f3f03d0fee970b0d6c490f010a # v1.1.2
+        with:
+          client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
+          credential-type: ApiKey
+          server-host: ${{ vars.SYLLAGO_SIGNING_AEMBIT_HOST }}
+
+      - name: Sign checksums.txt with Ed25519
+        if: steps.aembit-signing.outcome == 'success' && steps.aembit-signing.outputs.api-key != ''
+        working-directory: cli
+        env:
+          SYLLAGO_SIGNING_PRIVATE_KEY: ${{ steps.aembit-signing.outputs.api-key }}
+        run: |
+          go run ./cmd/syllago-sign sign checksums.txt > checksums.txt.sig
+          echo "Wrote checksums.txt.sig ($(wc -c < checksums.txt.sig) bytes)"
+
+      - name: Warn if Ed25519 signing was skipped
+        if: steps.aembit-signing.outcome != 'success' || steps.aembit-signing.outputs.api-key == ''
+        run: echo "::warning::Ed25519 signing skipped — release will not include checksums.txt.sig. Configure the Aembit Access Policy and SYLLAGO_SIGNING_AEMBIT_HOST repo variable to enable self-update signature verification."
+
       - name: Prepare release notes
         id: notes
         run: |
@@ -103,6 +131,9 @@ jobs:
             content-format.json syllago-yaml-schema.json sbom.spdx.json
             checksums.txt checksums.txt.bundle
           )
+          if [ -f checksums.txt.sig ]; then
+            ASSETS+=(checksums.txt.sig)
+          fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists; updating notes and re-uploading assets."
             gh release edit "$GITHUB_REF_NAME" \
@@ -130,6 +161,9 @@ jobs:
             content-format.json syllago-yaml-schema.json sbom.spdx.json
             checksums.txt checksums.txt.bundle
           )
+          if [ -f checksums.txt.sig ]; then
+            ASSETS+=(checksums.txt.sig)
+          fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release $GITHUB_REF_NAME already exists; updating title and re-uploading assets."
             gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME"
