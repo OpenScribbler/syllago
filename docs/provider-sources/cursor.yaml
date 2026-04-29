@@ -73,10 +73,12 @@ content_types:
 
   agents:
     sources:
-      - url: https://cursor.com/docs/agent/overview
+      - url: https://cursor.com/docs/subagents
         type: docs
         format: html
         extracts: [file_format, config_fields, file_locations]
     # Format: Markdown files with YAML frontmatter (name, description, model,
     # readonly, is_background) in .cursor/agents/ (project) or ~/.cursor/agents/
-    # (user). Added in Cursor 2.4.
+    # (user). Added in Cursor 2.4. Docs URL switched from /agent/overview
+    # (built-in Agent feature) to /subagents (custom subagents — the actual
+    # file-based agents surface) on 2026-04-28.

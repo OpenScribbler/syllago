@@ -148,41 +148,65 @@ func windsurfMcpLandmarkOptions() LandmarkOptions {
 // If windsurf later ships custom subagents, wire recognition then. Until
 // then, recognizer silence preserves accuracy.
 
-// Commands recognition is intentionally NOT wired for windsurf.
+// windsurfCommandsLandmarkOptions returns the landmark patterns for
+// Windsurf's Workflows documentation. Anchors derived from
+// .capmon-cache/windsurf/commands.0/extracted.json (cascade/workflows.md).
 //
-// The cached commands source (.capmon-cache/windsurf/commands.0/extracted.json)
-// is the WRONG page — its 5 landmarks are "Documentation Index", "Command",
-// "Models", "Terminal Command", "Best Practices". "Command" and "Terminal
-// Command" describe windsurf UI features (the Cascade chat command box and
-// the in-terminal command-execution surface), NOT user-authored slash
-// commands. The seeder spec for windsurf has the wrong source URL (likely
-// pointing at docs/cascade/command.md instead of docs/cascade/workflows.md
-// or whatever the actual workflows / slash-commands page is named).
+// Windsurf's user-authored slash commands are called "Workflows" — markdown
+// files under .windsurf/workflows/<name>.md invoked via the /<name>
+// shortcut. The doc has 10 workflow-specific landmarks: "Workflows",
+// "How it works", "How to create a Workflow", "Workflow Discovery",
+// "Workflow Storage Locations", "Generate a Workflow with Cascade",
+// "Example Workflows", "System-Level Workflows (Enterprise)",
+// "Workflow Precedence", and the "Documentation Index" navigational header.
 //
-// Per docs/provider-formats/windsurf.yaml, windsurf supports user-authored
-// "Workflows" — markdown files under .windsurf/workflows/ invoked via the
-// /workflow-name shortcut, with auto-execute behavior. The curator marks
-// argument_substitution as supported (workflow body templating) and
-// builtin_commands as supported (Cascade ships /help, /search, /memory,
-// etc.), both at "confirmed" confidence based on the workflows docs page
-// (not in the cache).
+// Per docs/provider-formats/windsurf.yaml, neither canonical commands key
+// has heading-level evidence in this doc:
+//   - argument_substitution: curator marks supported=false (no {{args}} or
+//     $ARGUMENTS placeholder syntax documented in the workflow body —
+//     workflows execute as-is).
+//   - builtin_commands: curator marks supported=true confirmed, but the
+//     evidence lives in a separate Cascade UI doc (not in this cache
+//     source). The /help, /search, /memory commands are documented on
+//     a different docs page.
 //
-// Recognizer silence is the right move — emitting any commands key from
-// the wrong cache source would conflate Cascade's UI Command feature with
-// user-authored Workflows. Commands recognition can be wired once the
-// correct workflows / slash-commands docs page is added to the cache and
-// yields heading-level evidence (e.g. "Workflows" / "Creating a Workflow"
-// / "Workflow arguments" anchors).
+// Therefore this recognizer emits ONLY commands.supported=true via an
+// empty-Capability pattern — it confirms windsurf has a user-authored
+// commands surface without claiming any per-key capability beyond what
+// the curator has manually documented. The curator's per-key flags in
+// the format YAML stay authoritative; the recognizer adds no per-key
+// signal here.
+//
+// Required anchors are unique to the workflows doc:
+//   - "How to create a Workflow" — H2, workflow-specific
+//   - "Workflow Storage Locations" — H2, workflow-specific
+//
+// Verified absent from windsurf's rules.{0,1}, skills.0, hooks.0,
+// agents.0, and mcp.0 caches — neither phrase appears in any other
+// windsurf doc, so cross-content-type landmark merging cannot trigger
+// a false positive.
+func windsurfCommandsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "How to create a Workflow", CaseInsensitive: true},
+		{Kind: "substring", Value: "Workflow Storage Locations", CaseInsensitive: true},
+	}
+	return CommandsLandmarkOptions(LandmarkPattern{
+		Capability: "",
+		Required:   required,
+		Matchers:   []StringMatcher{{Kind: "substring", Value: "Workflows", CaseInsensitive: true}},
+	})
+}
 
-// recognizeWindsurf recognizes skills + rules + hooks + mcp capabilities for
-// the Windsurf provider. Skills currently use the GoStruct strategy (Agent
-// Skills open standard) but the live windsurf docs cache contains no Skill.*
-// typed fields — skills emission depends on future typed-source availability.
-// Rules, hooks, and MCP are landmark-based against the rules.{0,1} (Memories
-// & Rules, AGENTS.md), hooks.0 (Cascade Hooks), and mcp.0 (cascade/mcp.md)
-// docs respectively. Agents and commands recognition are intentionally
-// absent — see the comment blocks immediately above this function for
-// rationale.
+// recognizeWindsurf recognizes skills + rules + hooks + mcp + commands
+// capabilities for the Windsurf provider. Skills currently use the GoStruct
+// strategy (Agent Skills open standard) but the live windsurf docs cache
+// contains no Skill.* typed fields — skills emission depends on future
+// typed-source availability. Rules, hooks, MCP, and commands are
+// landmark-based against the rules.{0,1} (Memories & Rules, AGENTS.md),
+// hooks.0 (Cascade Hooks), mcp.0 (cascade/mcp.md), and commands.0
+// (cascade/workflows.md) docs respectively. Agents recognition is
+// intentionally absent — see the comment block immediately above this
+// function for rationale.
 func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -195,6 +219,7 @@ func recognizeWindsurf(ctx RecognitionContext) RecognitionResult {
 	rulesResult := recognizeLandmarks(ctx, windsurfRulesLandmarkOptions())
 	hooksResult := recognizeLandmarks(ctx, windsurfHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, windsurfMcpLandmarkOptions())
+	commandsResult := recognizeLandmarks(ctx, windsurfCommandsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, commandsResult)
 }

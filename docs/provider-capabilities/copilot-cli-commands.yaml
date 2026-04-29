@@ -4,13 +4,13 @@ format: ""
 proposed_mappings:
     - canonical_key: argument_substitution
       supported: false
-      mechanism: command file format undocumented; no evidence of argument substitution in plugin.json schema or available sources
-      source_field: ""
-      source_value: ""
-      confidence: unknown
-    - canonical_key: builtin_commands
-      supported: false
-      mechanism: Copilot CLI has no standalone slash-command mechanism; extensibility is via plugins that bundle agents/skills/hooks; command format within plugins is undocumented
+      mechanism: built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /init suppress) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)
       source_field: ""
       source_value: ""
       confidence: inferred
+    - canonical_key: builtin_commands
+      supported: true
+      mechanism: ~50 built-in slash commands documented under the 'Slash commands in the interactive interface' heading of the CLI command reference (e.g. /help, /mcp, /init, /clear, /agent, /delegate, /review, /add-dir, /fleet, /research, /plugin); 'Command-line commands' heading covers the top-level `copilot` subcommands
+      source_field: ""
+      source_value: ""
+      confidence: confirmed

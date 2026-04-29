@@ -329,3 +329,17 @@ content_types:
         conversion: not-portable
     loading_model: "At startup pi scans all configured prompt template locations and collects *.md files non-recursively. Each file's name (without .md) becomes the command name. The description is read from frontmatter if present, otherwise from the first non-empty content line. All templates are registered as slash commands and appear in / autocomplete. When the user invokes /name [args], the template body is expanded with argument substitution and sent as the user's message to the agent."
     notes: "Pi calls these 'prompt templates' not 'commands'. The format is simpler than most providers' command systems: plain Markdown with optional frontmatter, no scripting or tool access. The argument substitution syntax ($1, $@, ${@:N}) is richer than typical slash command implementations and makes templates genuinely parameterizable. Discovery sources mirror the skills pattern exactly (global, project, packages, settings, CLI), making the mental model consistent across content types."
+
+  agents:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Pi's author explicitly rejects native sub-agent support — pi exposes no on-disk file format for user-defined agents with their own system prompts, tool restrictions, or scopes. Community extensions (pi-subagents, oh-my-pi) exist but per syllago's provider-eligibility rule do not count toward native support. See bead syllago-gfg2t for the open question of whether community extensions should graduate to a separate provider entry."
+
+  mcp:
+    status: unsupported
+    sources: []
+    canonical_mappings: {}
+    provider_extensions: []
+    notes: "Pi's author explicitly rejects native MCP support — pi has no on-disk MCP configuration surface, no transport configuration, and no built-in MCP client. Community extensions (pi-mcp-adapter) exist but per syllago's provider-eligibility rule do not count toward native support."

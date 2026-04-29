@@ -308,3 +308,85 @@ func TestRecognizeWindsurf_McpAnchorsMissing(t *testing.T) {
 		t.Error("mcp.supported should NOT be present when 'Adding a new MCP' anchor is missing")
 	}
 }
+
+// realWindsurfCommandsLandmarks is a snapshot of the headings extracted from
+// windsurf's Workflows doc (.capmon-cache/windsurf/commands.0/extracted.json —
+// docs.windsurf.com/windsurf/cascade/workflows.md) as of 2026-04-18.
+//
+// Per docs/provider-formats/windsurf.yaml, neither canonical commands key
+// (argument_substitution, builtin_commands) maps to heading-level evidence
+// in this doc:
+//   - argument_substitution: curator marks supported=false (no {{args}}
+//     placeholder syntax documented for Cascade Workflows)
+//   - builtin_commands: curator marks supported=true but evidence is on a
+//     different Cascade docs page that is not in this cache
+//
+// The recognizer therefore emits only commands.supported=true (gated on the
+// "How to create a Workflow" + "Workflow Storage Locations" anchors, which
+// confirm that windsurf has a user-authored slash-command surface) without
+// any per-key emission. This avoids fabricating signal where heading
+// evidence is absent.
+var realWindsurfCommandsLandmarks = []string{
+	"Documentation Index",
+	"Workflows",
+	"How it works",
+	"How to create a Workflow",
+	"Workflow Discovery",
+	"Workflow Storage Locations",
+	"Generate a Workflow with Cascade",
+	"Example Workflows",
+	"System-Level Workflows (Enterprise)",
+	"Workflow Precedence",
+}
+
+// TestRecognizeWindsurf_RealCommandsLandmarks proves commands recognition
+// emits only the top-level commands.supported=true signal, with no per-key
+// emission. The test merges rules + hooks + mcp + commands fixtures to
+// mirror real-world cache merging and asserts that no commands.capabilities.*
+// keys leak through.
+func TestRecognizeWindsurf_RealCommandsLandmarks(t *testing.T) {
+	merged := append([]string{}, realWindsurfRulesLandmarks...)
+	merged = append(merged, realWindsurfHooksLandmarks...)
+	merged = append(merged, realWindsurfMcpLandmarks...)
+	merged = append(merged, realWindsurfCommandsLandmarks...)
+	result := capmon.RecognizeWithContext("windsurf", capmon.RecognitionContext{
+		Provider:  "windsurf",
+		Format:    "markdown",
+		Landmarks: merged,
+	})
+
+	if result.Status != capmon.StatusRecognized {
+		t.Fatalf("status = %q, want %q (missing=%v)", result.Status, capmon.StatusRecognized, result.MissingAnchors)
+	}
+	caps := result.Capabilities
+	if caps["commands.supported"] != "true" {
+		t.Errorf("commands.supported = %q, want %q", caps["commands.supported"], "true")
+	}
+	for k := range caps {
+		if len(k) > len("commands.capabilities.") && k[:len("commands.capabilities.")] == "commands.capabilities." {
+			t.Errorf("commands.capabilities.* should NOT be emitted (no heading evidence): %s = %q", k, caps[k])
+		}
+	}
+}
+
+// TestRecognizeWindsurf_CommandsAnchorsMissing proves the required-anchor
+// guard suppresses commands emission when "How to create a Workflow" is
+// absent. This avoids triggering on a docs page that mentions Workflows in
+// passing without actually documenting how to create one.
+func TestRecognizeWindsurf_CommandsAnchorsMissing(t *testing.T) {
+	mutated := []string{}
+	for _, lm := range realWindsurfCommandsLandmarks {
+		if lm == "How to create a Workflow" {
+			continue
+		}
+		mutated = append(mutated, lm)
+	}
+	result := capmon.RecognizeWithContext("windsurf", capmon.RecognitionContext{
+		Provider:  "windsurf",
+		Format:    "markdown",
+		Landmarks: mutated,
+	})
+	if _, has := result.Capabilities["commands.supported"]; has {
+		t.Error("commands.supported should NOT be present when 'How to create a Workflow' anchor is missing")
+	}
+}

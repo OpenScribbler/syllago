@@ -63,13 +63,17 @@ content_types:
 
   mcp:
     sources:
-      - url: https://docs.factory.ai/llms.txt
+      - url: https://docs.factory.ai/cli/configuration/mcp
         type: docs
-        format: markdown
-        extracts: [server_config_fields, transport_types]
-    # llms.txt is a plain text manifest, fetched via http.
+        format: html
+        fetch_method: chromedp
+        extracts: [server_config_fields, transport_types, oauth_support, tool_filtering, marketplace]
+    # Mintlify SPA — chromedp required.
     # Transports: stdio, http
     # Config file: .factory/mcp.json (project) and ~/.factory/mcp.json (user)
+    # URL switched 2026-04-28 from llms.txt index (4 generic landmarks: "Factory
+    # Documentation", "Docs", "OpenAPI Specs", "Optional") to the real MCP docs
+    # page (10 H2s, 8 H3s) — llms.txt is a navigation manifest, not a docs page.
 
   skills:
     sources:

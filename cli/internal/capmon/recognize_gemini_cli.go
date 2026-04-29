@@ -146,11 +146,59 @@ func geminiCliCommandsLandmarkOptions() LandmarkOptions {
 	)
 }
 
-// recognizeGeminiCli recognizes skills + rules + hooks + mcp + commands
-// capabilities for the Gemini CLI provider. Skills use the GoStruct strategy
-// (Agent Skills open standard). Rules, hooks, MCP, and commands are
-// landmark-based against the gemini-md.md, hooks/{index,reference}.md,
-// mcp-server.md / mcp-setup.md, and custom-commands.md docs.
+// geminiCliAgentsLandmarkOptions returns the landmark patterns for Gemini
+// CLI's subagents documentation. Anchors derived from the merged headings of
+// .capmon-cache/gemini-cli/agents.{0,1}/extracted.json (docs/core/subagents.md
+// and docs/core/remote-agents.md).
+//
+// Required anchors are unique to the agents docs:
+//   - "Creating custom subagents" — H2 of subagents.md, the section that
+//     introduces the user-definable agent file format. Absent from every
+//     other gemini-cli cache (skills, rules, hooks, mcp, commands).
+//   - "Agent definition files"     — H3 immediately under the above; further
+//     uniqueness guard against false positives.
+//
+// Per docs/provider-formats/gemini-cli.yaml, all 7 canonical agents keys are
+// curated as "confirmed". Of those, 4 have direct heading-level evidence in
+// this cache and are emitted by the recognizer at "inferred" confidence:
+//
+//   - definition_format  → "Agent definition files" / "File format" headings.
+//   - invocation_patterns → "Automatic delegation" / "Forcing a subagent (@
+//     syntax)" / "How to use subagents" headings.
+//   - tool_restrictions  → "Tool wildcards" / "Subagent tool isolation" /
+//     "Configuring isolated tools and servers" headings.
+//   - per_agent_mcp      → "Configuring isolated tools and servers" heading
+//     (per-subagent MCP server isolation lives under this section).
+//
+// agent_scopes and model_selection live inside the configuration table on the
+// page, not in their own headings — recognition stays silent rather than
+// emit a false-positive heading claim. subagent_spawning is a *negative*
+// feature (recursion explicitly prevented per "Isolation and recursion
+// protection") — recognizers only emit "supported: true" entries; the curated
+// format doc carries the supported: false claim.
+func geminiCliAgentsLandmarkOptions() LandmarkOptions {
+	required := []StringMatcher{
+		{Kind: "substring", Value: "Creating custom subagents", CaseInsensitive: true},
+		{Kind: "substring", Value: "Agent definition files", CaseInsensitive: true},
+	}
+	return AgentsLandmarkOptions(
+		AgentsLandmarkPattern("definition_format", "Agent definition files",
+			"Markdown files with YAML frontmatter at .gemini/agents/<name>.md (project) and ~/.gemini/agents/<name>.md (user); body of the file becomes the subagent system prompt (documented under 'Agent definition files' / 'File format' headings)", required),
+		AgentsLandmarkPattern("invocation_patterns", "Automatic delegation",
+			"two invocation patterns: (1) automatic delegation by the main agent based on subagent description, (2) explicit @-mention at start of prompt (documented under 'Automatic delegation' / 'Forcing a subagent (@ syntax)' / 'How to use subagents' headings)", required),
+		AgentsLandmarkPattern("tool_restrictions", "Tool wildcards",
+			"per-subagent tool allow-listing via tools[] frontmatter with wildcards: '*', 'mcp_*', 'mcp_<server>_*' (documented under 'Tool wildcards' / 'Subagent tool isolation' / 'Configuring isolated tools and servers' headings)", required),
+		AgentsLandmarkPattern("per_agent_mcp", "Configuring isolated tools and servers",
+			"per-subagent mcpServers{} frontmatter declares inline MCP server configurations scoped to this subagent only (documented under 'Configuring isolated tools and servers' heading)", required),
+	)
+}
+
+// recognizeGeminiCli recognizes skills + rules + hooks + mcp + commands +
+// agents capabilities for the Gemini CLI provider. Skills use the GoStruct
+// strategy (Agent Skills open standard). Rules, hooks, MCP, commands, and
+// agents are landmark-based against the gemini-md.md,
+// hooks/{index,reference}.md, mcp-server.md / mcp-setup.md, custom-commands.md,
+// and core/{subagents,remote-agents}.md docs respectively.
 func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	skillsCaps := recognizeGoStruct(ctx.Fields, SkillsGoStructOptions())
 	if len(skillsCaps) > 0 {
@@ -164,6 +212,7 @@ func recognizeGeminiCli(ctx RecognitionContext) RecognitionResult {
 	hooksResult := recognizeLandmarks(ctx, geminiCliHooksLandmarkOptions())
 	mcpResult := recognizeLandmarks(ctx, geminiCliMcpLandmarkOptions())
 	commandsResult := recognizeLandmarks(ctx, geminiCliCommandsLandmarkOptions())
+	agentsResult := recognizeLandmarks(ctx, geminiCliAgentsLandmarkOptions())
 
-	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, commandsResult)
+	return mergeRecognitionResults(skillsResult, rulesResult, hooksResult, mcpResult, commandsResult, agentsResult)
 }
