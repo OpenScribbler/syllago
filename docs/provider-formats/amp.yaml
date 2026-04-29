@@ -2,7 +2,7 @@ provider: amp
 docs_url: "https://ampcode.com/manual"
 category: cli
 last_fetched_at: "2026-04-11T21:49:38Z"
-last_changed_at: "2026-04-17T00:00:00Z"
+last_changed_at: "2026-04-29T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -12,8 +12,8 @@ content_types:
       - uri: "https://ampcode.com/manual/agent-skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:f4fca62a6b5a7d94d4995cbb0be4fbadc11a4166fd9faf345139bc0b4c6a5e90"
-        fetched_at: "2026-04-11T21:49:40Z"
+        content_hash: "sha256:624b341cdc99453666703ca02acc9783338ca165cbe8641e9204beaaec7e367c"
+        fetched_at: "2026-04-29T16:15:06Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -67,7 +67,7 @@ content_types:
     provider_extensions:
       - id: mcp_bundling
         name: "MCP server bundling"
-        summary: "Bundle an MCP server with the skill via mcp.json (local command or remote URL); tools stay hidden until skill loads."
+        summary: "Bundle an MCP server with the skill via mcp.json (local command/args/env or remote url/headers); supports an includeTools glob-pattern allowlist to filter exposed tools; tools stay hidden until skill loads."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
         conversion: not-portable
@@ -85,7 +85,13 @@ content_types:
         conversion: embedded
       - id: skill_cli
         name: "CLI and command palette skill management"
-        summary: "Manage skills via 'amp skill' CLI or command palette (add/list/remove); supports GitHub shorthand paths."
+        summary: "Manage skills via 'amp skill' CLI or command palette (Ctrl+O in the CLI) using 'skill: add', 'skill: list', 'skill: remove'; install from GitHub shorthand (org/repo/path), git URL, or local path."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: building_skills_assistant
+        name: "Built-in 'building-skills' skill"
+        summary: "Amp ships a built-in 'building-skills' skill that authors new skills tailored to the current codebase via natural-language request (e.g., 'Create a skill for deploying to staging'); user picks 'project-specific' or 'user-wide' scope."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
         graduation_candidate: false
         conversion: not-portable
@@ -169,16 +175,11 @@ content_types:
   hooks:
     status: supported
     sources:
-      - uri: "https://ampcode.com/manual/hooks.md"
-        type: documentation
-        fetch_method: http
-        content_hash: "sha256:1f080df99fc26d005c22b16cba57120e3bed450d3b5521f5f40d7f594aa7f6b6"
-        fetched_at: "2026-04-11T21:49:36Z"
       - uri: "https://ampcode.com/manual/appendix/permissions-reference.md"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:47ad540681b67823f587fb4d4e5b04f1bd6a0e635db56f459446358caa4b25dc"
-        fetched_at: "2026-04-11T21:49:36Z"
+        content_hash: "sha256:05d7e9a34503c66e61ee90515a39fbe18a6964aab3b7d196102da24c2275b872"
+        fetched_at: "2026-04-29T16:15:03Z"
     canonical_mappings:
       handler_types:
         supported: true
@@ -216,55 +217,55 @@ content_types:
         confidence: inferred
       permission_control:
         supported: true
-        mechanism: "permissions_system: Amp has a permissions system that hooks interact with to make tool availability decisions"
+        mechanism: "amp.permissions ordered first-match-wins rule list returns one of allow / reject / ask / delegate for every tool invocation before execution; default fallback is ask on the main thread and reject in sub-agents"
         confidence: confirmed
     provider_extensions:
       - id: settings_json_merge
         name: "JSON merge into amp.hooks array"
         summary: "Hooks are stored as an array under the 'amp.hooks' key inside '.amp/settings.json' (workspace) or user-scope settings; they are not a standalone hooks file."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "amp.hooks"
       - id: command_handler_only
         name: "Command handler type only"
         summary: "The hook 'action' field invokes a shell command (declarative pre-execute 'send-user-message' and post-execute 'redact-tool-input' actions); no HTTP, LLM, or agent handler types are documented."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: translated
         provider_field: "action"
       - id: hook_events
         name: "Hook trigger events"
         summary: "Two events: 'tool:pre-execute' (before tool runs) and 'tool:post-execute' (after); each event accepts only specific actions. Canonical mapping: before_tool_execute → tool:pre-execute, after_tool_execute → tool:post-execute."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: translated
         provider_field: "event"
       - id: hook_action_send_user_message
         name: "Hook action: send-user-message"
         summary: "Pre-execute action that injects a user message and cancels the pending tool call to enforce behavioral constraints."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "action.type"
       - id: hook_action_redact_tool_input
         name: "Hook action: redact-tool-input"
         summary: "Post-execute action that redacts tool input fields after execution to avoid storing sensitive arguments."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "action.type"
       - id: hook_match_input_contains
         name: "Hook match condition: input.contains"
         summary: "Filter hook firing by exact literal substring match in tool input — no regex or glob support."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: translated
         provider_field: "input.contains"
       - id: hook_config_location
         name: "Hook configuration in settings file"
         summary: "Hook definitions live as an array in Amp settings files (.amp/settings.json or user-scope settings)."
-        source_ref: "https://ampcode.com/manual/hooks.md"
+        source_ref: "https://ampcode.com/manual?internal#hooks"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "amp.hooks"
@@ -277,18 +278,31 @@ content_types:
         provider_field: "amp.permissions"
       - id: permissions_match_conditions
         name: "Permission match condition types"
-        summary: "Match values support globs, regex (slash-delimited), arrays (OR), literals, and nested objects with dot notation."
+        summary: "Match values support glob patterns ('*'), regex (strings starting and ending with '/'), arrays (OR across entries), literals (boolean/number/null/undefined as exact match), and nested objects (deep property matching with dot notation for objects and numeric strings for array indices). Tool name field also accepts globs (e.g., 'Bash', 'mcp__playwright__*')."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "matches"
       - id: permissions_delegate_action
         name: "Permission delegate action"
-        summary: "Delegate decisions to an external program (JSON via stdin, exit code = decision); plugin API is the recommended successor."
+        summary: "Delegate decisions to an external program named in the rule's 'to' field (must be on $PATH or an absolute path). Amp pipes tool parameters as JSON to stdin and exports AMP_THREAD_ID, AGENT_TOOL_NAME, and AGENT=amp env vars. Exit status: 0=allow, 1=ask operator, ≥2=reject (stderr surfaced to the model). Plugin API is the documented successor; a compatibility plugin enforcing amp.permissions rules is planned."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
         conversion: not-portable
         provider_field: "action"
+      - id: permissions_reject_message
+        name: "Permission reject with continuation message"
+        summary: "A 'reject' rule may carry a 'message' string returned to the model; when set, the rejection continues the conversation with that feedback instead of halting it."
+        source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: "message"
+      - id: permissions_default_behavior
+        name: "Default action when no rule matches"
+        summary: "If no user rule and no built-in rule matches, Amp asks the operator on the main thread and rejects the call in sub-agents. Built-in rules (e.g., allowing 'ls' via Bash) are consulted after user rules."
+        source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
       - id: permissions_context_restriction
         name: "Permission context restriction (thread vs subagent)"
         summary: "Optionally scopes a rule to main thread, sub-agent only, or both (omitted); defaults differ by context."
@@ -298,22 +312,23 @@ content_types:
         provider_field: "context"
       - id: permissions_cli
         name: "Permissions CLI (amp permissions)"
-        summary: "'amp permissions' subcommands (list/add/edit/test) manage rules in a UNIX-shell-style text format without editing JSON."
+        summary: "'amp permissions' subcommands manage rules in a UNIX-shell-style text format without editing JSON: 'list' (with '--builtin' for built-ins only), 'add' (e.g., 'add reject web_search'), 'edit' (opens $EDITOR; also accepts STDIN), and 'test' (dry-runs a tool+args call and prints the matched rule, action, and source). Single/double-quoted strings supported; unquoted true/false/null/numbers parsed as JSON literals; values containing '*' must be quoted."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
         conversion: not-portable
     loading_model: "Hooks and permissions are loaded from the Amp settings file at startup. Hook definitions live under 'amp.hooks' and permission rules under 'amp.permissions'. Permission rules are evaluated as an ordered list — the first matching rule wins. No lazy loading is described; both systems are active for the duration of the Amp session."
     notes: >
-      Amp has two distinct but related interception systems in these sources. The 'hooks' system
-      (hooks-0 source) is simpler: two events (tool:pre-execute, tool:post-execute) with two
-      actions (send-user-message, redact-tool-input). The 'permissions' system (hooks-1 source)
-      is richer: ordered allow/reject/ask/delegate rules with glob and regex matching, context
+      Amp has two distinct but related interception systems. The 'hooks' system is simpler:
+      two events (tool:pre-execute, tool:post-execute) with two actions (send-user-message,
+      redact-tool-input); the runtime feature is documented at
+      https://ampcode.com/manual?internal#hooks (the dedicated /manual/hooks.md page was
+      retired in early 2026 — the consolidated single-page manual is now the canonical source,
+      and the news announcement at https://ampcode.com/news/hooks remains for historical
+      context). The 'permissions' system (the sole fetched source for this content type) is
+      richer: ordered allow/reject/ask/delegate rules with glob and regex matching, context
       restriction, and external delegation. The permissions doc explicitly notes that the plugin
       API is the preferred path for new permission hooks and is expected to replace the built-in
-      permissions system. The raw.bin content for hooks-0 contains truncated JSON examples (the
-      example payloads appear partially redacted in the fetched source), but the event names,
-      action names, input.contains behavior, and settings file location are all explicitly stated
-      in the surrounding prose.
+      permissions system.
   mcp:
     status: supported
     sources:

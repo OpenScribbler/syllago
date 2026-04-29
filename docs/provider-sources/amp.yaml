@@ -54,17 +54,15 @@ content_types:
 
   hooks:
     sources:
-      - url: https://ampcode.com/manual/hooks.md
-        type: docs
-        format: markdown
-        extracts: [config_schema, event_names, match_conditions]
-
       - url: https://ampcode.com/manual/appendix/permissions-reference.md
         type: docs
         format: markdown
         extracts: [permissions_schema, match_conditions]
     # Amp supports hooks via amp.hooks array in settings JSON (tool:pre-execute / tool:post-execute).
     # NOT file-based — stored as JSON config entries. Syllago manages via JSON merge into settings.
+    # Note: ampcode.com/manual/hooks.md was retired; the hooks section now lives inline at
+    # ampcode.com/manual?internal#hooks (auth-gated). Recognition is anchored entirely on
+    # permissions-reference.md — see recognize_amp.go:71.
 
   mcp:
     sources:
