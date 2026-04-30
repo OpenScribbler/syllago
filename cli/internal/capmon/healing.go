@@ -20,6 +20,7 @@ type HealResult struct {
 	Strategy          string
 	Proof             string             // short human-readable explanation for PR body
 	CandidateOutcomes []CandidateOutcome // every probed candidate, in attempt order
+	StrategyDeclines  []string           `json:"strategy_declines,omitempty"` // strategy-level decline reasons (e.g., "redirect: chain contains a temporary (302/307) redirect"), populated regardless of whether candidates were probed
 	FailReason        string             // populated when Success=false — derived summary or strategy-level decline
 }
 
@@ -99,10 +100,20 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 				result.NewURL = cand
 				result.Strategy = strategy
 				result.Proof = proofs[cand]
+				// Surface earlier-strategy declines on the success path too —
+				// e.g. when redirect declined cross-domain but variant healed,
+				// the redirect decline is still drift signal worth recording.
+				result.StrategyDeclines = declineReasons
 				return result, nil
 			}
 		}
 	}
+
+	// Always surface strategy-level declines so humans triaging drift can
+	// see what each strategy turned up — even when later strategies probed
+	// candidates of their own. Previously these reasons were silently
+	// dropped whenever len(CandidateOutcomes) > 0.
+	result.StrategyDeclines = declineReasons
 
 	// Failure path. Prefer the structured summary when any candidate was
 	// probed; otherwise fall back to strategy-level decline reasons so

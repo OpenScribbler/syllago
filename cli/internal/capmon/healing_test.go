@@ -474,6 +474,84 @@ func TestAttemptHeal_FailReasonDerivedSummary(t *testing.T) {
 	}
 }
 
+func TestAttemptHeal_StrategyDeclinesPopulatedAlongsideOutcomes(t *testing.T) {
+	// Regression for syllago-dm1zr / ampcode #92: when redirect strategy
+	// declines AND a later strategy probes candidates, the decline reasons
+	// must surface on result.StrategyDeclines so humans triaging drift can
+	// see what each strategy turned up. Previously, declineReasons was
+	// silently dropped whenever len(CandidateOutcomes) > 0.
+	//
+	// FailReason behavior is unchanged: when candidates were probed, it
+	// stays the structured candidate-summary one-liner, NOT the decline
+	// join. Both signals coexist in the result.
+	mux := http.NewServeMux()
+	mux.HandleFunc("/old/foo-bar.md", func(w http.ResponseWriter, r *http.Request) {
+		// 302 — redirect strategy declines with "temporary" reason.
+		w.Header().Set("Location", "/new/foo-bar.md")
+		w.WriteHeader(http.StatusFound)
+	})
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// All other paths 404 — variant candidates fail with http_error.
+		w.WriteHeader(http.StatusNotFound)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL: srv.URL + "/old/foo-bar.md",
+		Healing: &HealingConfig{
+			Strategies: []string{"redirect", "variant"},
+		},
+	}
+	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	if err != nil {
+		t.Fatalf("AttemptHeal: %v", err)
+	}
+	if result.Success {
+		t.Fatalf("expected failure; got Success with NewURL=%q", result.NewURL)
+	}
+
+	// Assertion 1: StrategyDeclines contains the redirect decline reason verbatim.
+	if len(result.StrategyDeclines) == 0 {
+		t.Fatalf("StrategyDeclines should be populated even when CandidateOutcomes are present; got empty")
+	}
+	foundRedirectDecline := false
+	for _, d := range result.StrategyDeclines {
+		if strings.HasPrefix(d, "redirect: ") && strings.Contains(d, "temporary") {
+			foundRedirectDecline = true
+			break
+		}
+	}
+	if !foundRedirectDecline {
+		t.Errorf("StrategyDeclines = %v, want one entry starting with 'redirect: ' and mentioning 'temporary'", result.StrategyDeclines)
+	}
+
+	// Assertion 2: CandidateOutcomes contains the variant outcomes.
+	if len(result.CandidateOutcomes) == 0 {
+		t.Fatalf("CandidateOutcomes should record variant probes")
+	}
+	foundVariantOutcome := false
+	for _, o := range result.CandidateOutcomes {
+		if o.Strategy == "variant" {
+			foundVariantOutcome = true
+			break
+		}
+	}
+	if !foundVariantOutcome {
+		t.Errorf("CandidateOutcomes = %+v, want at least one variant outcome", result.CandidateOutcomes)
+	}
+
+	// Assertion 3: FailReason is the candidate-summary one-liner (NOT the decline join).
+	// summarizeCandidateOutcomes mentions the word "candidates"; the decline
+	// fallback joinReasons would produce a string starting with "redirect:".
+	if !strings.Contains(result.FailReason, "candidates") {
+		t.Errorf("FailReason = %q, want candidate-summary mentioning 'candidates'", result.FailReason)
+	}
+	if strings.HasPrefix(result.FailReason, "redirect:") {
+		t.Errorf("FailReason = %q, must not be the decline-join when candidates were probed", result.FailReason)
+	}
+}
+
 func TestAttemptHeal_StrategiesTriedInOrder(t *testing.T) {
 	// Set up variant to succeed; redirect should be tried first and
 	// (harmlessly) fail because there are no redirects — then variant
