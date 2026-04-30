@@ -135,6 +135,11 @@ func BuildHealPRBody(in HealPRInputs) string {
 	fmt.Fprintf(&b, "| New URL | <%s> |\n", in.Heal.NewURL)
 	fmt.Fprintf(&b, "| Strategy | `%s` |\n", in.Heal.Strategy)
 	fmt.Fprintf(&b, "| Proof | %s |\n\n", in.Heal.Proof)
+	// Strategy-level declines render ABOVE the candidates table so reviewers
+	// see context for what other strategies refused before per-candidate rows.
+	// The helper returns "" when StrategyDeclines is empty, so direct concat
+	// is safe — no orphaned header when the slice is nil.
+	b.WriteString(renderStrategyDeclines(in.Heal.StrategyDeclines))
 	if len(in.Heal.CandidateOutcomes) > 1 {
 		b.WriteString("**All candidates probed:**\n\n")
 		b.WriteString(RenderCandidatesTable(in.Heal.CandidateOutcomes))

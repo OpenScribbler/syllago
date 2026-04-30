@@ -125,6 +125,10 @@ func createHealFailureIssue(provider, contentType string, sourceIndex, count int
 		fmt.Sprintf("**Content type:** `%s`\n", contentType) +
 		fmt.Sprintf("**Source index:** `%d`\n\n", sourceIndex) +
 		"**Last failure reason:**\n```\n" + result.FailReason + "\n```\n\n"
+	// Strategy-level declines render ABOVE the candidates table so reviewers
+	// see strategy-level context first. Helper returns "" for empty declines,
+	// so direct concat is safe — no orphaned header.
+	body += renderStrategyDeclines(result.StrategyDeclines)
 	if table := RenderCandidatesTable(result.CandidateOutcomes); table != "" {
 		body += "**Candidates probed on the most recent attempt:**\n\n" + table + "\n"
 	}
