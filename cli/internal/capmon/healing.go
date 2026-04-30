@@ -20,6 +20,7 @@ type HealResult struct {
 	Strategy          string
 	Proof             string             // short human-readable explanation for PR body
 	CandidateOutcomes []CandidateOutcome // every probed candidate, in attempt order
+	StrategyDeclines  []string           `json:"strategy_declines,omitempty"` // strategy-level decline reasons (e.g., "redirect: chain contains a temporary (302/307) redirect"), populated regardless of whether candidates were probed
 	FailReason        string             // populated when Success=false — derived summary or strategy-level decline
 }
 
@@ -99,10 +100,20 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 				result.NewURL = cand
 				result.Strategy = strategy
 				result.Proof = proofs[cand]
+				// Surface earlier-strategy declines on the success path too —
+				// e.g. when redirect declined cross-domain but variant healed,
+				// the redirect decline is still drift signal worth recording.
+				result.StrategyDeclines = declineReasons
 				return result, nil
 			}
 		}
 	}
+
+	// Always surface strategy-level declines so humans triaging drift can
+	// see what each strategy turned up — even when later strategies probed
+	// candidates of their own. Previously these reasons were silently
+	// dropped whenever len(CandidateOutcomes) > 0.
+	result.StrategyDeclines = declineReasons
 
 	// Failure path. Prefer the structured summary when any candidate was
 	// probed; otherwise fall back to strategy-level decline reasons so
@@ -119,9 +130,11 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 }
 
 // runRedirectStrategy follows the redirect chain and returns the final
-// URL only if the chain is entirely permanent and terminated in a 2xx.
-// A single 302 anywhere poisons the chain — temporary redirects aren't
-// safe to bake into a manifest.
+// URL only if the chain is entirely permanent, stays within the origin's
+// registrable domain (eTLD+1), and terminated in a 2xx. A single 302
+// anywhere poisons the chain — temporary redirects aren't safe to bake
+// into a manifest. A cross-eTLD+1 destination is drift signal — capmon
+// declines and surfaces the destination so a human can investigate.
 func runRedirectStrategy(ctx context.Context, rawURL string) (string, string, bool) {
 	chain, err := FollowRedirectChain(ctx, rawURL)
 	if err != nil {
@@ -135,6 +148,21 @@ func runRedirectStrategy(ctx context.Context, rawURL string) (string, string, bo
 	}
 	if chain.FinalURL == rawURL {
 		return "", "chain returned to origin URL", false
+	}
+	// Decline before any GET probe when the chain crosses the registrable
+	// domain. Cross-domain canonical moves are drift, not heals.
+	origETLD, origErr := etldPlusOne(rawURL)
+	finalETLD, finalErr := etldPlusOne(chain.FinalURL)
+	if origErr == nil && finalErr == nil && origETLD != finalETLD {
+		hopWord := "hops"
+		if len(chain.Hops) == 1 {
+			hopWord = "hop"
+		}
+		reason := fmt.Sprintf(
+			"chain crosses registrable domain: %s → %s; final URL %s, %d %s, terminated %d",
+			origETLD, finalETLD, chain.FinalURL, len(chain.Hops), hopWord, chain.TerminatingStatus,
+		)
+		return "", reason, false
 	}
 	return chain.FinalURL, fmt.Sprintf("followed %d permanent redirects", len(chain.Hops)), true
 }

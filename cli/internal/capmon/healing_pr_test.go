@@ -214,6 +214,80 @@ func TestBuildHealPRBody_RendersCandidatesTable(t *testing.T) {
 	}
 }
 
+func TestBuildHealPRBody_RendersStrategyDeclinesWhenPresent(t *testing.T) {
+	// When a heal succeeds but other strategies declined along the way, the
+	// "Other strategies declined" section must render ABOVE the candidates
+	// table so reviewers see strategy-level context before per-candidate
+	// rows.
+	in := HealPRInputs{
+		Provider:    "claude-code",
+		ContentType: "skills",
+		SourceIndex: 0,
+		RunID:       "run-77",
+		OldURL:      "https://example.com/old.md",
+		Heal: HealResult{
+			Success:  true,
+			NewURL:   "https://example.com/new.md",
+			Strategy: "variant",
+			Proof:    "rename _ → -",
+			StrategyDeclines: []string{
+				"redirect: chain contains a temporary (302/307) redirect",
+				"github-rename: source URL is not a github.com path",
+			},
+			CandidateOutcomes: []CandidateOutcome{
+				{URL: "https://example.com/missing.md", Strategy: "variant", Outcome: OutcomeHTTPError, StatusCode: 404},
+				{URL: "https://example.com/new.md", Strategy: "variant", Outcome: OutcomeSuccess, StatusCode: 200},
+			},
+		},
+	}
+	body := BuildHealPRBody(in)
+
+	if !strings.Contains(body, "## Other strategies declined") {
+		t.Errorf("PR body missing declines header\n\nFull body:\n%s", body)
+	}
+	for _, want := range []string{
+		"redirect: chain contains a temporary (302/307) redirect",
+		"github-rename: source URL is not a github.com path",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("PR body missing decline reason %q\n\nFull body:\n%s", want, body)
+		}
+	}
+
+	declineIdx := strings.Index(body, "## Other strategies declined")
+	tableIdx := strings.Index(body, "All candidates probed")
+	if declineIdx < 0 || tableIdx < 0 {
+		t.Fatalf("expected both sections to be present; declineIdx=%d tableIdx=%d", declineIdx, tableIdx)
+	}
+	if declineIdx > tableIdx {
+		t.Errorf("declines section must appear ABOVE candidates table; declineIdx=%d tableIdx=%d", declineIdx, tableIdx)
+	}
+}
+
+func TestBuildHealPRBody_OmitsStrategyDeclinesWhenEmpty(t *testing.T) {
+	// With no strategy declines, the PR body must not contain the section
+	// header — no orphaned "## Other strategies declined" with empty list.
+	in := HealPRInputs{
+		Provider:    "claude-code",
+		ContentType: "skills",
+		SourceIndex: 0,
+		RunID:       "run-78",
+		OldURL:      "https://example.com/old.md",
+		Heal: HealResult{
+			Success:           true,
+			NewURL:            "https://example.com/new.md",
+			Strategy:          "redirect",
+			Proof:             "followed 1 permanent redirect",
+			StrategyDeclines:  nil,
+			CandidateOutcomes: []CandidateOutcome{{URL: "https://example.com/new.md", Strategy: "redirect", Outcome: OutcomeSuccess, StatusCode: 200}},
+		},
+	}
+	body := BuildHealPRBody(in)
+	if strings.Contains(body, "## Other strategies declined") {
+		t.Errorf("PR body should not contain declines header when StrategyDeclines is empty\n\nFull body:\n%s", body)
+	}
+}
+
 func TestProposeManifestHealPR_DedupesToExistingPR(t *testing.T) {
 	anchor := HealPRAnchor("claude-code", "skills", 0)
 	SetGHCommandForTest(func(args ...string) ([]byte, error) {

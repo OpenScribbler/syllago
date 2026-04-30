@@ -223,6 +223,87 @@ func TestCreateHealFailureIssue_BodyContainsCandidatesTable(t *testing.T) {
 	}
 }
 
+func TestCreateHealFailureIssue_RendersStrategyDeclinesWhenPresent(t *testing.T) {
+	// When strategy-level declines accompany a heal failure, the issue body
+	// must render the "Other strategies declined" section ABOVE the
+	// candidates table so reviewers see strategy-level context first.
+	var capturedBody string
+	SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte("https://github.com/org/repo/issues/9\n"), nil
+	})
+	defer SetGHCommandForTest(nil)
+
+	result := &HealResult{
+		FailReason: "2 candidates: 1 http_error, 1 binary_content",
+		StrategyDeclines: []string{
+			"redirect: chain contains a temporary (302/307) redirect",
+			"github-rename: source URL is not a github.com path",
+		},
+		CandidateOutcomes: []CandidateOutcome{
+			{URL: "https://example.com/missing.md", Strategy: "variant", Outcome: OutcomeHTTPError, StatusCode: 404, Detail: "status 404"},
+			{URL: "https://example.com/image.md", Strategy: "variant", Outcome: OutcomeBinaryContent, StatusCode: 200, ContentType: "image/png"},
+		},
+	}
+	if _, err := createHealFailureIssue("claude-code", "skills", 0, 2, result); err != nil {
+		t.Fatalf("createHealFailureIssue: %v", err)
+	}
+	if !strings.Contains(capturedBody, "## Other strategies declined") {
+		t.Errorf("issue body missing declines header\n\nFull body:\n%s", capturedBody)
+	}
+	for _, want := range []string{
+		"redirect: chain contains a temporary (302/307) redirect",
+		"github-rename: source URL is not a github.com path",
+	} {
+		if !strings.Contains(capturedBody, want) {
+			t.Errorf("issue body missing decline reason %q\n\nFull body:\n%s", want, capturedBody)
+		}
+	}
+
+	declineIdx := strings.Index(capturedBody, "## Other strategies declined")
+	tableIdx := strings.Index(capturedBody, "Candidates probed on the most recent attempt")
+	if declineIdx < 0 || tableIdx < 0 {
+		t.Fatalf("expected both sections to be present; declineIdx=%d tableIdx=%d", declineIdx, tableIdx)
+	}
+	if declineIdx > tableIdx {
+		t.Errorf("declines section must appear ABOVE candidates table; declineIdx=%d tableIdx=%d", declineIdx, tableIdx)
+	}
+}
+
+func TestCreateHealFailureIssue_OmitsStrategyDeclinesWhenEmpty(t *testing.T) {
+	// With no strategy declines, the issue body must not contain the
+	// "Other strategies declined" header — no orphaned section with empty
+	// list.
+	var capturedBody string
+	SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte("https://github.com/org/repo/issues/10\n"), nil
+	})
+	defer SetGHCommandForTest(nil)
+
+	result := &HealResult{
+		FailReason:       "variant: nothing worked",
+		StrategyDeclines: nil,
+		CandidateOutcomes: []CandidateOutcome{
+			{URL: "https://example.com/missing.md", Strategy: "variant", Outcome: OutcomeHTTPError, StatusCode: 404},
+		},
+	}
+	if _, err := createHealFailureIssue("claude-code", "skills", 0, 2, result); err != nil {
+		t.Fatalf("createHealFailureIssue: %v", err)
+	}
+	if strings.Contains(capturedBody, "## Other strategies declined") {
+		t.Errorf("issue body should not contain declines header when StrategyDeclines is empty\n\nFull body:\n%s", capturedBody)
+	}
+}
+
 func TestRecordConsecutiveHealFailure_AppendUsesFailReason(t *testing.T) {
 	// On second-and-later failures, the comment appended to the existing
 	// issue must contain HealResult.FailReason so triagers can see what

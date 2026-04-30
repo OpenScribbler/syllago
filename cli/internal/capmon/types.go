@@ -91,6 +91,7 @@ type HealEvent struct {
 	IssueNumber       int                `json:"issue_number,omitempty"`
 	FailReason        string             `json:"fail_reason,omitempty"`
 	CandidateOutcomes []CandidateOutcome `json:"candidate_outcomes,omitempty"`
+	StrategyDeclines  []string           `json:"strategy_declines,omitempty"`
 }
 
 // RunManifest is write-only observability output — never a pipeline input.

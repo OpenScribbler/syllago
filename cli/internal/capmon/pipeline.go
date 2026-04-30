@@ -239,6 +239,7 @@ func tryHealSource(ctx context.Context, opts PipelineOptions, providerSlug, cont
 		return event
 	}
 	event.CandidateOutcomes = result.CandidateOutcomes
+	event.StrategyDeclines = result.StrategyDeclines
 	if !result.Success {
 		event.FailReason = result.FailReason
 		if !opts.DryRun {
