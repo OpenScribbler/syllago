@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-30T19:28:42.849Z
-> Files: 1297 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-30T23:19:16.281Z
+> Files: 1299 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -45,6 +45,7 @@
 - `feedback_no_vague_limitations.md` (~349 tok)
 - `feedback_release_notes_no_internal_labels.md` — Declares breakdowns (~803 tok)
 - `feedback_smoke_uses_real_cli.md` (~453 tok)
+- `feedback_tdd_discipline.md` — Declares definitions (~451 tok)
 - `learning_hook_event_translation.md` (~430 tok)
 - `learning_moat_dual_attested_verification.md` — Spec-grounded fact (~824 tok)
 - `learning_moat_source_uri_content_hash.md` (~571 tok)
@@ -52,7 +53,7 @@
 - `learning_resolve_cross_provider_fallback.md` (~439 tok)
 - `learning_signing_public_key_var_not_secret.md` (~388 tok)
 - `learning_tui_add_container_types.md` — Declares whose (~453 tok)
-- `MEMORY.md` — Syllago Project Memory (~2813 tok)
+- `MEMORY.md` — Syllago Project Memory (~2875 tok)
 - `project_provider_eligibility.md` (~475 tok)
 - `reference_stealth_fetch.md` — stealth-fetch (~308 tok)
 - `user_commit_email.md` — Global git config (as of 2026-04-27) (~478 tok)
@@ -64,11 +65,11 @@
 
 ## ../../../.claude/skills/syllago-capmon-process/
 
-- `SKILL.md` — syllago-capmon-process (~1466 tok)
+- `SKILL.md` — syllago-capmon-process (~1826 tok)
 
 ## ../../../.claude/skills/syllago-capmon-process/workflows/
 
-- `process-issues.md` — Process Issues Workflow (~3101 tok)
+- `process-issues.md` — Process Issues Workflow (~3538 tok)
 
 ## ../../../.config/pai/
 
@@ -1768,10 +1769,10 @@
 - `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~3415 tok)
 - `healing_pr.go` — Struct: HealPRInputs (~2631 tok)
 - `healing_redirect.go` — Struct: RedirectChain (~1340 tok)
-- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~6211 tok)
-- `healing.go` — Struct: HealResult (~2814 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~8287 tok)
+- `healing.go` — Struct: HealResult (~3656 tok)
 - `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Pro (~1718 tok)
-- `pipeline.go` — Struct: PipelineOptions (~4188 tok)
+- `pipeline.go` — Struct: PipelineOptions (~4205 tok)
 - `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
 - `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
 - `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
@@ -1825,9 +1826,10 @@
 - `seederspec_audit_test.go` — TestSeederSpecs_AllLoad (~508 tok)
 - `seederspec_test.go` — TestLoadSeederSpec_Valid, TestSeederSpecPath (~712 tok)
 - `seederspec.go` — Struct: ProposedMapping (~535 tok)
+- `sourceman_test.go` — TestLoadSourceManifest, TestLoadSourceManifest_NotFound, TestLoadAllSourceManifests, TestLoadAllSour (~2636 tok)
 - `sourceman_validate_test.go` — TestValidateSources_AllHaveSources, TestValidateSources_MissingURIs, TestValidateSources_SupportedFa (~1387 tok)
 - `sourceman_validate.go` — ValidateSources (~660 tok)
-- `sourceman.go` — Struct: SourceManifest (~1139 tok)
+- `sourceman.go` — Struct: SourceManifest (~1620 tok)
 - `types_test.go` — TestExtractedSource_ZeroValue, TestRunManifest_ExitClasses, TestSelectorConfig_Fields, TestRunManife (~1067 tok)
 - `types.go` — implements the syllago capability monitor pipeline. (~1398 tok)
 
@@ -2321,8 +2323,8 @@
 
 ## docs/provider-sources/
 
-- `_template.yaml` — {Provider Name} — Provider Source Manifest (~1466 tok)
-- `amp.yaml` — Amp — Provider Source Manifest (~1104 tok)
+- `_template.yaml` — {Provider Name} — Provider Source Manifest (~1846 tok)
+- `amp.yaml` — Amp — Provider Source Manifest (~1387 tok)
 - `claude-code.yaml` — Claude Code — Provider Source Manifest (~1146 tok)
 - `cline.yaml` — Cline — Provider Source Manifest (~1050 tok)
 - `codex.yaml` — Codex (OpenAI) — Provider Source Manifest (~2476 tok)

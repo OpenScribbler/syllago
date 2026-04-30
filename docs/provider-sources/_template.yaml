@@ -30,6 +30,35 @@ changelog:
   - url: ""
     label: ""
 
+# Provider-specific URL conventions used by the heal pipeline and the
+# syllago-capmon-process skill. All fields are optional. Add only the
+# conventions this provider actually has — the schema is designed to
+# accrete new fields per-provider as quirks surface.
+#
+# docs_conventions:
+#   # Literal query-string fragment (e.g. "?internal") that must be
+#   # present on every doc URL fetched from this provider. Currently
+#   # informational — read by the syllago-capmon-process skill when
+#   # proposing replacement URLs. Not auto-applied at fetch time;
+#   # manifest URLs stay literal.
+#   query_param_required: ""
+#
+#   # Path substrings that, if a redirect lands on them, mean "the URL
+#   # doesn't really exist for unauthenticated callers." Used by the
+#   # heal pipeline to enrich the redirect diagnostic Detail. Does NOT
+#   # change correctness — any redirect on a heal candidate is already
+#   # rejected. Human-triage signal only.
+#   auth_gated_paths:
+#     - "/auth/sign-in"
+#     - "/login"
+#
+#   # URL paths the variant generator must NOT propose replacements for.
+#   # Known-dead paths whose 404 is a permanent fact (the content moved
+#   # to a query-param-gated section, an in-page anchor, or was removed
+#   # outright). Matching is exact path equality.
+#   retired_paths:
+#     - "/example-retired-page.md"
+
 # Primary config schema (omit if provider has no machine-readable schema)
 # Some providers publish a single schema covering hooks, MCP, and settings.
 # When present, the pipeline can extract multiple content types from this one file.
