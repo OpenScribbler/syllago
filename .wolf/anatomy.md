@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-29T23:02:38.351Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-04-30T19:28:42.849Z
 > Files: 1297 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
@@ -1760,18 +1760,18 @@
 - `formatdoc.go` — Struct: FormatDoc (~1614 tok)
 - `generate_hooks_test.go` — TestGenerateHooksSpecTables_BasicOutput, TestGenerateHooksSpecTables_MissingBanner, TestReplaceGener (~1955 tok)
 - `generate.go` — Struct: providerInfo (~1761 tok)
-- `healing_diagnostics_test.go` — TestRenderCandidatesTable_Empty, TestRenderCandidatesTable_Success, TestRenderCandidatesTable_MixedO (~1612 tok)
-- `healing_diagnostics.go` — Struct: CandidateOutcome (~1202 tok)
+- `healing_diagnostics_test.go` — TestRenderCandidatesTable_Empty, TestRenderCandidatesTable_Success, TestRenderCandidatesTable_MixedO (~1972 tok)
+- `healing_diagnostics.go` — Struct: CandidateOutcome (~1468 tok)
 - `healing_github.go` — Struct: RenameCandidate (~2092 tok)
-- `healing_issue_test.go` — TestHealFailureAnchor, TestRecordConsecutiveHealFailure_UnderThreshold, TestRecordConsecutiveHealFai (~2433 tok)
-- `healing_issue.go` — HealFailureAnchor, RecordConsecutiveHealFailure, ResolveHealFailure (~1867 tok)
-- `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~2656 tok)
-- `healing_pr.go` — Struct: HealPRInputs (~2538 tok)
-- `healing_redirect.go` — Struct: RedirectChain (~1055 tok)
-- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~4297 tok)
-- `healing.go` — Struct: HealResult (~2397 tok)
+- `healing_issue_test.go` — TestHealFailureAnchor, TestRecordConsecutiveHealFailure_UnderThreshold, TestRecordConsecutiveHealFai (~3311 tok)
+- `healing_issue.go` — HealFailureAnchor, RecordConsecutiveHealFailure, ResolveHealFailure (~1936 tok)
+- `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~3415 tok)
+- `healing_pr.go` — Struct: HealPRInputs (~2631 tok)
+- `healing_redirect.go` — Struct: RedirectChain (~1340 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~6211 tok)
+- `healing.go` — Struct: HealResult (~2814 tok)
 - `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Pro (~1718 tok)
-- `pipeline.go` — Struct: PipelineOptions (~4175 tok)
+- `pipeline.go` — Struct: PipelineOptions (~4188 tok)
 - `recognize_agents_test.go` — TestAgentsContentType, TestCanonicalAgentsKeys_MatchesCanonicalKeysYAML, TestIsCanonicalAgentsKey, T (~2192 tok)
 - `recognize_agents.go` — IsCanonicalAgentsKey, AgentsLandmarkOptions, AgentsLandmarkPattern (~1526 tok)
 - `recognize_amp_test.go` — TestRecognizeAmp_RealLandmarks, TestRecognizeAmp_AnchorsMissing, TestRecognizeAmp_NoLandmarks, TestR (~3302 tok)
@@ -1829,7 +1829,7 @@
 - `sourceman_validate.go` — ValidateSources (~660 tok)
 - `sourceman.go` — Struct: SourceManifest (~1139 tok)
 - `types_test.go` — TestExtractedSource_ZeroValue, TestRunManifest_ExitClasses, TestSelectorConfig_Fields, TestRunManife (~1067 tok)
-- `types.go` — implements the syllago capability monitor pipeline. (~1378 tok)
+- `types.go` — implements the syllago capability monitor pipeline. (~1398 tok)
 
 ## cli/internal/capmon/capyaml/
 

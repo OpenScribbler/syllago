@@ -3,28 +3,28 @@
   "started": "2026-04-29T22:59:29.895Z",
   "files_read": {
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_issue.go": {
-      "count": 2,
-      "tokens": 1867,
+      "count": 4,
+      "tokens": 1936,
       "first_read": "2026-04-29T22:59:40.067Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_issue_test.go": {
-      "count": 1,
-      "tokens": 0,
+      "count": 2,
+      "tokens": 2433,
       "first_read": "2026-04-29T22:59:42.603Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go": {
-      "count": 2,
+      "count": 3,
       "tokens": 1378,
       "first_read": "2026-04-29T22:59:45.295Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go": {
-      "count": 2,
+      "count": 3,
       "tokens": 4175,
       "first_read": "2026-04-29T22:59:48.470Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_diagnostics.go": {
-      "count": 2,
-      "tokens": 1202,
+      "count": 5,
+      "tokens": 1468,
       "first_read": "2026-04-29T22:59:51.558Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline_heal_test.go": {
@@ -38,9 +38,59 @@
       "first_read": "2026-04-29T23:00:22.414Z"
     },
     "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_pr.go": {
-      "count": 1,
-      "tokens": 2538,
+      "count": 3,
+      "tokens": 2631,
       "first_read": "2026-04-29T23:05:04.698Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go": {
+      "count": 5,
+      "tokens": 2814,
+      "first_read": "2026-04-30T19:03:43.960Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_redirect.go": {
+      "count": 2,
+      "tokens": 1340,
+      "first_read": "2026-04-30T19:03:46.752Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch_validity.go": {
+      "count": 2,
+      "tokens": 1275,
+      "first_read": "2026-04-30T19:03:49.173Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go": {
+      "count": 6,
+      "tokens": 5391,
+      "first_read": "2026-04-30T19:03:55.311Z"
+    },
+    "/home/hhewett/.local/src/syllago/docs/plans/2026-04-30-cross-domain-redirect-decline-design.md": {
+      "count": 3,
+      "tokens": 0,
+      "first_read": "2026-04-30T19:05:11.965Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/check_test.go": {
+      "count": 1,
+      "tokens": 4318,
+      "first_read": "2026-04-30T19:05:24.956Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/fetch.go": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-04-30T19:05:30.128Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_variants.go": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-04-30T19:14:04.544Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_diagnostics_test.go": {
+      "count": 1,
+      "tokens": 1612,
+      "first_read": "2026-04-30T19:22:57.492Z"
+    },
+    "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_pr_test.go": {
+      "count": 1,
+      "tokens": 2656,
+      "first_read": "2026-04-30T19:27:25.793Z"
     }
   },
   "files_written": [
@@ -121,20 +171,158 @@
       "action": "edit",
       "tokens": 52,
       "at": "2026-04-29T23:02:38.361Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 30,
+      "at": "2026-04-30T19:06:42.166Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 1144,
+      "at": "2026-04-30T19:07:02.904Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_redirect.go",
+      "action": "edit",
+      "tokens": 238,
+      "at": "2026-04-30T19:07:17.091Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_redirect.go",
+      "action": "edit",
+      "tokens": 491,
+      "at": "2026-04-30T19:07:31.272Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_redirect.go",
+      "action": "edit",
+      "tokens": 59,
+      "at": "2026-04-30T19:07:35.999Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+      "action": "edit",
+      "tokens": 448,
+      "at": "2026-04-30T19:07:50.411Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 372,
+      "at": "2026-04-30T19:08:08.418Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 34,
+      "at": "2026-04-30T19:08:12.154Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 290,
+      "at": "2026-04-30T19:08:23.797Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 271,
+      "at": "2026-04-30T19:08:32.752Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_test.go",
+      "action": "edit",
+      "tokens": 896,
+      "at": "2026-04-30T19:16:56.154Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+      "action": "edit",
+      "tokens": 176,
+      "at": "2026-04-30T19:17:06.503Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+      "action": "edit",
+      "tokens": 252,
+      "at": "2026-04-30T19:17:16.224Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing.go",
+      "action": "edit",
+      "tokens": 262,
+      "at": "2026-04-30T19:17:35.776Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/types.go",
+      "action": "edit",
+      "tokens": 261,
+      "at": "2026-04-30T19:17:52.148Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/pipeline.go",
+      "action": "edit",
+      "tokens": 36,
+      "at": "2026-04-30T19:17:56.089Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_diagnostics_test.go",
+      "action": "edit",
+      "tokens": 400,
+      "at": "2026-04-30T19:23:09.711Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_diagnostics.go",
+      "action": "edit",
+      "tokens": 305,
+      "at": "2026-04-30T19:23:22.834Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_pr_test.go",
+      "action": "edit",
+      "tokens": 832,
+      "at": "2026-04-30T19:27:55.172Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_pr.go",
+      "action": "edit",
+      "tokens": 152,
+      "at": "2026-04-30T19:28:06.996Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_issue_test.go",
+      "action": "edit",
+      "tokens": 962,
+      "at": "2026-04-30T19:28:30.863Z"
+    },
+    {
+      "file": "/home/hhewett/.local/src/syllago/cli/internal/capmon/healing_issue.go",
+      "action": "edit",
+      "tokens": 140,
+      "at": "2026-04-30T19:28:42.875Z"
     }
   ],
   "edit_counts": {
-    "cli/internal/capmon/healing_issue_test.go": 5,
+    "cli/internal/capmon/healing_issue_test.go": 6,
     "cli/internal/capmon/types_test.go": 2,
     "cli/internal/capmon/pipeline_heal_test.go": 1,
-    "cli/internal/capmon/types.go": 1,
-    "cli/internal/capmon/healing_issue.go": 2,
-    "cli/internal/capmon/pipeline.go": 1,
-    "cli/internal/capmon/healing_pr.go": 1
+    "cli/internal/capmon/types.go": 2,
+    "cli/internal/capmon/healing_issue.go": 3,
+    "cli/internal/capmon/pipeline.go": 2,
+    "cli/internal/capmon/healing_pr.go": 2,
+    "cli/internal/capmon/healing_test.go": 7,
+    "cli/internal/capmon/healing_redirect.go": 3,
+    "cli/internal/capmon/healing.go": 4,
+    "cli/internal/capmon/healing_diagnostics_test.go": 1,
+    "cli/internal/capmon/healing_diagnostics.go": 1,
+    "cli/internal/capmon/healing_pr_test.go": 1
   },
-  "anatomy_hits": 4,
-  "anatomy_misses": 4,
-  "repeated_reads_warned": 5,
+  "anatomy_hits": 11,
+  "anatomy_misses": 7,
+  "repeated_reads_warned": 29,
   "cerebrum_warnings": 0,
-  "stop_count": 0
+  "stop_count": 3
 }
