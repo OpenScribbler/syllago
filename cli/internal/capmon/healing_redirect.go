@@ -16,11 +16,15 @@ const maxRedirectHops = 10
 // Permanent is true only when every redirect in the chain was 301 or 308 —
 // a single 302/307 anywhere in the chain makes the final URL a poor heal
 // candidate because the origin may return a different target next time.
+// TerminatingStatus is the HTTP status code returned by FinalURL (the first
+// non-3xx response in the chain). Zero when the chain didn't terminate
+// normally (e.g. errored out or hit max hops).
 type RedirectChain struct {
-	StartURL  string
-	FinalURL  string
-	Hops      []RedirectHop
-	Permanent bool
+	StartURL          string
+	FinalURL          string
+	Hops              []RedirectHop
+	Permanent         bool
+	TerminatingStatus int `json:"terminating_status,omitempty"`
 }
 
 // RedirectHop is one step in a redirect chain.
@@ -28,6 +32,21 @@ type RedirectHop struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Status int    `json:"status"`
+}
+
+// redirectClient is the HTTP client used by FollowRedirectChain for HEAD
+// walking. Tests override this via SetRedirectClientForTest to point at an
+// httptest server with a custom Transport (e.g. host-rewrite for eTLD+1
+// scenarios where the URL hostname must differ from the actual listener).
+var redirectClient *http.Client
+
+// SetRedirectClientForTest installs a custom *http.Client for FollowRedirectChain.
+// Pass nil to restore the default no-follow client.
+//
+// The injected client MUST set CheckRedirect to http.ErrUseLastResponse so
+// the stdlib doesn't auto-follow redirects underneath us.
+func SetRedirectClientForTest(c *http.Client) {
+	redirectClient = c
 }
 
 // FollowRedirectChain issues a HEAD request to rawURL and walks the redirect
@@ -46,10 +65,13 @@ func FollowRedirectChain(ctx context.Context, rawURL string) (*RedirectChain, er
 
 	// Use a client that does NOT follow redirects automatically — we walk the
 	// chain ourselves so we can inspect each hop's status code.
-	noFollow := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
+	noFollow := redirectClient
+	if noFollow == nil {
+		noFollow = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
 	}
 
 	chain := &RedirectChain{
@@ -76,6 +98,7 @@ func FollowRedirectChain(ctx context.Context, rawURL string) (*RedirectChain, er
 		if resp.StatusCode < 300 || resp.StatusCode >= 400 {
 			// Non-redirect response — chain terminates here.
 			chain.FinalURL = current
+			chain.TerminatingStatus = resp.StatusCode
 			return chain, nil
 		}
 

@@ -119,9 +119,11 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 }
 
 // runRedirectStrategy follows the redirect chain and returns the final
-// URL only if the chain is entirely permanent and terminated in a 2xx.
-// A single 302 anywhere poisons the chain — temporary redirects aren't
-// safe to bake into a manifest.
+// URL only if the chain is entirely permanent, stays within the origin's
+// registrable domain (eTLD+1), and terminated in a 2xx. A single 302
+// anywhere poisons the chain — temporary redirects aren't safe to bake
+// into a manifest. A cross-eTLD+1 destination is drift signal — capmon
+// declines and surfaces the destination so a human can investigate.
 func runRedirectStrategy(ctx context.Context, rawURL string) (string, string, bool) {
 	chain, err := FollowRedirectChain(ctx, rawURL)
 	if err != nil {
@@ -135,6 +137,21 @@ func runRedirectStrategy(ctx context.Context, rawURL string) (string, string, bo
 	}
 	if chain.FinalURL == rawURL {
 		return "", "chain returned to origin URL", false
+	}
+	// Decline before any GET probe when the chain crosses the registrable
+	// domain. Cross-domain canonical moves are drift, not heals.
+	origETLD, origErr := etldPlusOne(rawURL)
+	finalETLD, finalErr := etldPlusOne(chain.FinalURL)
+	if origErr == nil && finalErr == nil && origETLD != finalETLD {
+		hopWord := "hops"
+		if len(chain.Hops) == 1 {
+			hopWord = "hop"
+		}
+		reason := fmt.Sprintf(
+			"chain crosses registrable domain: %s → %s; final URL %s, %d %s, terminated %d",
+			origETLD, finalETLD, chain.FinalURL, len(chain.Hops), hopWord, chain.TerminatingStatus,
+		)
+		return "", reason, false
 	}
 	return chain.FinalURL, fmt.Sprintf("followed %d permanent redirects", len(chain.Hops)), true
 }
