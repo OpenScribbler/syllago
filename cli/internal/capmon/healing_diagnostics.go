@@ -93,6 +93,32 @@ func escapeCell(s string) string {
 	return s
 }
 
+// renderStrategyDeclines returns a markdown section listing strategy-level
+// decline reasons. Returns the empty string when declines is empty so callers
+// can omit the section entirely without an orphaned header.
+//
+// Used by both BuildHealPRBody (success path) and the failure-issue body
+// builder so the human always sees what strategies declined and why, even
+// when other strategies succeeded or produced their own outcomes. Each
+// reason is rendered verbatim — no truncation, no escaping. Markdown
+// auto-links bare URLs inside list bullets, so URL escaping is unnecessary.
+//
+// Trailing newline mirrors RenderCandidatesTable so both renderers compose
+// uniformly into surrounding body text.
+func renderStrategyDeclines(declines []string) string {
+	if len(declines) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("## Other strategies declined\n\n")
+	for _, d := range declines {
+		b.WriteString("- ")
+		b.WriteString(d)
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
 // summarizeCandidateOutcomes returns a one-liner aggregate count, e.g.
 // `"5 candidates: 3 http_error, 1 binary_content, 1 redirected"`. Counts
 // are ordered by frequency desc, with alphabetical tie-break. Used as

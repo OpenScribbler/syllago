@@ -170,6 +170,39 @@ func TestSummarizeCandidateOutcomes_Counts(t *testing.T) {
 	}
 }
 
+func TestRenderStrategyDeclines_Empty(t *testing.T) {
+	t.Parallel()
+	if got := renderStrategyDeclines(nil); got != "" {
+		t.Errorf("renderStrategyDeclines(nil) = %q, want empty string", got)
+	}
+	if got := renderStrategyDeclines([]string{}); got != "" {
+		t.Errorf("renderStrategyDeclines([]) = %q, want empty string", got)
+	}
+}
+
+func TestRenderStrategyDeclines_SingleDecline(t *testing.T) {
+	t.Parallel()
+	reason := "redirect: chain crosses registrable domain: example.com -> netlify.app; final URL https://example-docs.netlify.app/skill.md, 3 hops, terminated 200"
+	got := renderStrategyDeclines([]string{reason})
+	want := "## Other strategies declined\n\n- " + reason + "\n"
+	if got != want {
+		t.Errorf("renderStrategyDeclines single-decline mismatch\nGot:  %q\nWant: %q", got, want)
+	}
+}
+
+func TestRenderStrategyDeclines_MultipleDeclines(t *testing.T) {
+	t.Parallel()
+	declines := []string{
+		"redirect: chain crosses registrable domain: example.com -> netlify.app; final URL https://example-docs.netlify.app/skill.md, 3 hops, terminated 200",
+		"github-rename: no candidates above score floor",
+	}
+	got := renderStrategyDeclines(declines)
+	want := "## Other strategies declined\n\n- " + declines[0] + "\n- " + declines[1] + "\n"
+	if got != want {
+		t.Errorf("renderStrategyDeclines multi-decline mismatch\nGot:  %q\nWant: %q", got, want)
+	}
+}
+
 func TestRedirectHop_JSONRoundTrip(t *testing.T) {
 	t.Parallel()
 	hop := RedirectHop{
