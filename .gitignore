@@ -82,3 +82,4 @@ tmp/
 .wolf/memory.md
 .wolf/token-ledger.json
 .wolf/buglog.json
+.wolf/hooks/_session.json
