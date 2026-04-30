@@ -21,6 +21,26 @@ changelog:
   - url: https://ampcode.com/llms.txt
     label: llms.txt (stub — only 2 URLs)
 
+# Provider-specific URL conventions. See _template.yaml for field docs.
+docs_conventions:
+  # ampcode.com/manual is a thin public surface; the full manual (including
+  # the hooks section) is reachable only via ?internal. Skill use only —
+  # not auto-applied at fetch time.
+  query_param_required: "?internal"
+  # Anything that looks like /manual/<topic>/index.md or /manual/<topic>.md
+  # 302-redirects to /auth/sign-in for unauthenticated callers. The heal
+  # validator already rejects any redirect; this list lets the diagnostic
+  # surface "auth gate" instead of a generic "redirected" cell.
+  auth_gated_paths:
+    - "/auth/sign-in"
+    - "/login"
+  # Known-dead path: the hooks.md page was retired in favor of an inline
+  # section at /manual?internal#hooks. Variant generator must not propose
+  # replacements for this path (e.g. /manual/hooks/index.md still 302s to
+  # /auth/sign-in, which is the bug pattern that triggered this bead).
+  retired_paths:
+    - "/manual/hooks.md"
+
 content_types:
   # ── Support summary ───────────────────────────────────────────────────
   # Amp supports: rules, skills, mcp, hooks

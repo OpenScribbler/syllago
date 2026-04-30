@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -32,9 +34,17 @@ type HealResult struct {
 // bypass opt-out (healing.enabled=false causes AttemptHeal to return
 // Success=false with a FailReason explaining the skip, never an error).
 //
+// conventions, when non-nil, applies provider-specific URL hints from
+// the source manifest's docs_conventions block: variant candidates
+// matching RetiredPaths are dropped before probing, and OutcomeRedirected
+// outcomes are enriched with an "auth gate" detail when the final URL
+// matches an AuthGatedPaths substring. Conventions never change
+// success/failure outcomes — they only filter inputs and annotate
+// diagnostics.
+//
 // The orchestrator never mutates src. All new URLs are proposed via
 // the PR flow downstream of this call.
-func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealResult, error) {
+func AttemptHeal(ctx context.Context, src SourceEntry, conventions *DocsConventions, fetchErr error) (*HealResult, error) {
 	result := &HealResult{}
 	if !src.IsHealingEnabled() {
 		result.FailReason = "healing disabled for this source"
@@ -78,6 +88,10 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 			}
 		case "variant":
 			variants := GenerateVariants(src.URL)
+			variants, retiredDropped := filterRetiredVariants(variants, conventions)
+			if retiredDropped > 0 {
+				declineReasons = append(declineReasons, fmt.Sprintf("variant: dropped %d candidate(s) matching retired_paths", retiredDropped))
+			}
 			if len(variants) == 0 {
 				declineReasons = append(declineReasons, "variant: no candidates generated")
 				continue
@@ -94,6 +108,7 @@ func AttemptHeal(ctx context.Context, src SourceEntry, fetchErr error) (*HealRes
 
 		for _, cand := range candidates {
 			outcome := validateHealCandidate(ctx, src.URL, cand, strategy)
+			enrichAuthGateDetail(&outcome, conventions)
 			result.CandidateOutcomes = append(result.CandidateOutcomes, outcome)
 			if outcome.Outcome == OutcomeSuccess {
 				result.Success = true
@@ -284,6 +299,72 @@ func invalidKindToOutcome(k InvalidKind) CandidateOutcomeKind {
 		// Unknown kinds shouldn't reach here, but treat as a generic
 		// connect_error rather than crashing.
 		return OutcomeConnectError
+	}
+}
+
+// filterRetiredVariants drops candidates whose URL path matches any
+// docs_conventions.retired_paths entry exactly. Returns the surviving
+// candidates and the count of dropped ones (for diagnostic surfacing).
+// Matching is exact path equality — a retired_paths entry of
+// "/manual/hooks.md" matches a candidate URL with path "/manual/hooks.md"
+// regardless of host or query string.
+func filterRetiredVariants(variants []VariantCandidate, conventions *DocsConventions) ([]VariantCandidate, int) {
+	if conventions == nil || len(conventions.RetiredPaths) == 0 {
+		return variants, 0
+	}
+	retired := make(map[string]bool, len(conventions.RetiredPaths))
+	for _, p := range conventions.RetiredPaths {
+		retired[p] = true
+	}
+	out := make([]VariantCandidate, 0, len(variants))
+	dropped := 0
+	for _, v := range variants {
+		u, err := url.Parse(v.URL)
+		if err != nil {
+			out = append(out, v)
+			continue
+		}
+		if retired[u.Path] {
+			dropped++
+			continue
+		}
+		out = append(out, v)
+	}
+	return out, dropped
+}
+
+// enrichAuthGateDetail annotates a CandidateOutcome whose Outcome is
+// OutcomeRedirected and whose redirect chain (any hop's destination, or
+// the final URL) contains an AuthGatedPaths substring with a
+// human-readable Detail. This is triage signal only — the redirect
+// outcome is already drift, this just tells the human "the redirect
+// went somewhere meaningful (login wall) rather than a generic alias".
+// Scanning every hop matters because real auth flows often bounce out
+// to a separate host (e.g. ampcode.com/auth/sign-in →
+// auth.ampcode.com/?client_id=...) so the gate path lives mid-chain,
+// not at the terminal URL. No-op when conventions is nil or
+// auth_gated_paths is empty. Preserves any pre-existing Detail.
+func enrichAuthGateDetail(out *CandidateOutcome, conventions *DocsConventions) {
+	if out.Outcome != OutcomeRedirected || conventions == nil || len(conventions.AuthGatedPaths) == 0 {
+		return
+	}
+	if out.Detail != "" {
+		return
+	}
+	for _, gate := range conventions.AuthGatedPaths {
+		if gate == "" {
+			continue
+		}
+		if strings.Contains(out.FinalURL, gate) {
+			out.Detail = fmt.Sprintf("candidate redirected to known auth gate (%s)", gate)
+			return
+		}
+		for _, hop := range out.Redirects {
+			if strings.Contains(hop.To, gate) {
+				out.Detail = fmt.Sprintf("candidate redirected to known auth gate (%s)", gate)
+				return
+			}
+		}
 	}
 }
 

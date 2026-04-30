@@ -30,7 +30,7 @@ func TestTryHealSource_DisabledReturnsNil(t *testing.T) {
 		URL:     "https://example.com/missing.md",
 		Healing: &HealingConfig{Enabled: &disabled},
 	}
-	evt := tryHealSource(context.Background(), PipelineOptions{}, "test-provider", "skills", 0, src, errors.New("404"), "run-1")
+	evt := tryHealSource(context.Background(), PipelineOptions{}, "test-provider", "skills", 0, src, nil, errors.New("404"), "run-1")
 	if evt != nil {
 		t.Errorf("expected nil when healing disabled, got %+v", evt)
 	}
@@ -45,7 +45,7 @@ func TestTryHealSource_FailureRecordsCounter(t *testing.T) {
 	}
 	opts := PipelineOptions{CacheRoot: cacheRoot, RepoRoot: t.TempDir()}
 
-	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, errors.New("404"), "run-1")
+	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, nil, errors.New("404"), "run-1")
 	if evt == nil {
 		t.Fatal("expected event, got nil")
 	}
@@ -78,7 +78,7 @@ func TestTryHealSource_PropagatesCandidateOutcomes(t *testing.T) {
 		Healing: &HealingConfig{Strategies: []string{"variant"}},
 	}
 	opts := PipelineOptions{CacheRoot: t.TempDir(), RepoRoot: t.TempDir()}
-	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, errors.New("404"), "run-prop")
+	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, nil, errors.New("404"), "run-prop")
 	if evt == nil {
 		t.Fatal("expected event, got nil")
 	}
@@ -121,7 +121,7 @@ func TestTryHealSource_DryRunDoesNotOpenPR(t *testing.T) {
 		Healing: &HealingConfig{Strategies: []string{"variant"}},
 	}
 	opts := PipelineOptions{DryRun: true, CacheRoot: t.TempDir(), RepoRoot: t.TempDir()}
-	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, errors.New("404"), "run-1")
+	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, nil, errors.New("404"), "run-1")
 	if evt == nil || !evt.Success {
 		t.Fatalf("expected success event, got %+v", evt)
 	}
@@ -186,7 +186,7 @@ func TestTryHealSource_SuccessOpensPRAndClearsCounter(t *testing.T) {
 		RepoRoot:           repoDir,
 		SourceManifestsDir: manifestsDir,
 	}
-	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, errors.New("404"), "run-42")
+	evt := tryHealSource(context.Background(), opts, "test-provider", "skills", 0, src, nil, errors.New("404"), "run-42")
 	if evt == nil || !evt.Success {
 		t.Fatalf("expected success event, got %+v", evt)
 	}

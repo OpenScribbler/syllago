@@ -22,7 +22,7 @@ func TestAttemptHeal_DisabledShortCircuits(t *testing.T) {
 		URL:     "https://example.com/docs/foo.md",
 		Healing: &HealingConfig{Enabled: &enabled},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("fetch 404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("fetch 404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestAttemptHeal_VariantStrategySucceeds(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestAttemptHeal_VariantFailsContentValidation(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestAttemptHeal_VariantTooSmall(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, _ := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, _ := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if result.Success {
 		t.Error("expected failure when candidate body too small")
 	}
@@ -125,7 +125,7 @@ func TestAttemptHeal_UnknownStrategyIgnored(t *testing.T) {
 			Strategies: []string{"telepathy"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestAttemptHeal_RedirectStrategyRejectsTemporary(t *testing.T) {
 			Strategies: []string{"redirect"},
 		},
 	}
-	result, _ := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, _ := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if result.Success {
 		t.Error("302 chain must not produce a successful heal")
 	}
@@ -184,7 +184,7 @@ func TestAttemptHeal_RedirectStrategySucceedsOnPermanent(t *testing.T) {
 			Strategies: []string{"redirect"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestAttemptHeal_VariantRejectsRedirectedCandidate(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestAttemptHeal_VariantMultiHopRedirectChainCaptured(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -327,7 +327,7 @@ func TestAttemptHeal_VariantHTTPError(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -369,7 +369,7 @@ func TestAttemptHeal_VariantConnectError(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -421,7 +421,7 @@ func TestAttemptHeal_SuccessCapturesOutcomes(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -456,7 +456,7 @@ func TestAttemptHeal_FailReasonDerivedSummary(t *testing.T) {
 			Strategies: []string{"variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -503,7 +503,7 @@ func TestAttemptHeal_StrategyDeclinesPopulatedAlongsideOutcomes(t *testing.T) {
 			Strategies: []string{"redirect", "variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -575,7 +575,7 @@ func TestAttemptHeal_StrategiesTriedInOrder(t *testing.T) {
 			Strategies: []string{"redirect", "variant"},
 		},
 	}
-	result, err := AttemptHeal(context.Background(), src, errors.New("404"))
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
 	if err != nil {
 		t.Fatalf("AttemptHeal: %v", err)
 	}
@@ -699,5 +699,213 @@ func TestRunRedirectStrategy_AcceptsSameRegistrableDomain(t *testing.T) {
 	}
 	if cand != "https://docs.example.com/new" {
 		t.Errorf("cand = %q, want https://docs.example.com/new", cand)
+	}
+}
+
+// TestAttemptHeal_RetiredPathFiltersVariant pins the docs_conventions
+// retired_paths semantics. Original URL has stem "Hooks" — variant
+// generator emits "/manual/hooks.md" via the lowercase-stem rule. That
+// path is in retired_paths, so it must be dropped before probing.
+// Without conventions, the same variant would be probed and (in this
+// fixture) succeed; with conventions, no variant remains and the heal
+// fails with a "retired_paths" decline reason.
+func TestAttemptHeal_RetiredPathFiltersVariant(t *testing.T) {
+	mux := http.NewServeMux()
+	// /manual/hooks.md returns valid content. Without conventions, the
+	// lowercase-stem variant of /manual/Hooks.md would heal here.
+	mux.HandleFunc("/manual/hooks.md", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/markdown")
+		_, _ = w.Write(validBody)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL: srv.URL + "/manual/Hooks.md",
+		Healing: &HealingConfig{
+			Strategies: []string{"variant"},
+		},
+	}
+	conventions := &DocsConventions{
+		RetiredPaths: []string{"/manual/hooks.md"},
+	}
+	result, err := AttemptHeal(context.Background(), src, conventions, errors.New("404"))
+	if err != nil {
+		t.Fatalf("AttemptHeal: %v", err)
+	}
+	// The retired path must not appear in CandidateOutcomes — filtering
+	// happens before any probe.
+	for _, o := range result.CandidateOutcomes {
+		if strings.HasSuffix(o.URL, "/manual/hooks.md") {
+			t.Errorf("retired path %q was probed; expected to be filtered. CandidateOutcomes=%+v", o.URL, result.CandidateOutcomes)
+		}
+	}
+	// At least one strategy decline should record the drop.
+	foundDecline := false
+	for _, d := range result.StrategyDeclines {
+		if strings.Contains(d, "retired_paths") {
+			foundDecline = true
+			break
+		}
+	}
+	if !foundDecline {
+		t.Errorf("StrategyDeclines = %v, want one mentioning retired_paths", result.StrategyDeclines)
+	}
+}
+
+// TestAttemptHeal_AuthGateDetailEnriched pins the docs_conventions
+// auth_gated_paths semantics. Variant candidate 302-redirects to
+// /auth/sign-in (qc7yf already rejects this on correctness grounds).
+// With conventions populated, the resulting CandidateOutcome.Detail
+// should call out the auth gate so triagers see the cause, not just
+// "redirected".
+func TestAttemptHeal_AuthGateDetailEnriched(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/auth/sign-in", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write(validBody)
+	})
+	mux.HandleFunc("/manual/hooks/index.md", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "/auth/sign-in?returnTo="+r.URL.Path)
+		w.WriteHeader(http.StatusFound) // 302
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL: srv.URL + "/manual/hooks.md",
+		Healing: &HealingConfig{
+			Strategies: []string{"variant"},
+		},
+	}
+	conventions := &DocsConventions{
+		AuthGatedPaths: []string{"/auth/sign-in", "/login"},
+	}
+	result, err := AttemptHeal(context.Background(), src, conventions, errors.New("404"))
+	if err != nil {
+		t.Fatalf("AttemptHeal: %v", err)
+	}
+	if result.Success {
+		t.Fatalf("expected rejection on auth-gate redirect; got NewURL=%q", result.NewURL)
+	}
+	var redirected *CandidateOutcome
+	for i := range result.CandidateOutcomes {
+		o := &result.CandidateOutcomes[i]
+		if o.Outcome == OutcomeRedirected {
+			redirected = o
+			break
+		}
+	}
+	if redirected == nil {
+		t.Fatalf("expected a redirected outcome; got %+v", result.CandidateOutcomes)
+	}
+	if !strings.Contains(redirected.Detail, "auth gate") {
+		t.Errorf("redirected.Detail = %q, want mention of auth gate", redirected.Detail)
+	}
+	if !strings.Contains(redirected.Detail, "/auth/sign-in") {
+		t.Errorf("redirected.Detail = %q, want the matched gate path included", redirected.Detail)
+	}
+}
+
+// TestAttemptHeal_AuthGateDetail_MidChainHop pins the live amp pattern
+// observed during yogqh end-to-end testing: the candidate redirects
+// through /auth/sign-in but the chain terminates on a different host
+// (e.g. auth.ampcode.com/?client_id=...). Enrichment must scan the
+// redirect hops, not just FinalURL — otherwise the qc7yf incident's
+// most common surface (Hooks/index.md → /auth/sign-in → cross-host
+// auth bootstrap) shows up as a generic "redirected" cell.
+func TestAttemptHeal_AuthGateDetail_MidChainHop(t *testing.T) {
+	// External "auth bootstrap" host the chain terminates on.
+	authHost := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write(validBody)
+	}))
+	defer authHost.Close()
+
+	mux := http.NewServeMux()
+	// /auth/sign-in is the gate path — bounces to the external host.
+	mux.HandleFunc("/auth/sign-in", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", authHost.URL+"/?client_id=fake")
+		w.WriteHeader(http.StatusFound)
+	})
+	// Variant landing page — 302s to /auth/sign-in.
+	mux.HandleFunc("/manual/hooks/index.md", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "/auth/sign-in")
+		w.WriteHeader(http.StatusFound)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL: srv.URL + "/manual/hooks.md",
+		Healing: &HealingConfig{
+			Strategies: []string{"variant"},
+		},
+	}
+	conventions := &DocsConventions{
+		AuthGatedPaths: []string{"/auth/sign-in", "/login"},
+	}
+	result, err := AttemptHeal(context.Background(), src, conventions, errors.New("404"))
+	if err != nil {
+		t.Fatalf("AttemptHeal: %v", err)
+	}
+	if result.Success {
+		t.Fatalf("expected rejection on cross-host auth-gate redirect; got NewURL=%q", result.NewURL)
+	}
+	var redirected *CandidateOutcome
+	for i := range result.CandidateOutcomes {
+		o := &result.CandidateOutcomes[i]
+		if o.Outcome == OutcomeRedirected {
+			redirected = o
+			break
+		}
+	}
+	if redirected == nil {
+		t.Fatalf("expected a redirected outcome; got %+v", result.CandidateOutcomes)
+	}
+	// Sanity: chain must have a hop into /auth/sign-in but final URL must
+	// be the external auth host (no /auth/sign-in substring).
+	if strings.Contains(redirected.FinalURL, "/auth/sign-in") {
+		t.Fatalf("test setup wrong: FinalURL still contains gate substring: %s", redirected.FinalURL)
+	}
+	if !strings.Contains(redirected.Detail, "auth gate") {
+		t.Errorf("mid-chain auth gate not surfaced; Detail = %q", redirected.Detail)
+	}
+	if !strings.Contains(redirected.Detail, "/auth/sign-in") {
+		t.Errorf("Detail should name matched gate path; got %q", redirected.Detail)
+	}
+}
+
+// TestAttemptHeal_AuthGateDetail_NilConventionsNoOp ensures the
+// enrichment is genuinely additive — when conventions is nil, the
+// Detail field for OutcomeRedirected stays empty (matching pre-bead
+// behavior).
+func TestAttemptHeal_AuthGateDetail_NilConventionsNoOp(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/auth/sign-in", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write(validBody)
+	})
+	mux.HandleFunc("/manual/hooks/index.md", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Location", "/auth/sign-in")
+		w.WriteHeader(http.StatusFound)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	src := SourceEntry{
+		URL: srv.URL + "/manual/hooks.md",
+		Healing: &HealingConfig{
+			Strategies: []string{"variant"},
+		},
+	}
+	result, err := AttemptHeal(context.Background(), src, nil, errors.New("404"))
+	if err != nil {
+		t.Fatalf("AttemptHeal: %v", err)
+	}
+	for _, o := range result.CandidateOutcomes {
+		if o.Outcome == OutcomeRedirected && o.Detail != "" {
+			t.Errorf("with nil conventions, redirected outcome should have empty Detail; got %q", o.Detail)
+		}
 	}
 }

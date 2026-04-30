@@ -192,7 +192,7 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					// in-run — it records the heal outcome and proposes a PR.
 					// The next pipeline run (after PR merge) will pick up the
 					// corrected URL.
-					heal := tryHealSource(ctx, opts, m.Slug, ctName, i, src, fetchErr, manifest.RunID)
+					heal := tryHealSource(ctx, opts, m.Slug, ctName, i, src, m.DocsConventions, fetchErr, manifest.RunID)
 					if heal != nil {
 						status.HealEvents = append(status.HealEvents, *heal)
 					}
@@ -224,11 +224,11 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 // Returns a non-nil HealEvent in every case (success OR failure) so the
 // run manifest captures what was tried. Returns nil only when healing
 // is disabled for this source.
-func tryHealSource(ctx context.Context, opts PipelineOptions, providerSlug, contentType string, sourceIndex int, src SourceEntry, fetchErr error, runID string) *HealEvent {
+func tryHealSource(ctx context.Context, opts PipelineOptions, providerSlug, contentType string, sourceIndex int, src SourceEntry, conventions *DocsConventions, fetchErr error, runID string) *HealEvent {
 	if !src.IsHealingEnabled() {
 		return nil
 	}
-	result, err := AttemptHeal(ctx, src, fetchErr)
+	result, err := AttemptHeal(ctx, src, conventions, fetchErr)
 	event := &HealEvent{
 		ContentType: contentType,
 		SourceIndex: sourceIndex,

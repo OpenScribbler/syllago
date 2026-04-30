@@ -10,13 +10,45 @@ import (
 
 // SourceManifest is the parsed form of docs/provider-sources/<slug>.yaml.
 type SourceManifest struct {
-	SchemaVersion string                       `yaml:"schema_version"`
-	Slug          string                       `yaml:"slug"`
-	DisplayName   string                       `yaml:"display_name"`
-	LastVerified  string                       `yaml:"last_verified"`
-	FetchTier     string                       `yaml:"fetch_tier,omitempty"`
-	FetchMethod   string                       `yaml:"fetch_method,omitempty"`
-	ContentTypes  map[string]ContentTypeSource `yaml:"content_types"`
+	SchemaVersion   string                       `yaml:"schema_version"`
+	Slug            string                       `yaml:"slug"`
+	DisplayName     string                       `yaml:"display_name"`
+	LastVerified    string                       `yaml:"last_verified"`
+	FetchTier       string                       `yaml:"fetch_tier,omitempty"`
+	FetchMethod     string                       `yaml:"fetch_method,omitempty"`
+	DocsConventions *DocsConventions             `yaml:"docs_conventions,omitempty"`
+	ContentTypes    map[string]ContentTypeSource `yaml:"content_types"`
+}
+
+// DocsConventions carries provider-specific URL hints used by the heal
+// pipeline and the syllago-capmon-process skill. All fields are optional;
+// the schema is designed to accrete new fields per-provider as quirks
+// surface (Cursor docs versioning, Cline auth-gated changelog, etc.).
+//
+// This block is provider-wide, not per-content-type — conventions like
+// "always append ?internal" apply to every doc URL on the host.
+type DocsConventions struct {
+	// QueryParamRequired is the literal query-string fragment (e.g.
+	// "?internal") that must be present on every doc URL fetched from this
+	// provider. Currently informational — read by the syllago-capmon-process
+	// skill when proposing replacement URLs. Not auto-applied at fetch time;
+	// manifest URLs stay literal.
+	QueryParamRequired string `yaml:"query_param_required,omitempty"`
+
+	// AuthGatedPaths lists path substrings that, if a redirect lands on
+	// them, mean the candidate URL doesn't really exist for unauthenticated
+	// callers. Used by the heal pipeline to enrich the redirect diagnostic
+	// Detail so triagers see "auth gate" rather than just "redirected".
+	// Does NOT change correctness — any redirect on a heal candidate is
+	// already rejected (see qc7yf). This is human-triage signal only.
+	AuthGatedPaths []string `yaml:"auth_gated_paths,omitempty"`
+
+	// RetiredPaths lists URL paths the variant generator must NOT propose
+	// replacements for. Known-dead paths whose 404 is a permanent fact (the
+	// content moved to a query-param-gated section, an in-page anchor, or
+	// was removed outright). Matching is exact path equality against the
+	// candidate URL's path.
+	RetiredPaths []string `yaml:"retired_paths,omitempty"`
 }
 
 // ContentTypeSource groups all source entries for one content type.
