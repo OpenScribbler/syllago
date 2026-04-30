@@ -122,8 +122,16 @@ func manifestWithRevocations(t *testing.T) string {
 // /manifest.json and a bundle at /manifest.json.sigstore. Callers can
 // override per-request behavior by passing custom handlers; the harness
 // composes defaults for the common happy path.
+//
+// The harness also exposes server.Client() as h.client so callers can
+// route fetches through a per-server *http.Transport. Without this, the
+// zero-value Fetcher falls back to http.DefaultTransport — a process-wide
+// singleton — and one test's t.Cleanup(server.Close) calls CloseIdleConnections
+// on connections other parallel tests are mid-request on. See syllago-jm704.
 type syncHarness struct {
 	server       *httptest.Server
+	client       *http.Client
+	fetcher      *Fetcher
 	manifestURL  string
 	manifestHits int
 	bundleHits   int
@@ -152,9 +160,18 @@ func newSyncHarness(t *testing.T, manifestJSON string, bundleBytes []byte, etag 
 		_, _ = w.Write(bundleBytes)
 	})
 	h.server = httptest.NewServer(mux)
+	h.client = h.server.Client()
+	h.fetcher = &Fetcher{Client: h.client}
 	h.manifestURL = h.server.URL + "/manifest.json"
 	t.Cleanup(h.server.Close)
 	return h
+}
+
+// isolatedFetcher returns a Fetcher whose Client uses srv's per-server
+// Transport. Every TestSync_* call site that hits an httptest.Server must
+// route through one of these — see newSyncHarness for the full rationale.
+func isolatedFetcher(srv *httptest.Server) *Fetcher {
+	return &Fetcher{Client: srv.Client()}
 }
 
 // moatRegistry constructs a minimal MOAT-typed config.Registry pointed at
@@ -225,7 +242,7 @@ func TestSync_NotModified_AdvancesFetchedAt(t *testing.T) {
 	lf.SetRegistryFetchedAt(reg.ManifestURI, old)
 
 	now := time.Date(2026, 4, 9, 12, 0, 0, 0, time.UTC)
-	res, err := Sync(context.Background(), reg, lf, nil, nil, now)
+	res, err := Sync(context.Background(), reg, lf, nil, h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -267,7 +284,7 @@ func TestSync_HappyPath_ProfileMatches(t *testing.T) {
 	lf := &Lockfile{}
 	now := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
 
-	res, err := Sync(context.Background(), reg, lf, []byte("trusted-root-bytes"), nil, now)
+	res, err := Sync(context.Background(), reg, lf, []byte("trusted-root-bytes"), h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -309,7 +326,7 @@ func TestSync_TOFU_NoPinnedProfile(t *testing.T) {
 	lf := &Lockfile{}
 	now := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
 
-	res, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, now)
+	res, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -347,7 +364,7 @@ func TestSync_ProfileChanged(t *testing.T) {
 	lf := &Lockfile{}
 	now := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
 
-	res, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, now)
+	res, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -375,7 +392,7 @@ func TestSync_BundleFetchFailure(t *testing.T) {
 	reg := moatRegistry(srv.URL+"/manifest.json", nil)
 	lf := &Lockfile{}
 
-	_, err := Sync(context.Background(), reg, lf, nil, nil, time.Now())
+	_, err := Sync(context.Background(), reg, lf, nil, isolatedFetcher(srv), time.Now())
 	if err == nil || !strings.Contains(err.Error(), "fetch bundle") {
 		t.Fatalf("expected fetch-bundle error, got %v", err)
 	}
@@ -397,7 +414,7 @@ func TestSync_ManifestFetch5xx(t *testing.T) {
 	reg := moatRegistry(srv.URL+"/manifest.json", nil)
 	lf := &Lockfile{}
 
-	_, err := Sync(context.Background(), reg, lf, nil, nil, time.Now())
+	_, err := Sync(context.Background(), reg, lf, nil, isolatedFetcher(srv), time.Now())
 	if err == nil || !strings.Contains(err.Error(), "fetch manifest") {
 		t.Fatalf("expected fetch-manifest error, got %v", err)
 	}
@@ -418,7 +435,7 @@ func TestSync_VerifyErrorPropagates(t *testing.T) {
 	})
 	lf := &Lockfile{}
 
-	_, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, time.Now())
+	_, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, time.Now())
 	var ve *VerifyError
 	if !errors.As(err, &ve) {
 		t.Fatalf("expected *VerifyError, got %T: %v", err, err)
@@ -446,7 +463,7 @@ func TestSync_RevocationSyncAndPrivateCount(t *testing.T) {
 	lf := &Lockfile{}
 	now := time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
 
-	res, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, now)
+	res, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -493,7 +510,7 @@ func TestSync_Staleness_RespectsManifestExpires(t *testing.T) {
 	// now > expires → StalenessExpired
 	now := time.Date(2026, 4, 11, 0, 0, 0, 0, time.UTC)
 
-	res, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, now)
+	res, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, now)
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -518,7 +535,7 @@ func TestSync_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := Sync(ctx, reg, lf, nil, nil, time.Now())
+	_, err := Sync(ctx, reg, lf, nil, isolatedFetcher(srv), time.Now())
 	if err == nil {
 		t.Fatal("expected context-canceled error")
 	}
@@ -535,7 +552,7 @@ func TestSync_BundleURLIsManifestURIPlusSuffix(t *testing.T) {
 
 	reg := moatRegistry(h.manifestURL, nil)
 	lf := &Lockfile{}
-	res, err := Sync(context.Background(), reg, lf, []byte("tr"), nil, time.Now())
+	res, err := Sync(context.Background(), reg, lf, []byte("tr"), h.fetcher, time.Now())
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -563,7 +580,7 @@ func TestSync_MalformedManifest(t *testing.T) {
 
 	reg := moatRegistry(srv.URL+"/manifest.json", nil)
 	lf := &Lockfile{}
-	_, err := Sync(context.Background(), reg, lf, nil, nil, time.Now())
+	_, err := Sync(context.Background(), reg, lf, nil, isolatedFetcher(srv), time.Now())
 	if err == nil || !strings.Contains(err.Error(), "fetch manifest") {
 		t.Fatalf("expected fetch-manifest parse error, got %v", err)
 	}
@@ -596,7 +613,7 @@ func TestSync_OversizedBundle(t *testing.T) {
 
 	reg := moatRegistry(srv.URL+"/manifest.json", nil)
 	lf := &Lockfile{}
-	_, err := Sync(context.Background(), reg, lf, nil, nil, time.Now())
+	_, err := Sync(context.Background(), reg, lf, nil, isolatedFetcher(srv), time.Now())
 	if err == nil || !strings.Contains(err.Error(), "cap") {
 		t.Fatalf("expected bundle cap error, got %v", err)
 	}
