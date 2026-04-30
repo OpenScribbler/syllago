@@ -135,12 +135,10 @@ func BuildHealPRBody(in HealPRInputs) string {
 	fmt.Fprintf(&b, "| New URL | <%s> |\n", in.Heal.NewURL)
 	fmt.Fprintf(&b, "| Strategy | `%s` |\n", in.Heal.Strategy)
 	fmt.Fprintf(&b, "| Proof | %s |\n\n", in.Heal.Proof)
-	if len(in.Heal.TriedURLs) > 1 {
-		b.WriteString("<details><summary>All candidates probed</summary>\n\n")
-		for _, u := range in.Heal.TriedURLs {
-			fmt.Fprintf(&b, "- <%s>\n", u)
-		}
-		b.WriteString("\n</details>\n\n")
+	if len(in.Heal.CandidateOutcomes) > 1 {
+		b.WriteString("**All candidates probed:**\n\n")
+		b.WriteString(RenderCandidatesTable(in.Heal.CandidateOutcomes))
+		b.WriteString("\n")
 	}
 	b.WriteString("---\n")
 	b.WriteString("Auto-opened by capmon. **The healed URL must be reviewed before merge** — ")

@@ -2,6 +2,7 @@ package capmon_test
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -61,6 +62,63 @@ func TestRunManifest_NeverReadAsInput(t *testing.T) {
 	_ = capmon.RunManifest{
 		RunID:     "test-run-id",
 		StartedAt: time.Now(),
+	}
+}
+
+func TestHealEvent_JSONRoundTrip(t *testing.T) {
+	// HealEvent is persisted in the run manifest. Verify CandidateOutcomes
+	// survives JSON marshal/unmarshal so reviewers see the full diagnostic
+	// history when reading capmon-run.json.
+	original := capmon.HealEvent{
+		ContentType: "skills",
+		SourceIndex: 0,
+		OldURL:      "https://example.com/old.md",
+		Success:     false,
+		FailReason:  "2 candidates: 2 http_error",
+		CandidateOutcomes: []capmon.CandidateOutcome{
+			{URL: "https://example.com/v1.md", Strategy: "variant", Outcome: capmon.OutcomeHTTPError, StatusCode: 404, Detail: "status 404"},
+			{URL: "https://example.com/v2.md", Strategy: "variant", Outcome: capmon.OutcomeHTTPError, StatusCode: 410, Detail: "status 410"},
+		},
+	}
+	data, err := json.Marshal(original)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !strings.Contains(string(data), `"candidate_outcomes"`) {
+		t.Errorf("JSON missing candidate_outcomes key:\n%s", data)
+	}
+	var round capmon.HealEvent
+	if err := json.Unmarshal(data, &round); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if len(round.CandidateOutcomes) != 2 {
+		t.Fatalf("CandidateOutcomes len = %d, want 2", len(round.CandidateOutcomes))
+	}
+	if round.CandidateOutcomes[0].URL != original.CandidateOutcomes[0].URL {
+		t.Errorf("URL[0] = %q, want %q", round.CandidateOutcomes[0].URL, original.CandidateOutcomes[0].URL)
+	}
+	if round.CandidateOutcomes[1].StatusCode != 410 {
+		t.Errorf("StatusCode[1] = %d, want 410", round.CandidateOutcomes[1].StatusCode)
+	}
+}
+
+func TestHealEvent_OmitEmptyCandidateOutcomes(t *testing.T) {
+	// When no candidates were probed (e.g. healing disabled), CandidateOutcomes
+	// must be omitted from JSON to keep run manifests lean.
+	evt := capmon.HealEvent{
+		ContentType: "skills",
+		SourceIndex: 0,
+		OldURL:      "https://example.com/old.md",
+		Success:     true,
+		NewURL:      "https://example.com/new.md",
+		Strategy:    "redirect",
+	}
+	data, err := json.Marshal(evt)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if strings.Contains(string(data), "candidate_outcomes") {
+		t.Errorf("expected candidate_outcomes to be omitted; got:\n%s", data)
 	}
 }
 

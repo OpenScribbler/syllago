@@ -43,9 +43,10 @@ func HealFailureAnchor(provider, contentType string, sourceIndex int) string {
 // Returns (issueNumber, error). issueNumber is 0 when no issue was
 // created this run (under threshold or append-to-existing path).
 //
-// reason is a human-readable description of why the last heal attempt
-// failed; it ends up in the issue body.
-func RecordConsecutiveHealFailure(cacheRoot, provider, contentType string, sourceIndex int, reason string) (int, error) {
+// result carries the failure reason and the per-candidate diagnostic
+// outcomes; both are surfaced in issue body / comment so reviewers see
+// what each heal probe turned up.
+func RecordConsecutiveHealFailure(cacheRoot, provider, contentType string, sourceIndex int, result *HealResult) (int, error) {
 	slug, err := SanitizeSlug(provider)
 	if err != nil {
 		return 0, err
@@ -73,7 +74,7 @@ func RecordConsecutiveHealFailure(cacheRoot, provider, contentType string, sourc
 	if issueNum, found, err := findOpenHealFailureIssue(slug, contentType, sourceIndex); err != nil {
 		return 0, err
 	} else if found {
-		comment := fmt.Sprintf("Heal attempt #%d also failed: %s", count, reason)
+		comment := fmt.Sprintf("Heal attempt #%d also failed: %s", count, result.FailReason)
 		if _, err := ghRunner("issue", "comment",
 			fmt.Sprintf("%d", issueNum),
 			"--body", comment,
@@ -83,7 +84,7 @@ func RecordConsecutiveHealFailure(cacheRoot, provider, contentType string, sourc
 		return issueNum, nil
 	}
 
-	return createHealFailureIssue(slug, contentType, sourceIndex, count, reason)
+	return createHealFailureIssue(slug, contentType, sourceIndex, count, result)
 }
 
 // findOpenHealFailureIssue looks for an open capmon-heal-fail issue
@@ -115,7 +116,7 @@ func findOpenHealFailureIssue(provider, contentType string, sourceIndex int) (in
 
 // createHealFailureIssue opens a new capmon-heal-fail issue. Caller
 // ensures provider was already sanitized.
-func createHealFailureIssue(provider, contentType string, sourceIndex, count int, reason string) (int, error) {
+func createHealFailureIssue(provider, contentType string, sourceIndex, count int, result *HealResult) (int, error) {
 	anchor := HealFailureAnchor(provider, contentType, sourceIndex)
 	title := fmt.Sprintf("capmon: heal failed %dx for %s/%s source[%d]", count, provider, contentType, sourceIndex)
 	body := anchor + "\n\n" +
@@ -123,8 +124,11 @@ func createHealFailureIssue(provider, contentType string, sourceIndex, count int
 		fmt.Sprintf("**Provider:** `%s`\n", provider) +
 		fmt.Sprintf("**Content type:** `%s`\n", contentType) +
 		fmt.Sprintf("**Source index:** `%d`\n\n", sourceIndex) +
-		"**Last failure reason:**\n```\n" + reason + "\n```\n\n" +
-		"Possible actions:\n" +
+		"**Last failure reason:**\n```\n" + result.FailReason + "\n```\n\n"
+	if table := RenderCandidatesTable(result.CandidateOutcomes); table != "" {
+		body += "**Candidates probed on the most recent attempt:**\n\n" + table + "\n"
+	}
+	body += "Possible actions:\n" +
 		"- Manually update the URL in `docs/provider-sources/" + provider + ".yaml`\n" +
 		"- Disable healing for this source (`healing.enabled: false`) if the URL is actually correct\n" +
 		"- Mark the content type `supported: false` if the provider no longer documents it\n"

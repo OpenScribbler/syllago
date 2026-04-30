@@ -25,9 +25,9 @@ type RedirectChain struct {
 
 // RedirectHop is one step in a redirect chain.
 type RedirectHop struct {
-	From   string
-	To     string
-	Status int
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Status int    `json:"status"`
 }
 
 // FollowRedirectChain issues a HEAD request to rawURL and walks the redirect

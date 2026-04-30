@@ -24,7 +24,7 @@ func TestRecordConsecutiveHealFailure_UnderThreshold(t *testing.T) {
 	})
 	defer SetGHCommandForTest(nil)
 
-	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, "variant: all 404")
+	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, &HealResult{FailReason: "variant: all 404"})
 	if err != nil {
 		t.Fatalf("RecordConsecutiveHealFailure: %v", err)
 	}
@@ -56,7 +56,12 @@ func TestRecordConsecutiveHealFailure_HitsThreshold_CreatesIssue(t *testing.T) {
 	_ = os.MkdirAll(filepath.Dir(prev), 0755)
 	_ = os.WriteFile(prev, []byte("1"), 0644) // healFailureThreshold is 2
 
-	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, "github-rename: no candidates")
+	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, &HealResult{
+		FailReason: "github-rename: no candidates",
+		CandidateOutcomes: []CandidateOutcome{
+			{URL: "https://example.com/missing.md", Strategy: "github-rename", Outcome: OutcomeHTTPError, StatusCode: 404, Detail: "status 404"},
+		},
+	})
 	if err != nil {
 		t.Fatalf("RecordConsecutiveHealFailure: %v", err)
 	}
@@ -89,7 +94,7 @@ func TestRecordConsecutiveHealFailure_ExistingIssueAppends(t *testing.T) {
 	_ = os.MkdirAll(filepath.Dir(prev), 0755)
 	_ = os.WriteFile(prev, []byte("2"), 0644) // already at threshold
 
-	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, "redirect: still 404")
+	issueNum, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, &HealResult{FailReason: "redirect: still 404"})
 	if err != nil {
 		t.Fatalf("RecordConsecutiveHealFailure: %v", err)
 	}
@@ -167,7 +172,7 @@ func TestCreateHealFailureIssue_BodyContainsAnchor(t *testing.T) {
 	})
 	defer SetGHCommandForTest(nil)
 
-	_, err := createHealFailureIssue("claude-code", "skills", 0, 2, "variant: nothing worked")
+	_, err := createHealFailureIssue("claude-code", "skills", 0, 2, &HealResult{FailReason: "variant: nothing worked"})
 	if err != nil {
 		t.Fatalf("createHealFailureIssue: %v", err)
 	}
@@ -176,6 +181,81 @@ func TestCreateHealFailureIssue_BodyContainsAnchor(t *testing.T) {
 	}
 	if !strings.Contains(capturedBody, "variant: nothing worked") {
 		t.Errorf("body missing failure reason: %s", capturedBody)
+	}
+}
+
+func TestCreateHealFailureIssue_BodyContainsCandidatesTable(t *testing.T) {
+	// Multi-candidate failures must render the diagnostic table in the
+	// issue body so reviewers see what was probed before escalation. Same
+	// rendering as PR bodies — single source of truth via RenderCandidatesTable.
+	var capturedBody string
+	SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte("https://github.com/org/repo/issues/2\n"), nil
+	})
+	defer SetGHCommandForTest(nil)
+
+	result := &HealResult{
+		FailReason: "2 candidates: 1 http_error, 1 binary_content",
+		CandidateOutcomes: []CandidateOutcome{
+			{URL: "https://example.com/missing.md", Strategy: "variant", Outcome: OutcomeHTTPError, StatusCode: 404, Detail: "status 404"},
+			{URL: "https://example.com/image.md", Strategy: "variant", Outcome: OutcomeBinaryContent, StatusCode: 200, ContentType: "image/png"},
+		},
+	}
+	if _, err := createHealFailureIssue("claude-code", "skills", 0, 2, result); err != nil {
+		t.Fatalf("createHealFailureIssue: %v", err)
+	}
+	for _, want := range []string{
+		"| Strategy | Candidate URL | Outcome | Status | Final URL | Detail |",
+		"|---|---|---|---|---|---|",
+		"https://example.com/missing.md",
+		"http_error",
+		"https://example.com/image.md",
+		"binary_content",
+	} {
+		if !strings.Contains(capturedBody, want) {
+			t.Errorf("issue body missing %q\n\nFull body:\n%s", want, capturedBody)
+		}
+	}
+}
+
+func TestRecordConsecutiveHealFailure_AppendUsesFailReason(t *testing.T) {
+	// On second-and-later failures, the comment appended to the existing
+	// issue must contain HealResult.FailReason so triagers can see what
+	// the latest probe set looked like.
+	cacheRoot := t.TempDir()
+	anchor := HealFailureAnchor("claude-code", "skills", 0)
+	var capturedComment string
+	SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if args[0] == "issue" && args[1] == "list" {
+			return []byte(`[{"number": 88, "body": "old ` + anchor + ` body"}]`), nil
+		}
+		if args[0] == "issue" && args[1] == "comment" {
+			for i, a := range args {
+				if a == "--body" && i+1 < len(args) {
+					capturedComment = args[i+1]
+				}
+			}
+			return nil, nil
+		}
+		return nil, nil
+	})
+	defer SetGHCommandForTest(nil)
+
+	prev := healFailureCountFile(cacheRoot, "claude-code", "skills", 0)
+	_ = os.MkdirAll(filepath.Dir(prev), 0755)
+	_ = os.WriteFile(prev, []byte("2"), 0644) // already at threshold
+
+	wantReason := "3 candidates: 2 http_error, 1 connect_error"
+	if _, err := RecordConsecutiveHealFailure(cacheRoot, "claude-code", "skills", 0, &HealResult{FailReason: wantReason}); err != nil {
+		t.Fatalf("RecordConsecutiveHealFailure: %v", err)
+	}
+	if !strings.Contains(capturedComment, wantReason) {
+		t.Errorf("comment missing FailReason %q; got %q", wantReason, capturedComment)
 	}
 }
 

@@ -81,15 +81,16 @@ type ProviderStatus struct {
 // Both success and failure produce events so the run manifest carries a
 // complete audit trail.
 type HealEvent struct {
-	ContentType string `json:"content_type"`
-	SourceIndex int    `json:"source_index"`
-	OldURL      string `json:"old_url"`
-	NewURL      string `json:"new_url,omitempty"`
-	Strategy    string `json:"strategy,omitempty"`
-	Success     bool   `json:"success"`
-	PRURL       string `json:"pr_url,omitempty"`
-	IssueNumber int    `json:"issue_number,omitempty"`
-	FailReason  string `json:"fail_reason,omitempty"`
+	ContentType       string             `json:"content_type"`
+	SourceIndex       int                `json:"source_index"`
+	OldURL            string             `json:"old_url"`
+	NewURL            string             `json:"new_url,omitempty"`
+	Strategy          string             `json:"strategy,omitempty"`
+	Success           bool               `json:"success"`
+	PRURL             string             `json:"pr_url,omitempty"`
+	IssueNumber       int                `json:"issue_number,omitempty"`
+	FailReason        string             `json:"fail_reason,omitempty"`
+	CandidateOutcomes []CandidateOutcome `json:"candidate_outcomes,omitempty"`
 }
 
 // RunManifest is write-only observability output — never a pipeline input.

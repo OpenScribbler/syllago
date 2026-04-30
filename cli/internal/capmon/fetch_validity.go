@@ -8,10 +8,24 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
+// InvalidKind tags the specific reason ValidateContentResponse rejected a
+// response. Heal callers map this 1:1 onto CandidateOutcomeKind so the
+// reason for rejection can be reported structurally (without parsing the
+// human-readable Reason string).
+type InvalidKind string
+
+const (
+	InvalidBinaryContent  InvalidKind = "binary_content"
+	InvalidBodyTooSmall   InvalidKind = "body_too_small"
+	InvalidDomainMismatch InvalidKind = "domain_mismatch"
+)
+
 // ErrContentInvalid is returned by ValidateContentResponse when the fetched
 // content fails one of the readability checks. It carries a Reason field for
-// human-readable diagnostics and is distinguishable via errors.As.
+// human-readable diagnostics and a Kind for machine routing; distinguishable
+// via errors.As.
 type ErrContentInvalid struct {
+	Kind   InvalidKind
 	Reason string
 }
 
@@ -51,10 +65,12 @@ var binaryMIMEExact = map[string]bool{
 //
 // Returns *ErrContentInvalid for any failed check, allowing callers to
 // distinguish content validity failures from other errors via errors.As.
+// The Kind field on the returned error tags which check failed.
 func ValidateContentResponse(body []byte, contentType, originalURL, finalURL string) error {
 	// Check 1: minimum body size.
 	if len(body) < minContentBytes {
 		return &ErrContentInvalid{
+			Kind:   InvalidBodyTooSmall,
 			Reason: fmt.Sprintf("body too small (%d bytes, minimum %d)", len(body), minContentBytes),
 		}
 	}
@@ -65,17 +81,22 @@ func ValidateContentResponse(body []byte, contentType, originalURL, finalURL str
 	for _, prefix := range binaryMIMEPrefixes {
 		if strings.HasPrefix(mimeBase, prefix) {
 			return &ErrContentInvalid{
+				Kind:   InvalidBinaryContent,
 				Reason: fmt.Sprintf("binary content-type %q", mimeBase),
 			}
 		}
 	}
 	if binaryMIMEExact[mimeBase] {
 		return &ErrContentInvalid{
+			Kind:   InvalidBinaryContent,
 			Reason: fmt.Sprintf("binary content-type %q", mimeBase),
 		}
 	}
 
-	// Check 3: domain match between original and final URLs.
+	// Check 3: domain match between original and final URLs. Same-host
+	// short-circuit: identical hostnames can't be a cross-domain redirect
+	// hijack. This also avoids publicsuffix lookups that reject raw IPs
+	// (httptest servers listen on 127.0.0.1).
 	origURL, err := url.Parse(originalURL)
 	if err != nil {
 		return fmt.Errorf("parse original URL: %w", err)
@@ -84,9 +105,6 @@ func ValidateContentResponse(body []byte, contentType, originalURL, finalURL str
 	if err != nil {
 		return fmt.Errorf("parse final URL: %w", err)
 	}
-	// Same-host short-circuit: identical hostnames can't be a redirect
-	// hijack. This also avoids publicsuffix lookups that reject raw IPs
-	// (httptest servers listen on 127.0.0.1).
 	if origURL.Hostname() == finURL.Hostname() {
 		return nil
 	}
@@ -100,6 +118,7 @@ func ValidateContentResponse(body []byte, contentType, originalURL, finalURL str
 	}
 	if origETLD != finalETLD {
 		return &ErrContentInvalid{
+			Kind:   InvalidDomainMismatch,
 			Reason: fmt.Sprintf("redirect domain mismatch: %q → %q", origETLD, finalETLD),
 		}
 	}

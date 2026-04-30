@@ -99,3 +99,61 @@ func TestValidateContentResponse_TextPlainValid(t *testing.T) {
 		t.Errorf("text/plain with adequate body should pass, got: %v", err)
 	}
 }
+
+func TestErrContentInvalid_KindSet(t *testing.T) {
+	t.Parallel()
+	// Each of ValidateContentResponse's three rejection paths must populate
+	// ErrContentInvalid.Kind with the matching constant so heal callers can
+	// map invalidity to a CandidateOutcomeKind without parsing Reason.
+	body512 := []byte(strings.Repeat("a", 600))
+	cases := []struct {
+		name        string
+		body        []byte
+		contentType string
+		original    string
+		final       string
+		wantKind    capmon.InvalidKind
+	}{
+		{
+			name:        "binary content",
+			body:        body512,
+			contentType: "image/png",
+			original:    "https://docs.example.com/page",
+			final:       "https://docs.example.com/page",
+			wantKind:    capmon.InvalidBinaryContent,
+		},
+		{
+			name:        "body too small",
+			body:        []byte("short"),
+			contentType: "text/html",
+			original:    "https://docs.example.com/page",
+			final:       "https://docs.example.com/page",
+			wantKind:    capmon.InvalidBodyTooSmall,
+		},
+		{
+			name:        "domain mismatch",
+			body:        body512,
+			contentType: "text/html",
+			original:    "https://docs.example.com/page",
+			final:       "https://otherdomain.com/login",
+			wantKind:    capmon.InvalidDomainMismatch,
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := capmon.ValidateContentResponse(tc.body, tc.contentType, tc.original, tc.final)
+			if err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			var invalid *capmon.ErrContentInvalid
+			if !errors.As(err, &invalid) {
+				t.Fatalf("expected *ErrContentInvalid, got %T: %v", err, err)
+			}
+			if invalid.Kind != tc.wantKind {
+				t.Errorf("Kind = %q, want %q", invalid.Kind, tc.wantKind)
+			}
+		})
+	}
+}
