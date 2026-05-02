@@ -1,0 +1,63 @@
+{
+  "feature": "library-unified-view",
+  "started": "2026-05-01T22:43:59.389Z",
+  "updated": "2026-05-02T05:22:00.000Z",
+  "ticketBeadId": "syllago-mol-t6b",
+  "autonomy": "pragmatic",
+  "currentStage": "structure",
+  "completed": [
+    "lexicon-gate",
+    "align",
+    "research",
+    "design"
+  ],
+  "lexicon": {
+    "path": "lexicon.md",
+    "present": true,
+    "builtThisSession": true
+  },
+  "designConcept": {
+    "summary": "## Design Concept — library-unified-view\n\n**Goal:** Recast the Library tab as a single unified view of all content syllago can reach — local library items, Project Content, and Registry Clone items not yet Added — with state-based filters, inline action buttons, and matching CLI parity, so users have one place to discover and act on any content regardless of source.\n\n**Scope:**\n- Library tab renders Registry Clone items inline with Library items; not-yet-Added items display in muted styling with a `[not in library]` state indicator\n- Filter chips: `in-library`, `not-in-library`, `installed`, `not-installed`, `project`; default unfiltered\n- `syllago list --filter=<state>` repeatable flag + `[library]` tag column\n- Metapanel buttons per state: `[a] Add` + `[i] Add + Install` for not-in-library; existing `[i]` / `[x]` / `[d]` / `[e]` for Library items; `[e] Edit` hidden when item.Library == false; `[u] Update` reserved for outdated registry-sourced Library items\n- `syllago add --install --to <provider>` chains add.AddItems + installer.Install; no new orchestrator\n- Post-registry-add TUI modal + CLI hint; both suppress via hints.registry_add_dismissed=true\n- Updated INSTALL_002 / ITEM_001 suggestion text for registry-only-not-in-library case\n- Mouse + keyboard parity, telemetry PropertyDefs, golden file updates\n\n**Out of scope:**\n- Auto-copying registry content to Library on registry add\n- Replacing the two-step add→install model\n- New error codes; new orchestrator package; Project Content detection changes\n\n**User-visible behavior:**\nLibrary tab shows unified list — Library items normally, Project Content with [project] badge, not-yet-Added Registry Clone items muted with [not in library]. Filter chips narrow by state. Not-in-library items show [a] Add and [i] Add + Install in metapanel; Library items keep existing buttons. registry add triggers a one-time modal/hint explaining the add-before-use requirement, suppressible via config. syllago install <registry-only-item> emits updated error with copy-pasteable syllago add command.\n\n**Key decisions:**\n- Unified view vs. tabs: unified + filter chips — tabs force users to know which source to check\n- Add+Install: --install --to flag on existing syllago add — no new orchestrator layer needed\n- Error UX: suggestion text only on existing codes — avoids breaking callers JSON handling\n- Suppression: hints.registry_add_dismissed in ~/.syllago/config.json via syllago config set — no new persistence layer\n- [u] Update: runs registry sync first, re-copies only if newer — matches existing sync semantics\n\n**Risks / open questions accepted:**\n- Large registries could produce unbounded row counts; pagination/virtual scroll deferred\n- [u] Update conflict behavior (local edits to a registry-sourced Library item) deferred\n\n**Depends on / affects:** catalog, tui (Library tab, metapanel, golden files), list_cmd, add_cmd, registry_cmd, installer, telemetry/catalog.go, ~/.syllago/config.json",
+    "signedOffAt": "2026-05-02T04:37:52.763Z"
+  },
+  "artifacts": {
+    "research": ".ship/library-unified-view/research.md",
+    "design": ".ship/library-unified-view/design.md",
+    "structure": ".ship/library-unified-view/structure.md",
+    "plan": null
+  },
+  "phaseB": {
+    "complete": false
+  },
+  "beads": {
+    "created": false,
+    "prefix": null,
+    "epicIds": [],
+    "taskCount": 0,
+    "finalValidateId": null,
+    "testBeadIds": [],
+    "implBeadIds": []
+  },
+  "researchQuestions": [
+    "How does app.go currently pass items to the library sub-model SetItems? What is the exact call site and what slice does it pass?",
+    "What fields on catalog.ContentItem discriminate between Library items, Project Content, and Registry Clone items — and what are their exact types, zero-values, and invariants?",
+    "How are the current action buttons rendered in metapanel.go? What is the full conditional block that decides which buttons appear, including isUnstagedRegistryItem?",
+    "How does list_cmd.go currently filter and output items — what flags exist, how is per-row output formatted, and where is the output loop?",
+    "What flags does add_cmd.go currently accept, and how does the install step (if any) get triggered today — what is the entry point into installer.Install from the add pipeline?",
+    "In registry_cmd.go and actions.go, what is the full success path after a registry add — where does control return and what output is emitted?",
+    "How are INSTALL_002 and ITEM_001 errors currently constructed and emitted — what is the call site, what does the suggestion field currently contain, and are there any callers that branch on the error code?",
+    "How does syllago currently read and write ~/.syllago/config.json — what struct/package owns it, and how are boolean flags persisted and read back?"
+  ],
+  "adrs": {
+    "drafted": true
+  },
+  "prUrl": null,
+  "execution": {
+    "mode": null,
+    "tasksDispatched": [],
+    "tasksCompleted": [],
+    "currentTaskId": null,
+    "awaitingUserAck": false
+  },
+  "nextAction": "structure-review: accept structure.md to advance to plan"
+}
