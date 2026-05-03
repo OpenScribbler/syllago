@@ -10,7 +10,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: auto_memory
       supported: true
-      mechanism: Auto memory saves Claude's accumulated notes to ~/.claude/projects/<project>/memory/MEMORY.md; requires CC v2.1.59+; enabled by default
+      mechanism: Auto memory saves Claude's accumulated notes to ~/.claude/projects/<project>/memory/MEMORY.md; first 200 lines or 25KB loaded at session start; requires CC v2.1.59+; enabled by default; disable via CLAUDE_CODE_DISABLE_AUTO_MEMORY=1; override storage location via autoMemoryDirectory setting; subagents can also maintain their own auto memory
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -28,7 +28,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: hierarchical_loading
       supported: true
-      mechanism: CLAUDE.md files load from all ancestor directories up to repo root; .claude/rules/ files discovered recursively; user-level rules load before project rules
+      mechanism: CLAUDE.md files load from all ancestor directories up to repo root (ancestor files load in full at launch; subdirectory CLAUDE.md files beyond 200 lines threshold load on demand when Claude reads files in those subdirectories); .claude/rules/ files discovered recursively; user-level rules load before project rules
       source_field: ""
       source_value: ""
       confidence: confirmed
