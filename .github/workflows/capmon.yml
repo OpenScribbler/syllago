@@ -30,6 +30,9 @@ jobs:
         with:
           go-version-file: cli/go.mod
 
+      - name: Install build tools
+        run: apt-get update -qq && apt-get install -y -qq make
+
       - name: Build syllago
         run: make -C cli build
 
