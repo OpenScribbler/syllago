@@ -8,14 +8,14 @@
 │ private-skill                             Type: Skill     Files: 1           │
 │ Scope: project   Registry: moat-registry                                     │
 │                                                                              │
-│ Trust: Signed         Visibility: Private                         [e] Edit   │
+│ Trust: Signed         Visibility: Private   [a] Add      [i] Add + Install   │
 ├──────────────────────────────────────────────────────────────────────────────┤
+│All  In Library  Not in Library  Project                                      │
 │   Tr Name ▲               Type     Scope        Files Installed              │
-│ > ✓P private-skill        Skill    moat-regi... 1     --                     │
-│   R  revoked-skill        Skill    moat-regi... 1     --                     │
+│ > ✓P private-skill        Skill    moat-regi... 1     --     [not in library]│
+│   R  revoked-skill        Skill    moat-regi... 1     --     [not in library]│
 │      vanilla-skill        Skill    library      1     --                     │
-│   ✓  verified-skill       Skill    moat-regi... 1     --                     │
-│                                                                              │
+│   ✓  verified-skill       Skill    moat-regi... 1     --     [not in library]│
 │                                                                              │
 │                                                                              │
 │                                                                              │

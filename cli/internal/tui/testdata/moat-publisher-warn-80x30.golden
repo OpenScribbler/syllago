@@ -8,14 +8,14 @@
 │ private-skill                             Type: Skill     Files: 1           │
 │ Scope: project   Registry: moat-registry                                     │
 │                                                                              │
-│ Trust: Sign╭────────────────────────────────────────────────────╮ [e] Edit   │
+│ Trust: Sign╭────────────────────────────────────────────────────╮+ Install   │
 ├────────────│ Install revoked item "revoked-skill"?              │────────────┤
-│   Tr Name ▲│                                                    │            │
-│ > ✓P privat│ The publisher has revoked this item.               │            │
-│   R  revoke│                                                    │            │
-│      vanill│ Reason: key compromise                             │            │
-│   ✓  verifi│ Revoked by: ops@example.com                        │            │
-│            │ Details: https://example.com/revocation/123        │            │
+│All  In Libr│                                                    │            │
+│   Tr Name ▲│ The publisher has revoked this item.               │            │
+│ > ✓P privat│                                                    │ in library]│
+│   R  revoke│ Reason: key compromise                             │ in library]│
+│      vanill│ Revoked by: ops@example.com                        │            │
+│   ✓  verifi│ Details: https://example.com/revocation/123        │ in library]│
 │            │                                                    │            │
 │            │ Installing anyway will proceed with the current co │            │
 │            │                                                    │            │

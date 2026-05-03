@@ -25,4 +25,5 @@ const (
 	keySync      = "S"
 	keyHelp      = "?"
 	keyTrust     = "t"
+	keyFilter    = "f"
 )

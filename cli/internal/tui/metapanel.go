@@ -227,16 +227,22 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 	// content types. Trust+Visibility (if any) occupy fixed left columns
 	// so the Visibility chip never floats with tier-label length.
 	var btns []string
-	if data.canInstall {
-		btns = append(btns, zone.Mark("meta-install", activeButtonStyle.Render("[i] Install")))
+	if notInLibrary(*item) {
+		// Registry Clone items: offer to add to local library, not the usual ops.
+		btns = append(btns, zone.Mark("meta-add", activeButtonStyle.Render("[a] Add")))
+		btns = append(btns, zone.Mark("meta-add-install", activeButtonStyle.Render("[i] Add + Install")))
+	} else {
+		if data.canInstall {
+			btns = append(btns, zone.Mark("meta-install", activeButtonStyle.Render("[i] Install")))
+		}
+		if data.installed != "--" {
+			btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
+		}
+		if item.Library || item.Registry == "" {
+			btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
+		}
+		btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
 	}
-	if data.installed != "--" {
-		btns = append(btns, zone.Mark("meta-uninstall", activeButtonStyle.Render("[x] Uninstall")))
-	}
-	if item.Library || item.Registry == "" {
-		btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
-	}
-	btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
 	btnRow := strings.Join(btns, " ")
 	btnRowW := lipgloss.Width(btnRow)
 

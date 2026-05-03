@@ -578,6 +578,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case libraryInstallMsg:
 		return a.handleInstall()
 
+	case libraryAddMsg:
+		return a.handleLibraryAdd(msg.item)
+
+	case libraryAddInstallMsg:
+		return a.handleLibraryAddInstall(msg.item)
+
 	case libraryRemoveMsg:
 		return a.handleRemove()
 

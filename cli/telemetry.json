@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-27T16:46:18Z",
-  "syllagoVersion": "0.10.3",
+  "generatedAt": "2026-05-03T23:40:43Z",
+  "syllagoVersion": "0.11.0",
   "events": [
     {
       "name": "command_executed",
@@ -110,6 +110,15 @@
           "type": "string",
           "description": "Content source filter (library, shared, or registry)",
           "example": "library",
+          "commands": [
+            "list"
+          ]
+        },
+        {
+          "name": "filter",
+          "type": "string",
+          "description": "State-based filter applied to list output (comma-separated states: in-library, not-in-library, project)",
+          "example": "in-library",
           "commands": [
             "list"
           ]

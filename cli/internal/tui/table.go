@@ -82,6 +82,17 @@ type tableRow struct {
 	typeDetail string
 }
 
+// notInLibrary reports whether item is a Registry Clone that has not yet been
+// Added to the local library. Shared predicate used by table row rendering,
+// filter chips, metapanel buttons, and CLI filterByState.
+func notInLibrary(item catalog.ContentItem) bool {
+	return item.Registry != "" && !item.Library
+}
+
+// notInLibraryChip is the fixed text appended to a Registry Clone row's name
+// cell so users can distinguish unadded registry items at a glance.
+const notInLibraryChip = " [not in library]"
+
 func newTableModel(items []catalog.ContentItem, provs []provider.Provider, repoRoot string) tableModel {
 	t := tableModel{
 		providers: provs,
@@ -620,6 +631,18 @@ func (t tableModel) renderRow(index int, c colLayout) string {
 	// Pad row to full width BEFORE styling so the background color fills the entire row.
 	if gap := t.width - len([]rune(row)); gap > 0 {
 		row += strings.Repeat(" ", gap)
+	}
+
+	// Registry Clone items not yet Added: stamp [not in library] chip at the
+	// right edge of the padded row, replacing trailing padding. This preserves
+	// the full-width name column so existing name assertions stay unbroken.
+	if notInLibrary(t.items[index]) {
+		chip := notInLibraryChipStyle.Render(notInLibraryChip)
+		chipW := len([]rune(notInLibraryChip)) // visual width (ANSI-stripped)
+		rowRunes := []rune(row)
+		if len(rowRunes) > chipW {
+			row = string(rowRunes[:len(rowRunes)-chipW]) + chip
+		}
 	}
 	rendered := style.MaxWidth(t.width).Render(row)
 	return zone.Mark("tbl-"+itoa(index), rendered)

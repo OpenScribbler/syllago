@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-04-27T16:46:18Z",
-  "syllagoVersion": "0.10.3",
+  "generatedAt": "2026-05-03T23:40:42Z",
+  "syllagoVersion": "0.11.0",
   "commands": [
     {
       "name": "add",
@@ -2962,6 +2962,14 @@
       "longDescription": "Show a quick inventory of all content without launching the TUI.\n\nBy default, lists all content grouped by type. Use flags to filter.",
       "aliases": [],
       "flags": [
+        {
+          "name": "--filter",
+          "shorthand": null,
+          "type": "stringSlice",
+          "default": null,
+          "required": false,
+          "description": "Filter by item state (repeatable): in-library, not-in-library, project"
+        },
         {
           "name": "--source",
           "shorthand": null,

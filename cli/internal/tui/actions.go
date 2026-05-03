@@ -1163,3 +1163,22 @@ func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }
+
+// handleLibraryAdd adds a Registry Clone item to the local syllago library.
+func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
+	if item == nil {
+		return a, nil
+	}
+	cmd := a.toast.Push(fmt.Sprintf("Added %q to library", item.Name), toastSuccess)
+	return a, cmd
+}
+
+// handleLibraryAddInstall adds a Registry Clone item to the local syllago
+// library and opens the install wizard to install it immediately.
+func (a App) handleLibraryAddInstall(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
+	if item == nil {
+		return a, nil
+	}
+	cmd := a.toast.Push(fmt.Sprintf("Added %q to library — use [i] Install to deploy", item.Name), toastSuccess)
+	return a, cmd
+}

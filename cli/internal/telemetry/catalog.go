@@ -96,6 +96,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"list"},
 				},
 				{
+					Name:        "filter",
+					Type:        "string",
+					Description: "State-based filter applied to list output (comma-separated states: in-library, not-in-library, project)",
+					Example:     "in-library",
+					Commands:    []string{"list"},
+				},
+				{
 					Name:        "item_count",
 					Type:        "int",
 					Description: "Number of items in the result set",

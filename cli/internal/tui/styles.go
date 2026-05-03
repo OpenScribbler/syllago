@@ -87,6 +87,13 @@ var (
 	mutedStyle = lipgloss.NewStyle().Foreground(mutedColor)
 	boldStyle  = lipgloss.NewStyle().Bold(true).Foreground(primaryText)
 
+	// Library tab — Registry Clone items not yet Added to the local library
+	notInLibraryChipStyle = lipgloss.NewStyle().Foreground(mutedColor).Faint(true)
+
+	// Library filter chips — active chip is highlighted, inactive is muted
+	activeFilterChipStyle   = lipgloss.NewStyle().Foreground(primaryColor).Bold(true)
+	inactiveFilterChipStyle = lipgloss.NewStyle().Foreground(mutedColor).Faint(true)
+
 	// Inline section title: ──Title──────────────────
 	sectionTitleStyle = lipgloss.NewStyle().Foreground(primaryColor)
 	sectionRuleStyle  = lipgloss.NewStyle().Foreground(mutedColor)
