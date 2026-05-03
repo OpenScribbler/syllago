@@ -42,6 +42,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHROMEDP_URL: ""
 
+      - name: Debug — workspace contents
+        run: pwd && ls -la && ls -la .capmon-cache/ 2>/dev/null || echo "(no .capmon-cache/ dir)"
+
       - name: Compute artifact SHA-256
         id: sha
         run: |
