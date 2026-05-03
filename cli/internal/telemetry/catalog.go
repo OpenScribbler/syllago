@@ -103,6 +103,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"list"},
 				},
 				{
+					Name:        "install",
+					Type:        "bool",
+					Description: "Whether --install was passed to chain add + install in a single command",
+					Example:     true,
+					Commands:    []string{"add"},
+				},
+				{
 					Name:        "item_count",
 					Type:        "int",
 					Description: "Number of items in the result set",

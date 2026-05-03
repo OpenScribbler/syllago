@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
 // settingsJSON is a minimal claude-code settings.json with two hook groups.
@@ -1074,4 +1075,176 @@ func TestAddHooks_DisplayNameFlag(t *testing.T) {
 	if meta.Name != "My Custom Name" {
 		t.Errorf("expected display name 'My Custom Name', got %q", meta.Name)
 	}
+}
+
+// ── Slice 5: syllago add --install --to ───────────────────────────────────
+
+// mustSetAddFlag fails the test immediately if the named flag is not yet
+// registered on addCmd. This makes tests RED against unimplemented flags
+// without needing compile-time undefined symbols.
+func mustSetAddFlag(t *testing.T, name, value string) {
+	t.Helper()
+	if err := addCmd.Flags().Set(name, value); err != nil {
+		t.Fatalf("flag --%s not registered (feature not yet implemented): %v", name, err)
+	}
+}
+
+// TestRunAdd_InstallFlagRequiresToFlag verifies --install without --to returns
+// an input-missing error rather than silently succeeding.
+func TestRunAdd_InstallFlagRequiresToFlag(t *testing.T) {
+	tmp := setupAddProject(t)
+	withFakeRepoRoot(t, tmp)
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", "claude-code")
+	defer addCmd.Flags().Set("from", "")
+
+	mustSetAddFlag(t, "install", "true")
+	defer addCmd.Flags().Set("install", "false")
+
+	err := addCmd.RunE(addCmd, []string{"rules/security"})
+	if err == nil {
+		t.Fatal("expected error when --install is set without --to")
+	}
+	if !strings.Contains(err.Error(), "--to") {
+		t.Errorf("expected error to mention --to, got: %v", err)
+	}
+}
+
+// TestRunAdd_InstallFlagChainsInstall verifies that --install --to <provider>
+// calls installer.Install after a successful add, creating a symlink at the
+// target provider's install directory.
+func TestRunAdd_InstallFlagChainsInstall(t *testing.T) {
+	tmp := setupAddProject(t)
+	withFakeRepoRoot(t, tmp)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "chain-prov", "Chain Provider", installBase)
+
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", "claude-code")
+	defer addCmd.Flags().Set("from", "")
+	addCmd.Flags().Set("force", "true")
+	defer addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("no-input", "true")
+	defer addCmd.Flags().Set("no-input", "false")
+
+	mustSetAddFlag(t, "install", "true")
+	defer addCmd.Flags().Set("install", "false")
+	mustSetAddFlag(t, "to", "chain-prov")
+	defer addCmd.Flags().Set("to", "")
+
+	if err := addCmd.RunE(addCmd, []string{"rules/security"}); err != nil {
+		t.Fatalf("add --install --to chain-prov failed: %v", err)
+	}
+
+	// Verify the item was added to the global library.
+	itemDir := filepath.Join(globalDir, "rules", "claude-code", "security")
+	if _, err := os.Stat(itemDir); err != nil {
+		t.Fatalf("item not in global library at %s: %v", itemDir, err)
+	}
+
+	// Verify the item was installed to the provider's install dir.
+	installedDir := filepath.Join(installBase, "rules")
+	entries, err := os.ReadDir(installedDir)
+	if err != nil {
+		t.Fatalf("install dir %s not created: %v", installedDir, err)
+	}
+	if len(entries) == 0 {
+		t.Errorf("expected installed symlinks in %s, found none", installedDir)
+	}
+}
+
+// TestRunAdd_InstallFlagAddFailureSkipsInstall verifies that when the add step
+// produces no items (e.g. name not found), the install step is not attempted.
+func TestRunAdd_InstallFlagAddFailureSkipsInstall(t *testing.T) {
+	tmp := setupAddProject(t)
+	withFakeRepoRoot(t, tmp)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "skip-prov", "Skip Provider", installBase)
+
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", "claude-code")
+	defer addCmd.Flags().Set("from", "")
+
+	mustSetAddFlag(t, "install", "true")
+	defer addCmd.Flags().Set("install", "false")
+	mustSetAddFlag(t, "to", "skip-prov")
+	defer addCmd.Flags().Set("to", "")
+
+	// Request an item that doesn't exist; add should return an error.
+	err := addCmd.RunE(addCmd, []string{"rules/nonexistent"})
+	if err == nil {
+		t.Fatal("expected error for nonexistent item")
+	}
+
+	// install dir should be empty — install must not have run.
+	entries, _ := os.ReadDir(installBase)
+	if len(entries) > 0 {
+		t.Errorf("install ran despite add failure; found %d entries in %s", len(entries), installBase)
+	}
+}
+
+// TestRunAdd_InstallFlagDryRunSkipsInstall verifies that --dry-run --install
+// does not write any symlinks to the target provider's install directory.
+func TestRunAdd_InstallFlagDryRunSkipsInstall(t *testing.T) {
+	tmp := setupAddProject(t)
+	withFakeRepoRoot(t, tmp)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+
+	installBase := t.TempDir()
+	addTestProvider(t, "dryrun-prov", "Dryrun Provider", installBase)
+
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", "claude-code")
+	defer addCmd.Flags().Set("from", "")
+	addCmd.Flags().Set("dry-run", "true")
+	defer addCmd.Flags().Set("dry-run", "false")
+	addCmd.Flags().Set("no-input", "true")
+	defer addCmd.Flags().Set("no-input", "false")
+
+	mustSetAddFlag(t, "install", "true")
+	defer addCmd.Flags().Set("install", "false")
+	mustSetAddFlag(t, "to", "dryrun-prov")
+	defer addCmd.Flags().Set("to", "")
+
+	if err := addCmd.RunE(addCmd, []string{"rules/security"}); err != nil {
+		t.Fatalf("add --dry-run --install failed: %v", err)
+	}
+
+	// Nothing should have been installed.
+	entries, _ := os.ReadDir(installBase)
+	if len(entries) > 0 {
+		t.Errorf("--dry-run must not install; found %d entries in %s", len(entries), installBase)
+	}
+}
+
+// TestTelemetryCatalog_InstallPropertyPresent verifies the telemetry catalog
+// contains an "install" property for the "add" command.
+func TestTelemetryCatalog_InstallPropertyPresent(t *testing.T) {
+	t.Parallel()
+	for _, ev := range telemetry.EventCatalog() {
+		for _, prop := range ev.Properties {
+			if prop.Name == "install" {
+				for _, cmd := range prop.Commands {
+					if cmd == "add" {
+						return
+					}
+				}
+			}
+		}
+	}
+	t.Error("telemetry EventCatalog must contain 'install' property with 'add' in Commands")
 }

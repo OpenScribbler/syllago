@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-05-03T23:40:43Z",
+  "generatedAt": "2026-05-03T23:53:16Z",
   "syllagoVersion": "0.11.0",
   "events": [
     {
@@ -121,6 +121,15 @@
           "example": "in-library",
           "commands": [
             "list"
+          ]
+        },
+        {
+          "name": "install",
+          "type": "bool",
+          "description": "Whether --install was passed to chain add + install in a single command",
+          "example": true,
+          "commands": [
+            "add"
           ]
         },
         {
