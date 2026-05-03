@@ -98,10 +98,14 @@ func TestAttemptHeal_VariantFailsContentValidation(t *testing.T) {
 }
 
 func TestAttemptHeal_VariantTooSmall(t *testing.T) {
+	// The body-too-small gate fires only for HTML responses (real-world
+	// stub case: redirect/login walls, lean 404 HTML). Non-HTML small
+	// bodies are legitimate content. Use text/html here so the test
+	// continues to exercise the size-rejection heal path.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/docs/foo_bar.md", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/markdown")
-		_, _ = w.Write([]byte("short"))
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte("<html>short</html>"))
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()

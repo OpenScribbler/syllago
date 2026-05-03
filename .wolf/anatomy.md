@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-04-30T23:19:16.281Z
-> Files: 1299 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-05-02T05:17:18.970Z
+> Files: 1306 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -12,6 +12,7 @@
 
 - `bootstrap-moat-meta-registry.md` — Bootstrap syllago-meta-registry as the first self-publishing MOAT v0.6.0 registry (~437 tok)
 - `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~698 tok)
+- `finish-capmon-body-size-fix.md` — Ship capmon body-size threshold fix (~402 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 6 Epic 0 — schema update, generator update, infra generalization (~395 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~437 tok)
 - `start-epic4-mcp-recognition.md` — Start Phase 6 Epic 4 — wire MCP recognizers for 14 providers (~614 tok)
@@ -211,6 +212,7 @@
 - `CONTRIBUTING.md` — Contributing to syllago (~1842 tok)
 - `GEMINI.md` — Syllago (~697 tok)
 - `install.sh` — Install syllago — AI coding tool content manager (~880 tok)
+- `lexicon.md` — Syllago — Ubiquitous Language (~3061 tok)
 - `LICENSE` — Project license (~3025 tok)
 - `Makefile` — Make build targets (~176 tok)
 - `opencode.json` (~5 tok)
@@ -1410,6 +1412,7 @@
 - `bootstrap-moat-meta-registry.md` — Bootstrap MOAT meta-registry verification (spike) (~904 tok)
 - `continue-capmon-audit.md` — Continue auditing capmon (~624 tok)
 - `continue-provider-coverage-reconciliation.md` — Continue provider coverage reconciliation (~1196 tok)
+- `finish-capmon-body-size-fix.md` — Ship capmon body-size threshold fix (~1036 tok)
 - `finish-cmd-coverage-epic.md` — Finish cmd/syllago coverage epic (overnight) (~617 tok)
 - `finish-phase0-capmon-refactor.md` — Finish Phase 0: Capmon Recognition Refactor (~1391 tok)
 - `ship-v072-smoke-fix.md` — Ship v0.7.2 with Provider Smoke Tests running green (~515 tok)
@@ -1642,6 +1645,16 @@
 - `r3-valsorda.txt` — Declares Registry (~2567 tok)
 - `seed.txt` — PANEL: Syllago MOAT G-3 — Trusted Root Source + First Slice Scope (~1251 tok)
 
+## .ship/
+
+- `library-unified-view.json` (~1588 tok)
+
+## .ship/library-unified-view/
+
+- `design.md` — Design Discussion — library-unified-view (~4447 tok)
+- `research.md` — Research: library-unified-view (~4210 tok)
+- `structure.md` — Structure Outline — library-unified-view (~5919 tok)
+
 ## cli/
 
 - `.golangci.yml` (~747 tok)
@@ -1753,8 +1766,8 @@
 - `extract_test.go` — TestFixtures_ClaudeCodeHooksHTML, TestFixtures_WindsurfLLMSTxt, TestFixtures_LiveNetwork (~937 tok)
 - `fetch_chromedp_test.go` — TestChromedpURLWiring, TestRealisticUA_NotHeadless (~306 tok)
 - `fetch_chromedp.go` — ChromedpRemoteURL, FetchChromedp (~836 tok)
-- `fetch_validity_test.go` — TestValidateContentResponse_Valid, TestValidateContentResponse_TooSmall, TestValidateContentResponse (~1321 tok)
-- `fetch_validity.go` — Struct: ErrContentInvalid (~1275 tok)
+- `fetch_validity_test.go` — TestValidateContentResponse_Valid, TestValidateContentResponse_TooSmall, TestValidateContentResponse (~2116 tok)
+- `fetch_validity.go` — Struct: ErrContentInvalid (~1752 tok)
 - `formatdoc_test.go` — TestLoadFormatDoc_RoundTrip, TestFormatDocPath, TestLoadFormatDoc_FileNotFound, TestValidateAllForma (~2073 tok)
 - `formatdoc_validate_test.go` — TestValidateFormatDoc_Valid, TestValidateFormatDoc_UnknownKey, TestValidateFormatDoc_MissingExtensio (~5126 tok)
 - `formatdoc_validate.go` — Struct: ValidationWarning (~3183 tok)
@@ -1769,7 +1782,7 @@
 - `healing_pr_test.go` — TestUpdateManifestURL_ReplacesTargetOnly, TestUpdateManifestURL_WrongOldURL, TestUpdateManifestURL_I (~3415 tok)
 - `healing_pr.go` — Struct: HealPRInputs (~2631 tok)
 - `healing_redirect.go` — Struct: RedirectChain (~1340 tok)
-- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~8287 tok)
+- `healing_test.go` — TestAttemptHeal_DisabledShortCircuits, TestAttemptHeal_VariantStrategySucceeds, TestAttemptHeal_Vari (~8359 tok)
 - `healing.go` — Struct: HealResult (~3656 tok)
 - `pipeline_heal_test.go` — TestTryHealSource_DisabledReturnsNil, TestTryHealSource_FailureRecordsCounter, TestTryHealSource_Pro (~1718 tok)
 - `pipeline.go` — Struct: PipelineOptions (~4205 tok)
