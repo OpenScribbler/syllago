@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     container:
-      image: chromedp/headless-shell@sha256:6ae04e81d52e03b04e4ea4ef9827c9e23aedf4e0e2f0dbe1c4ed1218e6a3f36e # 132.0.6834.110
+      image: chromedp/headless-shell@sha256:01b37545a4e91a53ceb52e6f88ae1be375dbeb7e2148797d4b400989ea123d3a # 148.0.7778.97
       options: --shm-size=1gb
     outputs:
       artifact-sha256: ${{ steps.sha.outputs.sha256 }}
@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Download cache artifact
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f6645d931 # v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: capmon-cache
 
@@ -118,7 +118,7 @@ jobs:
         run: make -C cli build
 
       - name: Download cache artifact (if available)
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f6645d931 # v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: capmon-cache
         continue-on-error: true
