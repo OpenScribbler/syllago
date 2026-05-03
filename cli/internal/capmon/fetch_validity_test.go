@@ -100,6 +100,93 @@ func TestValidateContentResponse_TextPlainValid(t *testing.T) {
 	}
 }
 
+func TestValidateContentResponse_NonHTMLSmallPasses(t *testing.T) {
+	t.Parallel()
+	// Real codex source files are TypeScript enums and short markdown stubs
+	// served from raw.githubusercontent.com (Content-Type: text/plain).
+	// A 200-byte text/plain body must pass — the 512-byte threshold was an
+	// HTML-stub heuristic and shouldn't false-positive on legitimate small
+	// source files. See bead syllago-soagt.
+	cases := []struct {
+		name        string
+		contentType string
+	}{
+		{"text/plain", "text/plain; charset=utf-8"},
+		{"application/json", "application/json"},
+		{"text/markdown", "text/markdown"},
+	}
+	body := []byte(strings.Repeat("a", 200))
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := capmon.ValidateContentResponse(body, tc.contentType, "https://raw.githubusercontent.com/openai/codex/main/HookScope.ts", "https://raw.githubusercontent.com/openai/codex/main/HookScope.ts")
+			if err != nil {
+				t.Errorf("expected non-HTML 200-byte body to pass, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateContentResponse_EmptyAlwaysFails(t *testing.T) {
+	t.Parallel()
+	// 0-byte responses indicate truncation, vanished resources, or the
+	// explorer.toml-style empty-source case. Must always be rejected
+	// regardless of content-type so real upstream emptiness is not masked.
+	cases := []string{
+		"text/html",
+		"text/plain",
+		"application/json",
+		"text/markdown",
+	}
+	for _, ct := range cases {
+		ct := ct
+		t.Run(ct, func(t *testing.T) {
+			t.Parallel()
+			err := capmon.ValidateContentResponse([]byte{}, ct, "https://docs.example.com/page", "https://docs.example.com/page")
+			if err == nil {
+				t.Fatalf("expected empty body to fail for content-type %q", ct)
+			}
+			var invalid *capmon.ErrContentInvalid
+			if !errors.As(err, &invalid) {
+				t.Errorf("expected ErrContentInvalid, got %T: %v", err, err)
+			}
+			if invalid.Kind != capmon.InvalidBodyTooSmall {
+				t.Errorf("Kind = %q, want %q", invalid.Kind, capmon.InvalidBodyTooSmall)
+			}
+		})
+	}
+}
+
+func TestValidateContentResponse_HTMLSmallStillFails(t *testing.T) {
+	t.Parallel()
+	// HTML stubs (login walls, redirect pages, lean 404s) under 512 bytes
+	// remain rejected — the original threat model is unchanged.
+	body := []byte(strings.Repeat("a", 200))
+	cases := []string{
+		"text/html",
+		"text/html; charset=utf-8",
+		"application/xhtml+xml",
+	}
+	for _, ct := range cases {
+		ct := ct
+		t.Run(ct, func(t *testing.T) {
+			t.Parallel()
+			err := capmon.ValidateContentResponse(body, ct, "https://docs.example.com/page", "https://docs.example.com/page")
+			if err == nil {
+				t.Fatalf("expected HTML body under 512 bytes to fail for content-type %q", ct)
+			}
+			var invalid *capmon.ErrContentInvalid
+			if !errors.As(err, &invalid) {
+				t.Errorf("expected ErrContentInvalid, got %T: %v", err, err)
+			}
+			if invalid.Kind != capmon.InvalidBodyTooSmall {
+				t.Errorf("Kind = %q, want %q", invalid.Kind, capmon.InvalidBodyTooSmall)
+			}
+		})
+	}
+}
+
 func TestErrContentInvalid_KindSet(t *testing.T) {
 	t.Parallel()
 	// Each of ValidateContentResponse's three rejection paths must populate

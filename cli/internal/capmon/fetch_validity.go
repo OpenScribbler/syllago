@@ -33,9 +33,18 @@ func (e *ErrContentInvalid) Error() string {
 	return fmt.Sprintf("content invalid: %s", e.Reason)
 }
 
-// minContentBytes is the minimum body size for a response to be considered
-// meaningful content (avoids treating redirect pages or empty stubs as valid).
-const minContentBytes = 512
+// minContentBytesHTML is the minimum body size for an HTML response to be
+// considered meaningful. The threshold filters blank stubs, redirect pages,
+// and lean 404 HTML — all of which are HTML by construction. It does NOT
+// apply to non-HTML responses, because legitimate source files (TypeScript
+// enums, Rust modules, lean Markdown stubs) are routinely tiny: a 196-byte
+// `HookScope.ts` from raw.githubusercontent.com is real content, not a stub.
+//
+// The same gate exists in provmon (cli/internal/provmon/checker_source_hash.go)
+// where the call site comments that "ValidateContentResponse is only meaningful
+// for HTML responses." That observation is correct; this module now enforces it
+// at the validator instead of relying on every caller to repeat the check.
+const minContentBytesHTML = 512
 
 // binaryMIMEPrefixes are MIME type prefixes that indicate non-text content.
 // Content with these types cannot be meaningfully read as documentation.
@@ -58,7 +67,9 @@ var binaryMIMEExact = map[string]bool{
 // ValidateContentResponse checks that a fetched HTTP response body represents
 // readable, on-domain content. It performs three checks:
 //
-//  1. Body is at least minContentBytes — avoids treating stubs/redirects as valid
+//  1. Body is non-empty, and (for HTML responses only) at least
+//     minContentBytesHTML — avoids treating HTML stubs/redirect pages as valid
+//     while letting legitimate small source files pass.
 //  2. Content-Type does not indicate binary content
 //  3. The final URL's eTLD+1 matches the original URL's eTLD+1 — detects
 //     redirect-to-login domain hijacking
@@ -67,11 +78,22 @@ var binaryMIMEExact = map[string]bool{
 // distinguish content validity failures from other errors via errors.As.
 // The Kind field on the returned error tags which check failed.
 func ValidateContentResponse(body []byte, contentType, originalURL, finalURL string) error {
-	// Check 1: minimum body size.
-	if len(body) < minContentBytes {
+	// Check 1a: empty bodies are always invalid — that's a definitive failure
+	// mode (truncated transfer, vanished resource) and surfaces real upstream
+	// emptiness rather than masking it.
+	if len(body) == 0 {
 		return &ErrContentInvalid{
 			Kind:   InvalidBodyTooSmall,
-			Reason: fmt.Sprintf("body too small (%d bytes, minimum %d)", len(body), minContentBytes),
+			Reason: "body empty",
+		}
+	}
+	// Check 1b: HTML-only size threshold. Non-HTML responses are not
+	// size-checked because real source files and short docs stubs can be
+	// legitimately tiny.
+	if isHTMLContentType(contentType) && len(body) < minContentBytesHTML {
+		return &ErrContentInvalid{
+			Kind:   InvalidBodyTooSmall,
+			Reason: fmt.Sprintf("HTML body too small (%d bytes, minimum %d)", len(body), minContentBytesHTML),
 		}
 	}
 
@@ -124,6 +146,16 @@ func ValidateContentResponse(body []byte, contentType, originalURL, finalURL str
 	}
 
 	return nil
+}
+
+// isHTMLContentType reports whether the Content-Type header indicates HTML.
+// Parameters (e.g. "; charset=utf-8") are stripped before comparison.
+// Mirrors the helper of the same name in cli/internal/provmon — the gate is
+// intentionally identical so the two packages share one definition of "this
+// looks like an HTML response."
+func isHTMLContentType(contentType string) bool {
+	mimeBase := strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
+	return strings.EqualFold(mimeBase, "text/html") || strings.EqualFold(mimeBase, "application/xhtml+xml")
 }
 
 // etldPlusOne parses rawURL and returns its eTLD+1 (e.g. "github.com" from
