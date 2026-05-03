@@ -31,7 +31,7 @@ jobs:
           go-version-file: cli/go.mod
 
       - name: Install build tools
-        run: apt-get update -qq && apt-get install -y -qq make
+        run: apt-get update -qq && apt-get install -y -qq make ca-certificates
 
       - name: Build syllago
         run: make -C cli build
