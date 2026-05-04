@@ -4,7 +4,7 @@
   "updated": "2026-05-03T10:25:00.000Z",
   "ticketBeadId": "syllago-mol-t6b",
   "autonomy": "pragmatic",
-  "currentStage": "execute",
+  "currentStage": "pr",
   "completed": [
     "lexicon-gate",
     "align",
@@ -12,7 +12,9 @@
     "design",
     "structure",
     "plan",
-    "create-beads"
+    "create-beads",
+    "execute",
+    "final-validate"
   ],
   "lexicon": {
     "path": "lexicon.md",
