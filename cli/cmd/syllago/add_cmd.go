@@ -249,54 +249,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter by type when a positional arg is provided (and it's not --all).
-	if typeStr != "" {
-		ct := catalog.ContentType(typeStr)
-		// Validate the type.
-		valid := false
-		for _, known := range catalog.AllContentTypes() {
-			if ct == known {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			var typeNames []string
-			for _, t := range catalog.AllContentTypes() {
-				typeNames = append(typeNames, string(t))
-			}
-			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
-		}
-
-		var filtered []add.DiscoveryItem
-		for _, item := range items {
-			if item.Type == ct {
-				filtered = append(filtered, item)
-			}
-		}
-		items = filtered
-
-		// If a specific name was requested, further filter.
-		if nameFilter != "" {
-			var nameFiltered []add.DiscoveryItem
-			for _, item := range items {
-				if item.Name == nameFilter {
-					nameFiltered = append(nameFiltered, item)
-				}
-			}
-			if len(nameFiltered) == 0 {
-				// Build list of available names for the error message.
-				var available []string
-				for _, item := range items {
-					available = append(available, item.Name)
-				}
-				availStr := strings.Join(available, ", ")
-				if availStr == "" {
-					availStr = "(none found)"
-				}
-				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, prov.Name), "Available "+typeStr+": "+availStr)
-			}
-			items = nameFiltered
-		}
+	items, err = filterDiscoveryItems(items, typeStr, nameFilter, prov.Name)
+	if err != nil {
+		return err
 	}
 
 	// Build the canonicalizer adapter for this content type.
@@ -369,6 +324,57 @@ func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoo
 		}
 	}
 	return nil
+}
+
+// filterDiscoveryItems filters a discovery list by content type and optional name.
+// Extracted from runAdd to keep its cyclomatic complexity below the gocyclo threshold.
+func filterDiscoveryItems(items []add.DiscoveryItem, typeStr, nameFilter, providerName string) ([]add.DiscoveryItem, error) {
+	if typeStr == "" {
+		return items, nil
+	}
+	ct := catalog.ContentType(typeStr)
+	valid := false
+	for _, known := range catalog.AllContentTypes() {
+		if ct == known {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		var typeNames []string
+		for _, t := range catalog.AllContentTypes() {
+			typeNames = append(typeNames, string(t))
+		}
+		return nil, output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
+	}
+	var filtered []add.DiscoveryItem
+	for _, item := range items {
+		if item.Type == ct {
+			filtered = append(filtered, item)
+		}
+	}
+	items = filtered
+	if nameFilter == "" {
+		return items, nil
+	}
+	var nameFiltered []add.DiscoveryItem
+	for _, item := range items {
+		if item.Name == nameFilter {
+			nameFiltered = append(nameFiltered, item)
+		}
+	}
+	if len(nameFiltered) == 0 {
+		var available []string
+		for _, item := range items {
+			available = append(available, item.Name)
+		}
+		availStr := strings.Join(available, ", ")
+		if availStr == "" {
+			availStr = "(none found)"
+		}
+		return nil, output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, providerName), "Available "+typeStr+": "+availStr)
+	}
+	return nameFiltered, nil
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.

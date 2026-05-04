@@ -535,7 +535,7 @@ func (a App) handleHintDismissed() (tea.Model, tea.Cmd) {
 		cfg.Preferences = make(map[string]string)
 	}
 	cfg.Preferences["hints.registry_add_dismissed"] = "true"
-	config.SaveGlobal(cfg) //nolint:errcheck
+	_ = config.SaveGlobal(cfg) // best-effort: failure only means the hint shows again
 	return a, nil
 }
 
