@@ -72,7 +72,7 @@
   "adrs": {
     "drafted": true
   },
-  "prUrl": null,
+  "prUrl": "https://github.com/OpenScribbler/syllago/pull/323",
   "execution": {
     "mode": null,
     "tasksDispatched": [],
