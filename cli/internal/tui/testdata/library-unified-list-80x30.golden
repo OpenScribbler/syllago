@@ -5,16 +5,16 @@
 │                                                            [a] Add content   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ fresh-rule                                Type: Rule      Files: 1           │
+│ local-skill                               Type: Skill     Files: 1           │
 │ Scope: global    Registry: not in a registry                                 │
 │                                                                              │
 │ Trust: Unknown        Visibility: Public          [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │All  In Library  Not in Library  Project                                      │
 │   Tr Name ▲               Type     Scope        Files Installed              │
-│ >    fresh-rule           Rule     library      1     --                     │
-│      installed-rule       Rule     library      1     ✓                      │
-│                                                                              │
+│ >    local-skill          Skill    library      1     --                     │
+│      registry-skill       Skill    test-regi... 1     --     [not in library]│
+│      shared-rule          Rule     project      1     --                     │
 │                                                                              │
 │                                                                              │
 │                                                                              │

@@ -1,7 +1,7 @@
 provider: claude-code
 docs_url: "https://docs.claude.com/en/docs/claude-code"
 category: cli
-last_fetched_at: "2026-04-11T21:49:49Z"
+last_fetched_at: "2026-05-03T15:42:00Z"
 last_changed_at: "2026-04-11T00:00:00Z"
 generation_method: subagent
 
@@ -12,8 +12,8 @@ content_types:
       - uri: "https://code.claude.com/docs/en/skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:3fc5a05bcf658a22a243aaf6714fff07f320c88ded7e8bc2aa290bb10fe742b5"
-        fetched_at: "2026-04-11T21:49:46Z"
+        content_hash: "sha256:382b48aed37e52e7ff8a58cb22a3c877833709c8011666715ac735c051fa8a90"
+        fetched_at: "2026-05-03T15:42:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -29,7 +29,7 @@ content_types:
         supported: true
         provider_field: "disable-model-invocation"
         extension_id: "auto_invocation"
-        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false)"
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false); also prevents the skill from being preloaded into subagents via the skills frontmatter field"
         confidence: confirmed
       user_invocable:
         supported: true
@@ -112,7 +112,7 @@ content_types:
 
       - id: effort_override
         name: Per-Skill Effort Level
-        summary: "Overrides the session effort level (low/medium/high/max) while the skill is active."
+        summary: "Overrides the session effort level (low/medium/high/xhigh/max) while the skill is active."
         conversion: embedded
         provider_field: "effort"
         source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
@@ -152,7 +152,7 @@ content_types:
 
       - id: argument_substitution
         name: Argument and Session Variable Substitution
-        summary: "Skills support $ARGUMENTS, $N, ${CLAUDE_SESSION_ID}, and ${CLAUDE_SKILL_DIR} string substitutions in skill body content."
+        summary: "Skills support $ARGUMENTS, $N, ${CLAUDE_SESSION_ID}, ${CLAUDE_SKILL_DIR}, and ${CLAUDE_EFFORT} string substitutions in skill body content. Named arguments declared in the arguments frontmatter field use $name syntax."
         conversion: preserved
         source_ref: "https://code.claude.com/docs/en/skills.md#available-string-substitutions"
         graduation_candidate: false
@@ -216,7 +216,7 @@ content_types:
 
       - id: description_context_budget
         name: Skill Description Context Budget
-        summary: "Skill descriptions share a dynamic budget (1% of context, 8,000 char fallback) with a 250-char per-entry cap, raisable via SLASH_COMMAND_TOOL_CHAR_BUDGET."
+        summary: "Skill descriptions share a dynamic budget (1% of context, 8,000 char fallback) with a 1,536-character per-entry cap (combined description + when_to_use text), raisable via SLASH_COMMAND_TOOL_CHAR_BUDGET."
         conversion: not-portable
         source_ref: "https://code.claude.com/docs/en/skills.md#skill-descriptions-are-cut-short"
         graduation_candidate: false
@@ -228,6 +228,22 @@ content_types:
         source_ref: "https://code.claude.com/docs/en/skills.md"
         graduation_candidate: false
 
+      - id: when_to_use
+        name: When-to-Use Context Field
+        summary: "Additional context for when Claude should invoke the skill, such as trigger phrases or example requests. Appended to description in the skill listing and counts toward the 1,536-character cap."
+        conversion: embedded
+        provider_field: "when_to_use"
+        source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
+        graduation_candidate: true
+
+      - id: named_arguments
+        name: Named Positional Arguments via arguments Frontmatter
+        summary: "Named positional arguments for $name substitution in skill content. Declared as a space-separated string or YAML list in the arguments frontmatter field; names map to argument positions in order."
+        conversion: preserved
+        provider_field: "arguments"
+        source_ref: "https://code.claude.com/docs/en/skills.md#frontmatter-reference"
+        graduation_candidate: false
+
     loading_model: "Lazy — name and description visible to Claude at all times (subject to context budget); SKILL.md body loaded on demand when invoked. When disable-model-invocation is true, the description is also excluded from context. Subagents with preloaded skills are an exception: full skill content is injected at startup."
     notes: "Commands in .claude/commands/ are fully supported and work identically to skills; if a skill and command share the same name, the skill takes precedence. Skills follow the agentskills.io open standard with CC-specific extensions. The Plugin scope uses a plugin-name:skill-name namespace to avoid conflicts."
 
@@ -237,8 +253,8 @@ content_types:
       - uri: "https://code.claude.com/docs/en/memory.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:695238a6bc917a949ebe5853cd6c5990d584f5bd04106b271fc444af468d8a63"
-        fetched_at: "2026-04-11T21:46:19Z"
+        content_hash: "sha256:6f982898a5dd8c592c0791d5f63eb59fcd28f239f74a556294bda5e661a31c42"
+        fetched_at: "2026-05-03T15:42:00Z"
     canonical_mappings:
       activation_mode:
         supported: true
@@ -254,11 +270,11 @@ content_types:
         confidence: confirmed
       auto_memory:
         supported: true
-        mechanism: "Auto memory saves Claude's accumulated notes to ~/.claude/projects/<project>/memory/MEMORY.md; requires CC v2.1.59+; enabled by default"
+        mechanism: "Auto memory saves Claude's accumulated notes to ~/.claude/projects/<project>/memory/MEMORY.md; first 200 lines or 25KB loaded at session start; requires CC v2.1.59+; enabled by default; disable via CLAUDE_CODE_DISABLE_AUTO_MEMORY=1; override storage location via autoMemoryDirectory setting; subagents can also maintain their own auto memory"
         confidence: confirmed
       hierarchical_loading:
         supported: true
-        mechanism: "CLAUDE.md files load from all ancestor directories up to repo root; .claude/rules/ files discovered recursively; user-level rules load before project rules"
+        mechanism: "CLAUDE.md files load from all ancestor directories up to repo root (ancestor files load in full at launch; subdirectory CLAUDE.md files beyond 200 lines threshold load on demand when Claude reads files in those subdirectories); .claude/rules/ files discovered recursively; user-level rules load before project rules"
         confidence: confirmed
     provider_extensions:
       - id: claude_md_files
@@ -284,7 +300,7 @@ content_types:
 
       - id: auto_memory
         name: Auto Memory
-        summary: "Claude auto-saves cross-session notes to ~/.claude/projects/<project>/memory/MEMORY.md; toggled via autoMemoryEnabled (CC v2.1.59+)."
+        summary: "Claude auto-saves cross-session notes to ~/.claude/projects/<project>/memory/MEMORY.md; first 200 lines or 25KB loaded at session start; toggled via autoMemoryEnabled (CC v2.1.59+); disable via CLAUDE_CODE_DISABLE_AUTO_MEMORY=1; override storage location via autoMemoryDirectory setting. Subagents can also maintain their own auto memory."
         conversion: not-portable
         provider_field: "autoMemoryEnabled"
         source_ref: "https://code.claude.com/docs/en/memory.md#auto-memory"
@@ -292,7 +308,7 @@ content_types:
 
       - id: claude_md_excludes
         name: Exclude CLAUDE.md Files by Pattern
-        summary: "Skips ancestor CLAUDE.md or rules files by path/glob; managed CLAUDE.md cannot be excluded."
+        summary: "claudeMdExcludes setting accepts glob patterns matched against absolute file paths to skip ancestor CLAUDE.md or rules files. Managed policy CLAUDE.md files cannot be excluded."
         conversion: embedded
         provider_field: "claudeMdExcludes"
         source_ref: "https://code.claude.com/docs/en/memory.md#exclude-specific-claude-md-files"
@@ -300,16 +316,37 @@ content_types:
 
       - id: add_dir_rules_loading
         name: Rules Loading from Additional Directories via Environment Variable
-        summary: "Setting CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 enables loading CLAUDE.md and .claude/rules/ from --add-dir directories."
+        summary: "Setting CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 enables loading CLAUDE.md, .claude/CLAUDE.md, .claude/rules/*.md, and CLAUDE.local.md from --add-dir directories."
         conversion: not-portable
         source_ref: "https://code.claude.com/docs/en/memory.md#load-from-additional-directories"
         graduation_candidate: false
 
       - id: managed_org_claude_md
         name: Organization-Wide Managed CLAUDE.md
-        summary: "Centrally deployed CLAUDE.md at system paths (e.g. /etc/claude-code/CLAUDE.md) cannot be excluded and applies to all users."
+        summary: "Centrally deployed CLAUDE.md at OS-specific system paths cannot be excluded and applies to all users. Paths: macOS: /Library/Application Support/ClaudeCode/CLAUDE.md; Linux/WSL: /etc/claude-code/CLAUDE.md; Windows: C:\\Program Files\\ClaudeCode\\CLAUDE.md."
         conversion: not-portable
         source_ref: "https://code.claude.com/docs/en/memory.md#deploy-organization-wide-claude-md"
+        graduation_candidate: false
+
+      - id: agents_md_cross_import
+        name: AGENTS.md Cross-File Import via @-Syntax
+        summary: "Claude Code reads CLAUDE.md (not AGENTS.md natively), but CLAUDE.md can import AGENTS.md via @AGENTS.md syntax, making both Claude Code and tools that read AGENTS.md consume the same instructions."
+        conversion: embedded
+        source_ref: "https://code.claude.com/docs/en/memory.md#agents.md"
+        graduation_candidate: false
+
+      - id: html_comment_stripping
+        name: HTML Comment Stripping in CLAUDE.md
+        summary: "Block-level HTML comments (<!-- -->) in CLAUDE.md files are stripped before content is injected into Claude's context. Comments inside code blocks are preserved."
+        conversion: not-portable
+        source_ref: "https://code.claude.com/docs/en/memory.md#how-claude-md-files-load"
+        graduation_candidate: false
+
+      - id: claude_code_new_init_flow
+        name: Interactive Multi-Phase /init Flow via CLAUDE_CODE_NEW_INIT
+        summary: "Setting CLAUDE_CODE_NEW_INIT=1 enables an interactive /init flow: asks which artifacts to set up (CLAUDE.md, skills, hooks), explores the codebase with a subagent, fills in gaps, and presents a reviewable proposal before writing."
+        conversion: not-portable
+        source_ref: "https://code.claude.com/docs/en/memory.md#set-up-a-project-claude-md"
         graduation_candidate: false
 
     loading_model: >
@@ -334,13 +371,13 @@ content_types:
       - uri: "https://code.claude.com/docs/en/hooks.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:d973ccaabc400d7f632461ebff7ed1f56065f4abc09c7e49059635e52515c638"
-        fetched_at: "2026-04-11T21:48:17Z"
+        content_hash: "sha256:9168ed62a4bf31aca0cf34605716c49e7f82b988935c799c682ffeaf4296c022"
+        fetched_at: "2026-05-03T16:30:00Z"
       - uri: "https://code.claude.com/docs/en/hooks-guide.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:441dfe90e1041d49c6e62d41575c3a4c432d83e687a415e1d543b8cb73e9129f"
-        fetched_at: "2026-04-11T21:48:17Z"
+        content_hash: "sha256:c4c9d33c4751535445fb87a8e1becc7fd7a113e2fd8eed8dad55cf47e1b01c82"
+        fetched_at: "2026-05-03T16:30:00Z"
       - uri: "hooks-example-hooks.json"
         type: example
         fetch_method: local_file
@@ -359,7 +396,7 @@ content_types:
     canonical_mappings:
       handler_types:
         supported: true
-        mechanism: "Four types: command (shell), http (POST to URL), prompt (LLM evaluation), agent (subagent with tools); prompt/agent restricted to subset of events"
+        mechanism: "Five types: command (shell), http (POST to URL), mcp_tool (MCP tool call), prompt (LLM evaluation), agent (subagent with tools, experimental); prompt/agent restricted to subset of events"
         confidence: confirmed
       matcher_patterns:
         supported: true
@@ -396,14 +433,14 @@ content_types:
     provider_extensions:
       - id: hook_events
         name: Hook Event Set
-        summary: "24 hook events spanning session, turn, and tool-call cadences (SessionStart, PreToolUse, PostToolUse, PermissionRequest, FileChanged, etc.)."
+        summary: "29 hook events spanning session, turn, and tool-call cadences: Setup, SessionStart, SessionEnd, InstructionsLoaded, UserPromptSubmit, UserPromptExpansion, PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, PostToolUseFailure, PostToolBatch, Stop, StopFailure, Notification, SubagentStart, SubagentStop, TaskCreated, TaskCompleted, TeammateIdle, ConfigChange, CwdChanged, FileChanged, WorktreeCreate, WorktreeRemove, PreCompact, PostCompact, Elicitation, ElicitationResult."
         conversion: translated
         source_ref: "https://code.claude.com/docs/en/hooks.md#hook-lifecycle"
         graduation_candidate: false
 
       - id: hook_handler_types
-        name: Four Hook Handler Types
-        summary: "Hooks can be command (shell), http (POST), prompt (LLM eval), or agent (subagent); prompt/agent restricted to a subset of events."
+        name: Five Hook Handler Types
+        summary: "Hooks can be command (shell), http (POST), mcp_tool (call an MCP tool), prompt (LLM eval), or agent (subagent, experimental); prompt/agent restricted to a subset of events."
         conversion: translated
         provider_field: "type"
         source_ref: "https://code.claude.com/docs/en/hooks.md#hook-handler-fields"
@@ -492,6 +529,38 @@ content_types:
         source_ref: "https://code.claude.com/docs/en/hooks.md#elicitation"
         graduation_candidate: false
 
+      - id: hook_if_field
+        name: Conditional Handler Execution via if Field
+        summary: "Handlers accept an if field using permission-rule syntax to gate execution on conditions; requires CC v2.1.85+."
+        conversion: not-portable
+        provider_field: "if"
+        source_ref: "https://code.claude.com/docs/en/hooks-guide.md#conditional-execution"
+        graduation_candidate: false
+
+      - id: hook_asyncRewake
+        name: asyncRewake on Background Command Hooks
+        summary: "Command hooks with asyncRewake: true wake Claude after completing background execution, delivering a system message on the next turn."
+        conversion: not-portable
+        provider_field: "asyncRewake"
+        source_ref: "https://code.claude.com/docs/en/hooks-guide.md#run-hooks-in-the-background"
+        graduation_candidate: false
+
+      - id: hook_disable_all
+        name: disableAllHooks Setting
+        summary: "Setting disableAllHooks: true in settings.json disables all hook execution for that scope; useful for debugging or locked-down environments."
+        conversion: not-portable
+        provider_field: "disableAllHooks"
+        source_ref: "https://code.claude.com/docs/en/hooks-guide.md#disable-hooks"
+        graduation_candidate: false
+
+      - id: hook_allow_managed_only
+        name: allowManagedHooksOnly Enterprise Setting
+        summary: "Enterprise policy setting allowManagedHooksOnly: true restricts hook execution to only managed (admin-deployed) hooks, blocking user and project hooks."
+        conversion: not-portable
+        provider_field: "allowManagedHooksOnly"
+        source_ref: "https://code.claude.com/docs/en/hooks-guide.md#enterprise-hook-controls"
+        graduation_candidate: false
+
     loading_model: >
       Hooks are defined in JSON settings files and loaded at session start. Component-scoped hooks
       (in skill/agent frontmatter) are registered when the component activates and cleaned up when
@@ -512,8 +581,8 @@ content_types:
       - uri: "https://code.claude.com/docs/en/mcp.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:6f044532aa9bbec0170cbc708b6624755dc495d996eb6452721f7dcdef6bc76f"
-        fetched_at: "2026-04-11T21:49:45Z"
+        content_hash: "sha256:208e742686e4f6a019817a8423429b4850c88eadd8f38993a914b9f373769552"
+        fetched_at: "2026-05-03T16:30:00Z"
     canonical_mappings:
       transport_types:
         supported: true
@@ -558,14 +627,14 @@ content_types:
 
       - id: mcp_installation_scopes
         name: Three Installation Scopes (local, project, user)
-        summary: "Three install scopes: local (~/.claude.json per-project, default), project (.mcp.json shareable), user (~/.claude.json global)."
+        summary: "Three install scopes: local (~/.claude.json per-project, default; was 'project' in older versions), project (.mcp.json shareable with team), user (~/.claude.json global across projects; was 'global' in older versions)."
         conversion: translated
         source_ref: "https://code.claude.com/docs/en/mcp.md#mcp-installation-scopes"
         graduation_candidate: false
 
       - id: mcp_oauth_authentication
         name: OAuth 2.0 Authentication for Remote Servers
-        summary: "OAuth 2.0 with dynamic client registration, CIMD discovery, token storage in keychain/credentials file, and auto-refresh."
+        summary: "OAuth 2.0 for HTTP servers: dynamic client registration or CIMD auto-discovery; pre-configured credentials via --client-id/--client-secret; fixed callback port via --callback-port or oauth.callbackPort; oauth.scopes pins requested scope set; oauth.authServerMetadataUrl overrides discovery chain; token storage in keychain/credentials file with auto-refresh."
         conversion: translated
         provider_field: "oauth"
         source_ref: "https://code.claude.com/docs/en/mcp.md#authenticate-with-remote-mcp-servers"
@@ -580,7 +649,7 @@ content_types:
 
       - id: mcp_tool_search
         name: MCP Tool Search (Deferred Tool Loading)
-        summary: "MCP tool schemas are deferred via ToolSearch; controlled by ENABLE_TOOL_SEARCH (default/true/auto/auto:N/false), requires Sonnet 4+ or Opus 4+."
+        summary: "MCP tool schemas are deferred via ToolSearch; controlled by ENABLE_TOOL_SEARCH (default/true/auto/auto:N/false), requires Sonnet 4+ or Opus 4+; per-server alwaysLoad: true exempts a server from deferral (CC v2.1.121+); per-tool _meta anthropic/alwaysLoad: true does the same for individual tools."
         conversion: not-portable
         provider_field: "ENABLE_TOOL_SEARCH"
         source_ref: "https://code.claude.com/docs/en/mcp.md#scale-with-mcp-tool-search"
@@ -659,6 +728,21 @@ content_types:
         source_ref: "https://code.claude.com/docs/en/mcp.md#import-mcp-servers-from-claude-desktop"
         graduation_candidate: false
 
+      - id: mcp_headers_helper
+        name: Dynamic Headers via headersHelper
+        summary: "headersHelper field specifies a shell command that runs at connection time and returns JSON headers; enables Kerberos, short-lived tokens, or custom SSO without static credentials."
+        conversion: not-portable
+        provider_field: "headersHelper"
+        source_ref: "https://code.claude.com/docs/en/mcp.md#use-dynamic-headers-for-custom-authentication"
+        graduation_candidate: false
+
+      - id: mcp_reconnection
+        name: Automatic Reconnection with Exponential Backoff
+        summary: "HTTP and SSE servers reconnect automatically on disconnect: up to 5 attempts, starting at 1s, doubling each retry; initial connection retried up to 3 times for transient errors (CC v2.1.121+); stdio servers are not reconnected."
+        conversion: not-portable
+        source_ref: "https://code.claude.com/docs/en/mcp.md#automatic-reconnection"
+        graduation_candidate: false
+
     loading_model: >
       MCP servers are configured in settings files and .mcp.json. At session startup, enabled servers
       connect automatically; server tool names (but not full schemas when tool search is active) load
@@ -677,8 +761,8 @@ content_types:
       - uri: "https://code.claude.com/docs/en/sub-agents.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:44684e384346ac311a26928caebc047e33ae5506b1fb91286f0e5a83a7c0b67b"
-        fetched_at: "2026-04-11T21:49:47Z"
+        content_hash: "sha256:5e7dec99af9212e50bf24639d3e056015405d8873b31804a6213696e86e06e6c"
+        fetched_at: "2026-05-03T16:30:00Z"
     canonical_mappings:
       definition_format:
         supported: true
@@ -791,6 +875,14 @@ content_types:
         source_ref: "https://code.claude.com/docs/en/sub-agents.md#scope-mcp-servers-to-a-subagent"
         graduation_candidate: false
 
+      - id: agent_fork_mode
+        name: Forked Subagents (Experimental)
+        summary: "Experimental fork mode (CLAUDE_CODE_FORK_SUBAGENT=1, CC v2.1.117+): forks inherit the full conversation context instead of starting fresh, used for side tasks that need full background; /fork command spawns a fork instead of aliasing /branch."
+        conversion: not-portable
+        provider_field: "CLAUDE_CODE_FORK_SUBAGENT"
+        source_ref: "https://code.claude.com/docs/en/sub-agents.md#fork-the-current-conversation"
+        graduation_candidate: false
+
     loading_model: >
       Agent definitions load at session start from all configured scope locations. Built-in agents
       (Explore, Plan, general-purpose, statusline-setup, Claude Code Guide) are always available.
@@ -811,8 +903,8 @@ content_types:
       - uri: "https://code.claude.com/docs/en/commands.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:32f6065be9911db2db4845f5b367f5127acdc6441d69beba99c695116d90b8d8"
-        fetched_at: "2026-04-11T21:49:49Z"
+        content_hash: "sha256:976c970187c8983e1841a802300b7f2e157614dd99e4830b2108c2be3ec5ae26"
+        fetched_at: "2026-05-03T16:30:00Z"
     canonical_mappings:
       argument_substitution:
         supported: true
@@ -820,7 +912,7 @@ content_types:
         confidence: confirmed
       builtin_commands:
         supported: true
-        mechanism: "extensive set of built-in slash commands (/help, /clear, /compact, /config, /model, /mcp, /memory, /plan, etc.) plus bundled-skill commands (/batch, /debug, /loop); not user-modifiable"
+        mechanism: "~75 built-in slash commands (/help, /clear, /compact, /config, /model, /mcp, /memory, /plan, /effort, /context, /copy, /diff, /btw, /recap, /rewind, /sandbox, /teleport, /ultraplan, /ultrareview, etc.) plus 6 bundled-skill commands; not user-modifiable; availability varies by platform and plan"
         confidence: confirmed
     provider_extensions:
       - id: command_file_format
@@ -832,14 +924,14 @@ content_types:
 
       - id: builtin_commands
         name: Built-In Commands
-        summary: "Roughly 60 built-in CLI commands (/clear, /compact, /config, /mcp, /memory, /plan, /agents, /skills, etc.); availability varies by platform and plan."
+        summary: "Roughly 75 built-in CLI commands (/clear, /compact, /config, /mcp, /memory, /plan, /agents, /skills, /effort, /context, /copy, /diff, /btw, /recap, /rewind, /sandbox, /teleport, /autofix-pr, /ultraplan, /ultrareview, etc.); availability varies by platform and plan."
         conversion: not-portable
         source_ref: "https://code.claude.com/docs/en/commands.md"
         graduation_candidate: false
 
       - id: bundled_skill_commands
         name: Bundled Skill Commands
-        summary: "Some commands ship as bundled skills rather than CLI logic (/batch, /claude-api, /debug, /loop, /simplify); use the skill mechanism."
+        summary: "Six commands ship as bundled skills rather than CLI logic (/batch, /claude-api, /debug, /fewer-permission-prompts, /loop, /simplify); use the skill mechanism."
         conversion: not-portable
         source_ref: "https://code.claude.com/docs/en/commands.md"
         graduation_candidate: false

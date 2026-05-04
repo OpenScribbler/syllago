@@ -2453,3 +2453,65 @@ func TestApp_RouteMouse_GalleryDrillIn(t *testing.T) {
 		t.Fatalf("expected App, got %T", m)
 	}
 }
+
+// --- Slice 7: registry-add hint modal ---
+
+// TestHintModal_ShownWhenPreferenceAbsent verifies that openHintModalMsg
+// activates the hint overlay when hints.registry_add_dismissed is not set.
+func TestHintModal_ShownWhenPreferenceAbsent(t *testing.T) {
+	t.Parallel()
+	app := testApp(t) // testConfig() has no Preferences
+	m, _ := app.Update(openHintModalMsg{})
+	a := m.(App)
+	if !a.hint.active {
+		t.Error("hint modal should be active after openHintModalMsg with no dismissed preference")
+	}
+}
+
+// TestHintModal_NotShownWhenPreferenceDismissed verifies that handleRegistryAddDone
+// does not open the hint modal when hints.registry_add_dismissed is "true".
+func TestHintModal_NotShownWhenPreferenceDismissed(t *testing.T) {
+	t.Parallel()
+	cfg := &config.Config{
+		Preferences: map[string]string{"hints.registry_add_dismissed": "true"},
+	}
+	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, cfg, false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+	a := m.(App)
+	m2, cmd := a.handleRegistryAddDone(registryAddDoneMsg{name: "reg"})
+	a = m2.(App)
+	if cmd != nil {
+		m3, _ := a.Update(cmd())
+		a = m3.(App)
+	}
+	if a.hint.active {
+		t.Error("hint modal should NOT be active when hints.registry_add_dismissed is set")
+	}
+}
+
+// TestHintModal_DismissPersistsPreference verifies that hintDismissedMsg causes
+// the handler to save hints.registry_add_dismissed=true to global config.
+func TestHintModal_DismissPersistsPreference(t *testing.T) {
+	tmp := t.TempDir()
+	orig := config.GlobalDirOverride
+	config.GlobalDirOverride = tmp
+	t.Cleanup(func() { config.GlobalDirOverride = orig })
+
+	a := testApp(t)
+	a.Update(hintDismissedMsg{})
+
+	saved, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("config.LoadGlobal: %v", err)
+	}
+	if saved.Preferences["hints.registry_add_dismissed"] != "true" {
+		t.Errorf("expected preference saved as 'true', got %q", saved.Preferences["hints.registry_add_dismissed"])
+	}
+}
+
+// TestGoldenHintModal captures a golden snapshot of the hint modal overlay.
+func TestGoldenHintModal(t *testing.T) {
+	app := testApp(t)
+	m, _ := app.Update(openHintModalMsg{})
+	requireGolden(t, "hint-modal-80x30", snapshotApp(t, m.(App)))
+}

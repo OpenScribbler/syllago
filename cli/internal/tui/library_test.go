@@ -427,3 +427,338 @@ func TestLibrary_UpdateMouse_DetailPreviewPaneFocusesPreview(t *testing.T) {
 		t.Errorf("click on lib-preview pane should focus preview, got %v", l.focus)
 	}
 }
+
+// --- Slice 1: Registry Clone items visible in Library tab ---
+
+// testCatalogUnifiedList returns a catalog with one item from each category:
+// Library item, Project Content, and Registry Clone (not yet Added).
+func testCatalogUnifiedList(t *testing.T) *catalog.Catalog {
+	t.Helper()
+	return &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{
+				Name:    "local-skill",
+				Type:    catalog.Skills,
+				Source:  "library",
+				Library: true,
+				Files:   []string{"SKILL.md"},
+			},
+			{
+				Name:    "shared-rule",
+				Type:    catalog.Rules,
+				Source:  "project",
+				Library: false,
+				// Registry empty — Project Content
+				Files: []string{"rule.md"},
+			},
+			{
+				Name:     "registry-skill",
+				Type:     catalog.Skills,
+				Source:   "test-registry",
+				Registry: "test-registry",
+				Library:  false,
+				Files:    []string{"SKILL.md"},
+			},
+		},
+	}
+}
+
+// testAppWithUnifiedLibraryCatalog creates an App using the unified list
+// catalog at the given dimensions, landed on the Library tab (default).
+func testAppWithUnifiedLibraryCatalog(t *testing.T, w, h int) App {
+	t.Helper()
+	app := NewApp(testCatalogUnifiedList(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	return m.(App)
+}
+
+// TestLibraryTable_RegistryCloneItemRenderedMuted verifies that a Registry
+// Clone item (Registry != "" && Library == false) renders with a
+// [not in library] chip in the Library table.
+func TestLibraryTable_RegistryCloneItemRenderedMuted(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:     "guide-skill",
+		Type:     catalog.Skills,
+		Source:   "test-registry",
+		Registry: "test-registry",
+		Library:  false,
+		Files:    []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 10)
+	view := ansi.Strip(l.View())
+	if !strings.Contains(view, "[not in library]") {
+		t.Errorf("expected Registry Clone row to contain [not in library], view:\n%s", view)
+	}
+}
+
+// TestLibraryTable_LibraryItemRenderedNormal verifies that a Library item
+// (Library == true) does NOT render with a [not in library] chip.
+func TestLibraryTable_LibraryItemRenderedNormal(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:    "local-skill",
+		Type:    catalog.Skills,
+		Source:  "library",
+		Library: true,
+		Files:   []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 10)
+	view := ansi.Strip(l.View())
+	if strings.Contains(view, "[not in library]") {
+		t.Errorf("Library item must not render [not in library], view:\n%s", view)
+	}
+}
+
+// TestLibraryTable_ProjectContentRenderedNormal verifies that a Project
+// Content item (Library == false, Registry == "") does NOT render with a
+// [not in library] chip.
+func TestLibraryTable_ProjectContentRenderedNormal(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:    "shared-rule",
+		Type:    catalog.Rules,
+		Source:  "project",
+		Library: false,
+		// Registry intentionally empty — discriminates Project Content
+		Files: []string{"rule.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 10)
+	view := ansi.Strip(l.View())
+	if strings.Contains(view, "[not in library]") {
+		t.Errorf("Project Content item must not render [not in library], view:\n%s", view)
+	}
+}
+
+// TestGoldenLibrary_UnifiedList verifies that the Library tab renders all three
+// item categories — Library item, Project Content, and Registry Clone — in a
+// single unified list. The Registry Clone row must contain [not in library].
+func TestGoldenLibrary_UnifiedList(t *testing.T) {
+	app := testAppWithUnifiedLibraryCatalog(t, 80, 30)
+	view := snapshotApp(t, app)
+	// Verify [not in library] appears somewhere in the unified list output.
+	if !strings.Contains(view, "[not in library]") {
+		t.Errorf("unified list golden must contain [not in library] for registry clone item, view:\n%s", view)
+	}
+	requireGolden(t, "library-unified-list-80x30", view)
+}
+
+// ── Slice 2: filter chips ──────────────────────────────────────────────────
+
+// TestLibraryFilter_AllShowsEverything verifies the default (All) filter shows all items.
+func TestLibraryFilter_AllShowsEverything(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	if l.table.Len() != 3 {
+		t.Errorf("filterAll: want 3 items, got %d", l.table.Len())
+	}
+}
+
+// TestLibraryFilter_NotInLibraryNarrows verifies filterNotInLibrary shows only Registry Clone items.
+func TestLibraryFilter_NotInLibraryNarrows(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	l.setFilter(filterNotInLibrary)
+	if l.table.Len() != 1 {
+		t.Errorf("filterNotInLibrary: want 1 item, got %d", l.table.Len())
+	}
+	sel := l.table.Selected()
+	if sel == nil || sel.Registry == "" || sel.Library {
+		t.Errorf("filterNotInLibrary: selected item must be Registry Clone, got %v", sel)
+	}
+}
+
+// TestLibraryFilter_InLibraryNarrows verifies filterInLibrary shows only Library items.
+func TestLibraryFilter_InLibraryNarrows(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	l.setFilter(filterInLibrary)
+	if l.table.Len() != 1 {
+		t.Errorf("filterInLibrary: want 1 item, got %d", l.table.Len())
+	}
+	sel := l.table.Selected()
+	if sel == nil || !sel.Library {
+		t.Errorf("filterInLibrary: selected must be Library item, got %v", sel)
+	}
+}
+
+// TestLibraryFilter_ProjectNarrows verifies filterProject shows only Project Content items.
+func TestLibraryFilter_ProjectNarrows(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	l.setFilter(filterProject)
+	if l.table.Len() != 1 {
+		t.Errorf("filterProject: want 1 item, got %d", l.table.Len())
+	}
+	sel := l.table.Selected()
+	if sel == nil || sel.Library || sel.Registry != "" {
+		t.Errorf("filterProject: selected must be Project Content, got %v", sel)
+	}
+}
+
+// TestLibraryFilter_ChipKeyActivates verifies pressing 'f' cycles the active filter chip.
+func TestLibraryFilter_ChipKeyActivates(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	// Default filter is filterAll. First 'f' press → filterInLibrary.
+	l, _ = l.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	if l.filter != filterInLibrary {
+		t.Errorf("after one 'f': want filterInLibrary (%d), got %d", filterInLibrary, l.filter)
+	}
+	// Second press → filterNotInLibrary.
+	l, _ = l.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
+	if l.filter != filterNotInLibrary {
+		t.Errorf("after two 'f': want filterNotInLibrary (%d), got %d", filterNotInLibrary, l.filter)
+	}
+}
+
+// TestLibraryFilter_MouseChipClick verifies clicking the "Not in Library" chip zone
+// activates filterNotInLibrary. Must not use t.Parallel — uses bubblezone singleton.
+func TestLibraryFilter_MouseChipClick(t *testing.T) {
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	scanZones(l.View())
+	z := zone.Get("lib-filter-not-in-library")
+	if z.IsZero() {
+		t.Skip("zone lib-filter-not-in-library not registered")
+	}
+	l, _ = l.updateMouse(mouseClick(z.StartX, z.StartY))
+	if l.filter != filterNotInLibrary {
+		t.Errorf("after chip click: want filterNotInLibrary (%d), got %d", filterNotInLibrary, l.filter)
+	}
+}
+
+// TestGoldenLibrary_FilterChipsRendered verifies the filter chip row is visible
+// in the Library browse view and the golden output matches the baseline.
+func TestGoldenLibrary_FilterChipsRendered(t *testing.T) {
+	app := testAppWithUnifiedLibraryCatalog(t, 80, 30)
+	view := snapshotApp(t, app)
+	stripped := ansi.Strip(view)
+	if !strings.Contains(stripped, "All") {
+		t.Errorf("filter chips must include 'All' chip, view:\n%s", stripped)
+	}
+	requireGolden(t, "library-filter-chips-80x30", view)
+}
+
+// ── Slice 3: metapanel Add/Add+Install buttons ─────────────────────────────
+
+// TestMetapanel_AddButtonsForRegistryClone verifies that a Registry Clone item
+// (Registry != "" && !Library) shows [a] Add and [i] Add + Install in the metapanel,
+// and does NOT show [e] Edit.
+func TestMetapanel_AddButtonsForRegistryClone(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:     "registry-skill",
+		Type:     catalog.Skills,
+		Registry: "test-registry",
+		Library:  false,
+		Files:    []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 20)
+	view := ansi.Strip(l.View())
+	if !strings.Contains(view, "[a] Add") {
+		t.Errorf("Registry Clone metapanel must contain [a] Add, view:\n%s", view)
+	}
+	if !strings.Contains(view, "[i] Add + Install") {
+		t.Errorf("Registry Clone metapanel must contain [i] Add + Install, view:\n%s", view)
+	}
+	if strings.Contains(view, "[e] Edit") {
+		t.Errorf("Registry Clone metapanel must NOT contain [e] Edit, view:\n%s", view)
+	}
+}
+
+// TestMetapanel_EditButtonForLibraryItem verifies that a Library item (Library == true)
+// shows [e] Edit and does NOT show add buttons.
+func TestMetapanel_EditButtonForLibraryItem(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:    "local-skill",
+		Type:    catalog.Skills,
+		Library: true,
+		Files:   []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 20)
+	view := ansi.Strip(l.View())
+	if !strings.Contains(view, "[e] Edit") {
+		t.Errorf("Library item metapanel must contain [e] Edit, view:\n%s", view)
+	}
+	if strings.Contains(view, "[a] Add") {
+		t.Errorf("Library item metapanel must NOT contain [a] Add, view:\n%s", view)
+	}
+}
+
+// TestMetapanel_NoAddButtonsForProjectContent verifies that Project Content
+// (Registry == "" && !Library) shows neither [a] Add nor [i] Add + Install.
+func TestMetapanel_NoAddButtonsForProjectContent(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:    "shared-rule",
+		Type:    catalog.Rules,
+		Library: false,
+		// Registry intentionally empty — Project Content
+		Files: []string{"rule.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 20)
+	view := ansi.Strip(l.View())
+	if strings.Contains(view, "[a] Add") {
+		t.Errorf("Project Content metapanel must NOT contain [a] Add, view:\n%s", view)
+	}
+	if strings.Contains(view, "[i] Add + Install") {
+		t.Errorf("Project Content metapanel must NOT contain [i] Add + Install, view:\n%s", view)
+	}
+}
+
+// TestLibraryAddMsg_EmittedOnKeyA verifies that pressing 'a' on a Registry
+// Clone item emits libraryAddMsg (not the add wizard).
+func TestLibraryAddMsg_EmittedOnKeyA(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:     "registry-skill",
+		Type:     catalog.Skills,
+		Registry: "test-registry",
+		Library:  false,
+		Files:    []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 20)
+	_, cmd := l.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	if cmd == nil {
+		t.Fatal("pressing 'a' on Registry Clone must emit a cmd")
+	}
+	if _, ok := cmd().(libraryAddMsg); !ok {
+		t.Errorf("pressing 'a' on Registry Clone must emit libraryAddMsg, got %T", cmd())
+	}
+}
+
+// TestLibraryAddInstallMsg_EmittedOnKeyI verifies that pressing 'i' on a
+// Registry Clone item emits libraryAddInstallMsg.
+func TestLibraryAddInstallMsg_EmittedOnKeyI(t *testing.T) {
+	t.Parallel()
+	item := catalog.ContentItem{
+		Name:     "registry-skill",
+		Type:     catalog.Skills,
+		Registry: "test-registry",
+		Library:  false,
+		Files:    []string{"SKILL.md"},
+	}
+	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
+	l.SetSize(80, 20)
+	_, cmd := l.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'i'}})
+	if cmd == nil {
+		t.Fatal("pressing 'i' on Registry Clone must emit a cmd")
+	}
+	if _, ok := cmd().(libraryAddInstallMsg); !ok {
+		t.Errorf("pressing 'i' on Registry Clone must emit libraryAddInstallMsg, got %T", cmd())
+	}
+}

@@ -226,8 +226,25 @@ var registryAddCmd = &cobra.Command{
 			}
 		}
 
+		// One-time next-steps hint so the user knows to browse/install content.
+		freshCfgForHint, _ := config.LoadGlobal()
+		if shouldShowRegistryAddHint(freshCfgForHint) {
+			fmt.Fprintf(output.Writer, "\nTip: registry content is now visible with `syllago list --source registry`.\n")
+			fmt.Fprintf(output.Writer, "     Install items with `syllago add <name> --from %s`.\n", outcome.Registry.Name)
+		}
+
 		return nil
 	},
+}
+
+// shouldShowRegistryAddHint reports whether the registry-add next-steps hint
+// should be printed. It returns false when the user has previously dismissed
+// the hint (hints.registry_add_dismissed=true in global config preferences).
+func shouldShowRegistryAddHint(cfg *config.Config) bool {
+	if cfg == nil {
+		return true
+	}
+	return cfg.Preferences["hints.registry_add_dismissed"] != "true"
 }
 
 // classifyAddError maps the orchestrator's sentinel errors to the CLI's

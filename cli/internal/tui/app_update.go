@@ -37,6 +37,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.tofu.height = ch
 		a.trustInspector.SetSize(msg.Width, ch)
 		a.telemetryConsent.SetSize(msg.Width, ch)
+		a.hint.SetSize(msg.Width, ch)
 		a.configSettings.SetSize(msg.Width, ch)
 		a.configSystem.SetSize(msg.Width, ch)
 		a.configSandbox.SetSize(msg.Width, ch)
@@ -115,6 +116,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.trustInspector.active {
 			var cmd tea.Cmd
 			a.trustInspector, cmd = a.trustInspector.Update(msg)
+			return a, cmd
+		}
+		if a.hint.active {
+			var cmd tea.Cmd
+			a.hint, cmd = a.hint.Update(msg)
 			return a, cmd
 		}
 		if a.help.active {
@@ -229,6 +235,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var cmd tea.Cmd
 			a.trustInspector, cmd = a.trustInspector.Update(msg)
+			return a, cmd
+		}
+
+		// Hint modal captures all key input when active (except ctrl+c)
+		if a.hint.active {
+			if msg.Type == tea.KeyCtrlC {
+				return a, tea.Quit
+			}
+			var cmd tea.Cmd
+			a.hint, cmd = a.hint.Update(msg)
 			return a, cmd
 		}
 
@@ -533,6 +549,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case registryRemoveDoneMsg:
 		return a.handleRegistryRemoveDone(msg)
 
+	case openHintModalMsg:
+		a.hint.Open()
+		return a, nil
+	case hintDismissedMsg:
+		return a.handleHintDismissed()
+
 	case tabChangedMsg:
 		a.galleryDrillIn = false
 		a.refreshContent()
@@ -577,6 +599,12 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case libraryInstallMsg:
 		return a.handleInstall()
+
+	case libraryAddMsg:
+		return a.handleLibraryAdd(msg.item)
+
+	case libraryAddInstallMsg:
+		return a.handleLibraryAddInstall(msg.item)
 
 	case libraryRemoveMsg:
 		return a.handleRemove()

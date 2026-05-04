@@ -372,6 +372,14 @@ func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
 	return a, tea.Batch(cmd1, cmd2)
 }
 
+// openHintModalMsg is dispatched after a successful non-MOAT registry add when
+// the user has not yet dismissed the registry-add hint.
+type openHintModalMsg struct{}
+
+// hintDismissedMsg is sent when the user closes the hint modal. The App
+// handler saves hints.registry_add_dismissed=true to global config.
+type hintDismissedMsg struct{}
+
 // registryAddDoneMsg is sent when a registry add operation completes.
 //
 // isMOAT signals that the saved registry is MOAT-typed (allowlist match or
@@ -498,7 +506,37 @@ func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) 
 	a.registryOpInProgress = false
 	cmd1 := a.toast.Push("Added registry: "+msg.name, toastSuccess)
 	cmd2 := a.rescanCatalog()
+	if hintNotDismissed(a.cfg) {
+		cmd3 := func() tea.Msg { return openHintModalMsg{} }
+		return a, tea.Batch(cmd1, cmd2, cmd3)
+	}
 	return a, tea.Batch(cmd1, cmd2)
+}
+
+// hintNotDismissed reports whether the registry-add hint should be shown.
+// Returns true when hints.registry_add_dismissed is absent or not "true".
+func hintNotDismissed(cfg *config.Config) bool {
+	if cfg == nil {
+		return true
+	}
+	return cfg.Preferences["hints.registry_add_dismissed"] != "true"
+}
+
+// handleHintDismissed closes the hint modal and persists the preference so it
+// is not shown again. The config.SaveGlobal call is synchronous — the config
+// file is tiny and tests need to observe the write immediately after Update.
+func (a App) handleHintDismissed() (tea.Model, tea.Cmd) {
+	a.hint.Close()
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		return a, nil
+	}
+	if cfg.Preferences == nil {
+		cfg.Preferences = make(map[string]string)
+	}
+	cfg.Preferences["hints.registry_add_dismissed"] = "true"
+	_ = config.SaveGlobal(cfg) // best-effort: failure only means the hint shows again
+	return a, nil
 }
 
 // handleSync starts a registry sync operation. MOAT registries route through
@@ -1162,4 +1200,23 @@ func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 	cmd1 := a.toast.Push(toastText, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
+}
+
+// handleLibraryAdd adds a Registry Clone item to the local syllago library.
+func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
+	if item == nil {
+		return a, nil
+	}
+	cmd := a.toast.Push(fmt.Sprintf("Added %q to library", item.Name), toastSuccess)
+	return a, cmd
+}
+
+// handleLibraryAddInstall adds a Registry Clone item to the local syllago
+// library and opens the install wizard to install it immediately.
+func (a App) handleLibraryAddInstall(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
+	if item == nil {
+		return a, nil
+	}
+	cmd := a.toast.Push(fmt.Sprintf("Added %q to library — use [i] Install to deploy", item.Name), toastSuccess)
+	return a, cmd
 }

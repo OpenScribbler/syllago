@@ -89,6 +89,7 @@ type App struct {
 	tofu             tofuModal             // MOAT trust-on-first-use approval overlay
 	trustInspector   trustInspectorModel   // reusable trust inspector (library + registries)
 	telemetryConsent telemetryConsentModal // first-run opt-in disclosure
+	hint             hintModal             // one-time registry-add next-steps guide
 
 	// Config group sub-models
 	configSettings settingsModel
@@ -186,6 +187,7 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		tofu:             newTOFUModal(),
 		trustInspector:   newTrustInspectorModel(),
 		telemetryConsent: consent,
+		hint:             newHintModal(),
 
 		moatSession: moat.NewSession(),
 		moatMinTier: moat.TrustTierUnsigned,

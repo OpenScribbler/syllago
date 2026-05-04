@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -34,6 +35,7 @@ By default, lists all content grouped by type. Use flags to filter.`,
 func init() {
 	listCmd.Flags().String("source", "all", "Filter by source: library, shared, registry, builtin, all")
 	listCmd.Flags().String("type", "", "Filter to one content type (e.g., skills, rules)")
+	listCmd.Flags().StringSlice("filter", nil, "Filter by item state (repeatable): in-library, not-in-library, project")
 	rootCmd.AddCommand(listCmd)
 }
 
@@ -65,6 +67,15 @@ func runList(cmd *cobra.Command, args []string) error {
 
 	sourceFilter, _ := cmd.Flags().GetString("source")
 	typeFilter, _ := cmd.Flags().GetString("type")
+	rawStates, _ := cmd.Flags().GetStringSlice("filter")
+
+	// Strip empty strings left by test cleanup (defer Set("filter", "")).
+	var filterStates []string
+	for _, s := range rawStates {
+		if s != "" {
+			filterStates = append(filterStates, s)
+		}
+	}
 
 	projectRoot, _ := findProjectRoot()
 	if projectRoot == "" {
@@ -87,6 +98,9 @@ func runList(cmd *cobra.Command, args []string) error {
 		var items []listItem
 		for _, item := range cat.ByType(ct) {
 			if !filterBySource(item, sourceFilter) {
+				continue
+			}
+			if len(filterStates) > 0 && !filterByState(item, filterStates) {
 				continue
 			}
 			badge := catalog.UserFacingBadge(item.TrustTier, item.Revoked)
@@ -117,6 +131,9 @@ func runList(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("source_filter", sourceFilter)
 	telemetry.Enrich("content_type", typeFilter)
 	telemetry.Enrich("item_count", totalItems)
+	if len(filterStates) > 0 {
+		telemetry.Enrich("filter", strings.Join(filterStates, ","))
+	}
 
 	if output.JSON {
 		output.Print(result)

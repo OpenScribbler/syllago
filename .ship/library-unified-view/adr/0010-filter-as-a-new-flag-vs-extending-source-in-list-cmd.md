@@ -1,7 +1,7 @@
 # 0010. --filter as a new flag vs. extending --source in list_cmd
 
 Date: 2026-05-02
-Status: Proposed
+Status: Accepted
 Feature: library-unified-view
 
 ## Context

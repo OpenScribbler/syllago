@@ -7,9 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
 // isolateListEnv blocks global-config and registry-cache leakage into list
@@ -246,4 +248,157 @@ func TestListJSON_NoTrustBadgeForPlainItems(t *testing.T) {
 	if len(result.Groups) == 0 {
 		t.Fatal("expected at least one group in JSON output")
 	}
+}
+
+// ── Slice 4: --filter state-based filtering ───────────────────────────────
+
+// TestFilterByState_InLibrary verifies filterByState("in-library") passes only Library items.
+func TestFilterByState_InLibrary(t *testing.T) {
+	t.Parallel()
+	lib := catalog.ContentItem{Name: "lib-skill", Library: true}
+	clone := catalog.ContentItem{Name: "clone-skill", Registry: "reg", Library: false}
+	proj := catalog.ContentItem{Name: "proj-rule", Library: false}
+
+	if !filterByState(lib, []string{"in-library"}) {
+		t.Error("in-library: Library item should pass")
+	}
+	if filterByState(clone, []string{"in-library"}) {
+		t.Error("in-library: Registry Clone should not pass")
+	}
+	if filterByState(proj, []string{"in-library"}) {
+		t.Error("in-library: Project Content should not pass")
+	}
+}
+
+// TestFilterByState_NotInLibrary verifies filterByState("not-in-library") passes only Registry Clone items.
+func TestFilterByState_NotInLibrary(t *testing.T) {
+	t.Parallel()
+	lib := catalog.ContentItem{Name: "lib-skill", Library: true}
+	clone := catalog.ContentItem{Name: "clone-skill", Registry: "reg", Library: false}
+	proj := catalog.ContentItem{Name: "proj-rule", Library: false}
+
+	if filterByState(lib, []string{"not-in-library"}) {
+		t.Error("not-in-library: Library item should not pass")
+	}
+	if !filterByState(clone, []string{"not-in-library"}) {
+		t.Error("not-in-library: Registry Clone should pass")
+	}
+	if filterByState(proj, []string{"not-in-library"}) {
+		t.Error("not-in-library: Project Content should not pass")
+	}
+}
+
+// TestFilterByState_Project verifies filterByState("project") passes only Project Content items.
+func TestFilterByState_Project(t *testing.T) {
+	t.Parallel()
+	lib := catalog.ContentItem{Name: "lib-skill", Library: true}
+	clone := catalog.ContentItem{Name: "clone-skill", Registry: "reg", Library: false}
+	proj := catalog.ContentItem{Name: "proj-rule", Library: false}
+
+	if filterByState(lib, []string{"project"}) {
+		t.Error("project: Library item should not pass")
+	}
+	if filterByState(clone, []string{"project"}) {
+		t.Error("project: Registry Clone should not pass")
+	}
+	if !filterByState(proj, []string{"project"}) {
+		t.Error("project: Project Content should pass")
+	}
+}
+
+// TestFilterByState_MultipleStates verifies filterByState acts as OR across multiple states.
+func TestFilterByState_MultipleStates(t *testing.T) {
+	t.Parallel()
+	lib := catalog.ContentItem{Name: "lib-skill", Library: true}
+	clone := catalog.ContentItem{Name: "clone-skill", Registry: "reg", Library: false}
+	proj := catalog.ContentItem{Name: "proj-rule", Library: false}
+
+	states := []string{"in-library", "project"}
+	if !filterByState(lib, states) {
+		t.Error("in-library+project: Library item should pass")
+	}
+	if filterByState(clone, states) {
+		t.Error("in-library+project: Registry Clone should not pass")
+	}
+	if !filterByState(proj, states) {
+		t.Error("in-library+project: Project Content should pass")
+	}
+}
+
+// TestRunList_FilterFlag_NotInLibrary verifies --filter not-in-library shows Registry Clone items.
+func TestRunList_FilterFlag_NotInLibrary(t *testing.T) {
+	const regName = "test-org/filter-test-registry"
+
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	setupRegistryClone(t, cacheDir, regName)
+
+	root := setupProjectWithRegistry(t, regName)
+	withFakeRepoRoot(t, root)
+
+	origCfgDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfgDir })
+
+	stdout, _ := output.SetForTest(t)
+
+	listCmd.Flags().Set("filter", "not-in-library")
+	defer listCmd.Flags().Set("filter", "")
+
+	if err := listCmd.RunE(listCmd, []string{}); err != nil {
+		t.Fatalf("list --filter not-in-library: %v", err)
+	}
+
+	out := stdout.String()
+	// Registry clone items from the test registry should appear.
+	if !strings.Contains(out, "canary-skill") && !strings.Contains(out, "probe-skill") {
+		t.Errorf("--filter not-in-library must show registry clone items, got:\n%s", out)
+	}
+}
+
+// TestRunList_FilterFlag_Combined verifies multiple --filter values act as OR.
+func TestRunList_FilterFlag_Combined(t *testing.T) {
+	root := setupListRepo(t)
+	withFakeRepoRoot(t, root)
+	withGlobalLibrary(t, t.TempDir())
+	isolateListEnv(t)
+
+	stdout, _ := output.SetForTest(t)
+
+	// --filter project shows Project Content (shared items in setupListRepo).
+	// --filter in-library with empty library shows nothing; combined result = just project.
+	listCmd.Flags().Set("filter", "in-library")
+	listCmd.Flags().Set("filter", "project")
+	defer listCmd.Flags().Set("filter", "")
+
+	if err := listCmd.RunE(listCmd, []string{}); err != nil {
+		t.Fatalf("list --filter in-library --filter project: %v", err)
+	}
+
+	out := stdout.String()
+	// All items in setupListRepo are "project" (shared), so they should appear.
+	if !strings.Contains(out, "code-review") {
+		t.Errorf("combined filter must include project items, got:\n%s", out)
+	}
+}
+
+// TestTelemetryCatalog_FilterPropertyPresent verifies the telemetry catalog
+// contains a "filter" property for the "list" command.
+func TestTelemetryCatalog_FilterPropertyPresent(t *testing.T) {
+	t.Parallel()
+	for _, ev := range telemetry.EventCatalog() {
+		for _, prop := range ev.Properties {
+			if prop.Name == "filter" {
+				for _, cmd := range prop.Commands {
+					if cmd == "list" {
+						return
+					}
+				}
+			}
+		}
+	}
+	t.Error("telemetry EventCatalog must contain 'filter' property with 'list' in Commands")
 }

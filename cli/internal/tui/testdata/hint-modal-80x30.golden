@@ -5,23 +5,23 @@
 │                                                            [a] Add content   │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ fresh-rule                                Type: Rule      Files: 1           │
-│ Scope: global    Registry: not in a registry                                 │
-│                                                                              │
-│ Trust: Unknown        Visibility: Public          [d] Remove      [e] Edit   │
-├──────────────────────────────────────────────────────────────────────────────┤
 │All  In Library  Not in Library  Project                                      │
-│   Tr Name ▲               Type     Scope        Files Installed              │
-│ >    fresh-rule           Rule     library      1     --                     │
-│      installed-rule       Rule     library      1     ✓                      │
 │                                                                              │
 │                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
-│                                                                              │
+│           ╭──────────────────────────────────────────────────────╮           │
+│           │                                                      │           │
+│           │                   Registry Added!                    │           │
+│           │                                                      │           │
+│           │  Content is now visible in the Library under         │           │
+│           │  "not in library" entries.                           │           │
+│           │                                                      │           │
+│           │  Browse:  syllago list --source registry             │           │
+│           │  Install: syllago add <name> --from <reg>            │           │
+│           │  TUI:     switch to Content [2] to browse            │           │
+│           │                                                      │           │
+│           │                        Got it                        │           │
+│           │                                                      │           │
+│           ╰──────────────────────────────────────────────────────╯           │
 │                                                                              │
 │                                                                              │
 │                                                                              │

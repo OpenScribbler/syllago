@@ -10,6 +10,7 @@
 │                                                                                                                      │
 │ Trust: Unknown        Visibility: Public                                                  [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│All  In Library  Not in Library  Project                                                                              │
 │   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │ >    alpha-skill            Skill     team-rules   1     --                                                          │
 │      beta-skill             Skill     team-rules   1     --                                                          │
@@ -18,7 +19,6 @@
 │      eta-command            Command   team-rules   1     --                                                          │
 │      gamma-rule             Rule      library      1     --                                                          │
 │      zeta-mcp               MCP       library      1     --                                                          │
-│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │

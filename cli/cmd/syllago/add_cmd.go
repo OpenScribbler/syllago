@@ -70,6 +70,8 @@ func init() {
 	// can pin a Sigstore trusted_root.json per-invocation. Takes precedence
 	// over registry.trusted_root in config.json. Absolute path only.
 	addCmd.Flags().String("trusted-root", "", "Path to Sigstore trusted_root.json (overrides registry config and the bundled default)")
+	addCmd.Flags().Bool("install", false, "Install added items immediately after adding (requires --to)")
+	addCmd.Flags().String("to", "", "Target provider for --install")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -145,6 +147,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 			return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 		}
 		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
+	}
+
+	installFlag, _ := cmd.Flags().GetBool("install")
+	installTo, _ := cmd.Flags().GetString("to")
+	if installFlag && installTo == "" {
+		slugs := providerSlugs()
+		return output.NewStructuredError(output.ErrInputMissing, "--to is required with --install", "Available providers: "+strings.Join(slugs, ", "))
 	}
 
 	baseDir, _ := cmd.Flags().GetString("base-dir")
@@ -240,54 +249,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter by type when a positional arg is provided (and it's not --all).
-	if typeStr != "" {
-		ct := catalog.ContentType(typeStr)
-		// Validate the type.
-		valid := false
-		for _, known := range catalog.AllContentTypes() {
-			if ct == known {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			var typeNames []string
-			for _, t := range catalog.AllContentTypes() {
-				typeNames = append(typeNames, string(t))
-			}
-			return output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
-		}
-
-		var filtered []add.DiscoveryItem
-		for _, item := range items {
-			if item.Type == ct {
-				filtered = append(filtered, item)
-			}
-		}
-		items = filtered
-
-		// If a specific name was requested, further filter.
-		if nameFilter != "" {
-			var nameFiltered []add.DiscoveryItem
-			for _, item := range items {
-				if item.Name == nameFilter {
-					nameFiltered = append(nameFiltered, item)
-				}
-			}
-			if len(nameFiltered) == 0 {
-				// Build list of available names for the error message.
-				var available []string
-				for _, item := range items {
-					available = append(available, item.Name)
-				}
-				availStr := strings.Join(available, ", ")
-				if availStr == "" {
-					availStr = "(none found)"
-				}
-				return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, prov.Name), "Available "+typeStr+": "+availStr)
-			}
-			items = nameFiltered
-		}
+	items, err = filterDiscoveryItems(items, typeStr, nameFilter, prov.Name)
+	if err != nil {
+		return err
 	}
 
 	// Build the canonicalizer adapter for this content type.
@@ -313,7 +277,104 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("content_type", typeStr)
 	telemetry.Enrich("content_count", len(results))
 	telemetry.Enrich("dry_run", dryRun)
+	telemetry.Enrich("install", installFlag)
+
+	if installFlag && installTo != "" && !dryRun {
+		if err := chainInstallAfterAdd(results, installTo, globalDir, root); err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: install after add: %v\n", err)
+		}
+	}
+
 	return printAddResults(results, dryRun, prov.Name)
+}
+
+// chainInstallAfterAdd installs items that were successfully added to the
+// global library into the named target provider. Called when --install is set.
+func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoot string) error {
+	prov := findProviderBySlug(toSlug)
+	if prov == nil {
+		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(providerSlugs(), ", "))
+	}
+
+	// Collect names and types of items that were actually added this run.
+	type nameType struct {
+		name string
+		ct   catalog.ContentType
+	}
+	addedSet := make(map[nameType]bool)
+	for _, r := range results {
+		if r.Status == add.AddStatusAdded {
+			addedSet[nameType{r.Name, r.Type}] = true
+		}
+	}
+	if len(addedSet) == 0 {
+		return nil // nothing new to install
+	}
+
+	globalCat, err := catalog.Scan(globalDir, globalDir)
+	if err != nil {
+		return fmt.Errorf("scanning library: %w", err)
+	}
+
+	for _, item := range globalCat.Items {
+		if addedSet[nameType{item.Name, item.Type}] {
+			if _, err := installer.Install(item, *prov, globalDir, installer.MethodSymlink, ""); err != nil {
+				fmt.Fprintf(output.ErrWriter, "Warning: install %s to %s: %v\n", item.Name, toSlug, err)
+			}
+		}
+	}
+	return nil
+}
+
+// filterDiscoveryItems filters a discovery list by content type and optional name.
+// Extracted from runAdd to keep its cyclomatic complexity below the gocyclo threshold.
+func filterDiscoveryItems(items []add.DiscoveryItem, typeStr, nameFilter, providerName string) ([]add.DiscoveryItem, error) {
+	if typeStr == "" {
+		return items, nil
+	}
+	ct := catalog.ContentType(typeStr)
+	valid := false
+	for _, known := range catalog.AllContentTypes() {
+		if ct == known {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		var typeNames []string
+		for _, t := range catalog.AllContentTypes() {
+			typeNames = append(typeNames, string(t))
+		}
+		return nil, output.NewStructuredError(output.ErrItemTypeUnknown, fmt.Sprintf("unknown content type %q", typeStr), "Available: "+strings.Join(typeNames, ", "))
+	}
+	var filtered []add.DiscoveryItem
+	for _, item := range items {
+		if item.Type == ct {
+			filtered = append(filtered, item)
+		}
+	}
+	items = filtered
+	if nameFilter == "" {
+		return items, nil
+	}
+	var nameFiltered []add.DiscoveryItem
+	for _, item := range items {
+		if item.Name == nameFilter {
+			nameFiltered = append(nameFiltered, item)
+		}
+	}
+	if len(nameFiltered) == 0 {
+		var available []string
+		for _, item := range items {
+			available = append(available, item.Name)
+		}
+		availStr := strings.Join(available, ", ")
+		if availStr == "" {
+			availStr = "(none found)"
+		}
+		return nil, output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no %s named %q found in %s", typeStr, nameFilter, providerName), "Available "+typeStr+": "+availStr)
+	}
+	return nameFiltered, nil
 }
 
 // converterAdapter adapts converter.Converter to the add.Canonicalizer interface.

@@ -150,6 +150,29 @@ func exportWarnMessage(item catalog.ContentItem) string {
 	return ""
 }
 
+// filterByState returns true if the item matches any of the given state strings.
+// States act as an OR: an item passes if it satisfies at least one state.
+// Valid states: "in-library", "not-in-library", "project".
+func filterByState(item catalog.ContentItem, states []string) bool {
+	for _, s := range states {
+		switch s {
+		case "in-library":
+			if item.Library {
+				return true
+			}
+		case "not-in-library":
+			if item.Registry != "" && !item.Library {
+				return true
+			}
+		case "project":
+			if !item.Library && item.Registry == "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // filterBySource returns true if the item matches the given source filter.
 // Valid source values: "library", "shared", "registry", "builtin", "all".
 func filterBySource(item catalog.ContentItem, source string) bool {

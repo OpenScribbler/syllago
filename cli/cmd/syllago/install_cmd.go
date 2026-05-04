@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -301,11 +302,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	if len(items) == 0 {
 		if len(args) == 1 {
-			hint := typeFilter
-			if hint == "" {
-				hint = "skills"
-			}
-			return output.NewStructuredError(output.ErrInstallItemNotFound, fmt.Sprintf("no item named %q found in your library", args[0]), "Hint: syllago list --type "+hint)
+			hint := registryAddHint(args[0], typeFilter, projectRoot)
+			return output.NewStructuredError(output.ErrInstallItemNotFound, fmt.Sprintf("no item named %q found in your library", args[0]), hint)
 		}
 		fmt.Fprintln(output.ErrWriter, "no items found in library matching filters")
 		return nil
@@ -649,4 +647,47 @@ func firstArg(args []string) string {
 		return args[0]
 	}
 	return "<name>"
+}
+
+// registryAddHint returns the best hint for a missing-item install error.
+// When the named item exists in a registry clone (but not the local library),
+// it names the exact `syllago add` command to add it. Otherwise it falls back
+// to the generic `syllago list --type` suggestion.
+func registryAddHint(itemName, typeFilter, projectRoot string) string {
+	fallback := "Hint: syllago list --type "
+	if typeFilter != "" {
+		fallback += typeFilter
+	} else {
+		fallback += "skills"
+	}
+
+	cfg, err := config.Load(projectRoot)
+	if err != nil || len(cfg.Registries) == 0 {
+		return fallback
+	}
+
+	var sources []catalog.RegistrySource
+	for _, r := range cfg.Registries {
+		if registry.IsCloned(r.Name) {
+			dir, err := registry.CloneDir(r.Name)
+			if err == nil {
+				sources = append(sources, catalog.RegistrySource{Name: r.Name, Path: dir})
+			}
+		}
+	}
+	if len(sources) == 0 {
+		return fallback
+	}
+
+	regCat, err := catalog.ScanRegistriesOnly(sources)
+	if err != nil {
+		return fallback
+	}
+
+	for _, item := range regCat.Items {
+		if item.Name == itemName {
+			return fmt.Sprintf("Hint: syllago add %s --from %s", itemName, item.Registry)
+		}
+	}
+	return fallback
 }

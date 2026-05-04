@@ -23,6 +23,28 @@ const (
 	libraryDetail                    // file tree + preview drill-in
 )
 
+// libraryFilter narrows the table to a subset of items by provenance state.
+type libraryFilter int
+
+const (
+	filterAll          libraryFilter = iota // all items (default)
+	filterInLibrary                         // Library == true
+	filterNotInLibrary                      // Registry != "" && !Library
+	filterProject                           // Registry == "" && !Library
+)
+
+// filterChips is the ordered list of (zone-id, label, filter value) for rendering.
+var filterChips = []struct {
+	id     string
+	label  string
+	filter libraryFilter
+}{
+	{"lib-filter-all", "All", filterAll},
+	{"lib-filter-in-library", "In Library", filterInLibrary},
+	{"lib-filter-not-in-library", "Not in Library", filterNotInLibrary},
+	{"lib-filter-project", "Project", filterProject},
+}
+
 // libraryDrillMsg is sent when the user drills into an item from the Library table.
 type libraryDrillMsg struct {
 	item *catalog.ContentItem
@@ -43,6 +65,18 @@ type libraryUninstallMsg struct{}
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
 
+// libraryAddMsg is emitted when the user requests to add a Registry Clone item
+// to the local library (pressing 'a' or clicking [a] Add in the metapanel).
+type libraryAddMsg struct {
+	item *catalog.ContentItem
+}
+
+// libraryAddInstallMsg is emitted when the user requests to add a Registry
+// Clone item AND immediately install it (pressing 'i' or clicking [i] Add + Install).
+type libraryAddInstallMsg struct {
+	item *catalog.ContentItem
+}
+
 // libraryTrustInspectMsg is sent when the user opens the Trust Inspector
 // for the currently selected library item (via [t] or clicking the Trust
 // field in the metapanel).
@@ -52,13 +86,15 @@ type libraryTrustInspectMsg struct {
 
 // libraryModel manages the Library tab: full-width table with drill-in detail view.
 type libraryModel struct {
-	table   tableModel
-	tree    fileTreeModel
-	preview previewModel
-	mode    libraryMode
-	focus   explorerPane // paneItems=tree, panePreview=preview (reuse enum)
-	width   int
-	height  int
+	table    tableModel
+	tree     fileTreeModel
+	preview  previewModel
+	mode     libraryMode
+	focus    explorerPane // paneItems=tree, panePreview=preview (reuse enum)
+	width    int
+	height   int
+	filter   libraryFilter
+	allItems []catalog.ContentItem // full unfiltered item list; filter is applied on top
 
 	// The item currently being viewed in detail
 	detailItem *catalog.ContentItem
@@ -73,9 +109,11 @@ type libraryModel struct {
 
 func newLibraryModel(items []catalog.ContentItem, provs []provider.Provider, repoRoot string) libraryModel {
 	return libraryModel{
-		table:   newTableModel(items, provs, repoRoot),
-		preview: newPreviewModel(),
-		mode:    libraryBrowse,
+		table:    newTableModel(items, provs, repoRoot),
+		preview:  newPreviewModel(),
+		mode:     libraryBrowse,
+		filter:   filterAll,
+		allItems: items,
 	}
 }
 
@@ -128,9 +166,48 @@ func (l *libraryModel) SetSize(width, height int) {
 
 // SetItems replaces the table data and returns to browse mode.
 func (l *libraryModel) SetItems(items []catalog.ContentItem) {
-	l.table.SetItems(items)
+	l.allItems = items
+	l.table.SetItems(l.applyFilter())
 	l.mode = libraryBrowse
 	l.detailItem = nil
+}
+
+// applyFilter returns the subset of allItems matching the current filter.
+func (l libraryModel) applyFilter() []catalog.ContentItem {
+	switch l.filter {
+	case filterInLibrary:
+		var out []catalog.ContentItem
+		for _, item := range l.allItems {
+			if item.Library {
+				out = append(out, item)
+			}
+		}
+		return out
+	case filterNotInLibrary:
+		var out []catalog.ContentItem
+		for _, item := range l.allItems {
+			if notInLibrary(item) {
+				out = append(out, item)
+			}
+		}
+		return out
+	case filterProject:
+		var out []catalog.ContentItem
+		for _, item := range l.allItems {
+			if !item.Library && item.Registry == "" {
+				out = append(out, item)
+			}
+		}
+		return out
+	default: // filterAll
+		return l.allItems
+	}
+}
+
+// setFilter updates the active filter and refreshes the table items.
+func (l *libraryModel) setFilter(f libraryFilter) {
+	l.filter = f
+	l.table.SetItems(l.applyFilter())
 }
 
 // SetVerification stores the D16 rule-append verification result on the
@@ -194,6 +271,19 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		if item := l.table.Selected(); item != nil {
 			return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
 		}
+	case keyAdd:
+		// 'a' on a Registry Clone item adds it to the local library.
+		if item := l.table.Selected(); item != nil && notInLibrary(*item) {
+			return l, func() tea.Msg { return libraryAddMsg{item: item} }
+		}
+	case keyInstall:
+		// 'i' on a Registry Clone item adds it AND installs it.
+		if item := l.table.Selected(); item != nil && notInLibrary(*item) {
+			return l, func() tea.Msg { return libraryAddInstallMsg{item: item} }
+		}
+	case keyFilter:
+		l.filter = (l.filter + 1) % libraryFilter(len(filterChips))
+		l.table.SetItems(l.applyFilter())
 	case keySearch:
 		l.table.StartSearch()
 	case "s":
@@ -320,6 +410,26 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 	if msg.Action == tea.MouseActionPress && msg.Button == tea.MouseButtonLeft {
 		switch l.mode {
 		case libraryBrowse:
+			// Filter chip clicks
+			for _, chip := range filterChips {
+				if zone.Get(chip.id).InBounds(msg) {
+					l.setFilter(chip.filter)
+					return l, nil
+				}
+			}
+
+			// Registry Clone add button clicks
+			if zone.Get("meta-add").InBounds(msg) {
+				if item := l.table.Selected(); item != nil {
+					return l, func() tea.Msg { return libraryAddMsg{item: item} }
+				}
+			}
+			if zone.Get("meta-add-install").InBounds(msg) {
+				if item := l.table.Selected(); item != nil {
+					return l, func() tea.Msg { return libraryAddInstallMsg{item: item} }
+				}
+			}
+
 			// Metadata bar button clicks
 			if zone.Get("meta-install").InBounds(msg) {
 				return l, func() tea.Msg { return libraryInstallMsg{} }
@@ -576,27 +686,56 @@ func (l libraryModel) View() string {
 // drawn by the view, not counted here.
 const metaBarLinesBase = 4
 
-// viewBrowse renders a unified panel: metadata section + separator + table.
+// renderFilterChips renders one line of filter state chips (All, In Library, etc.).
+// The active chip uses primaryColor+bold; inactive chips are muted+faint.
+// Each chip is zone-marked for mouse click handling.
+func (l libraryModel) renderFilterChips(innerW int) string {
+	var parts []string
+	for _, chip := range filterChips {
+		label := chip.label
+		var rendered string
+		if l.filter == chip.filter {
+			rendered = activeFilterChipStyle.Render(label)
+		} else {
+			rendered = inactiveFilterChipStyle.Render(label)
+		}
+		parts = append(parts, zone.Mark(chip.id, rendered))
+	}
+	row := strings.Join(parts, "  ")
+	visW := lipgloss.Width(row)
+	if gap := innerW - visW; gap > 0 {
+		row += strings.Repeat(" ", gap)
+	}
+	return row
+}
+
+// viewBrowse renders a unified panel: metadata section + separator + filter chips + table.
 func (l libraryModel) viewBrowse() string {
 	l.table.focused = true
 	innerW := l.width - borderSize
 	innerH := l.height - borderSize
 
+	chipLines := 1
+
 	if l.table.Len() == 0 {
-		l.table.SetSize(innerW, innerH)
-		return borderedPanel(l.table.View(), innerW, innerH, focusedBorderFg)
+		tableH := max(3, innerH-chipLines)
+		l.table.SetSize(innerW, tableH)
+		chipRow := l.renderFilterChips(innerW)
+		content := chipRow + "\n" + l.table.View()
+		return borderedPanel(content, innerW, innerH, focusedBorderFg)
 	}
 
-	// metadata (3-5 lines) + separator (1 line) + table (rest)
+	// metadata (3-5 lines) + separator (1 line) + chips (1 line) + table (rest)
 	sepLines := 1
-	tableH := max(3, innerH-l.metaBarLines()-sepLines)
+	tableH := max(3, innerH-l.metaBarLines()-sepLines-chipLines)
 	l.table.SetSize(innerW, tableH)
 
 	metaContent := l.renderMetadataContent(innerW)
 	separator := sectionRuleStyle.Render("├" + strings.Repeat("─", innerW) + "┤")
+	chipRow := l.renderFilterChips(innerW)
 	tableContent := l.table.View()
 
-	// Build unified panel manually: top border + meta + separator + table + bottom border
+	// Build unified panel manually: top border + meta + separator + chips + table + bottom border
 	topBorder := sectionRuleStyle.Render("╭" + strings.Repeat("─", innerW) + "╮")
 	bottomBorder := sectionRuleStyle.Render("╰" + strings.Repeat("─", innerW) + "╯")
 
@@ -615,6 +754,7 @@ func (l libraryModel) viewBrowse() string {
 		lines = append(lines, wrapLine(ml))
 	}
 	lines = append(lines, separator)
+	lines = append(lines, wrapLine(chipRow))
 	for _, tl := range strings.Split(tableContent, "\n") {
 		lines = append(lines, wrapLine(tl))
 	}

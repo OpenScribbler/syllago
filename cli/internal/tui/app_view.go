@@ -40,6 +40,9 @@ func (a App) View() string {
 	if a.trustInspector.active {
 		content = overlayModal(content, a.trustInspector.View(), a.width, a.contentHeight())
 	}
+	if a.hint.active {
+		content = overlayModal(content, a.hint.View(), a.width, a.contentHeight())
+	}
 	if a.help.active {
 		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
 	}

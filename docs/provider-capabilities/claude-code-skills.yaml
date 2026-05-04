@@ -22,7 +22,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: disable_model_invocation
       supported: true
-      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false)'
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false); also prevents the skill from being preloaded into subagents via the skills frontmatter field'
       source_field: ""
       source_value: ""
       confidence: confirmed

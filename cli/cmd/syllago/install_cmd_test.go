@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // setupGlobalLibrary creates a temp dir structured as a ~/.syllago/content
@@ -546,5 +548,98 @@ func TestInstallToAllDryRun(t *testing.T) {
 func TestInstallFlagsRegisteredToAll(t *testing.T) {
 	if installCmd.Flags().Lookup("to-all") == nil {
 		t.Error("expected --to-all flag to be registered on installCmd")
+	}
+}
+
+// ── Slice 6: install error suggestion names the add command ───────────────
+
+// TestInstall_RegistryOnlyItemSuggestion verifies that when the requested item
+// is present in a registry clone but not in the local library, the install
+// error suggestion names `syllago add <item> --from <registry>` so the user
+// knows exactly what command to run next.
+func TestInstall_RegistryOnlyItemSuggestion(t *testing.T) {
+	const regName = "test-org/sug-registry"
+
+	// Set up registry cache with a skill item.
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	setupRegistryClone(t, cacheDir, regName)
+
+	// Set up project with registry config pointing to regName.
+	root := setupProjectWithRegistry(t, regName)
+	withFakeRepoRoot(t, root)
+
+	// Empty global library — item is in registry only.
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+
+	// Isolate global config so ~/.syllago is not read.
+	origCfgDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfgDir })
+
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+
+	err := installCmd.RunE(installCmd, []string{"canary-skill"})
+	if err == nil {
+		t.Fatal("expected error when item is in registry only")
+	}
+
+	se, ok := err.(output.StructuredError)
+	if !ok {
+		t.Fatalf("expected output.StructuredError, got %T: %v", err, err)
+	}
+	if !strings.Contains(se.Suggestion, "syllago add") {
+		t.Errorf("suggestion should contain 'syllago add', got: %q", se.Suggestion)
+	}
+	if !strings.Contains(se.Suggestion, "canary-skill") {
+		t.Errorf("suggestion should mention item name 'canary-skill', got: %q", se.Suggestion)
+	}
+	if !strings.Contains(se.Suggestion, regName) {
+		t.Errorf("suggestion should mention registry %q, got: %q", regName, se.Suggestion)
+	}
+}
+
+// TestInstall_NonExistentItemFallbackSuggestion verifies that when the item
+// does not exist anywhere (not in library, not in any registry clone), the
+// existing generic hint (syllago list --type) is preserved without regression.
+func TestInstall_NonExistentItemFallbackSuggestion(t *testing.T) {
+	// Empty global library.
+	globalDir := setupGlobalLibrary(t)
+	withGlobalLibrary(t, globalDir)
+
+	// Isolate registry cache so no registry clones are visible.
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = t.TempDir()
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	origCfgDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfgDir })
+
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "claude-code")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("type", "skills")
+	defer installCmd.Flags().Set("type", "")
+
+	err := installCmd.RunE(installCmd, []string{"truly-nonexistent-item"})
+	if err == nil {
+		t.Fatal("expected error when item is not found anywhere")
+	}
+
+	se, ok := err.(output.StructuredError)
+	if !ok {
+		t.Fatalf("expected output.StructuredError, got %T: %v", err, err)
+	}
+	if !strings.Contains(se.Suggestion, "syllago list") {
+		t.Errorf("fallback hint should mention 'syllago list', got: %q", se.Suggestion)
 	}
 }

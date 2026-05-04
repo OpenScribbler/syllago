@@ -10,10 +10,10 @@
 │                                                                                                                      │
 │ Trust: Unknown        Visibility: Public                                                  [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│All  In Library  Not in Library  Project                                                                              │
 │   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │ >    fresh-rule             Rule      library      1     --                                                          │
 │      installed-rule         Rule      library      1     ✓                                                           │
-│                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
 │                                                                                                                      │
