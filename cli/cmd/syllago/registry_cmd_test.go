@@ -619,6 +619,28 @@ func TestReprobeRegistryVisibility_ManifestStricterWins(t *testing.T) {
 	}
 }
 
+// --- Slice 7: registry-add hint ---
+
+// TestRegistryCmd_HintPrintedOnFirstAdd verifies that shouldShowRegistryAddHint
+// returns true when hints.registry_add_dismissed is absent.
+func TestRegistryCmd_HintPrintedOnFirstAdd(t *testing.T) {
+	cfg := &config.Config{} // no preferences
+	if !shouldShowRegistryAddHint(cfg) {
+		t.Error("expected shouldShowRegistryAddHint=true when preference is absent")
+	}
+}
+
+// TestRegistryCmd_HintSuppressedAfterDismiss verifies that shouldShowRegistryAddHint
+// returns false when hints.registry_add_dismissed is "true".
+func TestRegistryCmd_HintSuppressedAfterDismiss(t *testing.T) {
+	cfg := &config.Config{
+		Preferences: map[string]string{"hints.registry_add_dismissed": "true"},
+	}
+	if shouldShowRegistryAddHint(cfg) {
+		t.Error("expected shouldShowRegistryAddHint=false when preference is dismissed")
+	}
+}
+
 var errProbeFailed = &probeErr{msg: "probe failed"}
 
 type probeErr struct{ msg string }

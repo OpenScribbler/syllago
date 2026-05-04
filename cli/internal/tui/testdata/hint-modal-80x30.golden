@@ -1,0 +1,30 @@
+╭──syllago────────────────────────────────────────────────────────────────[?]──╮
+│               [1] Collections      [2] Content      [3] Config               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│   Library     Registries     Loadouts                                        │
+│                                                            [a] Add content   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│All  In Library  Not in Library  Project                                      │
+│                                                                              │
+│                                                                              │
+│           ╭──────────────────────────────────────────────────────╮           │
+│           │                                                      │           │
+│           │                   Registry Added!                    │           │
+│           │                                                      │           │
+│           │  Content is now visible in the Library under         │           │
+│           │  "not in library" entries.                           │           │
+│           │                                                      │           │
+│           │  Browse:  syllago list --source registry             │           │
+│           │  Install: syllago add <name> --from <reg>            │           │
+│           │  TUI:     switch to Content [2] to browse            │           │
+│           │                                                      │           │
+│           │                        Got it                        │           │
+│           │                                                      │           │
+│           ╰──────────────────────────────────────────────────────╯           │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+1/2/3 groups · tab items · ↑/↓ navigate · enter preview     syllago v0.0.0-test
+/ search · s sort · i install · e edit · d remove · x uninstall · t trust · R refresh · a add · ? help · q quit
