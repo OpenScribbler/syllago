@@ -625,10 +625,10 @@ func TestRunCapmonCheck_FetchErrorOnly_ProducesIssue(t *testing.T) {
 	}
 }
 
-// TestRunCapmonCheck_FlushError_ContinuesRun verifies that when FindOpenCapmonProviderIssue
-// returns an error, the pipeline logs a warning to stderr but completes without aborting.
-// This exercises the "warning: flush batch for %s: ..." non-fatal path in RunCapmonCheck.
-func TestRunCapmonCheck_FlushError_ContinuesRun(t *testing.T) {
+// TestRunCapmonCheck_FlushError_Aborts verifies that when FindOpenCapmonProviderIssue
+// returns an error, the pipeline propagates it and returns a non-nil error. A monitoring
+// pipeline must fail visibly on API failure rather than silently skipping issue creation.
+func TestRunCapmonCheck_FlushError_Aborts(t *testing.T) {
 	env := newCheckTestEnv(t)
 
 	testContent := []byte(strings.Repeat("r", 1000))
@@ -645,20 +645,12 @@ func TestRunCapmonCheck_FlushError_ContinuesRun(t *testing.T) {
 	})
 	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
 
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-	defer func() { os.Stderr = oldStderr }()
-
 	err := capmon.RunCapmonCheck(context.Background(), env.opts)
-	w.Close()
-	stderrOut, _ := io.ReadAll(r)
-
-	if err != nil {
-		t.Fatalf("RunCapmonCheck should not abort on flush error, got: %v", err)
+	if err == nil {
+		t.Fatal("RunCapmonCheck should return an error when the GitHub API call fails")
 	}
-	if !strings.Contains(string(stderrOut), "warning") {
-		t.Errorf("expected 'warning' in stderr on flush error, got: %q", string(stderrOut))
+	if !strings.Contains(err.Error(), "flush batch") {
+		t.Errorf("expected error to mention 'flush batch', got: %v", err)
 	}
 }
 

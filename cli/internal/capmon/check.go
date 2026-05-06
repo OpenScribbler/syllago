@@ -114,12 +114,16 @@ func flushProviderBatch(ctx context.Context, opts CapmonCheckOptions, provider s
 			provider, len(batch.changes), len(batch.fetchErrors))
 		return nil
 	}
+	// Two concurrent runs can still produce a duplicate if both call
+	// FindOpenCapmonProviderIssue before either creates an issue. The window is
+	// narrow (one race opportunity per provider per run, not per content type) and
+	// duplicates are dedup-detectable by anchor. See ADR-0009.
 	_, found, err := FindOpenCapmonProviderIssue(provider)
 	if err != nil {
 		return fmt.Errorf("find provider issue for %s: %w", provider, err)
 	}
 	if found {
-		return nil // open issue already exists — silent skip
+		return nil // open issue already exists — silent skip (ADR-0010)
 	}
 	body := buildProviderIssueBody(batch)
 	title := fmt.Sprintf("capmon: changes detected for %s", provider)
@@ -266,7 +270,7 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 			}
 		}
 		if err := flushProviderBatch(ctx, opts, provider, batch); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: flush batch for %s: %v\n", provider, err)
+			return fmt.Errorf("capmon check: flush batch for %s: %w", provider, err)
 		}
 	}
 

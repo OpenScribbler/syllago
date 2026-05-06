@@ -15,3 +15,5 @@ Chose **Silent skip — make no GitHub API call when an open issue already exist
 ## Consequences
 
 `AppendCapmonChangeEvent` is not called from `runSourceCheck` under the new design. It remains available for the warning-issue path which legitimately appends. Any future decision to re-enable appending on hash-change redetection would require revisiting this ADR.
+
+Note: this design cannot distinguish "re-detecting the same drift" from "detecting new drift while the first issue is still open." If a second content type changes while a provider's issue is pending review, the new drift is silently dropped until the open issue is closed and the pipeline runs again. This is accepted: reviewers are expected to close issues promptly, and the detection window for secondary drift is bounded by that review cycle rather than infinite.
