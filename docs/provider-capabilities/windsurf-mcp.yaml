@@ -16,7 +16,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: env_var_expansion
       supported: true
-      mechanism: 'config_interpolation: Windsurf MCP configuration supports ${VAR} interpolation for environment variables'
+      mechanism: 'config_interpolation: Windsurf MCP configuration supports ${env:VAR_NAME} and ${file:/path} interpolation for environment variables and file contents'
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -27,11 +27,11 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: oauth_support
-      supported: false
-      mechanism: Windsurf MCP does not document OAuth 2.0 authentication for remote servers
+      supported: true
+      mechanism: Windsurf supports OAuth for each transport type (stdio, Streamable HTTP, and SSE) for remote MCP server authentication
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: resource_referencing
       supported: false
       mechanism: Windsurf does not document @-mention or equivalent access to MCP resources
@@ -39,11 +39,11 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: tool_filtering
-      supported: false
-      mechanism: Windsurf exposes all tools from connected MCP servers; no per-server tool allowlist or blocklist documented
+      supported: true
+      mechanism: 'tool_limit_100: individual MCP tools can be toggled on or off per server via the Cascade panel UI; disabled tools are tracked in a disabledTools array separate from whitelist matching'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: transport_types
       supported: true
       mechanism: 'three_transport_types: Windsurf supports stdio, SSE, and HTTP/streamable-HTTP transports'
