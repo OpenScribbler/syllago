@@ -745,3 +745,67 @@ content_types:
 		t.Errorf("issue body should mention 'hooks' content type, got: %q", capturedBody)
 	}
 }
+
+// TestRunCapmonCheck_LocalFileSource_Skipped verifies that sources with
+// fetch_method: local_file are silently skipped — no HTTP fetch attempt and
+// no GitHub issue created, even when the stored hash is stale.
+func TestRunCapmonCheck_LocalFileSource_Skipped(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+
+	// Format doc with a local_file source that has a stale hash.
+	localFileDoc := `provider: test-provider
+docs_url: "https://example.com/docs"
+category: cli
+last_fetched_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+content_types:
+  hooks:
+    status: supported
+    sources:
+      - uri: "example-hooks.json"
+        type: example
+        fetch_method: local_file
+        content_hash: "sha256:stale"
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings: {}
+    provider_extensions: []
+`
+	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(localFileDoc), 0644)
+
+	// If fetchForCheck is called, it will error because "example-hooks.json" has no scheme.
+	// Verify no HTTP or gh calls occur.
+	httpCalled := false
+	capmon.SetHTTPClientForTest(&http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			httpCalled = true
+			return nil, errors.New("should not be called")
+		}),
+	})
+	t.Cleanup(func() { capmon.SetHTTPClientForTest(nil) })
+
+	ghCalled := false
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		ghCalled = true
+		return []byte("[]"), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v", err)
+	}
+	if httpCalled {
+		t.Error("local_file source should not trigger an HTTP fetch")
+	}
+	if ghCalled {
+		t.Error("local_file source should not produce any GitHub issue calls")
+	}
+}
+
+// roundTripFunc is a helper RoundTripper backed by a function.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }

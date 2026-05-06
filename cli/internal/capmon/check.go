@@ -282,6 +282,11 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 // batch for deferred issue creation. All GitHub API calls are deferred to
 // flushProviderBatch, which fires once after the full provider loop completes.
 func runSourceCheck(ctx context.Context, contentType string, src SourceRef, batch *providerBatch) error {
+	// local_file sources live in the repo; drift is detected by git, not HTTP.
+	if src.FetchMethod == "local_file" {
+		return nil
+	}
+
 	// Fetch content.
 	body, respContentType, finalURL, fetchErr := fetchForCheck(ctx, src.URI)
 	if fetchErr != nil {
