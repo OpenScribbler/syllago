@@ -4,13 +4,14 @@ format: ""
 proposed_mappings:
     - canonical_key: argument_substitution
       supported: false
-      mechanism: built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /init suppress) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)
+      mechanism: built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /skills info SKILL-NAME) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: builtin_commands
       supported: true
-      mechanism: ~50 built-in slash commands documented under the 'Slash commands in the interactive interface' heading of the CLI command reference (e.g. /help, /mcp, /init, /clear, /agent, /delegate, /review, /add-dir, /fleet, /research, /plugin); 'Command-line commands' heading covers the top-level `copilot` subcommands
+      mechanism: |
+        60+ built-in slash commands documented in the 'Slash commands in the interactive interface' table of the CLI command reference, including: /add-dir, /agent, /ask, /allow-all, /changelog, /chronicle, /clear, /compact, /context, /copy, /cwd, /delegate, /diff, /downgrade, /env, /exit, /experimental, /feedback, /fleet, /help, /ide, /init, /instructions, /keep-alive, /list-dirs, /login, /logout, /lsp, /mcp, /model, /plan, /plugin, /pr, /remote, /rename, /research, /reset-allowed-tools, /restart, /resume, /review, /session, /share, /skills, /statusline, /tasks, /terminal-setup, /theme, /undo, /update, /usage, /user, /version. The 'Command-line commands' table covers top-level copilot subcommands (copilot, copilot completion, copilot help, copilot init, copilot login, copilot mcp, copilot plugin, copilot update, copilot version).
       source_field: ""
       source_value: ""
       confidence: confirmed
