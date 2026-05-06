@@ -3,6 +3,25 @@ slug: gemini-cli
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      definition_format:
+        supported: true
+        mechanism: Markdown files with YAML frontmatter at .gemini/agents/<name>.md (project) and ~/.gemini/agents/<name>.md (user); body of the file becomes the subagent system prompt (documented under 'Agent definition files' / 'File format' headings)
+        confidence: inferred
+      invocation_patterns:
+        supported: true
+        mechanism: 'two invocation patterns: (1) automatic delegation by the main agent based on subagent description, (2) explicit @-mention at start of prompt (documented under ''Automatic delegation'' / ''Forcing a subagent (@ syntax)'' / ''How to use subagents'' headings)'
+        confidence: inferred
+      per_agent_mcp:
+        supported: true
+        mechanism: per-subagent mcpServers{} frontmatter declares inline MCP server configurations scoped to this subagent only (documented under 'Configuring isolated tools and servers' heading)
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: 'per-subagent tool allow-listing via tools[] frontmatter with wildcards: ''*'', ''mcp_*'', ''mcp_<server>_*'' (documented under ''Tool wildcards'' / ''Subagent tool isolation'' / ''Configuring isolated tools and servers'' headings)'
+        confidence: inferred
   commands:
     supported: true
     capabilities:
