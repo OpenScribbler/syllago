@@ -4,7 +4,7 @@ format: ""
 proposed_mappings:
     - canonical_key: activation_mode
       supported: true
-      mechanism: 'Four activation modes documented: Always (alwaysApply: true injects rule into every prompt), Auto-Attached (globs frontmatter matches edited files), Agent Requested (description frontmatter triggers model to pull in the rule), and Manual (no frontmatter triggers, referenced explicitly with @ruleName).'
+      mechanism: 'Four activation modes documented: Always (alwaysApply: true injects rule into every prompt), Apply to Specific Files (globs frontmatter matches edited files via glob syntax), Apply Intelligently (description frontmatter lets the Agent determine relevance), and Apply Manually (no frontmatter triggers, referenced explicitly with @ruleName).'
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -15,11 +15,11 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: cross_provider_recognition
-      supported: false
-      mechanism: Cursor reads its own .cursor/rules/*.mdc and legacy .cursorrules file; no documented recognition of other providers' rule files.
+      supported: true
+      mechanism: Cursor documents AGENTS.md as an officially supported alternative to .cursor/rules/*.mdc — a plain markdown file without frontmatter metadata that is recognized and loaded alongside project rules.
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: file_imports
       supported: true
       mechanism: MDC rule bodies may reference other files via @path syntax that inlines the referenced file into the rule context.
@@ -28,7 +28,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: hierarchical_loading
       supported: true
-      mechanism: Rules can live in nested .cursor/rules/ directories within a project; rules in a subtree apply when working with files under that subtree, enabling monorepo-style scoping.
+      mechanism: Rules can live in nested .cursor/rules/ directories within a project; rules in a subtree apply when working with files under that subtree, enabling monorepo-style scoping. AGENTS.md also supports nested files in subdirectories for granular context-specific guidance.
       source_field: ""
       source_value: ""
       confidence: confirmed

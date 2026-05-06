@@ -28,7 +28,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: disable_model_invocation
       supported: true
-      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false).'
+      mechanism: 'yaml frontmatter key: disable-model-invocation (optional bool, default false); when true, the skill is converted into an explicit slash command rather than a context-aware tool the model can auto-invoke.'
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -40,7 +40,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: global_scope
       supported: true
-      mechanism: ~/.agents/skills/<name>/SKILL.md for user-global scope via the cross-provider Agent Skills convention.
+      mechanism: ~/.agents/skills/<name>/SKILL.md and ~/.cursor/skills/<name>/SKILL.md for user-level scope; both paths are documented.
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -69,8 +69,8 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: user_invocable
-      supported: false
-      mechanism: ""
+      supported: true
+      mechanism: When disable-model-invocation is true, the skill becomes an explicit slash command invocable by the user rather than auto-invoked by the model.
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed

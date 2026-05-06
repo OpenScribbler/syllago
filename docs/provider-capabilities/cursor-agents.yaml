@@ -16,7 +16,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: invocation_patterns
       supported: true
-      mechanism: Custom agents are invoked through the Cursor IDE agent picker; background-enabled agents can also run concurrently via the background agents UI.
+      mechanism: Custom agents are invoked through the Cursor IDE agent picker; background-enabled agents can also run concurrently via the background agents UI. Subagents can be spawned by other agents for parallel execution workstreams.
       source_field: ""
       source_value: ""
       confidence: inferred
