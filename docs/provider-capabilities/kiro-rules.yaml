@@ -4,7 +4,7 @@ format: ""
 proposed_mappings:
     - canonical_key: activation_mode
       supported: true
-      mechanism: 'kiro_steering_inclusion_mode: Kiro steering files support always, conditional, and manual inclusion modes'
+      mechanism: 'kiro_steering_inclusion_mode: Kiro steering files support always, conditional, auto, and manual inclusion modes'
       source_field: ""
       source_value: ""
       confidence: confirmed
