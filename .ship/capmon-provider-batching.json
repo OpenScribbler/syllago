@@ -1,0 +1,54 @@
+{
+  "feature": "capmon-provider-batching",
+  "started": "2026-05-04T21:40:00.000Z",
+  "updated": "2026-05-05T00:10:00.000Z",
+  "ticketBeadId": "syllago-mol-hz7",
+  "autonomy": "pragmatic",
+  "currentStage": "pr",
+  "completed": ["lexicon-gate", "align", "research", "design", "structure", "plan", "create-beads", "execute"],
+  "lexicon": {
+    "path": "lexicon.md",
+    "present": true,
+    "builtThisSession": false
+  },
+  "designConcept": {
+    "summary": "## Design Concept — capmon-provider-batching\n\n**Goal:** Replace per-(provider, contentType) issue creation in capmon with per-provider batched issues, and add dedup logic to fetch-error issues, eliminating duplicate noise and GitHub API race conditions.\n\n**Scope:**\n- Batch all content-type changes for a single provider into one GitHub issue, created after the full detection loop completes for that provider\n- Issue body uses `## <content-type>` sections (e.g., `## rules`, `## hooks`, `## mcp`) listing hash changes per section\n- Issue body includes a `## Fetch Errors` section for broken/unreachable source URLs\n- Dedup anchor `<!-- capmon-check: <provider-slug> -->` used as the single find-or-create key per provider\n- Silent skip when an open issue already exists for the provider — no comment, no update, no new issue\n- Shared source URIs that appear under multiple content types are listed under each applicable section as-is\n- ~225 existing open issues closed manually as a one-time cleanup (out of scope for this code change)\n\n**Out of scope:** Drift PRs, healing failure system, hash comparison mechanics, automated bulk-close of legacy issues.\n\n**Key decisions:**\n- One issue per provider eliminates the race window; per-content-type with a lock was rejected as unnecessary complexity\n- Silent skip on re-detection; open issue is the signal; comment spam adds noise without helping reviewers prioritize\n\n**Accepted risks:**\n- One issue can surface both hash changes and fetch errors — reviewers see two problem types in one place\n- Manual close of ~225 legacy issues is a one-time ops task; no automation guards against stale issues reopening with the old format\n\n**Depends on / affects:**\n- `capmon` pipeline (change detection loop and fetch-error logger)\n- GitHub Issues API usage pattern (gh issue list + anchor-based find-or-create)\n- Existing `logOrCreateFetchErrorIssue` function — needs dedup logic added",
+    "signedOffAt": "2026-05-05T00:10:00.000Z"
+  },
+  "artifacts": {
+    "research": ".ship/capmon-provider-batching/research.md",
+    "design": ".ship/capmon-provider-batching/design.md",
+    "structure": ".ship/capmon-provider-batching/structure.md",
+    "plan": ".ship/capmon-provider-batching/plan.md"
+  },
+  "phaseB": { "complete": false },
+  "beads": {
+    "created": true,
+    "prefix": "capmon-provider-batching",
+    "epicIds": [],
+    "taskCount": 9,
+    "finalValidateId": "syllago-ovcm7",
+    "testBeadIds": ["syllago-dffsk", "syllago-9457e", "syllago-aks66", "syllago-ae056"],
+    "implBeadIds": ["syllago-cwvp9", "syllago-rhwub", "syllago-jn6tz", "syllago-09uur"]
+  },
+  "researchQuestions": [
+    "What is the complete call path from RunCapmonCheck to issue creation — which functions are called in what order, and what data flows between them?",
+    "What data is available inside runSourceCheck at the point issue creation currently fires — what fields exist on SourceRef, and what does the message string contain?",
+    "What are the exact gh CLI arguments FindOpenCapmonIssue passes, and what is the shape of the JSON response it parses?",
+    "What does CreateCapmonChangeIssue write to the issue body — anchor placement, label set, and body format?",
+    "What are all callers of FindOpenCapmonIssue and CreateCapmonChangeIssue, including any test files?",
+    "What does logOrCreateFetchErrorIssue write — title format, labels, body format — and are there any existing dedup attempts in that function or at its call sites?",
+    "What existing tests cover runSourceCheck, FindOpenCapmonIssue, CreateCapmonChangeIssue, and logOrCreateFetchErrorIssue — what is mocked via SetGHCommandForTest, and what are the coverage gaps?",
+    "Does RunCapmonCheck return early on error mid-provider or mid-source, and how does that interact with a deferred issue-write approach where all GH calls happen after the inner loop?"
+  ],
+  "adrs": { "drafted": false },
+  "prUrl": null,
+  "execution": {
+    "mode": null,
+    "tasksDispatched": [],
+    "tasksCompleted": [],
+    "currentTaskId": null,
+    "awaitingUserAck": false
+  },
+  "nextAction": null
+}
