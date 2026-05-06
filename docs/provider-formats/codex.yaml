@@ -1,8 +1,8 @@
 provider: codex
 docs_url: "https://github.com/openai/codex"
 category: cli
-last_fetched_at: "2026-04-11T21:50:06Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -19,10 +19,10 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:6f333860574248d9615556e8f65c0c654272ec54f6d95de262763d7d5e94daa8"
         fetched_at: "2026-04-11T21:50:06Z"
-      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core-skills/docs/skills.md"
+      - uri: "https://raw.githubusercontent.com/openai/codex/main/docs/skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: "sha256:e59789d09692310bbf94e2ef8db0aaf00d97f2226982c8c5330d2d260583a97d"
+        content_hash: ""
         fetched_at: "2026-04-11T21:50:06Z"
     canonical_mappings:
       display_name:
@@ -314,10 +314,10 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:d9d65a4afcd428a6124ccc40b3ca1bfc95430be484030f717100482a78b46ce6"
         fetched_at: "2026-04-11T21:48:23.551768221Z"
-      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/hooks/src/engine/config.rs"
+      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/hooks/src/engine/schema_loader.rs"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:c31bd1be17ba729a3a607d54b789a037bc84610955c75f06e6acc501c8ddd1ad"
+        content_hash: ""
         fetched_at: "2026-04-11T21:48:23.670864217Z"
       - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/hooks/src/types.rs"
         type: source_code
@@ -365,27 +365,27 @@ content_types:
       - id: hook_events
         name: Hook Events
         summary: "Five hook events: PreToolUse, PostToolUse, SessionStart, UserPromptSubmit, Stop (PascalCase in config.toml, camelCase in TS protocol)."
-        source_ref: "config.rs (HookEvents struct), HookEventName.ts"
+        source_ref: "schema_loader.rs (HookEvents struct), HookEventName.ts"
         graduation_candidate: false
         conversion: translated
       - id: hook_handler_types
         name: Hook Handler Types
         summary: "Each hook entry has a type: command (shell), prompt (LLM prompt), or agent (sub-agent delegation)."
-        source_ref: "config.rs (HookHandlerConfig enum), HookHandlerType.ts"
+        source_ref: "schema_loader.rs (HookHandlerConfig enum), HookHandlerType.ts"
         graduation_candidate: false
         provider_field: "type"
         conversion: translated
       - id: hook_matcher
         name: Tool Matcher (PreToolUse / PostToolUse)
         summary: "Optional matcher string on PreToolUse/PostToolUse entries filters which tool calls trigger the hook (absent = all tools)."
-        source_ref: "config.rs (MatcherGroup.matcher)"
+        source_ref: "schema_loader.rs (MatcherGroup.matcher)"
         graduation_candidate: false
         provider_field: "matcher"
         conversion: translated
       - id: hook_execution_mode
         name: Hook Execution Mode (sync / async)
         summary: "Hook handlers run sync (blocking) or async (fire-and-forget) via the async flag on command handlers / HookExecutionMode."
-        source_ref: "HookExecutionMode.ts, config.rs (HookHandlerConfig::Command.async)"
+        source_ref: "HookExecutionMode.ts, schema_loader.rs (HookHandlerConfig::Command.async)"
         graduation_candidate: false
         provider_field: "async"
         conversion: translated
@@ -575,11 +575,6 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:0e760708892f50ae3c6bcc0080e10276c8ac40e6f98bdd4924c3094ba5693f69"
         fetched_at: "2026-04-11T21:50:08.816691781Z"
-      - uri: "https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/src/agent/builtins/explorer.toml"
-        type: source_code
-        fetch_method: gh_raw
-        content_hash: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        fetched_at: "2026-04-11T21:50:09.020830589Z"
     canonical_mappings:
       definition_format:
         supported: true

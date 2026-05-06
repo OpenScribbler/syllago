@@ -5,8 +5,8 @@ category: cli
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-04-11T00:00:00Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: human-edited
 
 content_types:
@@ -240,9 +240,6 @@ content_types:
       - uri: "https://opencode.ai/docs/mcp-servers/"
         type: documentation
         fetch_method: readability
-      - uri: "https://raw.githubusercontent.com/sst/opencode/dev/schema.json"
-        type: schema
-        fetch_method: gh_raw
     canonical_mappings:
       transport_types:
         supported: true

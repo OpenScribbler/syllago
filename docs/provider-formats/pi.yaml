@@ -1,8 +1,8 @@
 provider: pi
 docs_url: "https://github.com/badlogic/pi-mono"
 category: cli
-last_fetched_at: "2026-04-11T21:46:24Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -180,20 +180,20 @@ content_types:
   hooks:
     status: supported
     sources:
-      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/types.ts"
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/extensions/types.ts"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:c96bc5a29e8b56c7eacb8e6af81ef0f3e1b7667ba42352323d1f7660886fafcd"
+        content_hash: ""
         fetched_at: "2026-04-11T21:50:57Z"
       - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/extensions.md"
         type: documentation
         fetch_method: gh_raw
         content_hash: "sha256:f9d3a8b4795d066da774c568aa0a2ba283bf993ad7df7311c202b4da8e4f4464"
         fetched_at: "2026-04-11T21:50:57Z"
-      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/runner.ts"
+      - uri: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/extensions/runner.ts"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:ca793fbc3b97a6c512d8e8bef238300fb324c52f51c2d48e8374d7d1da246444"
+        content_hash: ""
         fetched_at: "2026-04-11T21:50:57Z"
     canonical_mappings:
       handler_types:
@@ -242,7 +242,7 @@ content_types:
       - id: pi_extension_event_model
         name: "Rich lifecycle event model with 21 event types"
         summary: "Extensions subscribe via pi.on() to 21+ events spanning session, agent, turn, message, tool, model, and input lifecycle phases."
-        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/extensions/types.ts"
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/core/extensions/types.ts"
         graduation_candidate: false
         conversion: not-portable
       - id: pi_extension_tool_call_blocking

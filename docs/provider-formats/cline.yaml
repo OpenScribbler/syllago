@@ -1,8 +1,8 @@
 provider: cline
 docs_url: "https://docs.cline.bot"
 category: ide-extension
-last_fetched_at: "2026-04-11T21:49:56Z"
-last_changed_at: "2026-04-17T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -14,10 +14,10 @@ content_types:
         fetch_method: md_url
         content_hash: "sha256:79a90e7008bdfd9a08dda36bcfb124af167232a6a11db42c96863c549fe54ec5"
         fetched_at: "2026-04-11T21:49:46Z"
-      - uri: "https://raw.githubusercontent.com/cline/cline/main/assets/skills/create-pull-request/SKILL.md"
-        type: example
-        fetch_method: md_url
-        content_hash: "sha256:1d49400f76874ca05a277397e510a77c7cad68ac7477638b1c39d4e3e17d99f9"
+      - uri: "https://docs.cline.bot/customization/skills"
+        type: documentation
+        fetch_method: http
+        content_hash: ""
         fetched_at: "2026-04-11T21:49:46Z"
     canonical_mappings:
       display_name:
@@ -105,10 +105,10 @@ content_types:
   rules:
     status: supported
     sources:
-      - uri: "https://docs.cline.bot/customization/rules"
+      - uri: "https://docs.cline.bot/customization/cline-rules"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:a5d75547c59146960fdd0ae67218b640e4d011a5a1f854b70a63f93ac8b822a0"
+        content_hash: ""
         fetched_at: "2026-04-11T21:49:51.899572822Z"
     canonical_mappings:
       activation_mode:
@@ -135,26 +135,26 @@ content_types:
       - id: multi_source_rule_detection
         name: Multi-Source Rule Detection
         summary: "Cline auto-loads rule files from .cursorrules, .windsurfrules, and AGENTS.md alongside its own .clinerules/ directory."
-        source_ref: "https://docs.cline.bot/customization/rules#supported-rule-types"
+        source_ref: "https://docs.cline.bot/customization/cline-rules#supported-rule-types"
         graduation_candidate: false
         conversion: not-portable
       - id: rule_toggle
         name: Per-Rule Enable/Disable Toggle
         summary: "UI toggle in the Rules panel to enable or disable each rule file without deleting it."
-        source_ref: "https://docs.cline.bot/customization/rules#toggling-rules"
+        source_ref: "https://docs.cline.bot/customization/cline-rules#toggling-rules"
         graduation_candidate: false
         conversion: not-portable
       - id: conditional_rules_paths
         name: Conditional Rules via YAML Frontmatter paths
         summary: "Gates rule activation to files matching a glob array; empty array disables, missing frontmatter is always-on."
-        source_ref: "https://docs.cline.bot/customization/rules#conditional-rules"
+        source_ref: "https://docs.cline.bot/customization/cline-rules#conditional-rules"
         graduation_candidate: true
         provider_field: "paths"
         conversion: embedded
       - id: newrule_slash_command
         name: /newrule Slash Command for Interactive Rule Creation
         summary: "Built-in /newrule command guides the user through creating a .clinerules file interactively."
-        source_ref: "https://docs.cline.bot/customization/rules#creating-rules"
+        source_ref: "https://docs.cline.bot/customization/cline-rules#creating-rules"
         graduation_candidate: false
         conversion: not-portable
     loading_model: >
@@ -275,10 +275,10 @@ content_types:
         fetch_method: http
         content_hash: "sha256:0cfa136ac091d406c568d1678a7c4cec5a7005bbeb2f63995ca92330e782c9b8"
         fetched_at: "2026-04-11T21:49:56.128380982Z"
-      - uri: "https://docs.cline.bot/mcp/transport-mechanisms"
+      - uri: "https://docs.cline.bot/mcp/mcp-transport-mechanisms"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:20086c5b7211f04f93ca72f61a84b1c23f895a3760121b57a2e0b74c9c967668"
+        content_hash: ""
         fetched_at: "2026-04-11T21:49:56.739049379Z"
     canonical_mappings:
       transport_types:

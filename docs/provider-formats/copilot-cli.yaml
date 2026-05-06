@@ -1,8 +1,8 @@
 provider: copilot-cli
 docs_url: "https://docs.github.com/en/copilot/how-tos/use-copilot-agents/copilot-cli"
 category: cli
-last_fetched_at: "2026-04-11T21:50:18Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -14,10 +14,10 @@ content_types:
         fetch_method: gh_raw
         content_hash: "sha256:943dce04d029217c96a4863f66be9652ad374109fe2180a28ea0e43ddb252718"
         fetched_at: "2026-04-11T21:50:18Z"
-      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+      - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: "sha256:4108d891d8299a78a24cb30fbf7a975560c3f58ae1c61a9bd34d92ecb13a091a"
+        content_hash: ""
         fetched_at: "2026-04-11T21:50:18Z"
     canonical_mappings:
       display_name:
@@ -88,14 +88,14 @@ content_types:
       - id: plugin_scope
         name: Plugin Scope
         summary: Skills bundled via plugins occupy a separate management namespace and must be managed through the plugin, not /skills remove.
-        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
         graduation_candidate: false
         conversion: not-portable
 
       - id: cli_management_commands
         name: CLI Skill Management Commands
         summary: The /skills slash-command suite (list, info, add, reload, remove, toggle UI) provides runtime skill management without restart.
-        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/create-skills.md"
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
         graduation_candidate: false
         conversion: not-portable
     loading_model: >
