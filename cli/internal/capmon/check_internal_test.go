@@ -12,7 +12,7 @@ func TestBuildProviderIssueBody_HashChanges(t *testing.T) {
 			{contentType: "hooks", sourceURI: "https://example.com/hooks.md", oldHash: "sha256:old2", newHash: "sha256:new2"},
 		},
 	}
-	body := buildProviderIssueBody("test-provider", batch)
+	body := buildProviderIssueBody(batch)
 
 	for _, want := range []string{"## skills", "## hooks", "https://example.com/skills.md", "sha256:old1", "sha256:new1", "https://example.com/hooks.md", "sha256:old2", "sha256:new2"} {
 		if !strings.Contains(body, want) {
@@ -30,7 +30,7 @@ func TestBuildProviderIssueBody_FetchErrorsOnly(t *testing.T) {
 			{contentType: "skills", sourceURI: "https://example.com/skills.md", reason: "fetch error: connection refused"},
 		},
 	}
-	body := buildProviderIssueBody("test-provider", batch)
+	body := buildProviderIssueBody(batch)
 
 	if !strings.Contains(body, "## Fetch Errors") {
 		t.Errorf("body should contain '## Fetch Errors', got:\n%s", body)
@@ -53,7 +53,7 @@ func TestBuildProviderIssueBody_Mixed(t *testing.T) {
 			{contentType: "hooks", sourceURI: "https://example.com/hooks.md", reason: "fetch error: timeout"},
 		},
 	}
-	body := buildProviderIssueBody("test-provider", batch)
+	body := buildProviderIssueBody(batch)
 
 	if !strings.Contains(body, "## skills") {
 		t.Errorf("body should contain '## skills' section, got:\n%s", body)
@@ -68,7 +68,7 @@ func TestBuildProviderIssueBody_Mixed(t *testing.T) {
 
 func TestBuildProviderIssueBody_Empty(t *testing.T) {
 	batch := &providerBatch{}
-	body := buildProviderIssueBody("test-provider", batch)
+	body := buildProviderIssueBody(batch)
 	if body != "" {
 		t.Errorf("expected empty body for empty batch, got: %q", body)
 	}

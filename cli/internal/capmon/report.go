@@ -156,6 +156,7 @@ func FindOpenCapmonIssue(provider, contentType string) (int, bool, error) {
 		"--label", "capmon-change",
 		"--label", "provider:"+slug,
 		"--state", "open",
+		"--limit", "100",
 		"--json", "number,body",
 	)
 	if err != nil {
@@ -229,6 +230,7 @@ func FindOpenCapmonProviderIssue(provider string) (int, bool, error) {
 		"--label", "capmon-change",
 		"--label", "provider:"+slug,
 		"--state", "open",
+		"--limit", "100",
 		"--json", "number,body",
 	)
 	if err != nil {

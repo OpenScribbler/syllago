@@ -69,7 +69,7 @@ func (b *providerBatch) isEmpty() bool {
 
 // buildProviderIssueBody assembles the multi-section issue body from a provider
 // batch. Returns an empty string when the batch is empty.
-func buildProviderIssueBody(_ string, batch *providerBatch) string {
+func buildProviderIssueBody(batch *providerBatch) string {
 	if batch.isEmpty() {
 		return ""
 	}
@@ -103,9 +103,15 @@ func buildProviderIssueBody(_ string, batch *providerBatch) string {
 
 // flushProviderBatch writes at most one GitHub issue for the accumulated batch.
 // If an open issue already exists for the provider, this is a silent no-op.
-// Does nothing when the batch is empty or DryRun is set.
+// Does nothing when the batch is empty. DryRun logs a summary to stderr and skips
+// all GitHub calls.
 func flushProviderBatch(ctx context.Context, opts CapmonCheckOptions, provider string, batch *providerBatch) error {
-	if batch.isEmpty() || opts.DryRun {
+	if batch.isEmpty() {
+		return nil
+	}
+	if opts.DryRun {
+		fmt.Fprintf(os.Stderr, "dry-run: would create issue for %s (%d changes, %d fetch errors)\n",
+			provider, len(batch.changes), len(batch.fetchErrors))
 		return nil
 	}
 	_, found, err := FindOpenCapmonProviderIssue(provider)
@@ -115,7 +121,7 @@ func flushProviderBatch(ctx context.Context, opts CapmonCheckOptions, provider s
 	if found {
 		return nil // open issue already exists — silent skip
 	}
-	body := buildProviderIssueBody(provider, batch)
+	body := buildProviderIssueBody(batch)
 	title := fmt.Sprintf("capmon: changes detected for %s", provider)
 	_, err = CreateCapmonProviderIssue(ctx, provider, title, body)
 	return err
@@ -254,7 +260,7 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 		batch := &providerBatch{}
 		for ct, ctDoc := range doc.ContentTypes {
 			for _, src := range ctDoc.Sources {
-				if err := runSourceCheck(ctx, opts, provider, ct, src, batch); err != nil {
+				if err := runSourceCheck(ctx, ct, src, batch); err != nil {
 					return err
 				}
 			}
@@ -271,18 +277,18 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 // hash against the stored value in the format doc, and records the result into
 // batch for deferred issue creation. All GitHub API calls are deferred to
 // flushProviderBatch, which fires once after the full provider loop completes.
-func runSourceCheck(ctx context.Context, opts CapmonCheckOptions, provider, contentType string, src SourceRef, batch *providerBatch) error {
+func runSourceCheck(ctx context.Context, contentType string, src SourceRef, batch *providerBatch) error {
 	// Fetch content.
 	body, respContentType, finalURL, fetchErr := fetchForCheck(ctx, src.URI)
 	if fetchErr != nil {
-		logOrCreateFetchErrorIssue(opts, provider, contentType, src.URI,
+		logOrCreateFetchErrorIssue(contentType, src.URI,
 			fmt.Sprintf("fetch error: %v", fetchErr), batch)
 		return nil
 	}
 
 	// Validate content response.
 	if err := ValidateContentResponse(body, respContentType, src.URI, finalURL); err != nil {
-		logOrCreateFetchErrorIssue(opts, provider, contentType, src.URI,
+		logOrCreateFetchErrorIssue(contentType, src.URI,
 			fmt.Sprintf("content invalid: %v", err), batch)
 		return nil
 	}
@@ -304,13 +310,8 @@ func runSourceCheck(ctx context.Context, opts CapmonCheckOptions, provider, cont
 }
 
 // logOrCreateFetchErrorIssue records a fetch/validity failure into the provider
-// batch for deferred issue creation. DryRun mode logs to stderr and skips accumulation.
-func logOrCreateFetchErrorIssue(opts CapmonCheckOptions, provider, contentType, sourceURI, reason string, batch *providerBatch) {
-	if opts.DryRun {
-		fmt.Fprintf(os.Stderr, "dry-run: would record fetch-error for %s/%s (%s): %s\n",
-			provider, contentType, sourceURI, reason)
-		return
-	}
+// batch for deferred issue creation. DryRun is handled by flushProviderBatch.
+func logOrCreateFetchErrorIssue(contentType, sourceURI, reason string, batch *providerBatch) {
 	batch.fetchErrors = append(batch.fetchErrors, fetchErrorEntry{
 		contentType: contentType,
 		sourceURI:   sourceURI,

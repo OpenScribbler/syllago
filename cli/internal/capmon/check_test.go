@@ -625,6 +625,43 @@ func TestRunCapmonCheck_FetchErrorOnly_ProducesIssue(t *testing.T) {
 	}
 }
 
+// TestRunCapmonCheck_FlushError_ContinuesRun verifies that when FindOpenCapmonProviderIssue
+// returns an error, the pipeline logs a warning to stderr but completes without aborting.
+// This exercises the "warning: flush batch for %s: ..." non-fatal path in RunCapmonCheck.
+func TestRunCapmonCheck_FlushError_ContinuesRun(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("r", 1000))
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+	env.writeFormatDoc(t, "test-provider", "https://example.com/skills.md", "sha256:stale_hash")
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			return nil, errors.New("gh: authentication failed")
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	defer func() { os.Stderr = oldStderr }()
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	w.Close()
+	stderrOut, _ := io.ReadAll(r)
+
+	if err != nil {
+		t.Fatalf("RunCapmonCheck should not abort on flush error, got: %v", err)
+	}
+	if !strings.Contains(string(stderrOut), "warning") {
+		t.Errorf("expected 'warning' in stderr on flush error, got: %q", string(stderrOut))
+	}
+}
+
 // TestRunCapmonCheck_MultiContentType_SingleIssue verifies that when a provider has
 // two content types both with changed hashes, exactly one capmon-change issue is
 // created (not one per content type). Both changes must be batched and flushed as
