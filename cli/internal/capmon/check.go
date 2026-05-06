@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -37,6 +38,97 @@ type providersDoc struct {
 	Providers []struct {
 		Slug string `json:"slug"`
 	} `json:"providers"`
+}
+
+// sourceChange records a single content-hash change event for accumulation.
+type sourceChange struct {
+	contentType string
+	sourceURI   string
+	oldHash     string
+	newHash     string
+}
+
+// fetchErrorEntry records a single fetch/validity failure for accumulation.
+type fetchErrorEntry struct {
+	contentType string
+	sourceURI   string
+	reason      string
+}
+
+// providerBatch accumulates all change events and fetch errors for one provider
+// across the full content-type/source loop. The flush phase reads it once
+// after the inner loops complete.
+type providerBatch struct {
+	changes     []sourceChange
+	fetchErrors []fetchErrorEntry
+}
+
+func (b *providerBatch) isEmpty() bool {
+	return len(b.changes) == 0 && len(b.fetchErrors) == 0
+}
+
+// buildProviderIssueBody assembles the multi-section issue body from a provider
+// batch. Returns an empty string when the batch is empty.
+func buildProviderIssueBody(batch *providerBatch) string {
+	if batch.isEmpty() {
+		return ""
+	}
+	var sb strings.Builder
+
+	// Group changes by content type for deterministic section ordering.
+	byType := make(map[string][]sourceChange, len(batch.changes))
+	for _, c := range batch.changes {
+		byType[c.contentType] = append(byType[c.contentType], c)
+	}
+	cts := make([]string, 0, len(byType))
+	for ct := range byType {
+		cts = append(cts, ct)
+	}
+	sort.Strings(cts)
+	for _, ct := range cts {
+		fmt.Fprintf(&sb, "## %s\n\n", ct)
+		for _, c := range byType[ct] {
+			fmt.Fprintf(&sb, "- %s\n  Old hash: %s\n  New hash: %s\n\n", c.sourceURI, c.oldHash, c.newHash)
+		}
+	}
+
+	if len(batch.fetchErrors) > 0 {
+		fmt.Fprintf(&sb, "## Fetch Errors\n\n")
+		for _, fe := range batch.fetchErrors {
+			fmt.Fprintf(&sb, "- %s (%s): %s\n", fe.sourceURI, fe.contentType, fe.reason)
+		}
+	}
+	return sb.String()
+}
+
+// flushProviderBatch writes at most one GitHub issue for the accumulated batch.
+// If an open issue already exists for the provider, this is a silent no-op.
+// Does nothing when the batch is empty. DryRun logs a summary to stderr and skips
+// all GitHub calls.
+func flushProviderBatch(ctx context.Context, opts CapmonCheckOptions, provider string, batch *providerBatch) error {
+	if batch.isEmpty() {
+		return nil
+	}
+	if opts.DryRun {
+		fmt.Fprintf(os.Stderr, "dry-run: would create issue for %s (%d changes, %d fetch errors)\n",
+			provider, len(batch.changes), len(batch.fetchErrors))
+		return nil
+	}
+	// Two concurrent runs can still produce a duplicate if both call
+	// FindOpenCapmonProviderIssue before either creates an issue. The window is
+	// narrow (one race opportunity per provider per run, not per content type) and
+	// duplicates are dedup-detectable by anchor. See ADR-0009.
+	_, found, err := FindOpenCapmonProviderIssue(provider)
+	if err != nil {
+		return fmt.Errorf("find provider issue for %s: %w", provider, err)
+	}
+	if found {
+		return nil // open issue already exists — silent skip (ADR-0010)
+	}
+	body := buildProviderIssueBody(batch)
+	title := fmt.Sprintf("capmon: changes detected for %s", provider)
+	_, err = CreateCapmonProviderIssue(ctx, provider, title, body)
+	return err
 }
 
 // loadProviderSlugs parses providers.json and returns the set of known slugs.
@@ -162,40 +254,46 @@ func RunCapmonCheck(ctx context.Context, opts CapmonCheckOptions) error {
 			}
 		}
 
-		// Step 3: Fetch and compare each source URI.
+		// Step 3: Fetch and compare each source URI, accumulating changes and
+		// fetch errors into a per-provider batch for deferred issue creation.
 		doc, err := LoadFormatDoc(FormatDocPath(opts.FormatsDir, provider))
 		if err != nil {
 			return fmt.Errorf("capmon check: load format doc for %s: %w", provider, err)
 		}
 
+		batch := &providerBatch{}
 		for ct, ctDoc := range doc.ContentTypes {
 			for _, src := range ctDoc.Sources {
-				if err := runSourceCheck(ctx, opts, provider, ct, src); err != nil {
+				if err := runSourceCheck(ctx, ct, src, batch); err != nil {
 					return err
 				}
 			}
+		}
+		if err := flushProviderBatch(ctx, opts, provider, batch); err != nil {
+			return fmt.Errorf("capmon check: flush batch for %s: %w", provider, err)
 		}
 	}
 
 	return nil
 }
 
-// runSourceCheck fetches one source URI, validates the response, compares the hash
-// against the stored value in the format doc, and creates or appends a GitHub issue
-// if the content has changed.
-func runSourceCheck(ctx context.Context, opts CapmonCheckOptions, provider, contentType string, src SourceRef) error {
+// runSourceCheck fetches one source URI, validates the response, compares the
+// hash against the stored value in the format doc, and records the result into
+// batch for deferred issue creation. All GitHub API calls are deferred to
+// flushProviderBatch, which fires once after the full provider loop completes.
+func runSourceCheck(ctx context.Context, contentType string, src SourceRef, batch *providerBatch) error {
 	// Fetch content.
 	body, respContentType, finalURL, fetchErr := fetchForCheck(ctx, src.URI)
 	if fetchErr != nil {
-		logOrCreateFetchErrorIssue(ctx, opts, provider, contentType, src.URI,
-			fmt.Sprintf("fetch error: %v", fetchErr))
+		logOrCreateFetchErrorIssue(contentType, src.URI,
+			fmt.Sprintf("fetch error: %v", fetchErr), batch)
 		return nil
 	}
 
 	// Validate content response.
 	if err := ValidateContentResponse(body, respContentType, src.URI, finalURL); err != nil {
-		logOrCreateFetchErrorIssue(ctx, opts, provider, contentType, src.URI,
-			fmt.Sprintf("content invalid: %v", err))
+		logOrCreateFetchErrorIssue(contentType, src.URI,
+			fmt.Sprintf("content invalid: %v", err), batch)
 		return nil
 	}
 
@@ -205,47 +303,24 @@ func runSourceCheck(ctx context.Context, opts CapmonCheckOptions, provider, cont
 		return nil // no change
 	}
 
-	// Content changed (or first fetch — empty hash).
-	message := fmt.Sprintf("Content hash changed for %s/%s source %s:\nOld hash: %s\nNew hash: %s",
-		provider, contentType, src.URI, src.ContentHash, newHash)
-
-	if opts.DryRun {
-		fmt.Fprintf(os.Stderr, "dry-run: would create/append capmon-change issue for %s/%s (source %s)\n",
-			provider, contentType, src.URI)
-		return nil
-	}
-
-	// Find or create issue.
-	issueNum, found, err := FindOpenCapmonIssue(provider, contentType)
-	if err != nil {
-		// Non-blocking: log and continue.
-		fmt.Fprintf(os.Stderr, "warning: find issue for %s/%s: %v\n", provider, contentType, err)
-		return nil
-	}
-
-	title := fmt.Sprintf("capmon: content change detected for %s/%s", provider, contentType)
-	if found {
-		return AppendCapmonChangeEvent(ctx, issueNum, message)
-	}
-	_, err = CreateCapmonChangeIssue(ctx, provider, contentType, title, message)
-	return err
+	// Content changed (or first fetch — empty hash). Accumulate into batch.
+	batch.changes = append(batch.changes, sourceChange{
+		contentType: contentType,
+		sourceURI:   src.URI,
+		oldHash:     src.ContentHash,
+		newHash:     newHash,
+	})
+	return nil
 }
 
-// logOrCreateFetchErrorIssue creates a GitHub issue for a fetch/validity failure,
-// or logs to stderr when in dry-run mode.
-func logOrCreateFetchErrorIssue(ctx context.Context, opts CapmonCheckOptions, provider, contentType, sourceURI, reason string) {
-	if opts.DryRun {
-		fmt.Fprintf(os.Stderr, "dry-run: would create capmon-fetch-error issue for %s/%s (%s): %s\n",
-			provider, contentType, sourceURI, reason)
-		return
-	}
-	slug, _ := SanitizeSlug(provider)
-	_, _ = ghRunner("issue", "create",
-		"--title", fmt.Sprintf("capmon: fetch error for %s/%s", slug, contentType),
-		"--label", "capmon-fetch-error",
-		"--label", "provider:"+slug,
-		"--body", fmt.Sprintf("Source URI: %s\nReason: %s", sourceURI, reason),
-	)
+// logOrCreateFetchErrorIssue records a fetch/validity failure into the provider
+// batch for deferred issue creation. DryRun is handled by flushProviderBatch.
+func logOrCreateFetchErrorIssue(contentType, sourceURI, reason string, batch *providerBatch) {
+	batch.fetchErrors = append(batch.fetchErrors, fetchErrorEntry{
+		contentType: contentType,
+		sourceURI:   sourceURI,
+		reason:      reason,
+	})
 }
 
 // fetchForCheck makes a direct HTTP GET and returns the body, Content-Type header,

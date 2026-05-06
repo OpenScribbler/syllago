@@ -408,6 +408,107 @@ func TestCloseResolvedWarningIssues_NoneToClose(t *testing.T) {
 	}
 }
 
+func TestFindOpenCapmonProviderIssue_Found(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[{"number":101,"body":"<!-- capmon-check: test-provider -->\nsome body"}]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, found, err := capmon.FindOpenCapmonProviderIssue("test-provider")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonProviderIssue: %v", err)
+	}
+	if !found {
+		t.Fatal("expected found=true")
+	}
+	if num != 101 {
+		t.Errorf("issue number = %d, want 101", num)
+	}
+}
+
+func TestFindOpenCapmonProviderIssue_NotFound(t *testing.T) {
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, found, err := capmon.FindOpenCapmonProviderIssue("test-provider")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonProviderIssue: %v", err)
+	}
+	if found {
+		t.Errorf("expected found=false, got issue number %d", num)
+	}
+}
+
+func TestFindOpenCapmonProviderIssue_WrongAnchor(t *testing.T) {
+	// Legacy per-(provider,contentType) anchor must NOT match the new provider-only lookup.
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		return []byte(`[{"number":7,"body":"<!-- capmon-check: test-provider/skills -->\nbody"}]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	_, found, err := capmon.FindOpenCapmonProviderIssue("test-provider")
+	if err != nil {
+		t.Fatalf("FindOpenCapmonProviderIssue: %v", err)
+	}
+	if found {
+		t.Error("expected found=false: legacy per-content-type anchor must not match provider-only lookup")
+	}
+}
+
+func TestFindOpenCapmonProviderIssue_InvalidSlug(t *testing.T) {
+	ghCalled := false
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		ghCalled = true
+		return []byte(`[]`), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	_, _, err := capmon.FindOpenCapmonProviderIssue("INVALID SLUG")
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+	if ghCalled {
+		t.Error("expected no gh call when slug is invalid")
+	}
+}
+
+func TestCreateCapmonProviderIssue_Success(t *testing.T) {
+	var capturedBody string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		for i, a := range args {
+			if a == "--body" && i+1 < len(args) {
+				capturedBody = args[i+1]
+			}
+		}
+		return []byte("https://github.com/test/repo/issues/202\n"), nil
+	})
+	defer capmon.SetGHCommandForTest(nil)
+
+	num, err := capmon.CreateCapmonProviderIssue(context.Background(), "test-provider", "capmon: changes for test-provider", "issue body text")
+	if err != nil {
+		t.Fatalf("CreateCapmonProviderIssue: %v", err)
+	}
+	if num != 202 {
+		t.Errorf("issue number = %d, want 202", num)
+	}
+	anchor := "<!-- capmon-check: test-provider -->"
+	if !strings.HasPrefix(capturedBody, anchor) {
+		t.Errorf("body should start with anchor %q, got: %q", anchor, capturedBody)
+	}
+	if !strings.Contains(capturedBody, "issue body text") {
+		t.Errorf("body should contain caller-supplied text, got: %q", capturedBody)
+	}
+}
+
+func TestCreateCapmonProviderIssue_InvalidSlug(t *testing.T) {
+	_, err := capmon.CreateCapmonProviderIssue(context.Background(), "INVALID SLUG", "title", "body")
+	if err == nil {
+		t.Error("expected error for invalid slug")
+	}
+}
+
 func TestBuildPRBody_NoTemplateInjection(t *testing.T) {
 	diff := capmon.CapabilityDiff{
 		Provider: "test-provider",

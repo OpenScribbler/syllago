@@ -156,6 +156,7 @@ func FindOpenCapmonIssue(provider, contentType string) (int, bool, error) {
 		"--label", "capmon-change",
 		"--label", "provider:"+slug,
 		"--state", "open",
+		"--limit", "100",
 		"--json", "number,body",
 	)
 	if err != nil {
@@ -201,6 +202,78 @@ func CreateCapmonChangeIssue(_ context.Context, provider, contentType, title, bo
 	}
 
 	// gh issue create prints the URL: https://github.com/owner/repo/issues/123
+	issueURL := strings.TrimSpace(string(out))
+	parts := strings.Split(issueURL, "/")
+	if len(parts) == 0 {
+		return 0, fmt.Errorf("unexpected gh issue create output: %q", issueURL)
+	}
+	num, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil {
+		return 0, fmt.Errorf("parse issue number from %q: %w", issueURL, err)
+	}
+	return num, nil
+}
+
+// FindOpenCapmonProviderIssue searches for an open GitHub issue with the
+// capmon-change label and the provider:slug label, filtered by the provider-only
+// anchor <!-- capmon-check: <provider> -->. Returns (issueNumber, true, nil)
+// when found, or (0, false, nil) when no matching issue exists.
+// Legacy per-(provider,contentType) anchors (<!-- capmon-check: slug/ct -->) do not match.
+func FindOpenCapmonProviderIssue(provider string) (int, bool, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, false, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-check: %s -->", slug)
+
+	out, err := ghRunner("issue", "list",
+		"--label", "capmon-change",
+		"--label", "provider:"+slug,
+		"--state", "open",
+		"--limit", "100",
+		"--json", "number,body",
+	)
+	if err != nil {
+		return 0, false, fmt.Errorf("gh issue list: %w", err)
+	}
+
+	var issues []struct {
+		Number int    `json:"number"`
+		Body   string `json:"body"`
+	}
+	if err := json.Unmarshal(out, &issues); err != nil {
+		return 0, false, fmt.Errorf("parse issue list: %w", err)
+	}
+
+	for _, iss := range issues {
+		if strings.Contains(iss.Body, anchor) {
+			return iss.Number, true, nil
+		}
+	}
+	return 0, false, nil
+}
+
+// CreateCapmonProviderIssue creates a GitHub issue for a per-provider batched
+// change event. The issue body is prefixed with <!-- capmon-check: <provider> -->
+// for deduplication by FindOpenCapmonProviderIssue. Returns the new issue number.
+func CreateCapmonProviderIssue(_ context.Context, provider, title, body string) (int, error) {
+	slug, err := SanitizeSlug(provider)
+	if err != nil {
+		return 0, err
+	}
+	anchor := fmt.Sprintf("<!-- capmon-check: %s -->", slug)
+	fullBody := anchor + "\n" + body
+
+	out, err := ghRunner("issue", "create",
+		"--title", title,
+		"--label", "capmon-change",
+		"--label", "provider:"+slug,
+		"--body", fullBody,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("gh issue create: %w", err)
+	}
+
 	issueURL := strings.TrimSpace(string(out))
 	parts := strings.Split(issueURL, "/")
 	if len(parts) == 0 {

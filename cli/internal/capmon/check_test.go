@@ -214,17 +214,21 @@ func TestRunCapmonCheck_FetchError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunCapmonCheck: %v (fetch errors should be non-blocking)", err)
 	}
-	// Should create a fetch-error issue.
-	hasFetchErr := false
+	// Fetch errors are now batched into a per-provider capmon-change issue with a
+	// ## Fetch Errors section. Verify the batched issue was created and body contains
+	// the fetch error.
+	hasFetchSection := false
 	for _, c := range *calls {
-		for _, a := range c {
-			if strings.Contains(a, "capmon-fetch-error") {
-				hasFetchErr = true
+		if len(c) >= 2 && c[0] == "issue" && c[1] == "create" {
+			for _, a := range c {
+				if strings.Contains(a, "Fetch Errors") {
+					hasFetchSection = true
+				}
 			}
 		}
 	}
-	if !hasFetchErr {
-		t.Errorf("expected gh call with capmon-fetch-error label, got: %v", *calls)
+	if !hasFetchSection {
+		t.Errorf("expected gh issue create with '## Fetch Errors' section in body, got: %v", *calls)
 	}
 }
 
@@ -244,16 +248,19 @@ func TestRunCapmonCheck_ContentValidityFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RunCapmonCheck: %v", err)
 	}
-	hasFetchErr := false
+	// Validity failures are now batched into a per-provider capmon-change issue.
+	hasFetchSection := false
 	for _, c := range *calls {
-		for _, a := range c {
-			if strings.Contains(a, "capmon-fetch-error") {
-				hasFetchErr = true
+		if len(c) >= 2 && c[0] == "issue" && c[1] == "create" {
+			for _, a := range c {
+				if strings.Contains(a, "Fetch Errors") {
+					hasFetchSection = true
+				}
 			}
 		}
 	}
-	if !hasFetchErr {
-		t.Errorf("expected gh call with capmon-fetch-error label for tiny body, got: %v", *calls)
+	if !hasFetchSection {
+		t.Errorf("expected gh issue create with '## Fetch Errors' section in body for tiny body, got: %v", *calls)
 	}
 }
 
@@ -530,5 +537,211 @@ func TestRunCapmonCheck_DryRun(t *testing.T) {
 	}
 	if ghCalled {
 		t.Error("dry-run: expected no gh calls")
+	}
+}
+
+// TestRunCapmonCheck_BatchFlush_OpenIssueExists verifies that when an open GitHub
+// issue already exists for the provider (identified by the provider-only anchor
+// <!-- capmon-check: <slug> -->), the flush produces zero gh issue create calls.
+func TestRunCapmonCheck_BatchFlush_OpenIssueExists(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("p", 1000))
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+	env.writeFormatDoc(t, "test-provider", "https://example.com/skills.md", "sha256:stale_hash")
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	var createCalls int
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			// Return an existing open provider issue with the provider-only anchor.
+			return []byte(`[{"number":55,"body":"<!-- capmon-check: test-provider -->\nsome previous body"}]`), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
+			createCalls++
+			return []byte("https://github.com/test/repo/issues/99\n"), nil
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v", err)
+	}
+	if createCalls != 0 {
+		t.Errorf("expected zero issue creates when open issue exists, got %d", createCalls)
+	}
+}
+
+// TestRunCapmonCheck_FetchErrorOnly_ProducesIssue verifies that a provider with
+// only fetch errors (no hash changes) still produces exactly one capmon-change
+// issue containing a ## Fetch Errors section.
+func TestRunCapmonCheck_FetchErrorOnly_ProducesIssue(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+	env.writeFormatDoc(t, "test-provider", "https://example.com/skills.md", "")
+	// HTTP returns an error so no hash change occurs — only a fetch error.
+	capmon.SetHTTPClientForTest(&http.Client{
+		Transport: &mockTransport{err: errors.New("connection refused")},
+	})
+	t.Cleanup(func() { capmon.SetHTTPClientForTest(nil) })
+
+	var listCalls, createCalls int
+	var capturedBody string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			listCalls++
+			return []byte(`[]`), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
+			createCalls++
+			for i, a := range args {
+				if a == "--body" && i+1 < len(args) {
+					capturedBody = args[i+1]
+				}
+			}
+			return []byte("https://github.com/test/repo/issues/1\n"), nil
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v (fetch-error-only run should be non-blocking)", err)
+	}
+	if listCalls != 1 {
+		t.Errorf("expected exactly 1 gh issue list call, got %d", listCalls)
+	}
+	if createCalls != 1 {
+		t.Errorf("expected exactly 1 gh issue create for fetch-error-only provider, got %d", createCalls)
+	}
+	if !strings.Contains(capturedBody, "## Fetch Errors") {
+		t.Errorf("issue body should contain '## Fetch Errors' section, got: %q", capturedBody)
+	}
+}
+
+// TestRunCapmonCheck_FlushError_Aborts verifies that when FindOpenCapmonProviderIssue
+// returns an error, the pipeline propagates it and returns a non-nil error. A monitoring
+// pipeline must fail visibly on API failure rather than silently skipping issue creation.
+func TestRunCapmonCheck_FlushError_Aborts(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("r", 1000))
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+	env.writeFormatDoc(t, "test-provider", "https://example.com/skills.md", "sha256:stale_hash")
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			return nil, errors.New("gh: authentication failed")
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err == nil {
+		t.Fatal("RunCapmonCheck should return an error when the GitHub API call fails")
+	}
+	if !strings.Contains(err.Error(), "flush batch") {
+		t.Errorf("expected error to mention 'flush batch', got: %v", err)
+	}
+}
+
+// TestRunCapmonCheck_MultiContentType_SingleIssue verifies that when a provider has
+// two content types both with changed hashes, exactly one capmon-change issue is
+// created (not one per content type). Both changes must be batched and flushed as
+// a single GitHub issue after the provider loop completes.
+func TestRunCapmonCheck_MultiContentType_SingleIssue(t *testing.T) {
+	env := newCheckTestEnv(t)
+
+	testContent := []byte(strings.Repeat("q", 1000))
+
+	env.writeProviders(t, []string{"test-provider"})
+	env.writeSourceManifest(t, "test-provider")
+
+	// Format doc with two content types (skills + hooks) each having a stale hash.
+	// "hooks" is not in the test's canonical-keys.yaml, so its canonical_mappings
+	// validation is skipped (validKeys == nil path in ValidateFormatDoc).
+	multiCtDoc := `provider: test-provider
+docs_url: "https://example.com/docs"
+category: cli
+last_fetched_at: "2026-04-11T00:00:00Z"
+generation_method: human-edited
+content_types:
+  skills:
+    status: supported
+    sources:
+      - uri: "https://example.com/skills.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "sha256:stale_skills"
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings:
+      display_name:
+        supported: true
+        mechanism: "yaml key: name"
+        confidence: confirmed
+    provider_extensions: []
+  hooks:
+    status: supported
+    sources:
+      - uri: "https://example.com/hooks.md"
+        type: documentation
+        fetch_method: md_url
+        content_hash: "sha256:stale_hooks"
+        fetched_at: "2026-04-11T00:00:00Z"
+    canonical_mappings: {}
+    provider_extensions: []
+`
+	os.WriteFile(filepath.Join(env.opts.FormatsDir, "test-provider.yaml"), []byte(multiCtDoc), 0644)
+	env.setHTTPResponse(t, testContent, "text/html")
+
+	var createCalls, listCalls int
+	var capturedBody string
+	capmon.SetGHCommandForTest(func(args ...string) ([]byte, error) {
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "list" {
+			listCalls++
+			return []byte(`[]`), nil
+		}
+		if len(args) >= 2 && args[0] == "issue" && args[1] == "create" {
+			for i, a := range args {
+				if a == "capmon-change" {
+					createCalls++
+				}
+				if a == "--body" && i+1 < len(args) {
+					capturedBody = args[i+1]
+				}
+			}
+			return []byte("https://github.com/test/repo/issues/1\n"), nil
+		}
+		return []byte(""), nil
+	})
+	t.Cleanup(func() { capmon.SetGHCommandForTest(nil) })
+
+	err := capmon.RunCapmonCheck(context.Background(), env.opts)
+	if err != nil {
+		t.Fatalf("RunCapmonCheck: %v", err)
+	}
+
+	// Both content types changed but must produce exactly one batched capmon-change issue.
+	if createCalls != 1 {
+		t.Errorf("expected exactly 1 capmon-change issue create, got %d (multi-content-type batching failed)", createCalls)
+	}
+	if listCalls != 1 {
+		t.Errorf("expected exactly 1 gh issue list call, got %d", listCalls)
+	}
+	// The single issue body must reference both content types so neither is silently dropped.
+	if !strings.Contains(capturedBody, "skills") {
+		t.Errorf("issue body should mention 'skills' content type, got: %q", capturedBody)
+	}
+	if !strings.Contains(capturedBody, "hooks") {
+		t.Errorf("issue body should mention 'hooks' content type, got: %q", capturedBody)
 	}
 }
