@@ -4,8 +4,8 @@
   "updated": "2026-05-05T00:10:00.000Z",
   "ticketBeadId": "syllago-mol-hz7",
   "autonomy": "pragmatic",
-  "currentStage": "pr",
-  "completed": ["lexicon-gate", "align", "research", "design", "structure", "plan", "create-beads", "execute"],
+  "currentStage": "complete",
+  "completed": ["lexicon-gate", "align", "research", "design", "structure", "plan", "create-beads", "execute", "pr"],
   "lexicon": {
     "path": "lexicon.md",
     "present": true,
@@ -42,7 +42,7 @@
     "Does RunCapmonCheck return early on error mid-provider or mid-source, and how does that interact with a deferred issue-write approach where all GH calls happen after the inner loop?"
   ],
   "adrs": { "drafted": false },
-  "prUrl": null,
+  "prUrl": "https://github.com/OpenScribbler/syllago/pull/372",
   "execution": {
     "mode": null,
     "tasksDispatched": [],
