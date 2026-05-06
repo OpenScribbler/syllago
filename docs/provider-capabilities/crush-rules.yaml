@@ -4,7 +4,7 @@ format: ""
 proposed_mappings:
     - canonical_key: activation_mode
       supported: false
-      mechanism: Crush rule files (AGENTS.md) load unconditionally as project context; no conditional activation syntax documented
+      mechanism: Crush rule files load unconditionally as project context; no conditional activation syntax documented
       source_field: ""
       source_value: ""
       confidence: inferred
@@ -16,19 +16,19 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: cross_provider_recognition
       supported: true
-      mechanism: 'cross_provider_convention: Crush reads AGENTS.md, the cross-provider rules convention shared across multiple agents'
+      mechanism: 'Crush reads AGENTS.md, CRUSH.md, CLAUDE.md, GEMINI.md (and .local variants) as context files. The active filename is controlled by the initialize_as option (default: AGENTS.md); context_paths allows configuring an arbitrary list of additional file paths.'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: file_imports
       supported: false
-      mechanism: No file import directive documented for AGENTS.md in Crush
+      mechanism: No file import directive documented for context files in Crush
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: hierarchical_loading
       supported: false
-      mechanism: Crush documents AGENTS.md at the project root only; no hierarchical/subdirectory loading documented
+      mechanism: Crush documents context files at the project root only; no hierarchical/subdirectory loading documented
       source_field: ""
       source_value: ""
       confidence: inferred

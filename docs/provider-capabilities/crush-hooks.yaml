@@ -1,0 +1,58 @@
+provider: crush
+content_type: hooks
+format: ""
+proposed_mappings:
+    - canonical_key: async_execution
+      supported: false
+      mechanism: Hooks are synchronous; each fires before the tool executes and must complete within the configured timeout.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: context_injection
+      supported: true
+      mechanism: The hook JSON response may include an optional context field; this content is injected into the agent context for the current turn.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: decision_control
+      supported: true
+      mechanism: 'Hook subprocess exit code controls tool execution: exit code 2 blocks the tool call (deny). Other exit codes allow it. The hook may also return a JSON decision field with values allow, deny, or none.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: handler_types
+      supported: true
+      mechanism: Hooks are shell commands (command field in HookConfig). Each hook fires a subprocess with the tool context passed on stdin.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: hook_scopes
+      supported: true
+      mechanism: Hooks are configured in crush.json under the hooks key, which applies at the project or user-global config level (same config file scope as MCP and other settings).
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: input_modification
+      supported: false
+      mechanism: Hooks receive tool context on stdin and can return context to the agent, but modifying tool input parameters is not documented.
+      source_field: ""
+      source_value: ""
+      confidence: inferred
+    - canonical_key: json_io_protocol
+      supported: true
+      mechanism: Hooks receive a JSON object on stdin containing tool name and parameters. The hook subprocess may return a JSON object with decision (allow/deny/none) and optional context fields.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: matcher_patterns
+      supported: true
+      mechanism: 'HookConfig has a matcher field: a regex pattern tested against the tool name. An empty matcher matches all tools.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: permission_control
+      supported: true
+      mechanism: Hooks run before permission checks. Exit code 2 blocks the tool call entirely, taking effect before the built-in permission gate.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
