@@ -12,13 +12,13 @@ content_types:
       - uri: "https://docs.cline.bot/customization/skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:79a90e7008bdfd9a08dda36bcfb124af167232a6a11db42c96863c549fe54ec5"
-        fetched_at: "2026-04-11T21:49:46Z"
+        content_hash: "sha256:976a101896fc0bbfc0573055d4f3ffecfc2ea833b7c10edcb64236b0d2de5500"
+        fetched_at: "2026-05-06T00:00:00Z"
       - uri: "https://docs.cline.bot/customization/skills"
         type: documentation
-        fetch_method: http
-        content_hash: ""
-        fetched_at: "2026-04-11T21:49:46Z"
+        fetch_method: readability
+        content_hash: "sha256:c6e0aa7e2d9bf93b4b5f4dc029a0432dac561a79a0fb5b52a6565a8d41204f1a"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -107,9 +107,9 @@ content_types:
     sources:
       - uri: "https://docs.cline.bot/customization/cline-rules"
         type: documentation
-        fetch_method: http
-        content_hash: ""
-        fetched_at: "2026-04-11T21:49:51.899572822Z"
+        fetch_method: readability
+        content_hash: "sha256:7c2687a2da2a6981d9a1b2e2df33268af46a608f146c9077e4e135570762e488"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       activation_mode:
         supported: true
@@ -174,8 +174,8 @@ content_types:
       - uri: "https://docs.cline.bot/customization/hooks"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:96e776a4ac4742a14a2704194094a27bac10a1fda50781772efd11f826cf021f"
-        fetched_at: "2026-04-11T21:49:54.580789106Z"
+        content_hash: "sha256:a127d7a4123f8cf85f779b4242e8aeff257b8b86502e5b6bc062f5505acbc7e4"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       handler_types:
         supported: false
@@ -202,9 +202,9 @@ content_types:
         mechanism: "global_and_project_hooks: Cline supports global (user-wide) and project-level hook configuration"
         confidence: confirmed
       json_io_protocol:
-        supported: false
-        mechanism: "Cline hooks communicate via exit codes and output text; no structured JSON stdin/stdout protocol documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Hooks receive a JSON object via stdin (taskId, hookName, clineVersion, timestamp, workspaceRoots, userId, model, plus hook-specific fields) and return JSON to stdout with cancel (bool), contextModification (string), and errorMessage (string); debug output goes to stderr"
+        confidence: confirmed
       context_injection:
         supported: true
         mechanism: "context_modification_output: Cline hooks can inject additional context into the agent's session via hook output"
@@ -273,13 +273,13 @@ content_types:
       - uri: "https://docs.cline.bot/mcp/configuring-mcp-servers"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:0cfa136ac091d406c568d1678a7c4cec5a7005bbeb2f63995ca92330e782c9b8"
-        fetched_at: "2026-04-11T21:49:56.128380982Z"
+        content_hash: "sha256:eda2a0484ef5174a3653c427e2af14a6201dcd6be1f80b3d16233aaa9566bcbc"
+        fetched_at: "2026-05-06T00:00:00Z"
       - uri: "https://docs.cline.bot/mcp/mcp-transport-mechanisms"
         type: documentation
-        fetch_method: http
-        content_hash: ""
-        fetched_at: "2026-04-11T21:49:56.739049379Z"
+        fetch_method: readability
+        content_hash: "sha256:69dfa51966bd3bb4455bd7b17fa34b3a23afa2165245753b5ba6c417c3d52e12"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       transport_types:
         supported: true
@@ -346,11 +346,19 @@ content_types:
         graduation_candidate: true
         provider_field: "url"
         conversion: translated
+      - id: stdio_vs_sse_deployment
+        name: "STDIO vs SSE: Per-User vs Centralized Deployment Model"
+        summary: "STDIO requires per-user installation with local resource use; SSE enables centralized single-server deployment serving multiple concurrent users over HTTP/HTTPS with server-side resource consumption."
+        source_ref: "https://docs.cline.bot/mcp/mcp-transport-mechanisms"
+        graduation_candidate: true
+        conversion: not-portable
     loading_model: >
       MCP server configuration is stored in cline_mcp_settings.json (edited via the MCP
       Servers > Configure tab). STDIO servers are spawned as child processes (command + args
-      + env). SSE servers are accessed over HTTP using a url + optional headers. Both support
-      an alwaysAllow tool list and a disabled flag. Cline auto-detects available tools from
+      + env) using JSON-RPC 2.0 over newline-delimited stdin/stdout streams. SSE servers are
+      accessed over HTTP/HTTPS via a persistent connection for server-to-client events plus
+      separate POST requests for client-to-server messages. Both transports support an
+      alwaysAllow tool list and a disabled flag. Cline auto-detects available tools from
       each connected server and surfaces them in chat. Per-server enable/disable toggles and
       restart controls are available in the UI. Network timeout is configurable per server
       (30s–1h, default 1 minute).
@@ -361,13 +369,14 @@ content_types:
     sources:
       - uri: "https://docs.cline.bot/customization/workflows.md"
         type: documentation
-        fetch_method: http
-        fetched_at: "2026-04-17T00:00:00Z"
+        fetch_method: readability
+        content_hash: "sha256:b0366d5f0127c883589b4a77238e0c6c80965a25053d57b3771c189cf1ad95b5"
+        fetched_at: "2026-05-06T00:00:00Z"
       - uri: "https://docs.cline.bot/core-workflows/using-commands"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:5d4dc3d72dd355242f60f7944fdd36a83ecd5bf084df44ebd9cce60756c2c8c1"
-        fetched_at: "2026-04-11T21:46:20.322921534Z"
+        content_hash: "sha256:b825b520ece51cb1df960fffadcf58b7b2a96028e64c20d42e71733f52f62d8a"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       argument_substitution:
         supported: false
@@ -396,6 +405,12 @@ content_types:
         source_ref: "https://docs.cline.bot/customization/workflows.md"
         graduation_candidate: false
         conversion: preserved
+      - id: xml_tool_syntax_in_workflows
+        name: XML Tool Syntax in Workflow Bodies
+        summary: "Workflow markdown bodies can include XML tool syntax (e.g., <execute_command>, <read_file>, <ask_followup_question>) for precise tool invocation control alongside natural language steps."
+        source_ref: "https://docs.cline.bot/customization/workflows.md"
+        graduation_candidate: false
+        conversion: not-portable
       - id: builtin_slash_commands
         name: Built-In Slash Commands
         summary: "Hardcoded slash commands including /newtask, /smol (alias /compact), /newrule, /deep-planning, /explain-changes (VS Code only), /reportbug; separate from user-authored workflows."
@@ -420,10 +435,12 @@ content_types:
       Each file's basename becomes the invocation trigger — the user types /<filename>.md in
       the chat input (extension included) to run the workflow. Workflow bodies are plain
       markdown instructions with no frontmatter schema; Cline injects the body as a prompt
-      template when invoked. Workflows are not pre-loaded into context — they execute on
-      demand. Built-in slash commands (/newtask, /smol, /newrule, /deep-planning,
-      /explain-changes in VS Code, /reportbug) coexist with user workflows and are also
-      accessible via the / command picker.
+      template when invoked. Workflows can combine natural language steps, XML tool syntax
+      (<execute_command>, <read_file>, <ask_followup_question>), CLI tool invocations, and
+      MCP tool calls. Workflows are not pre-loaded into context — they execute on demand.
+      Built-in slash commands (/newtask, /smol, /newrule, /deep-planning, /explain-changes
+      in VS Code, /reportbug) coexist with user workflows and are also accessible via the /
+      command picker.
     notes: >
       Global workflows path is ~/Documents/Cline/Workflows on macOS/Linux and maps to
       %USERPROFILE%\\Documents\\Cline\\Workflows on Windows because Cline resolves the OS
