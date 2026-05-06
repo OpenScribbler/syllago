@@ -28,6 +28,25 @@ content_types:
         supported: true
         mechanism: 'hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event ''Decision Control'' headings'
         confidence: inferred
+  mcp:
+    supported: true
+    capabilities:
+      marketplace:
+        supported: true
+        mechanism: '40+ pre-configured MCP servers (Linear, GitHub, Stripe, etc.) documented under ''Quick Start: Add from Registry'' heading'
+        confidence: inferred
+      oauth_support:
+        supported: true
+        mechanism: OS-keyring OAuth-token storage for HTTP MCP servers documented under 'OAuth Tokens' heading
+        confidence: inferred
+      tool_filtering:
+        supported: true
+        mechanism: per-server tool allowlisting via the `disabledTools` field documented under 'Configuration Schema' heading
+        confidence: inferred
+      transport_types:
+        supported: true
+        mechanism: http and stdio transports documented under 'Adding HTTP Servers' and 'Adding Stdio Servers' headings
+        confidence: inferred
   skills:
     supported: true
     capabilities:
