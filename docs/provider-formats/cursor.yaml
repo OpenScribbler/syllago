@@ -5,9 +5,9 @@ category: standalone-app
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-04-22T04:38:00Z"
-last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
+generation_method: subagent
 
 content_types:
   rules:
@@ -15,40 +15,40 @@ content_types:
     sources:
       - uri: "https://cursor.com/docs/rules"
         type: documentation
-        fetch_method: http
-        content_hash: "sha256:24393cd401410ce1356f0f1f8feb56f4574a9533cc1a3580da861fc57d32fde4"
-        fetched_at: "2026-04-22T04:38:00Z"
+        fetch_method: readability
+        content_hash: "sha256:61acfdedb25d3020e257d27c482103bac731aa50ec53a66edea0b7502bc1d270"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       activation_mode:
         supported: true
-        mechanism: "Four activation modes documented: Always (alwaysApply: true injects rule into every prompt), Auto-Attached (globs frontmatter matches edited files), Agent Requested (description frontmatter triggers model to pull in the rule), and Manual (no frontmatter triggers, referenced explicitly with @ruleName)."
+        mechanism: "Four activation modes documented: Always (alwaysApply: true injects rule into every prompt), Apply to Specific Files (globs frontmatter matches edited files via glob syntax), Apply Intelligently (description frontmatter lets the Agent determine relevance), and Apply Manually (no frontmatter triggers, referenced explicitly with @ruleName)."
         confidence: confirmed
       file_imports:
         supported: true
         mechanism: "MDC rule bodies may reference other files via @path syntax that inlines the referenced file into the rule context."
         confidence: confirmed
       cross_provider_recognition:
-        supported: false
-        mechanism: "Cursor reads its own .cursor/rules/*.mdc and legacy .cursorrules file; no documented recognition of other providers' rule files."
-        confidence: inferred
+        supported: true
+        mechanism: "Cursor documents AGENTS.md as an officially supported alternative to .cursor/rules/*.mdc — a plain markdown file without frontmatter metadata that is recognized and loaded alongside project rules."
+        confidence: confirmed
       auto_memory:
         supported: false
         mechanism: "Cursor does not document an AI-generated auto-memory system distinct from user-authored rules."
         confidence: inferred
       hierarchical_loading:
         supported: true
-        mechanism: "Rules can live in nested .cursor/rules/ directories within a project; rules in a subtree apply when working with files under that subtree, enabling monorepo-style scoping."
+        mechanism: "Rules can live in nested .cursor/rules/ directories within a project; rules in a subtree apply when working with files under that subtree, enabling monorepo-style scoping. AGENTS.md also supports nested files in subdirectories for granular context-specific guidance."
         confidence: confirmed
     provider_extensions:
       - id: mdc_file_format
         name: MDC (Markdown + frontmatter) file format
-        summary: "Rules are .mdc files — Markdown bodies with YAML-style frontmatter exposing description, alwaysApply, and globs fields."
+        summary: "Rules are .mdc or .md files — Markdown bodies with YAML-style frontmatter exposing description, alwaysApply, and globs fields. Both extensions are documented."
         source_ref: "https://cursor.com/docs/rules"
         graduation_candidate: true
         conversion: translated
       - id: globs_activation
         name: Glob-based auto-attach
-        summary: "globs frontmatter array attaches a rule automatically whenever the agent edits or reads a matching file path."
+        summary: "globs frontmatter array attaches a rule automatically whenever the agent edits or reads a matching file path (e.g., src/**/*.tsx, docs/**/*.md)."
         source_ref: "https://cursor.com/docs/rules"
         graduation_candidate: true
         conversion: translated
@@ -62,7 +62,7 @@ content_types:
         provider_field: alwaysApply
       - id: agent_requested_description
         name: Agent-requested activation via description
-        summary: "A description-only frontmatter (no globs, no alwaysApply) lets the model decide when to pull the rule in based on the description text."
+        summary: "A description-only frontmatter (no globs, no alwaysApply) lets the Agent decide when to pull the rule in based on the description text."
         source_ref: "https://cursor.com/docs/rules"
         graduation_candidate: true
         conversion: translated
@@ -91,17 +91,41 @@ content_types:
         source_ref: "https://cursor.com/docs/rules"
         graduation_candidate: false
         conversion: translated
-    loading_model: "Rules live in .cursor/rules/*.mdc within a project (and optionally in nested .cursor/rules/ directories within subpackages) or in ~/.cursor/rules/ for user-global scope. Each rule is an MDC file with YAML frontmatter (description, alwaysApply, globs) and a Markdown body. At agent time, rules activate by one of four paths: alwaysApply injects the rule unconditionally, globs auto-attach the rule when matching files are touched, description-only frontmatter lets the model choose whether to include it, and rules with no triggers are invoked manually via @ruleName. A legacy .cursorrules file at the project root is also honored."
-    notes: "MDC = Markdown + frontmatter; Cursor's own filename convention for rule files. Nested .cursor/rules/ directories scope rules to a subtree, analogous to hierarchical loading in other providers. Only .mdc is documented as the rule format for the rules directory; the legacy .cursorrules file is plain text."
+      - id: agents_md_alternative
+        name: AGENTS.md plain markdown alternative
+        summary: "Cursor officially recognizes AGENTS.md as a simpler markdown alternative to .cursor/rules/*.mdc — no frontmatter metadata required; nested AGENTS.md files in subdirectories provide granular context-specific guidance."
+        source_ref: "https://cursor.com/docs/rules"
+        graduation_candidate: false
+        conversion: preserved
+      - id: team_rules
+        name: Team rules via dashboard
+        summary: "Enterprise plan users can enforce organization-wide rules through the Cursor dashboard with enforcement options; rules are distributed to all team members without requiring per-repo file changes."
+        source_ref: "https://cursor.com/docs/rules"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: remote_rules
+        name: Remote rules from GitHub repositories
+        summary: "Rules can be imported from external GitHub repositories directly into a project, enabling shared rule sets across teams without copying files."
+        source_ref: "https://cursor.com/docs/rules"
+        graduation_candidate: false
+        conversion: preserved
+      - id: create_rule_command
+        name: /create-rule slash command
+        summary: "Typing /create-rule in chat scaffolds a new rule file; Cursor also surfaces rule creation through the settings UI."
+        source_ref: "https://cursor.com/docs/rules"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Rules live in .cursor/rules/*.mdc or .cursor/rules/*.md within a project (and optionally in nested .cursor/rules/ directories within subpackages) or in ~/.cursor/rules/ for user-global scope. Each rule is an MDC file with YAML frontmatter (description, alwaysApply, globs) and a Markdown body. At agent time, rules activate by one of four paths: alwaysApply injects the rule unconditionally, globs auto-attach the rule when matching files are touched, description-only frontmatter lets the Agent decide whether to include it, and rules with no triggers are invoked manually via @ruleName. AGENTS.md files at the project root or in subdirectories are also recognized as plain-markdown alternatives without frontmatter. Team rules (Enterprise) are distributed from the Cursor dashboard. Remote rules can be imported from GitHub repositories. A legacy .cursorrules file at the project root is also honored."
+    notes: "Both .mdc and .md extensions are documented for rule files in the .cursor/rules/ directory. AGENTS.md is an officially recognized alternative format with subdirectory nesting support. Effective rules should stay under 500 lines; the docs recommend splitting large rules and referencing files instead of copying content. Team and remote rule distribution are Enterprise-tier features not stored in project files."
 
   skills:
     status: supported
     sources:
       - uri: "https://cursor.com/docs/skills"
         type: documentation
-        fetch_method: http
-        content_hash: "sha256:7a520e71a4f041d69fd6c34f8f1b0715a02242e11b6fb52dc4cc6b1b0388433c"
-        fetched_at: "2026-04-22T04:38:00Z"
+        fetch_method: readability
+        content_hash: "sha256:0e713b6a7ab36797b6347dae4d87bd7b4b1f25cfc26a5eaa82a319d38ed39964"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -131,7 +155,7 @@ content_types:
       disable_model_invocation:
         supported: true
         provider_field: "disable-model-invocation"
-        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false)."
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false); when true, the skill is converted into an explicit slash command rather than a context-aware tool the model can auto-invoke."
         confidence: confirmed
       project_scope:
         supported: true
@@ -142,9 +166,10 @@ content_types:
         confidence: confirmed
       global_scope:
         supported: true
-        mechanism: "~/.agents/skills/<name>/SKILL.md for user-global scope via the cross-provider Agent Skills convention."
+        mechanism: "~/.agents/skills/<name>/SKILL.md and ~/.cursor/skills/<name>/SKILL.md for user-level scope; both paths are documented."
         paths:
           - "~/.agents/skills/<name>/SKILL.md"
+          - "~/.cursor/skills/<name>/SKILL.md"
         confidence: confirmed
       shared_scope:
         supported: false
@@ -158,12 +183,13 @@ content_types:
         mechanism: "Not observed — the skill filename is fixed as SKILL.md."
         confidence: confirmed
       user_invocable:
-        supported: false
-        confidence: inferred
+        supported: true
+        mechanism: "When disable-model-invocation is true, the skill becomes an explicit slash command invocable by the user rather than auto-invoked by the model."
+        confidence: confirmed
     provider_extensions:
       - id: supporting_files
         name: Supporting file directories
-        summary: "Optional sibling files and directories alongside SKILL.md (scripts/, references/, assets/) hold executable scripts, static references, and templates used while the skill is active."
+        summary: "Optional sibling files and directories alongside SKILL.md (scripts/, references/, assets/) hold executable scripts, static references, and templates used while the skill is active; resources load on-demand to maintain efficient context usage."
         source_ref: "https://cursor.com/docs/skills"
         graduation_candidate: true
         conversion: preserved
@@ -173,21 +199,39 @@ content_types:
         source_ref: "https://cursor.com/docs/skills"
         graduation_candidate: false
         conversion: preserved
-    loading_model: "Skills follow the Agent Skills convention: each skill is a directory whose name is the skill identifier, containing a required SKILL.md with YAML frontmatter (name, description, plus optional license, compatibility, metadata, disable-model-invocation) and a Markdown body. Cursor discovers skills in .cursor/skills/<name>/SKILL.md for Cursor-native project scope, in .agents/skills/<name>/SKILL.md for the cross-provider convention, and in ~/.agents/skills/<name>/SKILL.md for user-global scope. When a skill is active, its body is injected as instructional context and any supporting files (scripts, references, assets) remain available in the skill directory for on-demand loading."
-    notes: "Cursor participates in the cross-provider Agent Skills convention; both .cursor/skills/ (Cursor-native) and .agents/skills/ (cross-provider) locations are recognized. Global scope is documented at ~/.agents/skills/ via the shared convention rather than ~/.cursor/skills/. Frontmatter fields beyond name and description (license, compatibility, metadata, disable-model-invocation) are inferred from the Anthropic Agent Skills standard and not independently documented in Cursor's own materials."
+      - id: glob_scoping
+        name: Glob-based skill scoping
+        summary: "Skills can be scoped to specific files using glob patterns, preventing irrelevant skills from being suggested during unrelated work."
+        source_ref: "https://cursor.com/docs/skills"
+        graduation_candidate: true
+        conversion: translated
+      - id: monorepo_colocation
+        name: Monorepo colocated skill scoping
+        summary: "In monorepos, skills placed in a package subdirectory automatically scope to that directory's context without requiring explicit path configuration."
+        source_ref: "https://cursor.com/docs/skills"
+        graduation_candidate: true
+        conversion: preserved
+      - id: migrate_to_skills_command
+        name: /migrate-to-skills built-in command
+        summary: "Cursor 2.4 ships a built-in /migrate-to-skills command that converts existing rules and slash commands into the skills format."
+        source_ref: "https://cursor.com/docs/skills"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Skills follow the Agent Skills convention: each skill is a directory whose name is the skill identifier, containing a required SKILL.md with YAML frontmatter (name, description, plus optional license, compatibility, metadata, disable-model-invocation) and a Markdown body. Cursor discovers skills in .cursor/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md for project scope, and in ~/.agents/skills/<name>/SKILL.md and ~/.cursor/skills/<name>/SKILL.md for user-level scope. In monorepos, colocated skills automatically scope to their parent directory. Skills support nested directory organization for categorization. When a skill is active, its body is injected as instructional context and any supporting files (scripts, references, assets) remain available in the skill directory for on-demand loading. Setting disable-model-invocation: true converts a skill into an explicit slash command."
+    notes: "Cursor participates in the cross-provider Agent Skills convention; both .cursor/skills/ (Cursor-native) and .agents/skills/ (cross-provider) locations are recognized at both project and user scope. ~/.cursor/skills/ is now documented alongside ~/.agents/skills/ for user-level scope. The disable-model-invocation flag enables user_invocable mode (explicit slash command) rather than context-aware auto-invocation. The built-in /migrate-to-skills command facilitates migration from the deprecated .cursor/commands/ surface."
 
   hooks:
     status: supported
     sources:
       - uri: "https://cursor.com/docs/hooks"
         type: documentation
-        fetch_method: http
-        content_hash: "sha256:7a0b838f6cebf9cfd57e93d619b1df86ff668512b0207dcdbee85ec2e918f766"
-        fetched_at: "2026-04-22T04:38:00Z"
+        fetch_method: readability
+        content_hash: "sha256:0330e05a5bcd3c124fe0488cf7c63323ce91b8cd80fed1f6a20831d4334ec57d"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       handler_types:
-        supported: false
-        mechanism: "Cursor hooks execute shell commands only (type: command); no HTTP, LLM prompt, or agent handler types documented."
+        supported: true
+        mechanism: "Two handler types documented: command (shell scripts communicating over stdio via JSON) and prompt (LLM-evaluated natural language conditions for policy enforcement without custom scripting)."
         confidence: confirmed
       matcher_patterns:
         supported: true
@@ -195,7 +239,7 @@ content_types:
         confidence: confirmed
       decision_control:
         supported: true
-        mechanism: "Exit codes drive decisions: non-zero blocks the action and surfaces stderr, zero allows it to proceed; JSON on stdout can also return structured decision fields."
+        mechanism: "Exit codes drive decisions: exit code 2 blocks the action, exit code 0 allows it to proceed; JSON on stdout can also return structured decision fields."
         confidence: confirmed
       input_modification:
         supported: false
@@ -207,16 +251,16 @@ content_types:
         confidence: inferred
       hook_scopes:
         supported: true
-        mechanism: "Project-scope hooks live under .cursor/hooks/ and are wired through .cursor/settings.json; user-global hooks live under ~/.cursor/ using the same shape."
+        mechanism: "Four scopes documented in priority order: Enterprise (system-wide MDM-managed), Team (cloud-distributed for Enterprise plans), Project (.cursor/hooks/ in the repository), and User (global personal configuration at ~/.cursor/hooks/)."
         confidence: confirmed
       json_io_protocol:
         supported: true
         mechanism: "Command hooks receive event data as JSON on stdin and may return structured JSON on stdout to signal decisions and supply output fields."
         confidence: confirmed
       context_injection:
-        supported: false
-        mechanism: "Cursor hooks do not document a mechanism to inject additional context into the agent session."
-        confidence: inferred
+        supported: true
+        mechanism: "Hooks can inject context at session initialization via the sessionStart event, enabling custom context to be added to the agent's active session at startup."
+        confidence: confirmed
       permission_control:
         supported: false
         mechanism: "Cursor hooks control allow/block via exit codes but do not govern tool availability through permission rule updates."
@@ -224,17 +268,23 @@ content_types:
     provider_extensions:
       - id: hook_events
         name: Cursor hook event set
-        summary: "Cursor documents a large set of camelCase lifecycle events including beforeShellExecution, beforeReadFile, beforeSubmitPrompt, afterFileEdit, stop, and related pre/post tool hooks."
+        summary: "Cursor documents lifecycle events for both Agent (sessionStart, preToolUse, beforeShellExecution, afterFileEdit, stop, and related pre/post tool hooks) and Cursor Tab inline completions (beforeTabFileRead and related Tab-specific hooks)."
         source_ref: "https://cursor.com/docs/hooks"
         graduation_candidate: true
         conversion: translated
       - id: command_handler_type
         name: Command (shell) handler type
-        summary: "Each hook entry uses type: command with a shell command string; this is the only handler type documented for Cursor."
+        summary: "Command-based hooks execute shell scripts that receive JSON via stdin; exit code 0 indicates success and exit code 2 blocks actions."
         source_ref: "https://cursor.com/docs/hooks"
         graduation_candidate: true
         conversion: translated
         provider_field: type
+      - id: prompt_handler_type
+        name: Prompt (LLM) handler type
+        summary: "Prompt-based hooks leverage an LLM to evaluate natural language conditions, enabling policy enforcement without custom scripting — the model determines whether to allow or block based on a natural language rule."
+        source_ref: "https://cursor.com/docs/hooks"
+        graduation_candidate: true
+        conversion: not-portable
       - id: timeout_ms
         name: Millisecond timeout field
         summary: "Hook entries accept a timeout in milliseconds that limits how long a command may run before being terminated."
@@ -269,54 +319,72 @@ content_types:
         source_ref: "https://cursor.com/docs/hooks"
         graduation_candidate: false
         conversion: not-portable
-    loading_model: "Hook definitions live as JSON under .cursor/hooks/ (project scope) or the equivalent user-global path. They are registered by entries in .cursor/settings.json, which maps each event name to one or more matcher groups. Each matcher group supplies a matcher string, optional failClosed and loop_limit flags, and an array of hook entries with type: command, a shell command, an optional millisecond timeout, and optional status messaging. At runtime, Cursor invokes matching hooks with event data on stdin; zero exit codes allow the action, non-zero codes block it, and stdout JSON can carry structured decision fields."
-    notes: "Hook install is JSON-merge: syllago merges hook configuration into .cursor/settings.json rather than dropping a standalone file. Only the command handler type is documented. Canonical syllago hook events translate into Cursor's camelCase native names (for example before_tool_execute becomes PreToolUse) via the HookEvents map in the converter; tool names translate likewise."
+      - id: enterprise_team_scopes
+        name: Enterprise and Team hook scopes
+        summary: "Cursor supports Enterprise (MDM-managed system-wide) and Team (cloud-distributed for Enterprise plans) hook scopes above the Project and User levels, enabling organization-wide hook policy deployment."
+        source_ref: "https://cursor.com/docs/hooks"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: cursor_tab_hooks
+        name: Cursor Tab inline completion hooks
+        summary: "Separate hook events (e.g., beforeTabFileRead) fire for Cursor Tab inline completion operations, distinct from Agent hook events, enabling separate control policies for inline vs. Agent-mode completions."
+        source_ref: "https://cursor.com/docs/hooks"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: partner_ecosystem
+        name: Partner ecosystem hooks
+        summary: "Cursor partners with ecosystem vendors (MintMCP, Semgrep, Snyk, 1Password, and others) who have built pre-built hook integrations covering security scanning, governance, and secrets management."
+        source_ref: "https://cursor.com/docs/hooks"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Hook definitions live as JSON under .cursor/hooks/ (project scope) or ~/.cursor/hooks/ (user scope). They are registered by entries in .cursor/settings.json, which maps each event name to one or more matcher groups. A four-level scope hierarchy applies in priority order: Enterprise (MDM-managed), Team (cloud-distributed, Enterprise plans), Project, and User. Each matcher group supplies a matcher string, optional failClosed and loop_limit flags, and an array of hook entries specifying either a command (shell) or prompt (LLM) handler type. Command hooks receive event data as JSON on stdin; exit code 0 allows the action, exit code 2 blocks it, and stdout JSON can carry structured decision fields. Prompt hooks use an LLM to evaluate natural language conditions. Hook events cover both Agent operations (sessionStart, preToolUse, beforeShellExecution, afterFileEdit, stop) and Cursor Tab inline completion operations (beforeTabFileRead and related)."
+    notes: "Hook install is JSON-merge: syllago merges hook configuration into .cursor/settings.json rather than dropping a standalone file. Two handler types are now documented: command (shell) and prompt (LLM). The prompt handler type is not portable — it depends on Cursor's own LLM evaluation pipeline. Enterprise and Team scopes are not file-portable; they are managed through the Cursor dashboard or MDM systems. Canonical syllago hook events translate into Cursor's camelCase native names via the HookEvents map in the converter."
 
   mcp:
     status: supported
     sources:
       - uri: "https://cursor.com/docs/mcp"
         type: documentation
-        fetch_method: http
-        content_hash: "sha256:366cfcd44bd4e05f0be2debb0826f519f982388db3239b51098ed78df3354e4e"
-        fetched_at: "2026-04-22T04:38:00Z"
+        fetch_method: readability
+        content_hash: "sha256:bd63a94019082540a5bdd8ad3379061393f4f4be127cd2213bfd5437a8c669dd"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       transport_types:
         supported: true
-        mechanism: "Cursor documents three MCP transports: stdio for local processes, sse for Server-Sent Events, and streamable-http for HTTP-based remote servers."
+        mechanism: "Cursor documents three MCP transports: stdio for local processes managed by Cursor, sse for Server-Sent Events (local or remote, multi-user), and streamable-http for HTTP-based servers (local or remote, multi-user) with OAuth authentication support."
         confidence: confirmed
       oauth_support:
-        supported: false
-        mechanism: "Cursor's MCP documentation does not describe OAuth 2.0 flows for remote servers."
-        confidence: inferred
+        supported: true
+        mechanism: "Remote servers using the streamable-http transport support OAuth authentication; static client credentials can be used instead of dynamic registration. The documentation explicitly notes OAuth as a streamable-http capability."
+        confidence: confirmed
       env_var_expansion:
         supported: true
-        mechanism: "Server env blocks reference environment variables so secrets can be read from the shell environment rather than hardcoded."
+        mechanism: "Server configuration supports variable interpolation using ${env:NAME} for environment variables, ${userHome} for the user's home directory, and ${workspaceFolder} for the workspace root — not limited to env blocks alone."
         confidence: confirmed
       tool_filtering:
         supported: false
         mechanism: "Cursor does not document per-server tool allowlists or blocklists for MCP servers."
         confidence: inferred
       auto_approve:
-        supported: false
-        mechanism: "Cursor does not document pre-configured auto-approval for specific MCP tools."
-        confidence: inferred
+        supported: true
+        mechanism: "Users can configure permanent permissions through permissions.json files so that specific MCP tools do not require per-invocation approval; auto-run functionality can also be enabled globally."
+        confidence: confirmed
       marketplace:
         supported: true
-        mechanism: "Cursor ships an in-IDE MCP directory for discovering and installing community MCP servers."
+        mechanism: "Cursor ships an in-IDE MCP Marketplace for discovering and installing community MCP servers with one-click installation."
         confidence: confirmed
       resource_referencing:
-        supported: false
-        mechanism: "Cursor's MCP documentation does not describe referencing MCP resources by URI."
-        confidence: inferred
+        supported: true
+        mechanism: "MCP resources (structured data sources) are documented as a supported protocol capability alongside tools, prompts, roots, elicitation, and Apps."
+        confidence: confirmed
       enterprise_management:
         supported: false
-        mechanism: "Cursor does not document organization-level managed MCP policy controls."
+        mechanism: "Cursor does not document organization-level managed MCP policy controls beyond the general hook and rule enterprise scopes."
         confidence: inferred
     provider_extensions:
       - id: mcp_transport_types
         name: Three MCP transport mechanisms
-        summary: "Supports stdio, sse, and streamable-http transports chosen by the server configuration."
+        summary: "Supports stdio (local, single-user), sse (local/remote, multi-user via Server-Sent Events), and streamable-http (local/remote, multi-user via HTTP) transports chosen by the server configuration."
         source_ref: "https://cursor.com/docs/mcp"
         graduation_candidate: true
         conversion: translated
@@ -329,28 +397,41 @@ content_types:
         conversion: translated
       - id: env_variable_passthrough
         name: Environment variables in server env blocks
-        summary: "Per-server env maps pass environment variables (including secrets sourced from the user's shell) to stdio servers."
+        summary: "Per-server env maps pass environment variables (including secrets sourced from the user's shell) to stdio servers; configuration also supports ${env:NAME}, ${userHome}, and ${workspaceFolder} interpolation syntax."
         source_ref: "https://cursor.com/docs/mcp"
         graduation_candidate: true
         conversion: preserved
         provider_field: env
       - id: mcp_directory
-        name: In-IDE MCP directory
-        summary: "Cursor exposes an MCP directory inside the IDE for browsing and installing community MCP servers without editing mcp.json by hand."
+        name: In-IDE MCP Marketplace
+        summary: "Cursor exposes an MCP Marketplace inside the IDE for browsing and one-click installing community MCP servers without editing mcp.json by hand."
         source_ref: "https://cursor.com/docs/mcp"
         graduation_candidate: false
         conversion: not-portable
-    loading_model: "MCP servers are configured in .cursor/mcp.json at the project root (project scope) or in ~/.cursor/mcp.json (user-global scope). Each entry under the top-level mcpServers map names a server and supplies a transport (stdio with command and args, sse with url, or streamable-http with url) plus an optional env map for stdio servers. On session start, Cursor connects to each configured server, fetches its tool set, and surfaces those tools to the agent."
-    notes: "Install path is JSON-merge: syllago merges server entries into .cursor/mcp.json rather than replacing the file. Transport names in the config are stdio, sse, and streamable-http; HTTP servers use the streamable-http transport. Global-scope MCP config lives under ~/.cursor/ alongside the user-global rules and skills locations."
+      - id: permissions_json
+        name: permissions.json for permanent MCP tool approval
+        summary: "Users can configure permanent per-tool approval through permissions.json files, preventing repeated approval prompts for trusted MCP tools."
+        source_ref: "https://cursor.com/docs/mcp"
+        graduation_candidate: true
+        conversion: not-portable
+        provider_field: permissions
+      - id: mcp_protocol_capabilities
+        name: "Full MCP protocol capability set: tools, prompts, resources, roots, elicitation, Apps"
+        summary: "Cursor supports the full MCP protocol capability surface including tools (executable functions), prompts (templated workflows), resources (structured data sources), roots (server-initiated URI inquiries), elicitation (user information requests), and Apps (interactive UI extensions)."
+        source_ref: "https://cursor.com/docs/mcp"
+        graduation_candidate: false
+        conversion: preserved
+    loading_model: "MCP servers are configured in .cursor/mcp.json at the project root (project scope) or in ~/.cursor/mcp.json (user-global scope). Each entry under the top-level mcpServers map names a server and supplies a transport (stdio with command and args, sse with url, or streamable-http with url) plus an optional env map for stdio servers. Configuration supports variable interpolation via ${env:NAME}, ${userHome}, and ${workspaceFolder} syntax. On session start, Cursor connects to each configured server and surfaces its tool set to the Agent; the Agent requests approval before invoking tools by default. Auto-run can be enabled globally, or permanent per-tool approval can be configured through permissions.json files. Remote streamable-http servers with OAuth requirements can use static client credentials rather than dynamic registration."
+    notes: "Install path is JSON-merge: syllago merges server entries into .cursor/mcp.json rather than replacing the file. OAuth support is now confirmed for streamable-http transport. The auto_approve capability is confirmed via permissions.json. Resource referencing is confirmed as a supported protocol capability (resources are part of the documented MCP capability surface). Transport names in the config are stdio, sse, and streamable-http. Global-scope MCP config lives under ~/.cursor/ alongside the user-global rules and skills locations."
 
   agents:
     status: supported
     sources:
       - uri: "https://cursor.com/docs/subagents"
         type: documentation
-        fetch_method: http
-        content_hash: ""
-        fetched_at: "2026-04-28T23:45:00Z"
+        fetch_method: readability
+        content_hash: "sha256:6f7ac987f98de386d1e83b0d02cf2f333a8402d221f2e5fce00103a61d89a233"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       definition_format:
         supported: true
@@ -362,7 +443,7 @@ content_types:
         confidence: confirmed
       invocation_patterns:
         supported: true
-        mechanism: "Custom agents are invoked through the Cursor IDE agent picker; background-enabled agents can also run concurrently via the background agents UI."
+        mechanism: "Custom agents are invoked through the Cursor IDE agent picker; background-enabled agents can also run concurrently via the background agents UI. Subagents can be spawned by other agents for parallel execution workstreams."
         confidence: inferred
       agent_scopes:
         supported: true
@@ -403,7 +484,7 @@ content_types:
         conversion: embedded
         provider_field: is_background
       - id: builtin_subagents
-        name: Built-in Explore, Bash, and Browser subagents
+        name: "Built-in Explore, Bash, and Browser subagents"
         summary: "Cursor ships three built-in subagents (Explore, Bash, Browser) that are harness-provided and not overridable via files; only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable."
         source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: false
@@ -414,8 +495,14 @@ content_types:
         source_ref: "https://cursor.com/docs/subagents"
         graduation_candidate: false
         conversion: translated
-    loading_model: "Custom agents load at session start from .cursor/agents/ within the project and from ~/.cursor/agents/ for user-global scope. Each agent is a Markdown file whose name (minus the extension) is the agent identifier; its frontmatter declares name, description, an optional model override, a readonly flag, and an is_background flag, while the Markdown body becomes the agent's system prompt. Custom agents are invoked through the Cursor agent picker in the IDE. Cursor's three built-in subagents (Explore, Bash, Browser) are shipped with the harness and coexist with user-authored agents; they are not file-overridable."
-    notes: "File-based custom agents were added in Cursor 2.4. Only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable; the three built-in subagents (Explore, Bash, Browser) are harness-owned and cannot be replaced with a file. Frontmatter fields beyond those documented (name, description, model, readonly, is_background) are not observed."
+      - id: agent_patterns
+        name: Common subagent coordination patterns
+        summary: "Cursor documents three recommended subagent patterns: verification agents (validate completed work), debugger agents (specialize in root cause analysis), and orchestrator patterns (coordinate multiple specialist subagents sequentially)."
+        source_ref: "https://cursor.com/docs/subagents"
+        graduation_candidate: false
+        conversion: preserved
+    loading_model: "Custom agents load at session start from .cursor/agents/ within the project and from ~/.cursor/agents/ for user-global scope. Each agent is a Markdown file whose name (minus the extension) is the agent identifier; its frontmatter declares name, description, an optional model override, a readonly flag, and an is_background flag, while the Markdown body becomes the agent's system prompt. Custom agents are invoked through the Cursor agent picker in the IDE. Subagents run in isolated context windows — long research tasks and parallel workstreams use subagents to preserve the main conversation's context. Cursor's three built-in subagents (Explore, Bash, Browser) are shipped with the harness and coexist with user-authored agents; they are not file-overridable. Running multiple subagents in parallel consumes more tokens than sequential execution."
+    notes: "File-based custom agents were added in Cursor 2.4. Only user-authored agents under .cursor/agents/ or ~/.cursor/agents/ are portable; the three built-in subagents (Explore, Bash, Browser) are harness-owned and cannot be replaced with a file. Subagent spawning (since Cursor 2.5) requires Task tool access. Context isolation is a primary design motivation — subagents run in separate context windows so parallel or long-running tasks do not consume the main conversation's context."
 
   commands:
     status: unsupported
