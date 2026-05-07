@@ -34,7 +34,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: subagent_spawning
       supported: true
-      mechanism: multi-agent V2 feature flag; max_threads controls concurrent agent count, max_depth controls nesting depth; spawn-agent tool initiates delegation
+      mechanism: multi-agent V2 feature flag; max_threads and max_concurrent_threads_per_session control concurrent agent count, max_depth controls nesting depth; spawn-agent tool initiates delegation
       source_field: ""
       source_value: ""
       confidence: confirmed
