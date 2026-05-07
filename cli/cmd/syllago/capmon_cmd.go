@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,13 +37,22 @@ type capmonFetchDryRunEntry struct {
 	SourceCount int    `json:"source_count"`
 }
 
+// capmonSourceResult is a single per-source entry included in JSON+verbose output.
+type capmonSourceResult struct {
+	ID     string `json:"id"`
+	URL    string `json:"url"`
+	Cached bool   `json:"cached"`
+}
+
 // capmonFetchLiveEntry is the per-provider live-fetch summary emitted by
 // 'syllago capmon fetch' (no --dry-run) in JSON mode.
+// Sources is populated only when --verbose is also set.
 type capmonFetchLiveEntry struct {
-	Provider string `json:"provider"`
-	Fetched  int    `json:"fetched"`
-	Cached   int    `json:"cached"`
-	Errors   int    `json:"errors"`
+	Provider string               `json:"provider"`
+	Fresh    int                  `json:"fresh"`
+	Cached   int                  `json:"cached"`
+	Errors   int                  `json:"errors"`
+	Sources  []capmonSourceResult `json:"sources,omitempty"`
 }
 
 var capmonCmd = &cobra.Command{
@@ -123,9 +133,12 @@ var capmonFetchCmd = &cobra.Command{
 		sourcesDir, _ := cmd.Flags().GetString("sources-dir")
 		cacheRoot, _ := cmd.Flags().GetString("cache-root")
 
+		// Validate slug format first (applies to both dry-run and live paths).
 		if provider != "" {
 			if _, err := capmon.SanitizeSlug(provider); err != nil {
-				return fmt.Errorf("invalid --provider: %w", err)
+				return output.NewStructuredError(output.ErrInputInvalid,
+					"invalid --provider: "+err.Error(),
+					"Provider slugs must be lowercase alphanumeric with hyphens (e.g. claude-code)")
 			}
 		}
 		if sourcesDir == "" {
@@ -135,26 +148,30 @@ var capmonFetchCmd = &cobra.Command{
 			cacheRoot = ".capmon-cache"
 		}
 
+		// Load manifests once — used for provider validation and dry-run output.
+		manifests, err := capmon.LoadAllSourceManifests(sourcesDir)
+		if err != nil {
+			return fmt.Errorf("load source manifests: %w", err)
+		}
+
+		// Validate --provider against known slugs (applies to both paths).
+		if provider != "" {
+			var validSlugs []string
+			found := false
+			for _, m := range manifests {
+				validSlugs = append(validSlugs, m.Slug)
+				if m.Slug == provider {
+					found = true
+				}
+			}
+			if !found {
+				return output.NewStructuredError(output.ErrInputInvalid,
+					fmt.Sprintf("unknown provider %q; valid providers: %s", provider, strings.Join(validSlugs, ", ")),
+					"Run 'syllago capmon fetch --dry-run' to list available providers")
+			}
+		}
+
 		if dryRun {
-			manifests, err := capmon.LoadAllSourceManifests(sourcesDir)
-			if err != nil {
-				return fmt.Errorf("load source manifests: %w", err)
-			}
-
-			if provider != "" {
-				var validSlugs []string
-				found := false
-				for _, m := range manifests {
-					validSlugs = append(validSlugs, m.Slug)
-					if m.Slug == provider {
-						found = true
-					}
-				}
-				if !found {
-					return fmt.Errorf("unknown provider %q; valid providers: %s", provider, strings.Join(validSlugs, ", "))
-				}
-			}
-
 			var entries []capmonFetchDryRunEntry
 			for _, m := range manifests {
 				if provider != "" && m.Slug != provider {
@@ -172,6 +189,25 @@ var capmonFetchCmd = &cobra.Command{
 			} else {
 				for _, e := range entries {
 					fmt.Fprintf(output.Writer, "%s: %d sources (dry run)\n", e.Provider, e.SourceCount)
+					if output.Verbose {
+						// List source IDs and URLs per content type (sorted for determinism).
+						for _, m := range manifests {
+							if m.Slug != e.Provider {
+								continue
+							}
+							ctNames := make([]string, 0, len(m.ContentTypes))
+							for ctName := range m.ContentTypes {
+								ctNames = append(ctNames, ctName)
+							}
+							sort.Strings(ctNames)
+							for _, ctName := range ctNames {
+								ct := m.ContentTypes[ctName]
+								for i, src := range ct.Sources {
+									fmt.Fprintf(output.Writer, "  %s.%d %s\n", ctName, i, src.URL)
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -193,6 +229,16 @@ var capmonFetchCmd = &cobra.Command{
 		if ctx == nil {
 			ctx = context.Background()
 		}
+
+		// Progress hint for non-JSON, non-quiet mode.
+		if !output.JSON && !output.Quiet {
+			if provider != "" {
+				fmt.Fprintf(output.Writer, "Fetching %s...\n", provider)
+			} else {
+				fmt.Fprintf(output.Writer, "Fetching all providers...\n")
+			}
+		}
+
 		manifest := capmon.RunManifest{
 			RunID:     "fetch-cmd",
 			Providers: make(map[string]capmon.ProviderStatus),
@@ -202,6 +248,17 @@ var capmonFetchCmd = &cobra.Command{
 			SourceManifestsDir: sourcesDir,
 			ProviderFilter:     provider,
 		}
+		// Per-source progress via callback (verbose non-JSON mode only).
+		if output.Verbose && !output.JSON {
+			opts.ProgressFn = func(providerSlug, sourceID string, cached bool) {
+				indicator := "[changed]"
+				if cached {
+					indicator = "[cached]"
+				}
+				fmt.Fprintf(output.Writer, "  %s/%s %s\n", providerSlug, sourceID, indicator)
+			}
+		}
+
 		if err := capmon.RunFetchStage(ctx, opts, &manifest); err != nil {
 			return fmt.Errorf("fetch stage: %w", err)
 		}
@@ -211,29 +268,40 @@ var capmonFetchCmd = &cobra.Command{
 		for slug, status := range manifest.Providers {
 			errCount := len(status.Errors)
 			totalErrors += errCount
-			liveEntries = append(liveEntries, capmonFetchLiveEntry{
+			// fresh = successfully fetched from network (not from cache).
+			fresh := status.SourcesFetched - status.SourcesCacheHit
+			entry := capmonFetchLiveEntry{
 				Provider: slug,
-				Fetched:  status.SourcesFetched,
+				Fresh:    fresh,
 				Cached:   status.SourcesCacheHit,
 				Errors:   errCount,
-			})
+			}
+			// Populate per-source detail for --json --verbose.
+			if output.Verbose && output.JSON {
+				results := append([]capmon.SourceResult(nil), status.SourceResults...)
+				sort.Slice(results, func(i, j int) bool {
+					return results[i].SourceID < results[j].SourceID
+				})
+				for _, sr := range results {
+					entry.Sources = append(entry.Sources, capmonSourceResult{
+						ID:     sr.SourceID,
+						URL:    sr.URL,
+						Cached: sr.Cached,
+					})
+				}
+			}
+			liveEntries = append(liveEntries, entry)
 		}
+		sort.Slice(liveEntries, func(i, j int) bool {
+			return liveEntries[i].Provider < liveEntries[j].Provider
+		})
 
 		if output.JSON {
 			output.Print(liveEntries)
-		} else {
+		} else if !output.Quiet {
 			for _, e := range liveEntries {
-				fmt.Fprintf(output.Writer, "%s: %d fetched, %d cached, %d errors\n",
-					e.Provider, e.Fetched, e.Cached, e.Errors)
-				if output.Verbose {
-					for _, sr := range manifest.Providers[e.Provider].SourceResults {
-						status := "[changed]"
-						if sr.Cached {
-							status = "[cached]"
-						}
-						fmt.Fprintf(output.Writer, "  %s %s %s\n", sr.SourceID, status, sr.URL)
-					}
-				}
+				fmt.Fprintf(output.Writer, "%s: %d fresh, %d cached, %d errors\n",
+					e.Provider, e.Fresh, e.Cached, e.Errors)
 			}
 		}
 
@@ -242,7 +310,7 @@ var capmonFetchCmd = &cobra.Command{
 		}
 		totalSources := 0
 		for _, e := range liveEntries {
-			totalSources += e.Fetched
+			totalSources += e.Fresh + e.Cached
 		}
 		telemetry.Enrich("dry_run", false)
 		telemetry.Enrich("source_count", totalSources)

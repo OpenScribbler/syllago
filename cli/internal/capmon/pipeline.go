@@ -35,6 +35,10 @@ type PipelineOptions struct {
 	// commands. Defaults to ".". Used by reactive healing to open PRs that
 	// update source manifests.
 	RepoRoot string
+	// ProgressFn is called after each source is successfully fetched in Stage 1.
+	// cached is true when the source content matched the existing cache entry.
+	// Set to nil to disable per-source progress callbacks.
+	ProgressFn func(providerSlug, sourceID string, cached bool)
 }
 
 // RunPipeline executes the capmon pipeline with the given options.
@@ -229,6 +233,9 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					URL:      src.URL,
 					Cached:   entry.Meta.Cached,
 				})
+				if opts.ProgressFn != nil {
+					opts.ProgressFn(m.Slug, sourceID, entry.Meta.Cached)
+				}
 			}
 		}
 		manifest.Providers[m.Slug] = status
