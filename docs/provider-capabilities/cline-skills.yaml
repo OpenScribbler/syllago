@@ -2,6 +2,12 @@ provider: cline
 content_type: skills
 format: ""
 proposed_mappings:
+    - canonical_key: auto_invocable
+      supported: true
+      mechanism: Cline auto-invokes skills by matching user message against the description frontmatter field via the use_skill tool; no explicit @-mention syntax exists.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
     - canonical_key: canonical_filename
       supported: true
       mechanism: Fixed filename SKILL.md required inside a named skill directory
@@ -47,6 +53,12 @@ proposed_mappings:
     - canonical_key: shared_scope
       supported: false
       mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: skill_bundled_resources
+      supported: true
+      mechanism: Optional docs/, templates/, scripts/ subdirectories under SKILL.md are loaded on demand when the skill is invoked.
       source_field: ""
       source_value: ""
       confidence: confirmed

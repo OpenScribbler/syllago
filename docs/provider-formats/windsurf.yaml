@@ -31,6 +31,10 @@ content_types:
         supported: true
         mechanism: "Explicit @mention by skill name in Cascade input (e.g., @deploy-to-production). Always available regardless of auto-invocation eligibility."
         confidence: confirmed
+      auto_invocable:
+        supported: true
+        mechanism: "Cascade auto-invokes a skill when the user's request semantically matches its description frontmatter field."
+        confidence: confirmed
       project_scope:
         supported: true
         mechanism: "Skill directory at .windsurf/skills/<skill-name>/. Committed with the repo; current workspace only. For cross-agent compatibility, also discovered at .agents/skills/<skill-name>/ and (if Claude Code config reading is enabled) .claude/skills/<skill-name>/."
@@ -55,6 +59,11 @@ content_types:
         supported: true
         mechanism: "Fixed filename SKILL.md required in each skill directory. All scopes (workspace, global, system) use this same convention."
         confidence: confirmed
+      skill_bundled_resources:
+        supported: true
+        mechanism: "Arbitrary additional files alongside SKILL.md (scripts, checklists, templates) in the skill directory; all are loaded when the skill is invoked."
+        source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#adding-supporting-resources"
+        confidence: confirmed
     # Optional extension depth fields (populated by capmon subagent):
     # - required: true | false | null (null = source doesn't say)
     # - value_type: see allow-list in formatdoc_validate.go
@@ -64,7 +73,8 @@ content_types:
         name: Supporting resource files
         summary: "Arbitrary additional files alongside SKILL.md (scripts, checklists, templates) bundle a multi-step workflow into a single skill directory."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/skills.md#adding-supporting-resources"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to skill_bundled_resources canonical key (issue #74)."
         conversion: not-portable
       - id: name_format_constraint
         name: Skill name format constraint
