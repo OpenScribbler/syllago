@@ -10,7 +10,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: builtin_commands
       supported: true
-      mechanism: ~75 built-in slash commands (/help, /clear, /compact, /config, /model, /mcp, /memory, /plan, /effort, /context, /copy, /diff, /btw, /recap, /rewind, /sandbox, /teleport, /ultraplan, /ultrareview, etc.) plus 6 bundled-skill commands; not user-modifiable; availability varies by platform and plan
+      mechanism: 80+ built-in slash commands including /add-dir, /agents, /autofix-pr, /batch [Skill], /branch, /btw, /chrome, /claude-api [Skill], /clear, /color, /compact, /config, /context, /copy, /cost, /debug [Skill], /desktop, /diff, /doctor, /effort, /exit, /export, /extra-usage, /fast, /feedback, /fewer-permission-prompts [Skill], /focus, /heapdump, /help, /hooks, /ide, /init, /insights, /install-github-app, /install-slack-app, /keybindings, /login, /logout, /loop [Skill], /mcp, /memory, /mobile, /model, /passes, /permissions, /plan, /plugin, /powerup, /privacy-settings, /recap, /release-notes, /reload-plugins, /remote-control, /remote-env, /rename, /resume, /review, /rewind, /sandbox, /schedule, /security-review, /setup-bedrock, /setup-vertex, /simplify [Skill], /skills, /stats, /status, /statusline, /stickers, /tasks, /team-onboarding, /teleport, /terminal-setup, /theme, /tui, /ultraplan, /ultrareview, /upgrade, /usage; not user-modifiable; availability varies by platform and plan
       source_field: ""
       source_value: ""
       confidence: confirmed

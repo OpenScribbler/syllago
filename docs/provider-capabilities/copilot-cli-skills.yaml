@@ -34,7 +34,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: global_scope
       supported: true
-      mechanism: skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/
+      mechanism: skill directory under ~/.copilot/skills/<name>/ or ~/.agents/skills/<name>/ in the user home directory
       source_field: ""
       source_value: ""
       confidence: confirmed

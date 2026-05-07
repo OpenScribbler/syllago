@@ -207,7 +207,7 @@ func TestBuiltinScanner_NestedDirsIgnored(t *testing.T) {
 
 // writeExternalScanner creates an executable shell script at dir/name that
 // produces the given stdout and exits with the given code. Skips the test
-// on non-Unix platforms where bash isn't guaranteed.
+// on non-Unix platforms where a POSIX shell isn't guaranteed.
 func writeExternalScanner(t *testing.T, name, body string, exitCode int) string {
 	t.Helper()
 	if runtime.GOOS == "windows" {
@@ -215,7 +215,10 @@ func writeExternalScanner(t *testing.T, name, body string, exitCode int) string 
 	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, name)
-	script := fmt.Sprintf("#!/bin/sh\ncat <<'EOF'\n%s\nEOF\nexit %d\n", body, exitCode)
+	// printf '%s\n' avoids the heredoc mechanism (which spawns an extra
+	// process and uses a shell-internal temp fd) and writes body directly
+	// to stdout. Body must not contain single quotes.
+	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' '%s'\nexit %d\n", body, exitCode)
 	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
 		t.Fatalf("write scanner: %v", err)
 	}
@@ -492,6 +495,10 @@ func TestRunScanChain_WithExternal(t *testing.T) {
 		t.Fatalf("RunScanChain: %v", err)
 	}
 
+	if len(res.Errors) > 0 {
+		t.Logf("scanner errors: %v", res.Errors)
+	}
+
 	sawBuiltin, sawExternal := false, false
 	for _, f := range res.Findings {
 		if f.Scanner == "builtin" {
@@ -502,10 +509,10 @@ func TestRunScanChain_WithExternal(t *testing.T) {
 		}
 	}
 	if !sawBuiltin {
-		t.Error("no builtin findings in merged result")
+		t.Errorf("no builtin findings in merged result; all findings: %+v", res.Findings)
 	}
 	if !sawExternal {
-		t.Error("no external findings in merged result")
+		t.Errorf("no external findings in merged result; all findings: %+v, errors: %v", res.Findings, res.Errors)
 	}
 }
 

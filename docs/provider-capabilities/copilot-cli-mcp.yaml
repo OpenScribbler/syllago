@@ -45,8 +45,8 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: transport_types
-      supported: false
-      mechanism: Copilot CLI MCP transport types not documented
+      supported: true
+      mechanism: Copilot CLI supports both local (stdio) and remote (HTTP/SSE) MCP server types, confirmed in concepts/context/mcp.md
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed

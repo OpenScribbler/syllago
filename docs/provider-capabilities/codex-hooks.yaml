@@ -39,11 +39,11 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: json_io_protocol
-      supported: false
-      mechanism: Codex hooks communicate via exit codes and stdout text; no structured JSON stdin/stdout protocol documented
+      supported: true
+      mechanism: Codex hooks communicate via structured JSON on stdin (typed per-event payload conforming to the event input schema) and stdout (typed response conforming to the event output schema); exit codes alone are not the protocol
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: matcher_patterns
       supported: true
       mechanism: 'hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook'

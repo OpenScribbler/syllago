@@ -16,7 +16,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: env_var_expansion
       supported: true
-      mechanism: 'env_variable_expansion: Crush MCP configuration supports environment variable references in server env blocks'
+      mechanism: Crush MCP configuration supports environment variable references in server env blocks
       source_field: ""
       source_value: ""
       confidence: inferred
@@ -39,14 +39,14 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: tool_filtering
-      supported: false
-      mechanism: Per-server tool allow/block list not documented in the Crush MCP schema
+      supported: true
+      mechanism: MCPConfig has a disabled_tools array (list of tool names to exclude from a specific server). This enables per-server tool filtering at the configuration level.
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: transport_types
       supported: true
-      mechanism: 'transport_types: Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration'
+      mechanism: Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration; default transport is stdio
       source_field: ""
       source_value: ""
       confidence: confirmed

@@ -15,11 +15,11 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: env_var_expansion
-      supported: false
-      mechanism: Codex MCP configuration does not document environment variable expansion
+      supported: true
+      mechanism: 'mcp_env_vars: Codex RawMcpServerConfig supports an env_vars array of McpServerEnvVar entries; each entry is either a plain string or a structured object with name and optional source fields enabling named environment variable sourcing'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: marketplace
       supported: false
       mechanism: Codex does not have an in-IDE MCP marketplace

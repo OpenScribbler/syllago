@@ -5,9 +5,9 @@ category: standalone-app
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-04-11T00:00:00Z"
-last_changed_at: "2026-04-11T00:00:00Z"
-generation_method: human-edited
+last_fetched_at: "2026-05-06T12:57:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
+generation_method: subagent
 
 content_types:
   rules:
@@ -16,11 +16,13 @@ content_types:
       - uri: "https://zed.dev/docs/ai/rules"
         type: documentation
         fetch_method: gh_raw
-        fetched_at: "2026-04-11T00:00:00Z"
+        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:122fc3c7af9835b77e45d11c5c4b99fc3f07874c58bc1f3bb46cfd82774bfac3"
       - uri: "https://raw.githubusercontent.com/zed-industries/zed/main/.rules"
         type: example
         fetch_method: gh_raw
-        fetched_at: "2026-04-11T00:00:00Z"
+        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:079f88838e5b214428c6ebd5e4e68d038df538c2abfc12de8f7bb9b93fa440f5"
     canonical_mappings:
       activation_mode:
         supported: false
@@ -32,7 +34,7 @@ content_types:
         confidence: inferred
       cross_provider_recognition:
         supported: true
-        mechanism: "Zed discovers .rules, .cursorrules, and CLAUDE.md at project root, so rule files authored for other agents are picked up"
+        mechanism: "Zed discovers rule files from multiple providers at project root using a priority-ordered list: .rules, .cursorrules, .windsurfrules, .clinerules, .github/copilot-instructions.md, AGENT.md, AGENTS.md, CLAUDE.md, GEMINI.md — the first matching file wins"
         confidence: confirmed
       auto_memory:
         supported: false
@@ -45,12 +47,24 @@ content_types:
     provider_extensions:
       - id: cross_provider_rule_files
         name: Cross-provider rule file recognition
-        summary: At project root, Zed recognizes .rules, .cursorrules, and CLAUDE.md so rule content authored for other agents is used without renaming.
+        summary: "At project root, Zed recognizes a priority-ordered list of rule filenames from multiple providers: .rules (preferred), .cursorrules, .windsurfrules, .clinerules, .github/copilot-instructions.md, AGENT.md, AGENTS.md, CLAUDE.md, GEMINI.md. The first matching file is used."
         source_ref: "https://zed.dev/docs/ai/rules"
         graduation_candidate: true
         conversion: preserved
-    loading_model: "Rules are plain Markdown with no frontmatter. Zed looks at the project root for a rule file named .rules (preferred), falling back to .cursorrules or CLAUDE.md. The file contents are provided to the agent as project context."
-    notes: "Single file at project root — no directory, no hierarchical scopes, no frontmatter. Global/user-scope rule files are not documented."
+      - id: rules_library
+        name: Rules Library editor
+        summary: "Zed provides a dedicated Rules Library editor (agent panel > ... > Rules..., or cmd-alt-l on macOS / ctrl-alt-l on Windows/Linux) with syntax highlighting, inline assistant support, title editing from the editor title bar, and duplicate/delete controls."
+        source_ref: "https://zed.dev/docs/ai/rules"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: default_rules
+        name: Default rules (paper clip icon)
+        summary: "Any rule in the Rules Library can be set as default by clicking the paper clip icon, making it automatically included in every new Agent Panel interaction. Default rules are managed through the Rules Library UI."
+        source_ref: "https://zed.dev/docs/ai/rules"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Rules are plain Markdown with no frontmatter. Zed looks at the project root for a rule file using a priority-ordered list (.rules preferred, then .cursorrules, .windsurfrules, .clinerules, .github/copilot-instructions.md, AGENT.md, AGENTS.md, CLAUDE.md, GEMINI.md). The first matching file is provided to the agent as project context. Rules can also be created and managed through the Rules Library editor in the Agent Panel."
+    notes: "Single file at project root — no directory, no hierarchical scopes, no frontmatter. Global/user-scope rule files managed through the Rules Library UI are separate from file-based rules. The expanded cross-provider filename list (9 entries as of 2026-05) significantly broadens portability."
 
   mcp:
     status: supported
@@ -58,35 +72,37 @@ content_types:
       - uri: "https://zed.dev/docs/ai/mcp"
         type: documentation
         fetch_method: gh_raw
-        fetched_at: "2026-04-11T00:00:00Z"
+        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:3b7a96e269dcbb52c3a5b2b8b88779d1ba09edfb694bbf7261a849d91c74a5d7"
       - uri: "https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs"
         type: source_code
         fetch_method: gh_raw
-        fetched_at: "2026-04-11T00:00:00Z"
+        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:1035d0f24cbcb693f575a8c53a9dd3a037776265cc265eb958ba74c1181e4c44"
     canonical_mappings:
       transport_types:
         supported: true
-        mechanism: "MCP servers are configured with a stdio command under context_servers in settings.json"
+        mechanism: "Zed supports both stdio (local command + args + env) and HTTP/HTTPS (remote URL + headers) transports. Stdio servers use the command/args/env shape; remote servers use url + optional headers. Both use the same MCP protocol initialization."
         confidence: confirmed
       oauth_support:
-        supported: false
-        mechanism: "Zed MCP configuration does not document OAuth 2.0 authentication for MCP servers"
-        confidence: inferred
+        supported: true
+        mechanism: "When a remote MCP server is configured with a url but no Authorization header, Zed prompts the user to authenticate using the standard MCP OAuth flow"
+        confidence: confirmed
       env_var_expansion:
         supported: false
         mechanism: "no automatic environment variable expansion documented in Zed MCP env blocks"
         confidence: inferred
       tool_filtering:
-        supported: false
-        mechanism: "no per-server include/exclude tool filter documented in Zed MCP configuration"
-        confidence: inferred
+        supported: true
+        mechanism: "Per-profile per-server tool enable/disable maps are supported via context_servers.<name>.tools in agent profile config; enable_all_context_servers: false allows disabling all servers except those explicitly listed in the profile"
+        confidence: confirmed
       auto_approve:
-        supported: false
-        mechanism: "Zed does not document a pre-approved MCP tools list"
-        confidence: inferred
+        supported: true
+        mechanism: "agent.tool_permissions.default: \"allow\" auto-approves all tool actions without prompting (v0.224.0+); individual tools can be targeted with mcp:<server>:<tool_name> key format. Default is \"confirm\"; \"deny\" blocks all tool actions."
+        confidence: confirmed
       marketplace:
         supported: true
-        mechanism: "Zed exposes an in-app MCP server gallery where servers can be browsed and installed"
+        mechanism: "Zed exposes an in-app MCP server gallery (zed: extensions filtered to context-servers, or Agent Panel > View Server Extensions) where servers can be browsed and installed"
         confidence: confirmed
       resource_referencing:
         supported: false
@@ -105,20 +121,59 @@ content_types:
         conversion: translated
         provider_field: context_servers
       - id: stdio_command_config
-        name: Stdio command + args + env server config
-        summary: Each server entry defines a command with executable path, argument array, and env map that Zed launches as a stdio subprocess.
+        name: Stdio command + args + env + timeout server config
+        summary: "Each stdio server entry defines a command with executable path, argument array, env map, and optional timeout that Zed launches as a stdio subprocess. The ModelContextServerBinary struct carries executable, args, env, and timeout fields."
         source_ref: "https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs"
         graduation_candidate: true
         conversion: translated
         provider_field: command
-      - id: server_gallery
-        name: In-app MCP server gallery
-        summary: Zed ships an agent panel UI for browsing and installing MCP servers without hand-editing settings.json.
+      - id: http_server_config
+        name: HTTP/HTTPS remote server config
+        summary: "Remote MCP servers are configured with a url field (http:// or https://) and an optional headers map. Zed's context_server.rs ContextServer::http() constructor validates the URL scheme and rejects non-http(s) schemes with an error."
+        source_ref: "https://raw.githubusercontent.com/zed-industries/zed/main/crates/context_server/src/context_server.rs"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: url
+      - id: oauth_flow
+        name: MCP OAuth authentication prompt
+        summary: "When a remote server's url is set but no Authorization header is provided, Zed automatically prompts the user to authenticate using the standard MCP OAuth flow. No extra configuration is required to trigger the prompt."
         source_ref: "https://zed.dev/docs/ai/mcp"
         graduation_candidate: false
         conversion: not-portable
-    loading_model: "MCP servers are defined in Zed's settings.json (user settings at ~/.config/zed/settings.json on Linux/macOS) under the context_servers key. Each entry supplies a stdio command with args and env for Zed to spawn. Servers are attached to the agent panel's available tools when enabled."
-    notes: "Only stdio transport is documented for user-configurable MCP servers in Zed's settings.json. Settings merge follows Zed's standard project/user override model."
+      - id: server_gallery
+        name: In-app MCP server gallery
+        summary: "Zed ships an agent panel UI for browsing and installing MCP servers (as extensions) without hand-editing settings.json. Accessible via 'zed: extensions' (filtered to context-servers) or Agent Panel top-right menu > View Server Extensions."
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: per_profile_tool_filtering
+        name: Per-profile per-server tool filtering
+        summary: "Agent profiles can set enable_all_context_servers: false and supply a per-server tools map (context_servers.<name>.tools with boolean values per tool name) to enable only specific MCP tools within that profile."
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: "agent.profiles"
+      - id: tool_permissions
+        name: Tool permissions (confirm / allow / deny)
+        summary: "agent.tool_permissions.default controls approval behavior for all tool actions: \"confirm\" (default) prompts before running, \"allow\" auto-approves, \"deny\" blocks. Individual MCP tools are targeted with the key format mcp:<server>:<tool_name>. Available since v0.224.0."
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: "agent.tool_permissions"
+      - id: dynamic_tool_list
+        name: Dynamic tool list reload (notifications/tools/list_changed)
+        summary: "Zed handles the MCP notifications/tools/list_changed notification: when a server adds, removes, or modifies tools at runtime, Zed automatically reloads the tool list without requiring a server restart."
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: external_agent_forwarding
+        name: MCP server forwarding to external agents
+        summary: "MCP servers configured in Zed are forwarded to external agents via the Agent Client Protocol. External agents can also access MCP servers from their own native config files."
+        source_ref: "https://zed.dev/docs/ai/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "MCP servers are defined in Zed's settings.json (user settings at ~/.config/zed/settings.json on Linux/macOS) under the context_servers key. Stdio servers supply command, args, env, and optional timeout; Zed spawns them as subprocesses. Remote servers supply a url and optional headers; Zed connects over HTTP/HTTPS and triggers an OAuth flow if no Authorization header is present. Servers are attached to the agent panel's available tools when enabled. Profile-level tool filtering and global tool_permissions gates control which tools require approval."
+    notes: "Both stdio and HTTP/HTTPS transports are documented and confirmed in source. OAuth prompting is automatic for remote servers without an Authorization header. Per-profile tool filtering and global tool_permissions (v0.224.0+) provide fine-grained approval control. Settings merge follows Zed's standard project/user override model."
 
   skills:
     status: unsupported

@@ -4,22 +4,22 @@ format: ""
 proposed_mappings:
     - canonical_key: async_execution
       supported: false
-      mechanism: Pi hooks run synchronously; no async execution documented
+      mechanism: Pi extension handlers are awaited synchronously in registration order; no fire-and-forget async execution documented
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: context_injection
-      supported: false
-      mechanism: Pi hooks cannot inject context into the agent session via hook output
+      supported: true
+      mechanism: 'before_agent_start handlers return { message: { customType, content, display } } to inject a persistent message stored in session and sent to LLM; context handlers return { messages } to modify the message array before each LLM call'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: decision_control
-      supported: false
-      mechanism: Pi hooks are observational; no mechanism to block, allow, or modify tool invocations documented
+      supported: true
+      mechanism: 'tool_call handlers return { block: true, reason? } to prevent tool execution; tool_call errors also block the tool (fail-safe behavior)'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: handler_types
       supported: true
       mechanism: 'pi_extension_typescript_native: Pi hooks support TypeScript/native extension handler type beyond shell commands'
@@ -27,14 +27,14 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: hook_scopes
-      supported: false
-      mechanism: Pi hooks are project-scoped; no multi-scope configuration documented
+      supported: true
+      mechanism: Extensions load from global scope (~/.pi/agent/extensions/) and project-local scope (.pi/extensions/); both scopes are auto-discovered and can be combined
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: input_modification
       supported: true
-      mechanism: 'pi_extension_tool_call_blocking: Pi extensions can intercept and modify tool call inputs before execution'
+      mechanism: tool_call handlers mutate event.input in place to modify tool arguments before execution; later handlers see prior mutations
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -43,16 +43,16 @@ proposed_mappings:
       mechanism: Pi hooks communicate via TypeScript extension API; no JSON stdin/stdout protocol for shell hooks
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: matcher_patterns
       supported: false
-      mechanism: Pi hooks fire on configured lifecycle events; no per-tool filtering documented
+      mechanism: Pi hooks fire on configured lifecycle events; no per-tool name filtering at the subscription level — tool discrimination is done in handler code
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: permission_control
       supported: false
-      mechanism: Pi hooks cannot make permission decisions about tool availability
+      mechanism: Pi extensions cannot make availability decisions for tools; tool_call block controls invocation flow but does not remove a tool from the available set; setActiveTools() is available but is not a hook return mechanism
       source_field: ""
       source_value: ""
       confidence: inferred
