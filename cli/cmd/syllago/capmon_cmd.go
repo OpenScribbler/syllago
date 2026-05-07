@@ -111,15 +111,11 @@ var capmonFetchCmd = &cobra.Command{
 		provider, _ := cmd.Flags().GetString("provider")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		sourcesDir, _ := cmd.Flags().GetString("sources-dir")
-		cacheRoot, _ := cmd.Flags().GetString("cache-root")
 
 		if provider != "" {
 			if _, err := capmon.SanitizeSlug(provider); err != nil {
 				return fmt.Errorf("invalid --provider: %w", err)
 			}
-		}
-		if cacheRoot == "" {
-			cacheRoot = ".capmon-cache"
 		}
 		if sourcesDir == "" {
 			sourcesDir = "docs/provider-sources"
