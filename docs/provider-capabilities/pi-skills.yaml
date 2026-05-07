@@ -58,7 +58,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: project_scope
       supported: true
-      mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md
+      mechanism: .pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md (checked in cwd and ancestor directories up to git repo root, or filesystem root)
       source_field: ""
       source_value: ""
       confidence: confirmed
