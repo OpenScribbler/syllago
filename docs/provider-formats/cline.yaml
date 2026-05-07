@@ -62,6 +62,16 @@ content_types:
       user_invocable:
         supported: false
         confidence: confirmed
+      auto_invocable:
+        supported: true
+        extension_id: description_based_auto_invocation
+        mechanism: "Cline auto-invokes skills by matching user message against the description frontmatter field via the use_skill tool; no explicit @-mention syntax exists."
+        confidence: confirmed
+      skill_bundled_resources:
+        supported: true
+        mechanism: "Optional docs/, templates/, scripts/ subdirectories under SKILL.md are loaded on demand when the skill is invoked."
+        source_ref: "https://docs.cline.bot/customization/skills.md#bundling-supporting-files"
+        confidence: confirmed
     # Optional extension depth fields (populated by capmon subagent):
     # - required: true | false | null (null = source doesn't say)
     # - value_type: see allow-list in formatdoc_validate.go
@@ -71,13 +81,15 @@ content_types:
         name: Supporting Files in Skill Directory
         summary: "Optional docs/, templates/, scripts/ subdirectories under SKILL.md, loaded on demand so source bytes never enter context."
         source_ref: "https://docs.cline.bot/customization/skills.md#bundling-supporting-files"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to skill_bundled_resources canonical key (issue #74)."
         conversion: not-portable
       - id: description_based_auto_invocation
         name: Description-Based Auto-Invocation via use_skill Tool
         summary: "Cline auto-invokes skills by matching user message against the description field; no explicit @-mention syntax exists."
         source_ref: "https://docs.cline.bot/customization/skills.md#how-skills-work"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to auto_invocable canonical key (issue #73)."
         provider_field: "description"
         conversion: not-portable
       - id: skill_toggle

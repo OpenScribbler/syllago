@@ -87,6 +87,17 @@ content_types:
         semantics; often used for tooling or automation metadata.
       type: object
 
+    auto_invocable:
+      description: >
+        Whether the provider supports automatic model-driven skill invocation —
+        the model selects and activates a skill without explicit user syntax.
+        Implementations vary: description-field semantic matching, explicit keyword
+        arrays, and boolean flags are all equivalent mechanisms for the same concept.
+        Note: a description field paired with an opt-out disable_model_invocation flag
+        is functionally equivalent to an explicit auto_invocable boolean — both express
+        that the skill participates in automatic activation unless suppressed.
+      type: bool
+
     disable_model_invocation:
       description: >
         When true, the AI cannot auto-invoke this skill; only the user can
@@ -133,6 +144,14 @@ content_types:
       description: >
         Whether the provider supports custom filenames (beyond the canonical
         filename convention).
+      type: bool
+
+    skill_bundled_resources:
+      description: >
+        Whether the skill directory may contain arbitrary co-located files (scripts,
+        templates, configs, checklists) beyond SKILL.md that the agent can access when
+        the skill is invoked. Enables multi-file skill bundles without converting
+        supporting files into separate skills or rules.
       type: bool
 
   rules:

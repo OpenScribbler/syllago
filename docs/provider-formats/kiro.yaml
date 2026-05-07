@@ -68,6 +68,11 @@ content_types:
         supported: false
         mechanism: ""
         confidence: confirmed
+      auto_invocable:
+        supported: true
+        extension_id: kiro_keywords
+        mechanism: "Keywords array in POWER.md frontmatter (key: keywords); Kiro activates the power when any listed keyword is mentioned in conversation."
+        confidence: confirmed
     # Optional extension depth fields (populated by capmon subagent):
     # - required: true | false | null (null = source doesn't say)
     # - value_type: see allow-list in formatdoc_validate.go
@@ -85,8 +90,8 @@ content_types:
         name: "keywords frontmatter field"
         summary: "Array of activation trigger words used by Kiro's automatic power-loading system. When a user mentions a keyword in conversation, Kiro activates the matching power."
         source_ref: "https://kiro.dev/docs/powers/create/"
-        graduation_candidate: true
-        graduation_notes: "Confirmed cross-provider concept — listed in graduation issue #73 as auto_invocation_signal."
+        graduation_candidate: false
+        graduation_notes: "The auto-invocation concept is captured by the auto_invocable canonical key (issue #73). The keywords-array mechanism is Kiro-specific and remains as an extension."
         provider_field: keywords
         conversion: embedded
       - id: steering_files

@@ -2,6 +2,12 @@ provider: pi
 content_type: skills
 format: ""
 proposed_mappings:
+    - canonical_key: auto_invocable
+      supported: true
+      mechanism: 'Skill name and description are injected into the system prompt as XML; the agent loads matching SKILL.md bodies on demand. Skills with disable-model-invocation: true are excluded from system prompt injection.'
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
     - canonical_key: canonical_filename
       supported: true
       mechanism: SKILL.md (required, fixed filename for directory-form skills)
@@ -65,6 +71,12 @@ proposed_mappings:
     - canonical_key: shared_scope
       supported: false
       mechanism: ""
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: skill_bundled_resources
+      supported: true
+      mechanism: Skill directories may include scripts/, references/, and assets/ subdirectories that SKILL.md references via relative paths.
       source_field: ""
       source_value: ""
       confidence: confirmed
