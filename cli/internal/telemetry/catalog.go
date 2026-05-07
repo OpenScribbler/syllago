@@ -44,7 +44,7 @@ func EventCatalog() []EventDef {
 					Type:        "string",
 					Description: "Target provider slug",
 					Example:     "claude-code",
-					Commands:    []string{"install", "uninstall", "loadout_apply", "sandbox_run", "sync-and-export", "capmon_validate_spec", "capmon_validate_format_doc", "capmon_validate_sources", "capmon_derive", "capmon_check", "capmon_onboard"},
+					Commands:    []string{"install", "uninstall", "loadout_apply", "sandbox_run", "sync-and-export", "capmon_validate_spec", "capmon_validate_format_doc", "capmon_validate_sources", "capmon_derive", "capmon_check", "capmon_onboard", "capmon_fetch"},
 				},
 				{
 					Name:        "content_type",
@@ -65,7 +65,7 @@ func EventCatalog() []EventDef {
 					Type:        "bool",
 					Description: "Whether --dry-run flag was used",
 					Example:     false,
-					Commands:    []string{"install", "add", "uninstall", "remove", "sync-and-export"},
+					Commands:    []string{"install", "add", "uninstall", "remove", "sync-and-export", "capmon_fetch"},
 				},
 				{
 					Name:        "from",
@@ -115,6 +115,20 @@ func EventCatalog() []EventDef {
 					Description: "Number of items in the result set",
 					Example:     12,
 					Commands:    []string{"list", "registry_items"},
+				},
+				{
+					Name:        "source_count",
+					Type:        "int",
+					Description: "Total number of provider sources targeted by capmon fetch",
+					Example:     15,
+					Commands:    []string{"capmon_fetch"},
+				},
+				{
+					Name:        "fetch_errors",
+					Type:        "int",
+					Description: "Number of sources that failed to fetch in capmon fetch",
+					Example:     0,
+					Commands:    []string{"capmon_fetch"},
 				},
 				{
 					Name:        "mode",
