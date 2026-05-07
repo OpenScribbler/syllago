@@ -15,11 +15,11 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: env_var_expansion
-      supported: false
-      mechanism: Kiro MCP configuration does not document environment variable expansion
+      supported: true
+      mechanism: 'kiro_mcp_env_var_expansion: Environment variables referenced dynamically using ${VARIABLE_NAME} syntax within MCP config values; recommended pattern for secrets instead of hardcoded values'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: marketplace
       supported: false
       mechanism: Kiro does not have an in-IDE MCP marketplace
@@ -28,7 +28,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: oauth_support
       supported: false
-      mechanism: Kiro MCP does not document OAuth 2.0 authentication
+      mechanism: Kiro MCP does not document OAuth 2.0 authentication; remote server auth uses static headers
       source_field: ""
       source_value: ""
       confidence: inferred
@@ -45,8 +45,8 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: transport_types
-      supported: false
-      mechanism: Kiro MCP transport types not documented beyond basic MCP support
+      supported: true
+      mechanism: Kiro supports stdio (local process via command + args) and remote (HTTPS endpoint or localhost HTTP via url + optional headers) server types
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
