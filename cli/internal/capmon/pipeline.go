@@ -143,6 +143,18 @@ func generateRunID() string {
 	return string(b)
 }
 
+// RunFetchStage executes Stage 1 (fetch) only, populating manifest.Providers.
+// Used by 'syllago capmon fetch' to run the fetch stage without triggering extraction.
+func RunFetchStage(ctx context.Context, opts PipelineOptions, manifest *RunManifest) error {
+	if opts.CacheRoot == "" {
+		opts.CacheRoot = ".capmon-cache"
+	}
+	if opts.SourceManifestsDir == "" {
+		opts.SourceManifestsDir = "docs/provider-sources"
+	}
+	return runStage1Fetch(ctx, opts, manifest)
+}
+
 // runStage1Fetch fetches all source URLs from provider source manifests and writes
 // content to the cache. Skips unchanged content (hash comparison). Records per-source
 // errors but continues — a single bad URL does not abort the provider.
@@ -212,6 +224,11 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 				if entry.Meta.Cached {
 					status.SourcesCacheHit++
 				}
+				status.SourceResults = append(status.SourceResults, SourceResult{
+					SourceID: sourceID,
+					URL:      src.URL,
+					Cached:   entry.Meta.Cached,
+				})
 			}
 		}
 		manifest.Providers[m.Slug] = status

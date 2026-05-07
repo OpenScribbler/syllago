@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,6 +34,15 @@ var capmonCapabilitiesDirOverride string
 type capmonFetchDryRunEntry struct {
 	Provider    string `json:"provider"`
 	SourceCount int    `json:"source_count"`
+}
+
+// capmonFetchLiveEntry is the per-provider live-fetch summary emitted by
+// 'syllago capmon fetch' (no --dry-run) in JSON mode.
+type capmonFetchLiveEntry struct {
+	Provider string `json:"provider"`
+	Fetched  int    `json:"fetched"`
+	Cached   int    `json:"cached"`
+	Errors   int    `json:"errors"`
 }
 
 var capmonCmd = &cobra.Command{
@@ -111,6 +121,7 @@ var capmonFetchCmd = &cobra.Command{
 		provider, _ := cmd.Flags().GetString("provider")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		sourcesDir, _ := cmd.Flags().GetString("sources-dir")
+		cacheRoot, _ := cmd.Flags().GetString("cache-root")
 
 		if provider != "" {
 			if _, err := capmon.SanitizeSlug(provider); err != nil {
@@ -119,6 +130,9 @@ var capmonFetchCmd = &cobra.Command{
 		}
 		if sourcesDir == "" {
 			sourcesDir = "docs/provider-sources"
+		}
+		if cacheRoot == "" {
+			cacheRoot = ".capmon-cache"
 		}
 
 		if dryRun {
@@ -163,8 +177,59 @@ var capmonFetchCmd = &cobra.Command{
 			return nil
 		}
 
-		// Live fetch: Stage 1 pipeline (Slice 3)
-		return fmt.Errorf("not yet implemented — use 'syllago capmon run --stage fetch-extract'")
+		// Live fetch: Stage 1 pipeline.
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		manifest := capmon.RunManifest{
+			RunID:     "fetch-cmd",
+			Providers: make(map[string]capmon.ProviderStatus),
+		}
+		opts := capmon.PipelineOptions{
+			CacheRoot:          cacheRoot,
+			SourceManifestsDir: sourcesDir,
+			ProviderFilter:     provider,
+		}
+		if err := capmon.RunFetchStage(ctx, opts, &manifest); err != nil {
+			return fmt.Errorf("fetch stage: %w", err)
+		}
+
+		var totalErrors int
+		var liveEntries []capmonFetchLiveEntry
+		for slug, status := range manifest.Providers {
+			errCount := len(status.Errors)
+			totalErrors += errCount
+			liveEntries = append(liveEntries, capmonFetchLiveEntry{
+				Provider: slug,
+				Fetched:  status.SourcesFetched,
+				Cached:   status.SourcesCacheHit,
+				Errors:   errCount,
+			})
+		}
+
+		if output.JSON {
+			output.Print(liveEntries)
+		} else {
+			for _, e := range liveEntries {
+				fmt.Fprintf(output.Writer, "%s: %d fetched, %d cached, %d errors\n",
+					e.Provider, e.Fetched, e.Cached, e.Errors)
+				if output.Verbose {
+					for _, sr := range manifest.Providers[e.Provider].SourceResults {
+						status := "[changed]"
+						if sr.Cached {
+							status = "[cached]"
+						}
+						fmt.Fprintf(output.Writer, "  %s %s %s\n", sr.SourceID, status, sr.URL)
+					}
+				}
+			}
+		}
+
+		if totalErrors > 0 {
+			return fmt.Errorf("fetch completed with %d error(s); see output for details", totalErrors)
+		}
+		return nil
 	},
 }
 
