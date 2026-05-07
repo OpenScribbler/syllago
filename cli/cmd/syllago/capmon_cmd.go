@@ -174,6 +174,17 @@ var capmonFetchCmd = &cobra.Command{
 					fmt.Fprintf(output.Writer, "%s: %d sources (dry run)\n", e.Provider, e.SourceCount)
 				}
 			}
+
+			if provider != "" {
+				telemetry.Enrich("provider", provider)
+			}
+			totalDrySources := 0
+			for _, e := range entries {
+				totalDrySources += e.SourceCount
+			}
+			telemetry.Enrich("dry_run", true)
+			telemetry.Enrich("source_count", totalDrySources)
+			telemetry.Enrich("fetch_errors", 0)
 			return nil
 		}
 
@@ -225,6 +236,17 @@ var capmonFetchCmd = &cobra.Command{
 				}
 			}
 		}
+
+		if provider != "" {
+			telemetry.Enrich("provider", provider)
+		}
+		totalSources := 0
+		for _, e := range liveEntries {
+			totalSources += e.Fetched
+		}
+		telemetry.Enrich("dry_run", false)
+		telemetry.Enrich("source_count", totalSources)
+		telemetry.Enrich("fetch_errors", totalErrors)
 
 		if totalErrors > 0 {
 			return fmt.Errorf("fetch completed with %d error(s); see output for details", totalErrors)
