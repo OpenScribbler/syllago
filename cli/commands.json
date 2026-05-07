@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-05-03T23:53:16Z",
-  "syllagoVersion": "0.11.0",
+  "generatedAt": "2026-05-07T16:51:15Z",
+  "syllagoVersion": "0.12.0",
   "commands": [
     {
       "name": "add",
@@ -717,12 +717,36 @@
       "aliases": [],
       "flags": [
         {
+          "name": "--cache-root",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to .capmon-cache/ (default: .capmon-cache)"
+        },
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Report source counts without fetching or writing cache"
+        },
+        {
           "name": "--provider",
           "shorthand": null,
           "type": "string",
           "default": null,
           "required": false,
           "description": "Fetch only this provider slug"
+        },
+        {
+          "name": "--sources-dir",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Path to provider-sources/ (default: docs/provider-sources)"
         }
       ],
       "inheritedFlags": [
