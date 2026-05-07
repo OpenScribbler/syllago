@@ -58,6 +58,14 @@ type CapabilityDiff struct {
 	ProposedYAMLPatch string        `json:"proposed_yaml_patch,omitempty"`
 }
 
+// SourceResult is a per-source fetch outcome recorded during Stage 1.
+// Populated only for successfully fetched sources; errors go to ProviderStatus.Errors.
+type SourceResult struct {
+	SourceID string `json:"source_id"`
+	URL      string `json:"url"`
+	Cached   bool   `json:"cached"`
+}
+
 // ProviderStatus tracks per-provider pipeline state for the RunManifest.
 type ProviderStatus struct {
 	Slug             string          `json:"slug,omitempty"`
@@ -66,6 +74,7 @@ type ProviderStatus struct {
 	SourcesFetched   int             `json:"sources_fetched,omitempty"`
 	SourcesCacheHit  int             `json:"sources_cache_hit,omitempty"`
 	SourcesExtracted int             `json:"sources_extracted,omitempty"`
+	SourceResults    []SourceResult  `json:"source_results,omitempty"`
 	SourcesSkipped   int             `json:"sources_skipped,omitempty"`
 	NeedsBaseline    bool            `json:"needs_baseline,omitempty"`
 	HasDrift         bool            `json:"has_drift,omitempty"`
