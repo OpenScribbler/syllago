@@ -58,7 +58,7 @@ func SetForTest(t interface{ Cleanup(func()) }) (stdout, stderr *bytes.Buffer) {
 }
 
 func Print(v any) {
-	if Quiet {
+	if Quiet && !JSON {
 		return
 	}
 	if JSON {

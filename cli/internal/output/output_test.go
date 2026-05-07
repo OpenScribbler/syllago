@@ -73,6 +73,22 @@ func TestPrintQuietMode(t *testing.T) {
 	}
 }
 
+func TestPrint_QuietJSONBypass(t *testing.T) {
+	var buf bytes.Buffer
+	Writer = &buf
+	defer func() { Writer = os.Stdout; Quiet = false; JSON = false }()
+
+	Quiet = true
+	JSON = true
+	Print(map[string]string{"key": "value"})
+	if buf.Len() == 0 {
+		t.Error("Print should emit JSON output even when Quiet is true")
+	}
+	if !strings.Contains(buf.String(), "key") {
+		t.Errorf("JSON output missing expected content; got: %s", buf.String())
+	}
+}
+
 func TestPrintVerbose(t *testing.T) {
 	var buf bytes.Buffer
 	Writer = &buf
