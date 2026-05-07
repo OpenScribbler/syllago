@@ -28,7 +28,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: oauth_support
       supported: true
-      mechanism: 'mcp_oauth_authentication: OAuth 2.0 for HTTP MCP servers; dynamic client registration; token storage in macOS keychain or credentials file; auto-refresh'
+      mechanism: 'mcp_oauth_authentication: OAuth 2.0 for HTTP MCP servers; dynamic client registration or CIMD auto-discovery; token storage in macOS keychain or credentials file; auto-refresh; oauth.scopes pins requested scope set; authServerMetadataUrl overrides discovery chain'
       source_field: ""
       source_value: ""
       confidence: confirmed

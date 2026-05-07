@@ -3,56 +3,56 @@ content_type: hooks
 format: ""
 proposed_mappings:
     - canonical_key: async_execution
-      supported: false
-      mechanism: Factory Droid hooks run synchronously; no async execution documented
+      supported: true
+      mechanism: Matching hooks for the same event execute concurrently (in parallel); deduplication consolidates identical commands automatically
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: context_injection
-      supported: false
-      mechanism: Factory Droid hooks cannot inject context into the agent session
+      supported: true
+      mechanism: additionalContext field in PostToolUse, UserPromptSubmit, and SessionStart hook output injects information into the agent session; systemMessage field in JSON output provides session-level injection
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: decision_control
       supported: true
-      mechanism: 'hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action'
+      mechanism: PreToolUse hooks return JSON with allow/deny/ask decision field; exit code 2 blocks with stderr fed back to Droid; non-zero non-2 shows stderr to user as non-blocking error
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: handler_types
       supported: false
-      mechanism: Factory Droid hooks execute shell commands only; no other handler types documented
+      mechanism: 'Factory Droid hooks execute shell commands only (type: command); no other handler types documented'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: hook_scopes
-      supported: false
-      mechanism: Factory Droid hooks are project-scoped; no multi-scope configuration documented
+      supported: true
+      mechanism: 'Four scopes documented: user-level (~/.factory/settings.json), project-level (.factory/settings.json), local-uncommitted (.factory/settings.local.json), and enterprise managed policies'
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: input_modification
-      supported: false
-      mechanism: Factory Droid hooks cannot modify tool input before execution
+      supported: true
+      mechanism: PreToolUse hooks return updatedInput in JSON output to modify tool parameters before execution
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: json_io_protocol
-      supported: false
-      mechanism: Factory Droid hooks communicate via exit codes; no JSON stdin/stdout protocol documented
+      supported: true
+      mechanism: Hooks receive JSON via stdin containing session_id, transcript_path, cwd, permission_mode, hook_event_name, and event-specific fields; hooks return JSON output with continue, stopReason, suppressOutput, systemMessage, and event-specific fields
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: matcher_patterns
-      supported: false
-      mechanism: Factory Droid hooks fire on configured lifecycle events; no per-tool pattern matching documented
+      supported: true
+      mechanism: PreToolUse and PostToolUse hooks use matcher strings supporting exact tool names, regex patterns (Edit|Create, Notebook.*), MCP tool patterns (mcp__<server>__<tool>), and wildcard (*) to match all tools
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: permission_control
-      supported: false
-      mechanism: Factory Droid hooks cannot make permission decisions about tool availability
+      supported: true
+      mechanism: PreToolUse hooks return allow, deny, or ask in the JSON decision field to bypass, block, or escalate tool permission decisions
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed

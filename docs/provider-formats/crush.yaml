@@ -18,9 +18,9 @@ category: cli
 #   3. Analogy with the preceding OpenCode format (the archived ancestor and
 #      Crush's sibling successor sst/opencode).
 # Confirmed facts are backed by direct upstream source references.
-last_fetched_at: "2026-04-17T00:00:00Z"
-last_changed_at: "2026-04-17T00:00:00Z"
-generation_method: human-edited
+last_fetched_at: "2026-05-06T12:57:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
+generation_method: subagent
 
 content_types:
   rules:
@@ -29,20 +29,20 @@ content_types:
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
         type: source_code
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:ed343888cadd36ea75edd18bdb0d53afd3ffec17eda3e1213fc9662fdff6cf58"
+        fetched_at: "2026-05-06T12:57:00Z"
     canonical_mappings:
       activation_mode:
         supported: false
-        mechanism: "Crush rule files (AGENTS.md) load unconditionally as project context; no conditional activation syntax documented"
+        mechanism: "Crush rule files load unconditionally as project context; no conditional activation syntax documented"
         confidence: inferred
       file_imports:
         supported: false
-        mechanism: "No file import directive documented for AGENTS.md in Crush"
+        mechanism: "No file import directive documented for context files in Crush"
         confidence: inferred
       cross_provider_recognition:
         supported: true
-        mechanism: "cross_provider_convention: Crush reads AGENTS.md, the cross-provider rules convention shared across multiple agents"
+        mechanism: "Crush reads AGENTS.md, CRUSH.md, CLAUDE.md, GEMINI.md (and .local variants) as context files. The active filename is controlled by the initialize_as option (default: AGENTS.md); context_paths allows configuring an arbitrary list of additional file paths."
         confidence: confirmed
       auto_memory:
         supported: false
@@ -50,16 +50,28 @@ content_types:
         confidence: inferred
       hierarchical_loading:
         supported: false
-        mechanism: "Crush documents AGENTS.md at the project root only; no hierarchical/subdirectory loading documented"
+        mechanism: "Crush documents context files at the project root only; no hierarchical/subdirectory loading documented"
         confidence: inferred
     provider_extensions:
       - id: crush_md_variant
         name: CRUSH.md Crush-specific variant
         summary: Crush additionally recognizes a project-scope CRUSH.md file as a Crush-specific rules variant alongside the cross-provider AGENTS.md convention.
-        source_ref: "https://github.com/charmbracelet/crush"
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
         graduation_candidate: false
         conversion: translated
-    loading_model: "Rules are plain Markdown files at the project root, with no YAML frontmatter. Crush reads AGENTS.md as the cross-provider rules convention; it additionally recognizes CRUSH.md as a Crush-specific variant. Rule content is loaded as context for the agent at session start."
+      - id: multi_provider_context_files
+        name: Multi-provider context file recognition
+        summary: Crush reads AGENTS.md, CRUSH.md, CLAUDE.md, and GEMINI.md (plus .local variants) as context files, enabling rules written for other providers to be loaded without modification.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
+        graduation_candidate: false
+        conversion: preserved
+      - id: context_paths_configurable
+        name: Configurable context_paths and initialize_as
+        summary: The crush.json options block supports context_paths (an array of additional file paths to load as context) and initialize_as (sets the default rules filename, e.g. AGENTS.md, CRUSH.md, CLAUDE.md). This allows teams to direct Crush at arbitrary rule file locations.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Rules are plain Markdown files at the project root, with no YAML frontmatter. Crush reads AGENTS.md as the default cross-provider convention (controlled by the initialize_as option); it additionally recognizes CRUSH.md, CLAUDE.md, GEMINI.md, and their .local variants. The context_paths option in crush.json allows specifying additional file paths. Rule content is loaded as context for the agent at session start."
     notes: "No global user-scope rules file is documented in Crush. Project-scope only. Hierarchical/subdirectory loading not documented — inferred unsupported pending upstream clarification."
 
   skills:
@@ -68,18 +80,18 @@ content_types:
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
         type: source_code
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:8a6017f357accd0cfedf83a7e4ae5b6655c29e341ff2aa15257daad7e75ff439"
+        fetched_at: "2026-05-06T12:57:00Z"
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md"
         type: source_code
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:877215de75b74d808cd69b666790aa3b8c852d2343b2d75ea9504f25e91d2fa0"
+        fetched_at: "2026-05-06T12:57:00Z"
     canonical_mappings:
       display_name:
         supported: true
         provider_field: "name"
-        mechanism: "yaml frontmatter key: name (required); follows the Anthropic Agent Skills standard"
+        mechanism: "yaml frontmatter key: name (required); follows the Anthropic Agent Skills standard. Validated: must be alphanumeric with hyphens, max 64 chars."
         confidence: confirmed
       description:
         supported: true
@@ -114,7 +126,7 @@ content_types:
       disable_model_invocation:
         supported: true
         provider_field: "disable-model-invocation"
-        mechanism: "yaml frontmatter key: disable-model-invocation (optional boolean) per the Agent Skills standard"
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional boolean) per the Agent Skills standard. Note: the Go Skill struct in skills.go does not have a corresponding field — behavior is inferred from the standard, not from explicit Crush source handling."
         confidence: inferred
       user_invocable:
         supported: false
@@ -132,8 +144,14 @@ content_types:
         source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
         graduation_candidate: true
         conversion: preserved
-    loading_model: "A skill is a directory containing a SKILL.md file. Crush discovers skills from .crush/skills/<name>/SKILL.md (native project scope), .agents/skills/<name>/SKILL.md (cross-provider project convention), and ~/.config/crush/skills/<name>/SKILL.md plus ~/.agents/skills/<name>/SKILL.md (user global scope). The SKILL.md YAML frontmatter supplies name and description; the Markdown body contains instructions that guide agent behavior when the skill is active."
-    notes: "Implements the Agent Skills open standard (https://agentskills.io). Frontmatter keys license, compatibility, and metadata are optional; disable-model-invocation follows the standard but its exact handling in Crush is inferred from the standard rather than explicitly documented in Charm's upstream docs."
+      - id: name_directory_constraint
+        name: Skill name must match directory name
+        summary: Crush validates that the skill name from SKILL.md frontmatter matches the directory basename containing the SKILL.md file. Skills failing this check are rejected at load time.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/skills.go"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "A skill is a directory containing a SKILL.md file. Crush discovers skills from .crush/skills/<name>/SKILL.md (native project scope), .agents/skills/<name>/SKILL.md (cross-provider project convention), and ~/.config/crush/skills/<name>/SKILL.md plus ~/.agents/skills/<name>/SKILL.md (user global scope). The skills_paths option in crush.json allows configuring additional discovery paths. The SKILL.md YAML frontmatter supplies name and description; the Markdown body contains instructions that guide agent behavior when the skill is active. Skills are deduplicated by name; last path wins."
+    notes: "Implements the Agent Skills open standard (https://agentskills.io). Frontmatter keys license, compatibility, and metadata are optional. The disable-model-invocation key follows the standard but is not present in the Go Skill struct — its exact runtime handling in Crush is inferred from the standard rather than explicit source code. The skill directory base name must match the frontmatter name field; mismatches are rejected at load time."
 
   mcp:
     status: supported
@@ -141,17 +159,17 @@ content_types:
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
         type: source_code
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:1ed71c8a69ce5a9a87855fb2a6abc78af23b821e7a6597727590849c52b45b88"
+        fetched_at: "2026-05-06T12:57:00Z"
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/README.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-17T00:00:00Z"
+        content_hash: "sha256:5d2a410e86938dea52567d778bc345469c992acde2807337bf81fca1c53085ef"
+        fetched_at: "2026-05-06T12:57:00Z"
     canonical_mappings:
       transport_types:
         supported: true
-        mechanism: "transport_types: Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration"
+        mechanism: "Crush documents stdio, http, and sse transports in its JSON schema for MCP server configuration; default transport is stdio"
         confidence: confirmed
       oauth_support:
         supported: false
@@ -159,12 +177,13 @@ content_types:
         confidence: inferred
       env_var_expansion:
         supported: true
-        mechanism: "env_variable_expansion: Crush MCP configuration supports environment variable references in server env blocks"
+        mechanism: "Crush MCP configuration supports environment variable references in server env blocks"
         confidence: inferred
       tool_filtering:
-        supported: false
-        mechanism: "Per-server tool allow/block list not documented in the Crush MCP schema"
-        confidence: inferred
+        supported: true
+        provider_field: "disabled_tools"
+        mechanism: "MCPConfig has a disabled_tools array (list of tool names to exclude from a specific server). This enables per-server tool filtering at the configuration level."
+        confidence: confirmed
       auto_approve:
         supported: false
         mechanism: "Crush does not document pre-configured auto-approval for specific MCP tools"
@@ -195,15 +214,103 @@ content_types:
         source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
         graduation_candidate: false
         conversion: not-portable
-    loading_model: "MCP servers are configured in crush.json under the mcp key as a map of server-name to server config objects. The config file lives at the project root (crush.json) or under the user's XDG config directory (~/.config/crush/crush.json). On startup, Crush iterates configured servers, establishes transport connections (stdio, http, or sse), fetches tool definitions, and registers tools for the agent."
-    notes: "Transport types (stdio, http, sse) are confirmed from the upstream JSON schema and match the Go provider's MCPTransports declaration. OAuth, per-server tool filtering, and resource referencing are not documented in Crush's public schema — inferred unsupported pending upstream clarification."
+      - id: per_server_disabled_tools
+        name: Per-server disabled_tools list
+        summary: Each MCP server entry in crush.json supports a disabled_tools array to exclude specific tool names from that server's tool registration. This is a per-server block list, not a global filter.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: true
+        conversion: translated
+        provider_field: disabled_tools
+      - id: per_server_headers
+        name: Per-server custom HTTP headers
+        summary: HTTP and SSE transport entries support a headers object for attaching custom request headers (e.g. auth tokens) to server connections.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: headers
+    loading_model: "MCP servers are configured in crush.json under the mcp key as a map of server-name to server config objects. The config file is searched in order: .crush.json, crush.json, $HOME/.config/crush/crush.json. On startup, Crush iterates configured servers, establishes transport connections (stdio, http, or sse), fetches tool definitions, and registers tools for the agent. The disabled_tools array in each server entry excludes named tools from registration."
+    notes: "Transport types (stdio, http, sse) are confirmed from the upstream JSON schema. Per-server tool filtering via disabled_tools is confirmed from the MCPConfig schema definition. OAuth, resource referencing, and enterprise management are not documented in Crush's public schema — inferred unsupported pending upstream clarification."
 
   hooks:
-    status: unsupported
-    sources: []
-    canonical_mappings: {}
-    provider_extensions: []
-    notes: "Crush does not expose user-definable lifecycle hooks; no hook configuration key or event system is documented in the Crush schema."
+    status: supported
+    sources:
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:1ed71c8a69ce5a9a87855fb2a6abc78af23b821e7a6597727590849c52b45b88"
+        fetched_at: "2026-05-06T12:57:00Z"
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:ed343888cadd36ea75edd18bdb0d53afd3ffec17eda3e1213fc9662fdff6cf58"
+        fetched_at: "2026-05-06T12:57:00Z"
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md"
+        type: source_code
+        fetch_method: gh_raw
+        content_hash: "sha256:877215de75b74d808cd69b666790aa3b8c852d2343b2d75ea9504f25e91d2fa0"
+        fetched_at: "2026-05-06T12:57:00Z"
+    canonical_mappings:
+      handler_types:
+        supported: true
+        mechanism: "Hooks are shell commands (command field in HookConfig). Each hook fires a subprocess with the tool context passed on stdin."
+        confidence: confirmed
+      matcher_patterns:
+        supported: true
+        provider_field: "matcher"
+        mechanism: "HookConfig has a matcher field: a regex pattern tested against the tool name. An empty matcher matches all tools."
+        confidence: confirmed
+      decision_control:
+        supported: true
+        mechanism: "Hook subprocess exit code controls tool execution: exit code 2 blocks the tool call (deny). Other exit codes allow it. The hook may also return a JSON decision field with values allow, deny, or none."
+        confidence: confirmed
+      input_modification:
+        supported: false
+        mechanism: "Hooks receive tool context on stdin and can return context to the agent, but modifying tool input parameters is not documented."
+        confidence: inferred
+      async_execution:
+        supported: false
+        mechanism: "Hooks are synchronous; each fires before the tool executes and must complete within the configured timeout."
+        confidence: confirmed
+      hook_scopes:
+        supported: true
+        mechanism: "Hooks are configured in crush.json under the hooks key, which applies at the project or user-global config level (same config file scope as MCP and other settings)."
+        confidence: confirmed
+      json_io_protocol:
+        supported: true
+        mechanism: "Hooks receive a JSON object on stdin containing tool name and parameters. The hook subprocess may return a JSON object with decision (allow/deny/none) and optional context fields."
+        confidence: confirmed
+      context_injection:
+        supported: true
+        provider_field: "context"
+        mechanism: "The hook JSON response may include an optional context field; this content is injected into the agent context for the current turn."
+        confidence: confirmed
+      permission_control:
+        supported: true
+        mechanism: "Hooks run before permission checks. Exit code 2 blocks the tool call entirely, taking effect before the built-in permission gate."
+        confidence: confirmed
+    provider_extensions:
+      - id: event_keyed_map
+        name: Event-keyed hook map
+        summary: The hooks config key is an object keyed by event name (e.g. PreToolUse), with each value being an array of HookConfig objects. This allows multiple hooks per event and per-tool matcher filtering.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: translated
+        provider_field: hooks
+      - id: hook_timeout
+        name: Per-hook timeout
+        summary: Each HookConfig entry has a timeout field (integer, seconds, default 30) that limits how long the hook subprocess may run before being killed.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: not-portable
+        provider_field: timeout
+      - id: pre_permission_execution
+        name: Hooks fire before permission checks
+        summary: Crush's hookedTool decorator runs hook commands before the built-in permission gate, giving hooks full veto power over tool calls independent of configured permissions.
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Hooks are configured in crush.json under the hooks key as an object keyed by event name (e.g. PreToolUse). Each key maps to an array of HookConfig objects. Each HookConfig specifies a command (required shell command), an optional matcher (regex against tool name; empty matches all tools), and an optional timeout (seconds, default 30). At tool execution time, Crush fires matching hooks in order, passing JSON on stdin (tool name and parameters). The hook may return JSON with a decision (allow/deny/none) and optional context. Exit code 2 blocks the tool call. Hooks run before Crush's built-in permission checks."
+    notes: "Hook event key naming follows provider-native conventions (e.g. PreToolUse) in the crush.json config. Canonical syllago event names (before_tool_execute) must be translated to provider-native keys during install/export. The hookedTool implementation is in internal/agent/hooked_tool.go."
 
   agents:
     status: unsupported

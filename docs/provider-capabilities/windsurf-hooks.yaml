@@ -4,7 +4,7 @@ format: ""
 proposed_mappings:
     - canonical_key: async_execution
       supported: false
-      mechanism: Windsurf hooks run synchronously; no async/background execution documented
+      mechanism: Windsurf hooks run synchronously; post_cascade_response and post_cascade_response_with_transcript fire asynchronously after the response but hooks themselves do not execute fire-and-forget
       source_field: ""
       source_value: ""
       confidence: inferred
@@ -16,7 +16,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: decision_control
       supported: false
-      mechanism: Windsurf hooks are observational; no mechanism to block, allow, or modify the triggering action documented
+      mechanism: Windsurf hooks are observational by default; pre-hooks can block via exit code 2 but cannot allow or modify the triggering action
       source_field: ""
       source_value: ""
       confidence: inferred

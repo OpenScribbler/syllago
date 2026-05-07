@@ -22,7 +22,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: handler_types
       supported: false
-      mechanism: Kiro hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented
+      mechanism: Kiro hooks execute shell commands or predefined agent prompts; no HTTP, LLM-as-hook, or TypeScript extension handler types documented
       source_field: ""
       source_value: ""
       confidence: inferred
@@ -46,7 +46,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: matcher_patterns
       supported: false
-      mechanism: Kiro hooks fire on configured lifecycle events; no per-tool filtering documented
+      mechanism: Kiro hooks fire on configured lifecycle events; no per-tool name filtering or regex matching documented
       source_field: ""
       source_value: ""
       confidence: inferred

@@ -16,7 +16,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: cross_provider_recognition
       supported: true
-      mechanism: Zed discovers .rules, .cursorrules, and CLAUDE.md at project root, so rule files authored for other agents are picked up
+      mechanism: 'Zed discovers rule files from multiple providers at project root using a priority-ordered list: .rules, .cursorrules, .windsurfrules, .clinerules, .github/copilot-instructions.md, AGENT.md, AGENTS.md, CLAUDE.md, GEMINI.md — the first matching file wins'
       source_field: ""
       source_value: ""
       confidence: confirmed

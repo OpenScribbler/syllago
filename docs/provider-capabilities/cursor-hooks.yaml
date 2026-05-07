@@ -9,26 +9,26 @@ proposed_mappings:
       source_value: ""
       confidence: inferred
     - canonical_key: context_injection
-      supported: false
-      mechanism: Cursor hooks do not document a mechanism to inject additional context into the agent session.
+      supported: true
+      mechanism: Hooks can inject context at session initialization via the sessionStart event, enabling custom context to be added to the agent's active session at startup.
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: decision_control
       supported: true
-      mechanism: 'Exit codes drive decisions: non-zero blocks the action and surfaces stderr, zero allows it to proceed; JSON on stdout can also return structured decision fields.'
+      mechanism: 'Exit codes drive decisions: exit code 2 blocks the action, exit code 0 allows it to proceed; JSON on stdout can also return structured decision fields.'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: handler_types
-      supported: false
-      mechanism: 'Cursor hooks execute shell commands only (type: command); no HTTP, LLM prompt, or agent handler types documented.'
+      supported: true
+      mechanism: 'Two handler types documented: command (shell scripts communicating over stdio via JSON) and prompt (LLM-evaluated natural language conditions for policy enforcement without custom scripting).'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: hook_scopes
       supported: true
-      mechanism: Project-scope hooks live under .cursor/hooks/ and are wired through .cursor/settings.json; user-global hooks live under ~/.cursor/ using the same shape.
+      mechanism: 'Four scopes documented in priority order: Enterprise (system-wide MDM-managed), Team (cloud-distributed for Enterprise plans), Project (.cursor/hooks/ in the repository), and User (global personal configuration at ~/.cursor/hooks/).'
       source_field: ""
       source_value: ""
       confidence: confirmed
