@@ -32,9 +32,11 @@ var capmonCapabilitiesDirOverride string
 
 // capmonFetchDryRunEntry is the per-provider dry-run summary emitted by
 // 'syllago capmon fetch --dry-run'.
+// Sources is populated only when --verbose is also set.
 type capmonFetchDryRunEntry struct {
-	Provider    string `json:"provider"`
-	SourceCount int    `json:"source_count"`
+	Provider    string               `json:"provider"`
+	SourceCount int                  `json:"source_count"`
+	Sources     []capmonSourceResult `json:"sources,omitempty"`
 }
 
 // capmonSourceResult is a single per-source entry included in JSON+verbose output.
@@ -181,7 +183,24 @@ var capmonFetchCmd = &cobra.Command{
 				for _, ct := range m.ContentTypes {
 					count += len(ct.Sources)
 				}
-				entries = append(entries, capmonFetchDryRunEntry{Provider: m.Slug, SourceCount: count})
+				entry := capmonFetchDryRunEntry{Provider: m.Slug, SourceCount: count}
+				if output.Verbose {
+					ctNames := make([]string, 0, len(m.ContentTypes))
+					for ctName := range m.ContentTypes {
+						ctNames = append(ctNames, ctName)
+					}
+					sort.Strings(ctNames)
+					for _, ctName := range ctNames {
+						ct := m.ContentTypes[ctName]
+						for i, src := range ct.Sources {
+							entry.Sources = append(entry.Sources, capmonSourceResult{
+								ID:  fmt.Sprintf("%s.%d", ctName, i),
+								URL: src.URL,
+							})
+						}
+					}
+				}
+				entries = append(entries, entry)
 			}
 
 			if output.JSON {
