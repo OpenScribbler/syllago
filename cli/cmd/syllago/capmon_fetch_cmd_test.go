@@ -331,9 +331,9 @@ func TestCapmonFetchCmd_LiveFetch_JSONOutput(t *testing.T) {
 	if !strings.Contains(out, "json-provider") {
 		t.Errorf("JSON output missing provider slug; got:\n%s", out)
 	}
-	// Must include per-provider counts (fetched/cached/errors).
-	if !strings.Contains(out, "fetched") || !strings.Contains(out, "errors") {
-		t.Errorf("JSON output missing fetched/errors keys; got:\n%s", out)
+	// Must include per-provider counts (fresh/cached/errors).
+	if !strings.Contains(out, "fresh") || !strings.Contains(out, "errors") {
+		t.Errorf("JSON output missing fresh/errors keys; got:\n%s", out)
 	}
 }
 
@@ -381,5 +381,189 @@ func TestCapmonFetchCmd_LiveFetch_AllCached_ExitZero(t *testing.T) {
 	out := stdout2.String()
 	if !strings.Contains(out, "cached-provider") {
 		t.Errorf("second-run output missing provider slug; got:\n%s", out)
+	}
+}
+
+// TestCapmonFetchCmd_LiveFetch_UnknownProvider_LiveMode verifies that an unknown
+// --provider in live (non-dry-run) mode returns an error instead of silently
+// succeeding with zero output.
+func TestCapmonFetchCmd_LiveFetch_UnknownProvider_LiveMode(t *testing.T) {
+	srcDir := t.TempDir()
+	writeTestSourceManifest(t, srcDir, "alpha-provider", 1)
+
+	capmon.SetValidateURLForTest(func(string) error { return nil })
+	defer capmon.SetValidateURLForTest(nil)
+
+	_, _ = output.SetForTest(t)
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	capmonFetchCmd.Flags().Set("provider", "nonexistent-provider")
+	defer func() {
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+		capmonFetchCmd.Flags().Set("provider", "")
+	}()
+
+	err := capmonFetchCmd.RunE(capmonFetchCmd, []string{})
+	if err == nil {
+		t.Fatal("expected error for unknown provider in live mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "alpha-provider") {
+		t.Errorf("error must list valid provider slugs; got: %v", err)
+	}
+}
+
+// TestCapmonFetchCmd_LiveFetch_JSONVerbose verifies that --json --verbose includes
+// a per-source "sources" array in each provider entry.
+func TestCapmonFetchCmd_LiveFetch_JSONVerbose(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "content for "+r.URL.Path)
+	}))
+	defer ts.Close()
+
+	capmon.SetValidateURLForTest(func(string) error { return nil })
+	defer capmon.SetValidateURLForTest(nil)
+
+	srcDir := t.TempDir()
+	cacheDir := t.TempDir()
+	writeTestSourceManifestWithURLs(t, srcDir, "jv-provider", ts.URL, 2)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	output.Verbose = true
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	capmonFetchCmd.Flags().Set("cache-root", cacheDir)
+	defer func() {
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+		capmonFetchCmd.Flags().Set("cache-root", "")
+	}()
+
+	if err := capmonFetchCmd.RunE(capmonFetchCmd, []string{}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	out := strings.TrimSpace(stdout.String())
+	var payload interface{}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("output is not valid JSON: %v\noutput:\n%s", err, out)
+	}
+	// --json --verbose must include a sources array with per-source entries.
+	if !strings.Contains(out, `"sources"`) {
+		t.Errorf("JSON+verbose output missing sources array; got:\n%s", out)
+	}
+	if !strings.Contains(out, `"id"`) {
+		t.Errorf("JSON+verbose sources must include id field; got:\n%s", out)
+	}
+}
+
+// TestCapmonFetchCmd_DryRun_Verbose verifies that --dry-run --verbose lists
+// individual source IDs and URLs under each provider.
+func TestCapmonFetchCmd_DryRun_Verbose(t *testing.T) {
+	srcDir := t.TempDir()
+	writeTestSourceManifest(t, srcDir, "verbose-dry-provider", 2)
+
+	stdout, _ := output.SetForTest(t)
+	output.Verbose = true
+	capmonFetchCmd.Flags().Set("dry-run", "true")
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	defer func() {
+		capmonFetchCmd.Flags().Set("dry-run", "false")
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+	}()
+
+	if err := capmonFetchCmd.RunE(capmonFetchCmd, []string{}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	out := stdout.String()
+	// The summary line must still appear.
+	if !strings.Contains(out, "verbose-dry-provider") {
+		t.Errorf("verbose dry-run missing provider slug; got:\n%s", out)
+	}
+	// Per-source lines must include the source ID and a URL.
+	if !strings.Contains(out, "rules.0") {
+		t.Errorf("verbose dry-run missing source ID rules.0; got:\n%s", out)
+	}
+	if !strings.Contains(out, "https://") {
+		t.Errorf("verbose dry-run missing source URL; got:\n%s", out)
+	}
+}
+
+// TestCapmonFetchCmd_Quiet_SuppressesSummary verifies that --quiet suppresses
+// the per-provider summary line and progress output.
+func TestCapmonFetchCmd_Quiet_SuppressesSummary(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "quiet test content")
+	}))
+	defer ts.Close()
+
+	capmon.SetValidateURLForTest(func(string) error { return nil })
+	defer capmon.SetValidateURLForTest(nil)
+
+	srcDir := t.TempDir()
+	cacheDir := t.TempDir()
+	writeTestSourceManifestWithURLs(t, srcDir, "quiet-provider", ts.URL, 1)
+
+	stdout, _ := output.SetForTest(t)
+	output.Quiet = true
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	capmonFetchCmd.Flags().Set("cache-root", cacheDir)
+	defer func() {
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+		capmonFetchCmd.Flags().Set("cache-root", "")
+	}()
+
+	if err := capmonFetchCmd.RunE(capmonFetchCmd, []string{}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	out := stdout.String()
+	if strings.Contains(out, "quiet-provider") {
+		t.Errorf("--quiet must suppress summary output; got:\n%s", out)
+	}
+	if strings.Contains(out, "Fetching") {
+		t.Errorf("--quiet must suppress progress output; got:\n%s", out)
+	}
+}
+
+// TestCapmonFetchCmd_LiveFetch_Progress verifies that verbose mode emits
+// per-source progress lines during the fetch (via ProgressFn).
+func TestCapmonFetchCmd_LiveFetch_Progress(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "progress test content for "+r.URL.Path)
+	}))
+	defer ts.Close()
+
+	capmon.SetValidateURLForTest(func(string) error { return nil })
+	defer capmon.SetValidateURLForTest(nil)
+
+	srcDir := t.TempDir()
+	cacheDir := t.TempDir()
+	writeTestSourceManifestWithURLs(t, srcDir, "progress-provider", ts.URL, 2)
+
+	stdout, _ := output.SetForTest(t)
+	output.Verbose = true
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	capmonFetchCmd.Flags().Set("cache-root", cacheDir)
+	defer func() {
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+		capmonFetchCmd.Flags().Set("cache-root", "")
+	}()
+
+	if err := capmonFetchCmd.RunE(capmonFetchCmd, []string{}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	out := stdout.String()
+	// Progress lines must include provider/sourceID format.
+	if !strings.Contains(out, "progress-provider/rules.") {
+		t.Errorf("progress output missing provider/sourceID format; got:\n%s", out)
+	}
+	// Must appear before the summary line.
+	progressIdx := strings.Index(out, "progress-provider/rules.")
+	summaryIdx := strings.Index(out, "progress-provider: ")
+	if progressIdx == -1 || summaryIdx == -1 {
+		t.Fatalf("missing progress or summary line; got:\n%s", out)
+	}
+	if progressIdx > summaryIdx {
+		t.Errorf("progress lines must appear before summary; got:\n%s", out)
 	}
 }
