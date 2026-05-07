@@ -3,6 +3,62 @@ slug: cursor
 display_name: ""
 last_verified: ""
 content_types:
+  agents:
+    supported: true
+    capabilities:
+      agent_scopes:
+        supported: true
+        capabilities:
+          project:
+            supported: true
+            mechanism: .cursor/agents/ project scope, taking precedence over user scope (documented under 'File locations' heading)
+            confidence: inferred
+          user:
+            supported: true
+            mechanism: ~/.cursor/agents/ user-global scope (documented under 'File locations' heading)
+            confidence: inferred
+      definition_format:
+        supported: true
+        mechanism: Markdown files with YAML frontmatter (name, description, model, readonly, is_background) followed by a prompt body, documented under 'File format' heading
+        confidence: inferred
+      invocation_patterns:
+        supported: true
+        capabilities:
+          automatic_delegation:
+            supported: true
+            mechanism: Cursor's Agent proactively delegates tasks to subagents based on description, complexity, and available tools (documented under 'Automatic delegation' heading)
+            confidence: inferred
+          explicit:
+            supported: true
+            mechanism: /<name> syntax or natural-language mentions invoke a specific subagent (documented under 'Explicit invocation' heading)
+            confidence: inferred
+      model_selection:
+        supported: true
+        mechanism: model frontmatter field accepts 'inherit', 'fast', or a specific model id; admin policies and Max Mode requirements may override (documented under 'Model configuration' heading)
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: Since Cursor 2.5, subagents can launch child subagents to create a tree of coordinated work; nested launches require Task tool access and can be restricted by hooks or tool policies (FAQ heading 'Can subagents launch other subagents?')
+        confidence: inferred
+      tool_restrictions:
+        supported: true
+        mechanism: readonly frontmatter flag restricts the subagent to read-only tools (documented in 'Configuration fields')
+        confidence: inferred
+  hooks:
+    supported: true
+    capabilities:
+      hook_scopes:
+        supported: true
+        mechanism: project + user-global hook scopes documented under 'Project Hooks (Version Control)' / 'Configuration' headings
+        confidence: inferred
+      json_io_protocol:
+        supported: true
+        mechanism: JSON I/O protocol documented under 'Common schema' / 'Input (all hooks)' headings (event data on stdin, structured decision JSON on stdout)
+        confidence: inferred
+      matcher_patterns:
+        supported: true
+        mechanism: matcher patterns documented under 'Matcher Configuration' heading
+        confidence: inferred
   mcp:
     supported: true
     capabilities:
@@ -67,3 +123,22 @@ content_types:
         supported: true
         mechanism: 'three-tier scope: Project rules (.cursor/rules) + Team Rules (org-wide) + User Rules (documented under ''Project rules'' / ''Team Rules'' / ''User Rules'')'
         confidence: inferred
+  skills:
+    supported: true
+    capabilities:
+      canonical_filename:
+        supported: true
+        mechanism: SKILL.md is the canonical skill filename, documented under 'SKILL.md file format' heading
+        confidence: inferred
+      disable_model_invocation:
+        supported: true
+        mechanism: disable-model-invocation frontmatter toggle documented under 'Disabling automatic invocation' heading
+        confidence: inferred
+      global_scope:
+        supported: true
+        mechanism: Skills stored in ~/.agents/skills/<name>/SKILL.md per the cross-provider Agent Skills convention
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: Skills stored in .cursor/skills/<name>/SKILL.md (cursor-native) or .agents/skills/<name>/SKILL.md (cross-provider Agent Skills convention)
+        confidence: confirmed
