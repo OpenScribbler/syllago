@@ -4,13 +4,13 @@ format: ""
 proposed_mappings:
     - canonical_key: argument_substitution
       supported: true
-      mechanism: $ARGUMENTS substitution in Markdown-type commands; equivalent to Claude Code's $ARGUMENTS pattern; Executable commands receive args via shell process stdin/args
+      mechanism: $ARGUMENTS substitution in Markdown-type commands expands to text typed after the command name; argument-hint frontmatter field provides autocomplete usage hint; executable commands receive arguments as positional shell parameters
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: builtin_commands
       supported: false
-      mechanism: no built-in slash commands documented; Factory commands are user-defined Markdown templates or executables
+      mechanism: no built-in slash commands documented; Factory commands are user-defined Markdown templates or executable scripts
       source_field: ""
       source_value: ""
       confidence: inferred

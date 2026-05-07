@@ -10,25 +10,25 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: enterprise_management
       supported: false
-      mechanism: only user-level and project-level configuration scopes documented; no organization/enterprise admin layer
+      mechanism: only user-level (~/.factory/mcp.json) and project-level (.factory/mcp.json) configuration scopes documented; no organization/enterprise admin layer
       source_field: ""
       source_value: ""
       confidence: inferred
     - canonical_key: env_var_expansion
-      supported: false
-      mechanism: Configuration schema shows env field for stdio servers but no expansion syntax (e.g. ${VAR}) is documented
+      supported: true
+      mechanism: stdio server add command accepts --env KEY=VALUE flags; env field documented in configuration schema for stdio servers
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: marketplace
       supported: true
-      mechanism: 'Quick Start: Add from Registry — 40+ pre-configured servers organized into categories (Development & Testing, Project Management, Payments, Design, Infrastructure)'
+      mechanism: 'Quick Start: Add from Registry via /mcp command — 40+ pre-configured servers (Figma, Linear, Sentry, Notion, Supabase, Stripe, Vercel, Playwright, HubSpot, MongoDB) organized into categories'
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: oauth_support
       supported: true
-      mechanism: OAuth tokens documented under 'OAuth Tokens' heading; most HTTP servers support OAuth with token storage in system keyring
+      mechanism: OAuth authentication supported for HTTP servers; tokens stored globally in system keyring rather than per-project; managed via /mcp interactive manager
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -46,7 +46,7 @@ proposed_mappings:
       confidence: confirmed
     - canonical_key: transport_types
       supported: true
-      mechanism: 'two transports documented: http (remote endpoints) and stdio (local processes); ''Adding HTTP Servers'' and ''Adding Stdio Servers'' headings'
+      mechanism: 'two transports documented: http (remote cloud endpoints, droid mcp add <name> <url> --type http) and stdio (local processes, droid mcp add <name> ''<command>'' [--env KEY=VALUE...])'
       source_field: ""
       source_value: ""
       confidence: confirmed

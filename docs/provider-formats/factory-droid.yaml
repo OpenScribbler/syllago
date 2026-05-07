@@ -1,8 +1,8 @@
 provider: factory-droid
 docs_url: "https://docs.factory.ai"
 category: cli
-last_fetched_at: "2026-04-11T21:50:31Z"
-last_changed_at: "2026-04-11T00:00:00Z"
+last_fetched_at: "2026-05-06T00:00:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -11,9 +11,9 @@ content_types:
     sources:
       - uri: "https://docs.factory.ai/cli/configuration/skills"
         type: documentation
-        fetch_method: html_url
-        content_hash: "sha256:0995e07daf155010f3c75a71607b43c8392da192a57803b89d710bcefabc38a4"
-        fetched_at: "2026-04-11T21:50:31Z"
+        fetch_method: readability
+        content_hash: "sha256:b9bfbedd5ade7bd9f3c4a82be83f8255d61b584145f8183cf8e05fceb2aa1313"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -59,10 +59,6 @@ content_types:
         supported: true
         mechanism: "skill.mdx is accepted as an alternative to SKILL.md within the skill directory"
         confidence: confirmed
-    # Optional extension depth fields (populated by capmon subagent):
-    # - required: true | false | null (null = source doesn't say)
-    # - value_type: see allow-list in formatdoc_validate.go
-    # - examples: [{title?, lang, code, note?}]
     provider_extensions:
       - id: supporting_files
         name: Supporting Files
@@ -73,6 +69,12 @@ content_types:
       - id: auto_invocation
         name: Auto-Invocation
         summary: "The Droid automatically invokes matching skills based on the description field; gated by user-invocable and disable-model-invocation flags."
+        source_ref: "https://docs.factory.ai/cli/configuration/skills"
+        graduation_candidate: true
+        conversion: translated
+      - id: argument_substitution
+        name: Argument Substitution in Skills
+        summary: "Skills accept arguments via $ARGUMENTS variable when invoked with /skill-name <arguments>; argument-hint frontmatter field provides autocomplete usage examples."
         source_ref: "https://docs.factory.ai/cli/configuration/skills"
         graduation_candidate: true
         conversion: translated
@@ -95,7 +97,7 @@ content_types:
         graduation_candidate: false
         conversion: not-portable
     loading_model: ""
-    notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported (not in original format doc). The docs additionally show skill.mdx accepted alongside SKILL.md. Skill descriptions serve double duty as both user-facing documentation and auto-invocation trigger signals — the model reads the description to decide whether the skill applies to the current task."
+    notes: "A compatibility discovery path at <repo>/.agent/skills/ is also supported. The docs additionally show skill.mdx accepted alongside SKILL.md. Skill descriptions serve double duty as both user-facing documentation and auto-invocation trigger signals — the model reads the description to decide whether the skill applies to the current task. Skills accept $ARGUMENTS substitution (same pattern as commands) and support an argument-hint frontmatter field for autocomplete hints. Nine skill family categories are available covering frontend UI, service integration, data analysis, product management, and automated QA."
 
   rules:
     status: supported
@@ -103,8 +105,8 @@ content_types:
       - uri: "https://docs.factory.ai/cli/configuration"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:ece84e852c185734366ebbb7a1a2936fb6f14bfbadf44cf6749869267f6bcf53"
-        fetched_at: "2026-04-11T21:50:26.856210369Z"
+        content_hash: "sha256:68dd6098b2ce999a013beb0821de9e9fc23bd7cb27fcb0a06713a0866678d6db"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       activation_mode:
         supported: false
@@ -146,8 +148,20 @@ content_types:
         graduation_candidate: false
         provider_field: "customInstructions"
         conversion: embedded
+      - id: settings_local_override
+        name: Local Settings Override
+        summary: "settings.local.json alongside settings.json in any .factory/ folder provides machine-specific overrides that merge on top of the corresponding settings.json; intended to be gitignored."
+        source_ref: "https://docs.factory.ai/cli/configuration"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: legacy_droid_yaml
+        name: Legacy .droid.yaml Migration
+        summary: ".droid.yaml was an older project configuration surface; current configuration uses .factory/settings.json, AGENTS.md, and purpose-specific files (mcp, hooks, skills)."
+        source_ref: "https://docs.factory.ai/cli/configuration"
+        graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
-    notes: "Factory mirrors the AGENTS.md cross-provider standard (OpenAI/Codex origin). Discovery hierarchy: ~/AGENTS.md (global) → repo root AGENTS.md → subdir AGENTS.md (innermost wins). Common sections: project overview, build/test commands, coding conventions, PR workflow."
+    notes: "Factory mirrors the AGENTS.md cross-provider standard (OpenAI/Codex origin). Discovery hierarchy: ~/AGENTS.md (global) → repo root AGENTS.md → subdir AGENTS.md (innermost wins). Common sections: project overview, build/test commands, coding conventions, PR workflow. Settings file documents commandAllowlist and commandDenylist for shell command approval behavior; hooksDisabled: true globally disables all hooks without removing configurations."
 
   hooks:
     status: supported
@@ -155,73 +169,73 @@ content_types:
       - uri: "https://docs.factory.ai/cli/configuration/hooks-guide"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:7c23535321a844fb9348234d31dbaec5f11d3e9895c996825248c52637ff0c81"
-        fetched_at: "2026-04-11T21:46:21.993498315Z"
+        content_hash: "sha256:2ba00ceade78cf380ef00efa6385a286909ff16ccb095df3bd6c63aecda401a6"
+        fetched_at: "2026-05-06T00:00:00Z"
       - uri: "https://docs.factory.ai/reference/hooks-reference"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:32313a7e5191527eb7b581717c3eb2731674bfdaacad31ba011892a7955454a1"
-        fetched_at: "2026-04-11T21:46:22.150307964Z"
+        content_hash: "sha256:863be38b9535b0b5cc702cb945d3185e91f3ef2e14a7f8bd0f5b75c0053774a7"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       handler_types:
         supported: false
-        mechanism: "Factory Droid hooks execute shell commands only; no other handler types documented"
-        confidence: inferred
+        mechanism: "Factory Droid hooks execute shell commands only (type: command); no other handler types documented"
+        confidence: confirmed
       matcher_patterns:
-        supported: false
-        mechanism: "Factory Droid hooks fire on configured lifecycle events; no per-tool pattern matching documented"
-        confidence: inferred
+        supported: true
+        mechanism: "PreToolUse and PostToolUse hooks use matcher strings supporting exact tool names, regex patterns (Edit|Create, Notebook.*), MCP tool patterns (mcp__<server>__<tool>), and wildcard (*) to match all tools"
+        confidence: confirmed
       decision_control:
         supported: true
-        mechanism: "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action"
+        mechanism: "PreToolUse hooks return JSON with allow/deny/ask decision field; exit code 2 blocks with stderr fed back to Droid; non-zero non-2 shows stderr to user as non-blocking error"
         confidence: confirmed
       input_modification:
-        supported: false
-        mechanism: "Factory Droid hooks cannot modify tool input before execution"
-        confidence: inferred
+        supported: true
+        mechanism: "PreToolUse hooks return updatedInput in JSON output to modify tool parameters before execution"
+        confidence: confirmed
       async_execution:
-        supported: false
-        mechanism: "Factory Droid hooks run synchronously; no async execution documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Matching hooks for the same event execute concurrently (in parallel); deduplication consolidates identical commands automatically"
+        confidence: confirmed
       hook_scopes:
-        supported: false
-        mechanism: "Factory Droid hooks are project-scoped; no multi-scope configuration documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Four scopes documented: user-level (~/.factory/settings.json), project-level (.factory/settings.json), local-uncommitted (.factory/settings.local.json), and enterprise managed policies"
+        confidence: confirmed
       json_io_protocol:
-        supported: false
-        mechanism: "Factory Droid hooks communicate via exit codes; no JSON stdin/stdout protocol documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Hooks receive JSON via stdin containing session_id, transcript_path, cwd, permission_mode, hook_event_name, and event-specific fields; hooks return JSON output with continue, stopReason, suppressOutput, systemMessage, and event-specific fields"
+        confidence: confirmed
       context_injection:
-        supported: false
-        mechanism: "Factory Droid hooks cannot inject context into the agent session"
-        confidence: inferred
+        supported: true
+        mechanism: "additionalContext field in PostToolUse, UserPromptSubmit, and SessionStart hook output injects information into the agent session; systemMessage field in JSON output provides session-level injection"
+        confidence: confirmed
       permission_control:
-        supported: false
-        mechanism: "Factory Droid hooks cannot make permission decisions about tool availability"
-        confidence: inferred
+        supported: true
+        mechanism: "PreToolUse hooks return allow, deny, or ask in the JSON decision field to bypass, block, or escalate tool permission decisions"
+        confidence: confirmed
     provider_extensions:
       - id: hook_events
         name: Hook Events
-        summary: "Nine hook events including PreToolUse (block), PostToolUse (rerun), UserPromptSubmit (modify inputText), Stop, SubagentStop, PreCompact, SessionStart, SessionEnd, Notification."
+        summary: "Nine hook events: PreToolUse (block/allow/ask/modify input), PostToolUse (block with reasoning/add context), UserPromptSubmit (block or add context), Stop (block stopping), SubagentStop (block stopping), PreCompact (inject memory), SessionStart (add context), SessionEnd (cleanup), Notification (custom alerts)."
         source_ref: "https://docs.factory.ai/reference/hooks-reference"
         graduation_candidate: true
         conversion: translated
       - id: hook_config_structure
         name: Hook Config Structure
-        summary: "JSON config under top-level hooks key with matcher patterns (exact, regex, or *) routing to command-type entries."
+        summary: "JSON config under top-level hooks key; each event maps to an array of matcher objects, each with a matcher string and a hooks array of {type: command, command: string, timeout?: number} entries."
         source_ref: "https://docs.factory.ai/cli/configuration/hooks-guide"
         graduation_candidate: false
         provider_field: "hooks"
         conversion: translated
       - id: hook_scope_files
         name: Hook Scope Files
-        summary: "Hooks live in scoped settings files: ~/.factory/settings.json (global), .factory/settings.json (project), .factory/settings.local.json (local), plus plugin settings."
+        summary: "Hooks live in scoped settings files: ~/.factory/settings.json (user-level), .factory/settings.json (project-level), .factory/settings.local.json (local uncommitted), plus enterprise managed policies."
         source_ref: "https://docs.factory.ai/cli/configuration/hooks-guide"
         graduation_candidate: false
         conversion: not-portable
       - id: hook_exit_code_behavior
         name: Hook Exit Code Behavior
-        summary: "Exit code 2 suppresses output; JSON output fields decision, reason, stopReason, inputText, suppressOutput; FACTORY_TOOL_INPUT env var provided."
+        summary: "Exit code 0 = success (stdout shown in transcript, or adds context for UserPromptSubmit/SessionStart); exit code 2 = blocking error (stderr fed back to Droid); other non-zero = non-blocking error (stderr shown to user). JSON output fields: continue, stopReason, suppressOutput, systemMessage, plus event-specific fields (allow/deny/ask/updatedInput for PreToolUse; block/additionalContext for PostToolUse and UserPromptSubmit; block for Stop/SubagentStop; additionalContext for SessionStart)."
         source_ref: "https://docs.factory.ai/reference/hooks-reference"
         graduation_candidate: true
         conversion: translated
@@ -232,29 +246,48 @@ content_types:
         graduation_candidate: true
         provider_field: "PreCompact"
         conversion: translated
+      - id: hook_input_env
+        name: "Hook Input: JSON stdin and Environment Variables"
+        summary: "Hooks receive full JSON context via stdin (session_id, transcript_path, cwd, permission_mode, hook_event_name, plus event-specific tool data). Environment variables available include FACTORY_PROJECT_DIR (project root) and standard shell environment."
+        source_ref: "https://docs.factory.ai/reference/hooks-reference"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: hook_execution_details
+        name: Hook Execution Details
+        summary: "Default timeout is 60 seconds per command (configurable via timeout field). Matching hooks for the same event run concurrently. Identical commands are automatically deduplicated. Plugin hooks via plugins/[name]/hooks/hooks.json use ${DROID_PLUGIN_ROOT} env var and merge with user configurations."
+        source_ref: "https://docs.factory.ai/reference/hooks-reference"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: mcp_tool_matchers
+        name: MCP Tool Hook Matchers
+        summary: "MCP tools follow the naming pattern mcp__<server>__<tool> and can be matched with regex patterns in PreToolUse/PostToolUse matchers (e.g., mcp__memory__.* for all memory server tools, mcp__.*__write.* for write operations across all MCP servers)."
+        source_ref: "https://docs.factory.ai/reference/hooks-reference"
+        graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
-    notes: "Hook structure closely mirrors Claude Code's hook system (same event names, same JSON config shape, same exit-code semantics). The FACTORY_TOOL_INPUT env var and suppressOutput flag appear to be Factory-specific additions. Plugin hooks via plugins/[name]/settings.json enable installable hook bundles."
+    notes: "Hook structure closely mirrors Claude Code's hook system (same event names, same JSON config shape, same exit-code semantics). Key updates from reference source: matcher_patterns are now confirmed supported (regex, exact, wildcard); input_modification is supported via updatedInput; context_injection is supported via additionalContext and systemMessage; permission_control is supported via allow/deny/ask decision field; json_io_protocol is fully confirmed (JSON stdin for input, JSON stdout for output); async_execution is confirmed (concurrent within same event). Default command timeout is 60 seconds. Plugin hooks via plugins/[name]/hooks/hooks.json auto-merge with user configs. hooksDisabled setting in settings.json globally disables all hooks without removing configurations."
 
   mcp:
     status: supported
     sources:
       - uri: "https://docs.factory.ai/cli/configuration/mcp"
         type: documentation
-        fetch_method: chromedp
-        fetched_at: "2026-04-28T00:00:00Z"
+        fetch_method: readability
+        content_hash: "sha256:ea4adae066cf30c1f67a713a816096d6084fb2cef78e965dc935c3ced70ce8aa"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       transport_types:
         supported: true
-        mechanism: "two transports documented: http (remote endpoints) and stdio (local processes); 'Adding HTTP Servers' and 'Adding Stdio Servers' headings"
+        mechanism: "two transports documented: http (remote cloud endpoints, droid mcp add <name> <url> --type http) and stdio (local processes, droid mcp add <name> '<command>' [--env KEY=VALUE...])"
         confidence: confirmed
       oauth_support:
         supported: true
-        mechanism: "OAuth tokens documented under 'OAuth Tokens' heading; most HTTP servers support OAuth with token storage in system keyring"
+        mechanism: "OAuth authentication supported for HTTP servers; tokens stored globally in system keyring rather than per-project; managed via /mcp interactive manager"
         confidence: confirmed
       env_var_expansion:
-        supported: false
-        mechanism: "Configuration schema shows env field for stdio servers but no expansion syntax (e.g. ${VAR}) is documented"
-        confidence: inferred
+        supported: true
+        mechanism: "stdio server add command accepts --env KEY=VALUE flags; env field documented in configuration schema for stdio servers"
+        confidence: confirmed
       tool_filtering:
         supported: true
         mechanism: "per-server tool disable via disabledTools field in Configuration Schema"
@@ -265,7 +298,7 @@ content_types:
         confidence: inferred
       marketplace:
         supported: true
-        mechanism: "Quick Start: Add from Registry — 40+ pre-configured servers organized into categories (Development & Testing, Project Management, Payments, Design, Infrastructure)"
+        mechanism: "Quick Start: Add from Registry via /mcp command — 40+ pre-configured servers (Figma, Linear, Sentry, Notion, Supabase, Stripe, Vercel, Playwright, HubSpot, MongoDB) organized into categories"
         confidence: confirmed
       resource_referencing:
         supported: false
@@ -273,12 +306,12 @@ content_types:
         confidence: inferred
       enterprise_management:
         supported: false
-        mechanism: "only user-level and project-level configuration scopes documented; no organization/enterprise admin layer"
+        mechanism: "only user-level (~/.factory/mcp.json) and project-level (.factory/mcp.json) configuration scopes documented; no organization/enterprise admin layer"
         confidence: inferred
     provider_extensions:
       - id: mcp_manager_ui
-        name: Interactive MCP Manager (/mcp)
-        summary: "Interactive Manager invoked via /mcp slash command for connecting and managing MCP servers without manual JSON editing."
+        name: "Interactive MCP Manager (/mcp)"
+        summary: "Interactive Manager invoked via /mcp slash command for browsing servers, viewing tools, enabling/disabling connections, authenticating via OAuth, and managing configurations without manual JSON editing."
         source_ref: "https://docs.factory.ai/cli/configuration/mcp"
         graduation_candidate: false
         conversion: not-portable
@@ -289,13 +322,25 @@ content_types:
         graduation_candidate: false
         conversion: not-portable
       - id: registry_categories
-        name: Categorized server registry
-        summary: "Pre-configured servers organized into categories (Development & Testing, Project Management & Documentation, Payments & Commerce, Design & Media, Infrastructure & DevOps) for discovery via Quick Start: Add from Registry."
+        name: Categorized Server Registry
+        summary: "Pre-configured servers organized into categories (Development & Testing, Project Management & Documentation, Payments & Commerce, Design & Media, Infrastructure & DevOps) for discovery via Quick Start: Add from Registry in the /mcp manager."
+        source_ref: "https://docs.factory.ai/cli/configuration/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: mcp_config_files
+        name: Dedicated MCP Configuration Files
+        summary: "MCP configurations are stored in dedicated files: ~/.factory/mcp.json (user-level, takes priority) and .factory/mcp.json (project-level, committed to repo). User config wins when both define the same server. OAuth tokens always store globally in the system keyring."
+        source_ref: "https://docs.factory.ai/cli/configuration/mcp"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: mcp_cli_commands
+        name: MCP CLI Management Commands
+        summary: "Servers are managed via droid mcp add <name> <url> --type http [--header 'KEY: VALUE'...] for HTTP servers and droid mcp add <name> '<command>' [--env KEY=VALUE...] for stdio servers; removed via droid mcp remove <name>."
         source_ref: "https://docs.factory.ai/cli/configuration/mcp"
         graduation_candidate: false
         conversion: not-portable
     loading_model: ""
-    notes: "MCP server support is also present in Factory's Zed editor integration. Configuration Schema documents the stdio fields (command, args, env) and http fields (url, headers); per-server disabledTools enables tool-level filtering. OAuth tokens are stored in the system keyring."
+    notes: "MCP configuration uses dedicated mcp.json files (not settings.json): ~/.factory/mcp.json for user-level servers and .factory/mcp.json for project-level servers. User-level config takes priority over project-level when both define the same server name. OAuth tokens store globally in the system keyring. env_var_expansion is now confirmed supported via --env flags on CLI add commands. Popular HTTP servers include Sentry, Hugging Face, Notion, Linear, Stripe, Figma, Vercel; popular stdio servers include Airtable, ClickUp, HubSpot."
 
   agents:
     status: supported
@@ -303,41 +348,41 @@ content_types:
       - uri: "https://docs.factory.ai/cli/configuration/custom-droids"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:2e109957800e1d85e89f2adcfee98c130b23017b516c8378437a48e50ab4bb08"
-        fetched_at: "2026-04-11T21:50:33.339259873Z"
+        content_hash: "sha256:3b5c72e662488dad5b8f95203961d09419f8680e2b3361ceab1057c24ae72977"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       definition_format:
         supported: true
-        mechanism: ".md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); single-file with system prompt, model preference, and tooling policy"
+        mechanism: ".md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); single-file with YAML frontmatter (name, description, model, reasoningEffort, tools) and system prompt body"
         confidence: confirmed
       tool_restrictions:
         supported: true
-        mechanism: "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch); differs from per-tool allowlists used by other providers"
+        mechanism: "tools field accepts a category string (read-only, edit, execute, web, mcp), an explicit array of tool IDs ([\"Read\", \"Edit\", \"Execute\"], case-sensitive), or omission for all tools; TodoWrite is automatically included for all droids"
         confidence: confirmed
       invocation_patterns:
         supported: true
-        mechanism: "exposed as subagent_type targets for the Task tool; droids enabled by default with live progress reporting in UI"
+        mechanism: "exposed as subagent_type targets for the Task tool; primary assistant delegates mid-session; droids enabled by default with live progress streaming in UI"
         confidence: inferred
       agent_scopes:
         supported: true
-        mechanism: "project (.factory/droids/) overrides personal (~/.factory/droids/) on name collision — reverse of skills precedence"
+        mechanism: "project (.factory/droids/) overrides personal (~/.factory/droids/) on name collision — reverse of skills precedence; top-level files only, no recursion"
         confidence: confirmed
       model_selection:
         supported: true
-        mechanism: "per-droid model preference field independent of global model setting; enables mixed-model agent compositions"
+        mechanism: "model field accepts inherit (use parent session model) or a specific model identifier; custom BYOK models use custom: prefix; reasoningEffort (low/medium/high) is an additional per-droid field ignored when model is inherit"
         confidence: confirmed
       per_agent_mcp:
         supported: false
-        mechanism: "no per-droid MCP configuration documented; MCP is workspace-wide"
+        mechanism: "no per-droid MCP configuration documented; MCP is workspace-wide; droids can use MCP tools via the mcp tool category"
         confidence: inferred
       subagent_spawning:
         supported: true
-        mechanism: "droids exposed as subagent_type targets for Task tool delegation; /import-subagent converts Claude Code .claude/agents/*.md to droid format"
+        mechanism: "droids exposed as subagent_type targets for Task tool delegation; /droids menu (I key) imports Claude Code .claude/agents/*.md to droid format with field mapping and model family translation"
         confidence: inferred
     provider_extensions:
       - id: droid_format
         name: Custom Droid Format
-        summary: "Agents are flat .md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); top-level scan only, no recursion."
+        summary: "Agents are flat .md files in .factory/droids/ (project) or ~/.factory/droids/ (personal); top-level scan only, no recursion. Frontmatter fields: name (required, lowercase/digits/-/_), description (optional, ≤500 chars), model, reasoningEffort, tools."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
         conversion: translated
@@ -349,24 +394,30 @@ content_types:
         conversion: not-portable
       - id: tool_categories
         name: Tool Categories
-        summary: "Droids restrict tools by named categories (filesystem, shell, search, browser, web_fetch) instead of per-tool allowlists."
+        summary: "Droids restrict tools by named category strings (read-only → Read/LS/Grep/Glob; edit → Create/Edit/ApplyPatch; execute → Execute; web → WebSearch/FetchUrl; mcp → dynamically populated MCP tools) or explicit tool ID arrays. TodoWrite is automatically included for all droids. When using Edit with OpenAI models, ApplyPatch is automatically included."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
         conversion: embedded
       - id: model_selection_per_droid
         name: Per-Droid Model Selection
-        summary: "Each droid declares its own model preference independent of the global setting, enabling mixed-model agent compositions."
+        summary: "Each droid declares its own model preference (inherit or specific model ID; custom BYOK via custom: prefix) independent of the global setting, plus an optional reasoningEffort field (low/medium/high, ignored when model is inherit)."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: true
         conversion: translated
       - id: claude_code_subagent_import
         name: Claude Code Subagent Import
-        summary: "The /import-subagent slash command converts .claude/agents/*.md files to Factory droid format for migration."
+        summary: "The /droids UI (press I) imports .claude/agents/*.md files from both project and personal scopes to Factory droid format; maps agent name → droid name, description → droid description, instructions → system prompt body, model families (inherit→inherit, sonnet→first Sonnet, etc.). Invalid tools listed with a warning; common remaps: Write → Edit/Create, BrowseURL → WebSearch/FetchUrl."
+        source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: droids_management_ui
+        name: Droids Management UI
+        summary: "/droids slash command opens a modal with list of droids (name, model, description, location badge, tools summary), a Create wizard (description, system prompt, identifier, model, tools), an Import from Claude Code option, and View/Edit/Delete/Reload actions. CLI normalizes filenames to lowercase-hyphenated on save."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-droids"
         graduation_candidate: false
         conversion: not-portable
     loading_model: ""
-    notes: "Factory calls agents 'Custom Droids'. Exposed as subagent_type targets for the Task tool. Project droids override personal (note: reverse of skills). Droids are enabled by default with live progress reporting in the UI."
+    notes: "Factory calls agents 'Custom Droids'. Exposed as subagent_type targets for the Task tool with live progress streaming. Project droids override personal (note: reverse of skills). Tool categories are now fully documented: read-only (Read/LS/Grep/Glob), edit (Create/Edit/ApplyPatch), execute (Execute), web (WebSearch/FetchUrl), mcp (dynamic). Omitting tools grants access to all tools. TodoWrite is always included automatically. reasoningEffort (low/medium/high) is a new per-droid field for controlling reasoning depth, ignored when model is inherit. Import flow is UI-based via /droids + I key (replaces the previously documented /import-subagent slash command)."
 
   commands:
     status: supported
@@ -374,27 +425,28 @@ content_types:
       - uri: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:fefc0ec7c7fceff7308a330ad6bdb1aa6e19adb113a802871bf2e110a0177260"
-        fetched_at: "2026-04-11T21:50:24.284728649Z"
+        content_hash: "sha256:7dbb0cc6105910ac39feda44e50679247a9de4dff599a24f7de0e9edfd2631db"
+        fetched_at: "2026-05-06T00:00:00Z"
     canonical_mappings:
       argument_substitution:
         supported: true
-        mechanism: "$ARGUMENTS substitution in Markdown-type commands; equivalent to Claude Code's $ARGUMENTS pattern; Executable commands receive args via shell process stdin/args"
+        provider_field: "$ARGUMENTS"
+        mechanism: "$ARGUMENTS substitution in Markdown-type commands expands to text typed after the command name; argument-hint frontmatter field provides autocomplete usage hint; executable commands receive arguments as positional shell parameters"
         confidence: confirmed
       builtin_commands:
         supported: false
-        mechanism: "no built-in slash commands documented; Factory commands are user-defined Markdown templates or executables"
+        mechanism: "no built-in slash commands documented; Factory commands are user-defined Markdown templates or executable scripts"
         confidence: inferred
     provider_extensions:
       - id: two_command_types
         name: Two Command Types
-        summary: "Commands are either Markdown templates (with $ARGUMENTS substitution) or Executable scripts whose stdout is injected into the conversation."
+        summary: "Commands are either Markdown templates (with $ARGUMENTS substitution and optional YAML frontmatter for description and argument-hint) or Executable scripts (must have shebang line, receive args as positional params, stdout up to 64 KB posted back to chat along with script contents)."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: true
         conversion: translated
       - id: command_discovery_paths
         name: Command Discovery Paths
-        summary: "Commands are discovered from .factory/commands/ (project) or ~/.factory/commands/ (personal); filename becomes the slash command name."
+        summary: "Commands discovered from .factory/commands/ (workspace/project, shared with teammates) or ~/.factory/commands/ (personal, cross-project). Only Markdown files and scripts with shebangs register. Filenames become lowercase slugs (spaces become hyphens), so 'Code Review.mdx' becomes /code-review."
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: false
         conversion: translated
@@ -404,5 +456,11 @@ content_types:
         source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
         graduation_candidate: false
         conversion: not-portable
+      - id: commands_ui_reload
+        name: Commands UI Hot Reload
+        summary: "/commands UI supports pressing R to reload commands from disk without restarting the session; includes an import feature to convert existing .agents or .claude commands into Factory format."
+        source_ref: "https://docs.factory.ai/cli/configuration/custom-slash-commands"
+        graduation_candidate: false
+        conversion: not-portable
     loading_model: ""
-    notes: "Commands are partly superseded by skills in Factory's model — the docs explicitly suggest using skills for new commands. The $ARGUMENTS substitution in Markdown commands is equivalent to the $ARGUMENTS pattern found in other providers (e.g. Claude Code). Executable commands differ from skills by running as shell processes rather than being injected as prompts."
+    notes: "Commands are partly superseded by skills in Factory's model — the docs explicitly suggest using skills for new commands. The $ARGUMENTS substitution in Markdown commands is equivalent to the $ARGUMENTS pattern found in other providers (e.g. Claude Code). The argument-hint frontmatter field is analogous to Claude Code's argument-hint. Executable commands differ from skills by running as shell processes rather than being injected as prompts; their stdout (up to 64 KB) plus script contents are posted back to chat for transparency. Scripts inherit the shell environment and receive arguments as positional parameters."
