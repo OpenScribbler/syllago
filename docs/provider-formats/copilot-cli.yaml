@@ -1,8 +1,8 @@
 provider: copilot-cli
 docs_url: "https://docs.github.com/en/copilot/how-tos/use-copilot-agents/copilot-cli"
 category: cli
-last_fetched_at: "2026-05-06T00:00:00Z"
-last_changed_at: "2026-05-06T00:00:00Z"
+last_fetched_at: "2026-05-06T14:00:00Z"
+last_changed_at: "2026-05-06T14:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -12,13 +12,13 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/about-agent-skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: "sha256:943dce04d029217c96a4863f66be9652ad374109fe2180a28ea0e43ddb252718"
-        fetched_at: "2026-04-11T21:50:18Z"
+        content_hash: "sha256:847551478761bfbf19fc8aaeabe462458f9b39020d41469fdd3e5b5d50817847"
+        fetched_at: "2026-05-06T14:00:00Z"
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
         type: documentation
         fetch_method: gh_raw
-        content_hash: ""
-        fetched_at: "2026-04-11T21:50:18Z"
+        content_hash: "sha256:e6830d4fc00c9442dcc3847a42f3a0e683b067d1a1d1e62d3c1877e59e2927e9"
+        fetched_at: "2026-05-06T14:00:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -44,10 +44,9 @@ content_types:
         confidence: confirmed
       global_scope:
         supported: true
-        mechanism: "skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/"
+        mechanism: "skill directory under ~/.copilot/skills/<name>/ or ~/.agents/skills/<name>/ in the user home directory"
         paths:
           - "~/.copilot/skills/<name>/SKILL.md"
-          - "~/.claude/skills/<name>/SKILL.md"
           - "~/.agents/skills/<name>/SKILL.md"
         confidence: confirmed
       shared_scope:
@@ -92,9 +91,16 @@ content_types:
         graduation_candidate: false
         conversion: not-portable
 
+      - id: skill_toggle
+        name: Per-Skill Enable/Disable Toggle
+        summary: The /skills command (with no subcommand) opens an interactive toggle UI — up/down keys navigate and space bar enables or disables individual skills without removing them.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
+        graduation_candidate: false
+        conversion: not-portable
+
       - id: cli_management_commands
         name: CLI Skill Management Commands
-        summary: The /skills slash-command suite (list, info, add, reload, remove, toggle UI) provides runtime skill management without restart.
+        summary: "The /skills slash-command suite (list, info, add, reload, remove) provides runtime skill management without restart; /skills remove works only for directly-added skills, not plugin-bundled skills."
         source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-skills.md"
         graduation_candidate: false
         conversion: not-portable
@@ -105,18 +111,20 @@ content_types:
       scripts, resources) is the unit of loading. No lazy-loading or on-demand file loading
       semantics are described in the source material. Skill locations are scanned from project
       paths (.github/skills/, .claude/skills/, .agents/skills/) and personal paths
-      (~/.copilot/skills/, ~/.claude/skills/, ~/.agents/skills/) at session start; additional
-      locations can be registered via `/skills add` and loaded into a running session via
-      `/skills reload`.
+      (~/.copilot/skills/, ~/.agents/skills/) at session start; additional locations can be
+      registered via `/skills add` and loaded into a running session via `/skills reload`.
     notes: >
       Copilot CLI implements the Agent Skills open standard (agentskills.io). Skills are folders
       of instructions, scripts, and resources — not single markdown files. The standard uses a
       fixed SKILL.md entrypoint but the skill directory can contain additional supporting files.
       Organization-level and enterprise-level skills (shared_scope) are explicitly listed as
       "coming soon" in the source. Skills can be sourced from public collections such as
-      anthropics/skills and github/awesome-copilot. The CLI-specific /skills management surface
-      (list, info, add, reload, remove) is unique among providers and provides runtime skill
-      management without session restart.
+      anthropics/skills and github/awesome-copilot, and also managed via `gh skill` in the
+      GitHub CLI. The CLI-specific /skills management surface (list, info, add, reload, remove,
+      toggle) is unique among providers and provides runtime skill management without session
+      restart. The personal scope paths confirmed in the updated source are ~/.copilot/skills/
+      and ~/.agents/skills/ — ~/.claude/skills/ is listed only as a project-scope path
+      (.claude/skills/) and is not confirmed for personal scope in the current source.
 
   rules:
     status: supported
@@ -134,8 +142,8 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/customization-cheat-sheet.md"
         type: reference
         fetch_method: http
-        content_hash: "sha256:9a507ae83650172dcaebf94cf885b7272ffff33973eac9cb5440d93e68a7e0e2"
-        fetched_at: "2026-04-11T21:50:12.792866253Z"
+        content_hash: "sha256:2fe982f84acdf2828ed80bbfee19ad28989e395f632ecc7744a6d1e2bcf7e9f3"
+        fetched_at: "2026-05-06T14:00:00Z"
     canonical_mappings:
       activation_mode:
         supported: false
@@ -181,10 +189,17 @@ content_types:
 
       - id: personal_instructions
         name: Personal (Home Directory) Custom Instructions
-        summary: $HOME/.copilot/copilot-instructions.md provides user-scoped instructions; COPILOT_CUSTOM_INSTRUCTIONS_DIRS adds search directories.
+        summary: "$HOME/.copilot/copilot-instructions.md provides user-scoped instructions; COPILOT_CUSTOM_INSTRUCTIONS_DIRS adds search directories."
         source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions.md"
         graduation_candidate: false
         conversion: embedded
+
+      - id: no_custom_instructions_flag
+        name: --no-custom-instructions CLI Flag
+        summary: "The --no-custom-instructions flag disables loading of custom instructions from AGENTS.md and related files for a session, enabling a clean-slate run."
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
     loading_model: >
       Custom instructions are always-on within their defined scope — no explicit user
       invocation is required. Repository-wide instructions (.github/copilot-instructions.md)
@@ -193,7 +208,10 @@ content_types:
       the declared path glob. AGENTS.md files are loaded from the repository root (primary)
       and any additional configured directories (supplementary). All applicable instruction
       files are combined rather than selecting one by priority. Changes to instruction files
-      take effect on the next prompt submission within the current or a future session.
+      take effect on the next prompt submission within the current or a future session. The
+      --no-custom-instructions CLI flag disables all AGENTS.md and related file loading for
+      a session; COPILOT_CUSTOM_INSTRUCTIONS_DIRS is an environment variable for adding
+      extra directories.
     notes: >
       Copilot CLI supports four distinct rules mechanisms: repository-wide
       (.github/copilot-instructions.md), path-specific
@@ -202,7 +220,9 @@ content_types:
       CLAUDE.md and GEMINI.md at the repository root are also accepted as instruction files,
       making Copilot CLI compatible with content authored for Claude Code and Gemini without
       conversion. Organization-level instructions are not supported in Copilot CLI (those are
-      a github.com surface feature only).
+      a github.com surface feature only). The customization cheat sheet confirms custom
+      instructions are supported (✓) in Copilot CLI; prompt files are not supported (✗) in
+      Copilot CLI.
 
   hooks:
     status: supported
@@ -215,8 +235,8 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/use-hooks.md"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:6e7c3936f8e65dbb64ff04cf4e24b840b7aca6b8ac7f42f3249d962f8bac5303"
-        fetched_at: "2026-04-11T21:50:14.529583981Z"
+        content_hash: "sha256:2604dd5b1d9c1d936f5eba1684c7970ebce03129724f26c858b83a69e850734d"
+        fetched_at: "2026-05-06T14:00:00Z"
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-copilot-cli.md"
         type: documentation
         fetch_method: http
@@ -295,7 +315,10 @@ content_types:
       event names (preToolUse, postToolUse, sessionStart, sessionEnd,
       userPromptSubmitted, errorOccurred). Only preToolUse supports permission gating;
       all other hook outputs are ignored. PowerShell is a first-class script target
-      alongside Bash, making hooks functional on Windows without WSL.
+      alongside Bash, making hooks functional on Windows without WSL. The use-hooks.md
+      source (hooks-1) now redirects to reusable content shared with the cloud agent;
+      the hooks-configuration.md reference (hooks-0) remains the authoritative schema
+      source and is unchanged.
 
   mcp:
     status: supported
@@ -308,13 +331,13 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/context/mcp.md"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:c74b8a05e0f0632da57344fa58141156da9df5f952c42786d965bf4e74f754f3"
-        fetched_at: "2026-04-11T21:48:25.329663064Z"
+        content_hash: "sha256:7608cf2afdd638298e266ef4cba92591b9a71bf6c3ec99b8276f00cd7b97f1fb"
+        fetched_at: "2026-05-06T14:00:00Z"
     canonical_mappings:
       transport_types:
-        supported: false
-        mechanism: "Copilot CLI MCP transport types not documented"
-        confidence: inferred
+        supported: true
+        mechanism: "Copilot CLI supports both local (stdio) and remote (HTTP/SSE) MCP server types, confirmed in concepts/context/mcp.md"
+        confidence: confirmed
       oauth_support:
         supported: false
         mechanism: "Copilot CLI MCP does not document OAuth 2.0 authentication"
@@ -346,14 +369,14 @@ content_types:
     provider_extensions:
       - id: builtin_github_mcp_server
         name: Built-In GitHub MCP Server
-        summary: A GitHub MCP server ships inside the Copilot CLI binary and is always present in the tool set, overriding any same-name user config.
-        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
+        summary: A GitHub MCP server ships inside the Copilot CLI binary and is always present in the tool set, available without additional configuration; it can be disabled via --disable-builtin-mcps.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/context/mcp.md"
         graduation_candidate: false
         conversion: not-portable
 
       - id: interactive_mcp_management
         name: Interactive /mcp Slash Commands
-        summary: The /mcp slash-command suite (add, show, edit, delete, disable, enable) manages MCP servers at runtime without restart.
+        summary: "The /mcp slash-command suite (add, show, edit, delete, disable, enable, auth, reload) manages MCP servers at runtime without restart."
         source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers.md"
         graduation_candidate: false
         conversion: not-portable
@@ -368,8 +391,22 @@ content_types:
 
       - id: mcp_tool_allow_deny_flags
         name: Per-Tool Allow/Deny CLI Flags
-        summary: The --allow-tool, --deny-tool, and --allow-all-tools CLI flags grant or deny MCP tools (and built-in tools) without manual approval.
-        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/agents/copilot-cli/about-copilot-cli.md"
+        summary: "The --allow-tool, --deny-tool, --available-tools, --excluded-tools, and --allow-all-tools CLI flags grant or deny MCP tools (and built-in tools) without manual approval; --disable-builtin-mcps and --disable-mcp-server disable servers."
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
+
+      - id: github_mcp_toolset_control
+        name: GitHub MCP Server Toolset Control
+        summary: "The --add-github-mcp-tool, --add-github-mcp-toolset, and --enable-all-github-mcp-tools flags selectively enable GitHub MCP server tools beyond the default CLI subset."
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
+
+      - id: github_mcp_registry
+        name: GitHub MCP Registry
+        summary: The GitHub MCP Registry (github.com/mcp) is a curated list of MCP servers from partners and the community, usable for discovery alongside the built-in GitHub MCP server.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/concepts/context/mcp.md"
         graduation_candidate: false
         conversion: not-portable
     loading_model: >
@@ -378,16 +415,19 @@ content_types:
       via `.mcp.json` in the plugin root or `.github/mcp.json`. MCP servers from multiple
       sources are merged with last-writer-wins semantics on server name conflicts (plugins
       override personal config; `--additional-mcp-config` flag overrides plugins). The
-      built-in GitHub MCP server is always present and cannot be overridden. New servers
-      added via `/mcp add` are available immediately in the running session.
+      built-in GitHub MCP server is always present and cannot be overridden by user config
+      (but can be disabled with `--disable-builtin-mcps`). New servers added via `/mcp add`
+      are available immediately in the running session. The mcp.md concepts source confirms
+      Copilot CLI supports both local and remote MCP servers.
     notes: >
-      Copilot CLI has broad MCP support: local (stdio) and remote (HTTP/SSE) server types,
-      per-server tool filtering, a built-in GitHub MCP server, interactive management via
-      /mcp slash commands, and org-level policy enforcement (with known limitations —
-      the "MCP servers in Copilot" and "MCP Registry URL" org policies are not enforced
-      in the CLI as of source date). The stdio type is accepted as an alias for local for
-      compatibility with VS Code and Claude Code MCP configurations, enabling direct reuse
-      of mcp.json files across providers.
+      Copilot CLI has broad MCP support: local (stdio) and remote (HTTP/SSE) server types
+      confirmed in the updated concepts/context/mcp.md source, per-server tool filtering,
+      a built-in GitHub MCP server, interactive management via /mcp slash commands (now
+      including an `auth` subcommand), and org-level policy enforcement. The updated
+      source confirms the GitHub MCP server is available without additional configuration
+      in Copilot CLI. The stdio type is accepted as an alias for local for compatibility
+      with VS Code and Claude Code MCP configurations. A GitHub MCP Registry
+      (github.com/mcp) is now documented as a discovery resource for community MCP servers.
 
   agents:
     status: supported
@@ -488,7 +528,8 @@ content_types:
       enables cross-provider agent profile portability — the same tools list works across
       Claude Code, VS Code, and Copilot CLI without modification. The stdio→local type
       mapping in MCP server configs within agent profiles similarly enables sharing with
-      Claude Code.
+      Claude Code. The customization cheat sheet confirms custom agents are supported (✓)
+      in Copilot CLI.
 
   commands:
     status: supported
@@ -496,18 +537,42 @@ content_types:
       - uri: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
         type: reference
         fetch_method: http
-        content_hash: ""
-        fetched_at: "2026-04-28T00:00:00Z"
+        content_hash: "sha256:1f18e2b4b6d465f663e9a9c5b92cc8dcd6b0e9558cd7ba7533ade670e19fad2c"
+        fetched_at: "2026-05-06T14:00:00Z"
     canonical_mappings:
       argument_substitution:
         supported: false
-        mechanism: "built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /init suppress) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)"
+        mechanism: "built-in slash commands accept literal positional arguments (e.g. /add-dir PATH, /skills info SKILL-NAME) but Copilot CLI does not document a user-authored custom-command mechanism with template-substitution syntax (no $ARGUMENTS, $1/$2, or {{args}} interpolation)"
         confidence: inferred
       builtin_commands:
         supported: true
-        mechanism: "~50 built-in slash commands documented under the 'Slash commands in the interactive interface' heading of the CLI command reference (e.g. /help, /mcp, /init, /clear, /agent, /delegate, /review, /add-dir, /fleet, /research, /plugin); 'Command-line commands' heading covers the top-level `copilot` subcommands"
+        mechanism: >
+          60+ built-in slash commands documented in the 'Slash commands in the interactive interface'
+          table of the CLI command reference, including: /add-dir, /agent, /ask, /allow-all,
+          /changelog, /chronicle, /clear, /compact, /context, /copy, /cwd, /delegate, /diff,
+          /downgrade, /env, /exit, /experimental, /feedback, /fleet, /help, /ide, /init,
+          /instructions, /keep-alive, /list-dirs, /login, /logout, /lsp, /mcp, /model, /plan,
+          /plugin, /pr, /remote, /rename, /research, /reset-allowed-tools, /restart, /resume,
+          /review, /session, /share, /skills, /statusline, /tasks, /terminal-setup, /theme,
+          /undo, /update, /usage, /user, /version. The 'Command-line commands' table covers
+          top-level copilot subcommands (copilot, copilot completion, copilot help, copilot init,
+          copilot login, copilot mcp, copilot plugin, copilot update, copilot version).
         confidence: confirmed
     provider_extensions:
+      - id: tool_permission_patterns
+        name: Tool Permission Pattern Syntax
+        summary: "The --allow-tool and --deny-tool options accept Kind(argument) patterns (e.g. shell(git:*), read(.env), MyMCP(create_issue)); deny rules always take precedence over allow rules even when --allow-all is set."
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
+
+      - id: otel_monitoring
+        name: OpenTelemetry Monitoring
+        summary: Copilot CLI exports traces and metrics via OpenTelemetry (OTel) following GenAI Semantic Conventions; off by default, activated by COPILOT_OTEL_ENABLED or OTEL_EXPORTER_OTLP_ENDPOINT; covers invoke_agent, chat, and execute_tool spans.
+        source_ref: "https://raw.githubusercontent.com/github/docs/main/content/copilot/reference/copilot-cli-reference/cli-command-reference.md"
+        graduation_candidate: false
+        conversion: not-portable
+
       - id: plugin_system
         name: Plugin System as Commands Distribution Mechanism
         summary: Copilot CLI has no standalone slash-commands type; extensibility ships via plugins that bundle agents, skills, hooks, MCP, and command dirs.
@@ -544,7 +609,10 @@ content_types:
       a standalone slash-command mechanism. The plugin.json schema includes a `commands`
       path field, and the loading order diagram shows skills override commands (commands
       sit below skills in precedence), but no documentation exists for what command files
-      look like or how they are invoked. This suggests the commands mechanism is either
-      nascent, undocumented, or subsumed by the skills system. Syllago should treat plugin
-      install/management as the primary unit of commands-equivalent distribution for
-      Copilot CLI until further documentation emerges.
+      look like or how they are invoked. The updated CLI command reference (commands-0)
+      documents 60+ built-in slash commands including recent additions: /ask, /chronicle,
+      /fleet, /pr, /remote, /rename, /research, /session, /share, /statusline, /tasks,
+      and /terminal-setup. Tool permission patterns (Kind(argument) syntax for --allow-tool
+      and --deny-tool) and OpenTelemetry monitoring are newly documented in this source.
+      Syllago should treat plugin install/management as the primary unit of
+      commands-equivalent distribution for Copilot CLI until further documentation emerges.
