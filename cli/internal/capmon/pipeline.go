@@ -161,7 +161,7 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 
 		for ctName, ct := range m.ContentTypes {
 			for i, src := range ct.Sources {
-				if err := ValidateSourceURL(src.URL); err != nil {
+				if err := validateSourceURL(src.URL); err != nil {
 					status.Errors = append(status.Errors, fmt.Sprintf("%s.%d: SSRF rejected: %v", ctName, i, err))
 					continue
 				}
@@ -209,6 +209,9 @@ func runStage1Fetch(ctx context.Context, opts PipelineOptions, manifest *RunMani
 					status.Errors = append(status.Errors, fmt.Sprintf("%s meta: %v", sourceID, err))
 				}
 				status.SourcesFetched++
+				if entry.Meta.Cached {
+					status.SourcesCacheHit++
+				}
 			}
 		}
 		manifest.Providers[m.Slug] = status

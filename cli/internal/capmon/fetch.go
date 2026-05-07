@@ -52,6 +52,19 @@ func SetHTTPClientForTest(c *http.Client) {
 	}
 }
 
+// validateSourceURL is overridable for tests that need to bypass SSRF
+// validation when using httptest servers (which use raw IP addresses).
+var validateSourceURL = ValidateSourceURL
+
+// SetValidateURLForTest overrides the URL validator in tests.
+func SetValidateURLForTest(f func(string) error) {
+	if f == nil {
+		validateSourceURL = ValidateSourceURL
+	} else {
+		validateSourceURL = f
+	}
+}
+
 // FetchSource fetches one source URL, writes to cache, and returns the entry.
 // If content hash is unchanged from the last cached entry, returns the cached entry
 // with Meta.Cached = true.
