@@ -384,6 +384,39 @@ func TestCapmonFetchCmd_LiveFetch_AllCached_ExitZero(t *testing.T) {
 	}
 }
 
+// TestCapmonFetchCmd_DryRun_JSONVerbose verifies that --dry-run --json --verbose
+// includes a per-source "sources" array in each provider entry.
+func TestCapmonFetchCmd_DryRun_JSONVerbose(t *testing.T) {
+	srcDir := t.TempDir()
+	writeTestSourceManifest(t, srcDir, "dryjv-provider", 2)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	output.Verbose = true
+	capmonFetchCmd.Flags().Set("dry-run", "true")
+	capmonFetchCmd.Flags().Set("sources-dir", srcDir)
+	defer func() {
+		capmonFetchCmd.Flags().Set("dry-run", "false")
+		capmonFetchCmd.Flags().Set("sources-dir", "")
+	}()
+
+	if err := capmonFetchCmd.RunE(capmonFetchCmd, []string{}); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	out := strings.TrimSpace(stdout.String())
+	var payload interface{}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("output is not valid JSON: %v\noutput:\n%s", err, out)
+	}
+	if !strings.Contains(out, `"sources"`) {
+		t.Errorf("dry-run JSON+verbose missing sources array; got:\n%s", out)
+	}
+	if !strings.Contains(out, `"id"`) || !strings.Contains(out, `"url"`) {
+		t.Errorf("dry-run JSON+verbose sources must include id and url fields; got:\n%s", out)
+	}
+}
+
 // TestCapmonFetchCmd_LiveFetch_UnknownProvider_LiveMode verifies that an unknown
 // --provider in live (non-dry-run) mode returns an error instead of silently
 // succeeding with zero output.
