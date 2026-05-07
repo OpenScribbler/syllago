@@ -1,8 +1,8 @@
 provider: amp
 docs_url: "https://ampcode.com/manual"
 category: cli
-last_fetched_at: "2026-04-11T21:49:38Z"
-last_changed_at: "2026-04-29T00:00:00Z"
+last_fetched_at: "2026-05-06T12:57:00Z"
+last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
 content_types:
@@ -12,8 +12,8 @@ content_types:
       - uri: "https://ampcode.com/manual/agent-skills.md"
         type: documentation
         fetch_method: md_url
-        content_hash: "sha256:624b341cdc99453666703ca02acc9783338ca165cbe8641e9204beaaec7e367c"
-        fetched_at: "2026-04-29T16:15:06Z"
+        content_hash: "sha256:3364d9e8141430524bd952c1d6dcd7ce5682e6b0f9b74c5b5329e7fe797a4997"
+        fetched_at: "2026-05-06T12:57:00Z"
     canonical_mappings:
       display_name:
         supported: true
@@ -178,8 +178,8 @@ content_types:
       - uri: "https://ampcode.com/manual/appendix/permissions-reference.md"
         type: documentation
         fetch_method: http
-        content_hash: "sha256:05d7e9a34503c66e61ee90515a39fbe18a6964aab3b7d196102da24c2275b872"
-        fetched_at: "2026-04-29T16:15:03Z"
+        content_hash: "sha256:d5e24aca1259039675945e5eb1e193ac8635da69b582b309db6feb9c9891fa0f"
+        fetched_at: "2026-05-06T12:57:00Z"
     canonical_mappings:
       handler_types:
         supported: true
@@ -285,7 +285,7 @@ content_types:
         provider_field: "matches"
       - id: permissions_delegate_action
         name: "Permission delegate action"
-        summary: "Delegate decisions to an external program named in the rule's 'to' field (must be on $PATH or an absolute path). Amp pipes tool parameters as JSON to stdin and exports AMP_THREAD_ID, AGENT_TOOL_NAME, and AGENT=amp env vars. Exit status: 0=allow, 1=ask operator, ≥2=reject (stderr surfaced to the model). Plugin API is the documented successor; a compatibility plugin enforcing amp.permissions rules is planned."
+        summary: "Delegate decisions to an external program named in the rule's 'to' field (must be on $PATH). Amp pipes tool parameters as JSON to stdin and exports AMP_THREAD_ID, AGENT_TOOL_NAME, and AGENT=amp env vars. Exit status: 0=allow, 1=ask operator, ≥2=reject (stderr surfaced to the model). Plugin API is the documented successor; a compatibility plugin enforcing amp.permissions rules is planned."
         source_ref: "https://ampcode.com/manual/appendix/permissions-reference.md"
         graduation_candidate: false
         conversion: not-portable
