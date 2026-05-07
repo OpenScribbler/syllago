@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capmon"
@@ -18,6 +19,7 @@ import (
 	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_toml"
 	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_typescript"
 	_ "github.com/OpenScribbler/syllago/cli/internal/capmon/extract_yaml"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -25,6 +27,13 @@ import (
 // capmonCapabilitiesDirOverride allows tests to redirect the verify command
 // to a temp directory instead of the repo's docs/provider-capabilities/.
 var capmonCapabilitiesDirOverride string
+
+// capmonFetchDryRunEntry is the per-provider dry-run summary emitted by
+// 'syllago capmon fetch --dry-run'.
+type capmonFetchDryRunEntry struct {
+	Provider    string `json:"provider"`
+	SourceCount int    `json:"source_count"`
+}
 
 var capmonCmd = &cobra.Command{
 	Use:   "capmon",
@@ -100,12 +109,65 @@ var capmonFetchCmd = &cobra.Command{
 	Short: "Fetch source URLs and update hash cache",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		provider, _ := cmd.Flags().GetString("provider")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		sourcesDir, _ := cmd.Flags().GetString("sources-dir")
+		cacheRoot, _ := cmd.Flags().GetString("cache-root")
+
 		if provider != "" {
 			if _, err := capmon.SanitizeSlug(provider); err != nil {
 				return fmt.Errorf("invalid --provider: %w", err)
 			}
 		}
-		// Full implementation in pipeline.go (Phase 9)
+		if cacheRoot == "" {
+			cacheRoot = ".capmon-cache"
+		}
+		if sourcesDir == "" {
+			sourcesDir = "docs/provider-sources"
+		}
+
+		if dryRun {
+			manifests, err := capmon.LoadAllSourceManifests(sourcesDir)
+			if err != nil {
+				return fmt.Errorf("load source manifests: %w", err)
+			}
+
+			if provider != "" {
+				var validSlugs []string
+				found := false
+				for _, m := range manifests {
+					validSlugs = append(validSlugs, m.Slug)
+					if m.Slug == provider {
+						found = true
+					}
+				}
+				if !found {
+					return fmt.Errorf("unknown provider %q; valid providers: %s", provider, strings.Join(validSlugs, ", "))
+				}
+			}
+
+			var entries []capmonFetchDryRunEntry
+			for _, m := range manifests {
+				if provider != "" && m.Slug != provider {
+					continue
+				}
+				count := 0
+				for _, ct := range m.ContentTypes {
+					count += len(ct.Sources)
+				}
+				entries = append(entries, capmonFetchDryRunEntry{Provider: m.Slug, SourceCount: count})
+			}
+
+			if output.JSON {
+				output.Print(entries)
+			} else {
+				for _, e := range entries {
+					fmt.Fprintf(output.Writer, "%s: %d sources (dry run)\n", e.Provider, e.SourceCount)
+				}
+			}
+			return nil
+		}
+
+		// Live fetch: Stage 1 pipeline (Slice 3)
 		return fmt.Errorf("not yet implemented — use 'syllago capmon run --stage fetch-extract'")
 	},
 }
@@ -257,6 +319,10 @@ func init() {
 	capmonVerifyCmd.Flags().Bool("migration-window", false, "Accept current-minus-one schema_version during schema migrations")
 
 	capmonFetchCmd.Flags().String("provider", "", "Fetch only this provider slug")
+	capmonFetchCmd.Flags().Bool("dry-run", false, "Report source counts without fetching or writing cache")
+	capmonFetchCmd.Flags().String("sources-dir", "", "Path to provider-sources/ (default: docs/provider-sources)")
+	capmonFetchCmd.Flags().String("cache-root", "", "Path to .capmon-cache/ (default: .capmon-cache)")
+
 	capmonExtractCmd.Flags().String("provider", "", "Extract only this provider slug")
 
 	capmonRunCmd.Flags().String("stage", "", "Pipeline stage to run: 'fetch-extract' or 'report' (default: all stages)")
