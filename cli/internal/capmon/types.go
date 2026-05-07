@@ -64,6 +64,7 @@ type ProviderStatus struct {
 	Errors           []string        `json:"errors,omitempty"`
 	Warnings         []string        `json:"warnings,omitempty"`
 	SourcesFetched   int             `json:"sources_fetched,omitempty"`
+	SourcesCacheHit  int             `json:"sources_cache_hit,omitempty"`
 	SourcesExtracted int             `json:"sources_extracted,omitempty"`
 	SourcesSkipped   int             `json:"sources_skipped,omitempty"`
 	NeedsBaseline    bool            `json:"needs_baseline,omitempty"`
