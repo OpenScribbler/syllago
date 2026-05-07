@@ -22,13 +22,13 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: model_selection
       supported: true
-      mechanism: model field in agent JSON config overrides workspace default for that agent
+      mechanism: model field in agent JSON config overrides workspace default for that agent; falls back to default if specified model is unavailable
       source_field: ""
       source_value: ""
       confidence: confirmed
     - canonical_key: per_agent_mcp
       supported: true
-      mechanism: inline mcpServers map per agent config; includeMcpJson boolean controls whether workspace .kiro/mcp.json is merged into agent's server set
+      mechanism: inline mcpServers map per agent config; includeMcpJson boolean controls whether workspace .kiro/settings/mcp.json is merged into agent's server set
       source_field: ""
       source_value: ""
       confidence: confirmed
@@ -40,7 +40,7 @@ proposed_mappings:
       confidence: inferred
     - canonical_key: tool_restrictions
       supported: true
-      mechanism: tools array with exact names, wildcards (computer_*), or MCP-namespaced refs (mcp:serverName:toolName); toolsSettings for per-tool config objects
+      mechanism: tools array with exact names, wildcards (computer_*), or MCP-namespaced refs (@server_name); allowedTools list for tools requiring no user approval; toolsSettings map for per-tool behavioral config
       source_field: ""
       source_value: ""
       confidence: confirmed

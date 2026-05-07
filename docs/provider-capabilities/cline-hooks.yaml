@@ -39,11 +39,11 @@ proposed_mappings:
       source_value: ""
       confidence: confirmed
     - canonical_key: json_io_protocol
-      supported: false
-      mechanism: Cline hooks communicate via exit codes and output text; no structured JSON stdin/stdout protocol documented
+      supported: true
+      mechanism: Hooks receive a JSON object via stdin (taskId, hookName, clineVersion, timestamp, workspaceRoots, userId, model, plus hook-specific fields) and return JSON to stdout with cancel (bool), contextModification (string), and errorMessage (string); debug output goes to stderr
       source_field: ""
       source_value: ""
-      confidence: inferred
+      confidence: confirmed
     - canonical_key: matcher_patterns
       supported: false
       mechanism: Cline hooks fire on configured lifecycle events; no per-tool pattern matching documented
