@@ -18,6 +18,9 @@ concurrency:
   group: smoke-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   claude-code:
     name: Claude Code Smoke Tests
@@ -41,7 +44,7 @@ jobs:
 
       - name: Install Claude Code
         run: |
-          npm install -g @anthropic-ai/claude-code
+          npm install -g @anthropic-ai/claude-code@2.1.136
           claude --version
 
       # TODO: Configure SSO/service account auth for Claude Code.
@@ -82,7 +85,7 @@ jobs:
 
       - name: Install Gemini CLI
         run: |
-          npm install -g @google/gemini-cli
+          npm install -g @google/gemini-cli@0.41.2
           gemini --version
 
       # TODO: Configure SSO/service account auth for Gemini CLI.

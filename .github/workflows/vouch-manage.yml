@@ -8,6 +8,9 @@ concurrency:
   group: vouch-manage
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   manage:
     runs-on: ubuntu-latest

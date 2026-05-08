@@ -24,6 +24,9 @@ concurrency:
   group: moat-trusted-root-check
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Check bundled trusted-root staleness
