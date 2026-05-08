@@ -56,9 +56,18 @@ content_types:
         supported: false
         mechanism: "not documented — no mechanism to prevent the model from auto-invoking a skill; the model always selects based on name and description match"
         confidence: confirmed
+      auto_invocable:
+        supported: true
+        mechanism: "Model auto-selects skill by matching user request against frontmatter name and description fields; no explicit opt-out mechanism is documented."
+        confidence: confirmed
       shared_scope:
         supported: false
         mechanism: "not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists"
+        confidence: confirmed
+      skill_bundled_resources:
+        supported: true
+        mechanism: "Arbitrary files (scripts, templates, configs) co-located alongside SKILL.md in the skill directory; agent reads them by relative path when the skill is invoked."
+        source_ref: "https://ampcode.com/manual/agent-skills.md"
         confidence: confirmed
     # Optional extension depth fields (populated by capmon subagent):
     # - required: true | false | null (null = source doesn't say)
@@ -81,7 +90,8 @@ content_types:
         name: "Bundled passive resources"
         summary: "Include arbitrary files (scripts, templates, configs) alongside SKILL.md; agent reads them by relative path."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to skill_bundled_resources canonical key (issue #74)."
         conversion: embedded
       - id: skill_cli
         name: "CLI and command palette skill management"
@@ -99,7 +109,8 @@ content_types:
         name: "Automatic model-driven invocation"
         summary: "Model auto-selects skill by matching user request against frontmatter name/description; SKILL.md body loads on demand."
         source_ref: "https://ampcode.com/manual/agent-skills.md"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to auto_invocable canonical key (issue #73)."
         conversion: embedded
     loading_model: "Lazy — name and description (frontmatter) are always visible to the model and loaded at startup; SKILL.md body is loaded on demand when the skill is invoked. MCP tools and toolbox executables bundled in a skill remain hidden until the skill is loaded. Skill precedence order (first wins): ~/.config/agents/skills/, ~/.config/amp/skills/, .agents/skills/, .claude/skills/, ~/.claude/skills/, then plugins, toolbox directories, and built-in skills."
     notes: >

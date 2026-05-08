@@ -78,6 +78,16 @@ content_types:
       user_invocable:
         supported: false
         confidence: confirmed
+      auto_invocable:
+        supported: true
+        extension_id: auto_invocation
+        mechanism: "Skill name and description are injected into the system prompt as XML; the agent loads matching SKILL.md bodies on demand. Skills with disable-model-invocation: true are excluded from system prompt injection."
+        confidence: confirmed
+      skill_bundled_resources:
+        supported: true
+        mechanism: "Skill directories may include scripts/, references/, and assets/ subdirectories that SKILL.md references via relative paths."
+        source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
+        confidence: confirmed
     # Optional extension depth fields (populated by capmon subagent):
     # - required: true | false | null (null = source doesn't say)
     # - value_type: see allow-list in formatdoc_validate.go
@@ -94,13 +104,15 @@ content_types:
         name: "Supporting files in skill directory"
         summary: "Skill directories may include scripts/, references/, and assets/ subdirectories that SKILL.md references via relative paths."
         source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to skill_bundled_resources canonical key (issue #74)."
         conversion: embedded
       - id: auto_invocation
         name: "Description-based auto-invocation"
         summary: "Names and descriptions are injected as XML in the system prompt, and the agent loads matching SKILL.md bodies on demand."
         source_ref: "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/docs/skills.md"
-        graduation_candidate: true
+        graduation_candidate: false
+        graduation_notes: "Graduated to auto_invocable canonical key (issue #73)."
         conversion: embedded
       - id: cross_harness_skill_loading
         name: "Cross-harness skill loading via settings array"
