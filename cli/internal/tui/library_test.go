@@ -472,10 +472,10 @@ func testAppWithUnifiedLibraryCatalog(t *testing.T, w, h int) App {
 	return m.(App)
 }
 
-// TestLibraryTable_RegistryCloneItemRenderedMuted verifies that a Registry
-// Clone item (Registry != "" && Library == false) renders with a
-// [not in library] chip in the Library table.
-func TestLibraryTable_RegistryCloneItemRenderedMuted(t *testing.T) {
+// TestLibraryTable_RegistryCloneItemRendered verifies that a Registry Clone
+// item (Registry != "" && Library == false) appears in the Library table.
+// Color differentiation (gray vs white) is covered by golden tests.
+func TestLibraryTable_RegistryCloneItemRendered(t *testing.T) {
 	t.Parallel()
 	item := catalog.ContentItem{
 		Name:     "guide-skill",
@@ -488,8 +488,8 @@ func TestLibraryTable_RegistryCloneItemRenderedMuted(t *testing.T) {
 	l := newLibraryModel([]catalog.ContentItem{item}, nil, "")
 	l.SetSize(80, 10)
 	view := ansi.Strip(l.View())
-	if !strings.Contains(view, "[not in library]") {
-		t.Errorf("expected Registry Clone row to contain [not in library], view:\n%s", view)
+	if !strings.Contains(view, "guide-skill") {
+		t.Errorf("expected Registry Clone row to appear in table, view:\n%s", view)
 	}
 }
 
@@ -535,14 +535,10 @@ func TestLibraryTable_ProjectContentRenderedNormal(t *testing.T) {
 
 // TestGoldenLibrary_UnifiedList verifies that the Library tab renders all three
 // item categories — Library item, Project Content, and Registry Clone — in a
-// single unified list. The Registry Clone row must contain [not in library].
+// single unified list.
 func TestGoldenLibrary_UnifiedList(t *testing.T) {
 	app := testAppWithUnifiedLibraryCatalog(t, 80, 30)
 	view := snapshotApp(t, app)
-	// Verify [not in library] appears somewhere in the unified list output.
-	if !strings.Contains(view, "[not in library]") {
-		t.Errorf("unified list golden must contain [not in library] for registry clone item, view:\n%s", view)
-	}
 	requireGolden(t, "library-unified-list-80x30", view)
 }
 
@@ -646,6 +642,73 @@ func TestGoldenLibrary_FilterChipsRendered(t *testing.T) {
 		t.Errorf("filter chips must include 'All' chip, view:\n%s", stripped)
 	}
 	requireGolden(t, "library-filter-chips-80x30", view)
+}
+
+// ── Filter chip counts ─────────────────────────────────────────────────────
+
+// TestLibraryFilterCount_SpecificCounts verifies filterCount returns the correct
+// value for each filter given the unified-list fixture (1 library, 1 project,
+// 1 registry clone).
+func TestLibraryFilterCount_SpecificCounts(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	tests := []struct {
+		filter libraryFilter
+		want   int
+	}{
+		{filterAll, 3},
+		{filterInLibrary, 1},
+		{filterNotInLibrary, 1},
+		{filterProject, 1},
+	}
+	for _, tc := range tests {
+		got := l.filterCount(tc.filter)
+		if got != tc.want {
+			t.Errorf("filterCount(%d): want %d, got %d", tc.filter, tc.want, got)
+		}
+	}
+}
+
+// TestLibraryFilterCount_AllEqualsPartition verifies the exhaustive partition
+// invariant: count(All) == count(InLibrary) + count(NotInLibrary) + count(Project).
+// Every item is exactly one of: Library==true, Registry!=""&&!Library, or
+// !Library&&Registry=="" — so the three sub-counts must sum to All with no gaps
+// or overlaps. This test uses the unified-list fixture but the math is a
+// catalog-level invariant that holds for any valid item set.
+func TestLibraryFilterCount_AllEqualsPartition(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+
+	all := l.filterCount(filterAll)
+	inLib := l.filterCount(filterInLibrary)
+	notInLib := l.filterCount(filterNotInLibrary)
+	project := l.filterCount(filterProject)
+
+	if sum := inLib + notInLib + project; sum != all {
+		t.Errorf("partition invariant broken: InLibrary(%d) + NotInLibrary(%d) + Project(%d) = %d, want All(%d)",
+			inLib, notInLib, project, sum, all)
+	}
+}
+
+// TestLibraryFilterChip_CountsInView verifies that the rendered chip row
+// contains parenthesized counts for every chip (e.g. "All (3)").
+func TestLibraryFilterChip_CountsInView(t *testing.T) {
+	t.Parallel()
+	l := newLibraryModel(testCatalogUnifiedList(t).Items, nil, "")
+	l.SetSize(80, 20)
+	view := ansi.Strip(l.View())
+
+	wantSubstrings := []string{
+		"All (3)",
+		"In Library (1)",
+		"Not in Library (1)",
+		"Project (1)",
+	}
+	for _, want := range wantSubstrings {
+		if !strings.Contains(view, want) {
+			t.Errorf("filter chip row must contain %q, view:\n%s", want, view)
+		}
+	}
 }
 
 // ── Slice 3: metapanel Add/Add+Install buttons ─────────────────────────────

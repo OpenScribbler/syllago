@@ -1,0 +1,11 @@
+format_version: 1
+id: e76ffe05-2b25-4a04-aa97-1d55efd761fc
+name: verification-before-completion
+description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+type: skills
+source_format: md
+source_type: registry
+source_hash: sha256:ea52d15aabaf72bc6b558efe2c126f161b53961090ddcd712000273bfe8c7b6c
+source_registry: obra/superpowers
+added_at: 2026-05-07T22:37:40.49027676Z
+added_by: syllago

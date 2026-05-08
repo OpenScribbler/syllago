@@ -1,0 +1,11 @@
+format_version: 1
+id: 5e38345f-fac4-41a7-b82f-07504b3ea842
+name: anthropic-best-practices
+description: '> Learn how to write effective Skills that Claude can discover and use successfully.'
+type: commands
+source_format: md
+source_type: registry
+source_hash: sha256:20914c2fda31670c75fe91710e18a53d413ce0d00b5102acfa251d75c9226e3f
+source_registry: obra/superpowers
+added_at: 2026-05-07T22:43:16.308528556Z
+added_by: syllago

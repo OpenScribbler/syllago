@@ -1247,31 +1247,39 @@ func ScanWithGlobalAndRegistries(contentRoot string, projectRoot string, registr
 	// Merge warnings from global scan into main catalog
 	cat.Warnings = append(cat.Warnings, globalCat.Warnings...)
 
-	// Tag global items and append only those not already in project
-	projectNames := make(map[string]bool)
-	for _, item := range cat.Items {
-		projectNames[string(item.Type)+"/"+item.Name] = true
-	}
-
 	// applyPrecedence must run before processing global items so that its
 	// replacement of cat.Overridden does not discard global shadow entries.
 	applyPrecedence(cat)
 
-	// Re-build projectNames from the post-precedence Items list.
-	projectNames = make(map[string]bool)
-	for _, item := range cat.Items {
-		projectNames[string(item.Type)+"/"+item.Name] = true
+	// Build a key→index map so we can do O(1) lookups and in-place replacements
+	// when a library item needs to displace a lower-precedence existing item.
+	itemIdx := make(map[string]int, len(cat.Items))
+	for i, item := range cat.Items {
+		itemIdx[string(item.Type)+"/"+item.Name] = i
 	}
 
 	for i := range globalCat.Items {
 		globalCat.Items[i].Source = "global"
 		globalCat.Items[i].Library = true
 		key := string(globalCat.Items[i].Type) + "/" + globalCat.Items[i].Name
-		if !projectNames[key] {
+		idx, exists := itemIdx[key]
+		if !exists {
+			itemIdx[key] = len(cat.Items)
 			cat.Items = append(cat.Items, globalCat.Items[i])
+			continue
+		}
+		// Key conflict: use itemPrecedence to decide which version wins.
+		// Library items (precedence 0) must beat registry clones (precedence 2)
+		// so that adding a registry item to the library is reflected in the
+		// catalog. Project items (precedence 1) still win over library items
+		// when a local override is intentional.
+		if itemPrecedence(globalCat.Items[i]) < itemPrecedence(cat.Items[idx]) {
+			// Library item wins — displace the existing item.
+			cat.Overridden = append(cat.Overridden, cat.Items[idx])
+			cat.Items[idx] = globalCat.Items[i]
 		} else {
-			// Project item takes precedence; keep global item in Overridden
-			// so CleanupPromotedItems can find and remove it if needed.
+			// Existing item wins — keep global item in Overridden so
+			// CleanupPromotedItems can find and remove it if needed.
 			cat.Overridden = append(cat.Overridden, globalCat.Items[i])
 		}
 	}
