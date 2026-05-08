@@ -64,6 +64,8 @@ var CanonicalSkillsKeys = []string{
 	"shared_scope",
 	"canonical_filename",
 	"custom_filename",
+	"auto_invocable",
+	"skill_bundled_resources",
 }
 
 // canonicalSkillsKeySet is the lookup form of CanonicalSkillsKeys, built once
