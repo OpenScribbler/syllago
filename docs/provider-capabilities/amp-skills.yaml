@@ -2,6 +2,12 @@ provider: amp
 content_type: skills
 format: ""
 proposed_mappings:
+    - canonical_key: auto_invocable
+      supported: true
+      mechanism: Model auto-selects skill by matching user request against frontmatter name and description fields; no explicit opt-out mechanism is documented.
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
     - canonical_key: canonical_filename
       supported: true
       mechanism: SKILL.md (required, fixed name)
@@ -47,6 +53,12 @@ proposed_mappings:
     - canonical_key: shared_scope
       supported: false
       mechanism: not documented — only project-scope (.agents/skills/) and user-wide (~/.config/agents/skills/) are described; no enterprise or shared scope exists
+      source_field: ""
+      source_value: ""
+      confidence: confirmed
+    - canonical_key: skill_bundled_resources
+      supported: true
+      mechanism: Arbitrary files (scripts, templates, configs) co-located alongside SKILL.md in the skill directory; agent reads them by relative path when the skill is invoked.
       source_field: ""
       source_value: ""
       confidence: confirmed
