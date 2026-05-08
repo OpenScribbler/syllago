@@ -10,12 +10,12 @@
 │                                                                              │
 │ Trust: Sign╭────────────────────────────────────────────────────╮+ Install   │
 ├────────────│ Install revoked item "revoked-skill"?              │────────────┤
-│All  In Libr│                                                    │            │
+│ All (4)    │                                                    │Project (1) │
 │   Tr Name ▲│ The publisher has revoked this item.               │            │
-│ > ✓P privat│                                                    │ in library]│
-│   R  revoke│ Reason: key compromise                             │ in library]│
+│ > ✓P privat│                                                    │            │
+│   R  revoke│ Reason: key compromise                             │            │
 │      vanill│ Revoked by: ops@example.com                        │            │
-│   ✓  verifi│ Details: https://example.com/revocation/123        │ in library]│
+│   ✓  verifi│ Details: https://example.com/revocation/123        │            │
 │            │                                                    │            │
 │            │ Installing anyway will proceed with the current co │            │
 │            │                                                    │            │

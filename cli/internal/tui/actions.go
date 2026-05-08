@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -1207,16 +1208,101 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
 	if item == nil {
 		return a, nil
 	}
-	cmd := a.toast.Push(fmt.Sprintf("Added %q to library", item.Name), toastSuccess)
-	return a, cmd
+	// MOAT unstaged items (empty Path) need to be fetched at install time,
+	// not copied — direct them to the install wizard.
+	if isUnstagedRegistryItem(item) {
+		cmd := a.toast.Push("Use [i] Install to add this registry item", toastWarning)
+		return a, cmd
+	}
+	if item.Path == "" {
+		cmd := a.toast.Push("Item has no local path; cannot add directly", toastWarning)
+		return a, cmd
+	}
+
+	// Always write to the global library directory (~/.syllago/content/), NOT
+	// a.contentRoot. contentRoot is the project content root (may be a dev repo
+	// or project dir); items written there scan as Source:"project", Library:false.
+	// GlobalContentDir() is what the catalog tags as Library:true after scanning.
+	contentRoot := catalog.GlobalContentDir()
+	if contentRoot == "" {
+		cmd := a.toast.Push("Could not locate library directory (~/.syllago/content/)", toastError)
+		return a, cmd
+	}
+	itemCopy := *item
+
+	addCmd := func() tea.Msg {
+		// item.Path may be a directory (for dir-based items) or a file (for
+		// manifest-indexed items where mi.Path points directly to the file).
+		// Use os.Stat to distinguish and build DiscoveryItem correctly.
+		var primaryPath, sourceDir string
+		info, statErr := os.Stat(itemCopy.Path)
+		if statErr != nil {
+			return libraryAddDoneMsg{name: itemCopy.Name, err: fmt.Errorf("stat %s: %w", itemCopy.Path, statErr)}
+		}
+		if info.IsDir() {
+			// Directory-based item: derive primary file from Files list.
+			primary := catalog.PrimaryFileName(itemCopy.Files, itemCopy.Type)
+			if primary != "" {
+				primaryPath = filepath.Join(itemCopy.Path, primary)
+			} else if len(itemCopy.Files) > 0 {
+				primaryPath = filepath.Join(itemCopy.Path, itemCopy.Files[0])
+			} else {
+				primaryPath = itemCopy.Path
+			}
+			sourceDir = itemCopy.Path
+		} else {
+			// File-based item: path IS the primary file; sourceDir is its parent.
+			primaryPath = itemCopy.Path
+			sourceDir = filepath.Dir(itemCopy.Path)
+		}
+
+		di := add.DiscoveryItem{
+			Name:      itemCopy.Name,
+			Type:      itemCopy.Type,
+			Path:      primaryPath,
+			SourceDir: sourceDir,
+			Status:    add.StatusNew,
+			Scope:     "global",
+		}
+		if itemCopy.DisplayName != "" {
+			di.DisplayName = itemCopy.DisplayName
+		}
+		if itemCopy.Description != "" {
+			di.Description = itemCopy.Description
+		}
+
+		opts := add.AddOptions{
+			Force:          false,
+			SourceRegistry: itemCopy.Registry,
+		}
+		results := add.AddItems([]add.DiscoveryItem{di}, opts, contentRoot, nil, "syllago")
+		if len(results) == 0 {
+			return libraryAddDoneMsg{name: itemCopy.Name, err: fmt.Errorf("no result")}
+		}
+		r := results[0]
+		if r.Status == add.AddStatusError {
+			return libraryAddDoneMsg{name: itemCopy.Name, err: r.Error}
+		}
+		return libraryAddDoneMsg{name: itemCopy.Name, err: nil}
+	}
+
+	return a, addCmd
+}
+
+// handleLibraryAddDone processes the result of a direct library add operation.
+func (a App) handleLibraryAddDone(msg libraryAddDoneMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		cmd := a.toast.Push("Failed to add: "+msg.err.Error(), toastError)
+		return a, cmd
+	}
+	cmd1 := a.toast.Push(fmt.Sprintf("Added %q to library", msg.name), toastSuccess)
+	cmd2 := a.rescanCatalog()
+	return a, tea.Batch(cmd1, cmd2)
 }
 
 // handleLibraryAddInstall adds a Registry Clone item to the local syllago
 // library and opens the install wizard to install it immediately.
+// Delegates to handleLibraryAdd — the user can press [i] after the catalog refreshes.
 func (a App) handleLibraryAddInstall(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
-	if item == nil {
-		return a, nil
-	}
-	cmd := a.toast.Push(fmt.Sprintf("Added %q to library — use [i] Install to deploy", item.Name), toastSuccess)
-	return a, cmd
+	return a.handleLibraryAdd(item)
 }

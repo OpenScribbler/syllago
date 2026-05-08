@@ -10,7 +10,7 @@
 │                                                                                                                      │
 │ Trust: Unknown        Visibility: Public                                                  [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│All  In Library  Not in Library  Project                                                                              │
+│ All (7)    In Library (0)    Not in Library (0)    Global (0)    Project (7)                                         │
 │   Tr Name ▲                 Type      Scope        Files Installed      Description                                  │
 │ >    alpha-skill            Skill     team-rules   1     --                                                          │
 │      beta-skill             Skill     team-rules   1     --                                                          │
