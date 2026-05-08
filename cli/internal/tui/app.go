@@ -129,6 +129,11 @@ type App struct {
 	pendingGateRegistryURL string
 	pendingGateContentHash string
 
+	// Set by Add+Install so handleCatalogReady can open the wizard after the
+	// rescan completes and the item is visible as a Library item.
+	pendingInstallAfterAddName string
+	pendingInstallAfterAddType catalog.ContentType
+
 	// Dimensions
 	width, height int
 
@@ -349,6 +354,36 @@ func (a App) handleCatalogReady(msg catalogReadyMsg) (tea.Model, tea.Cmd) {
 	a.galleryDrillIn = false
 	a.refreshContent()
 	a.updateNavState()
+
+	// If Add+Install queued a pending install, find the now-Library item and
+	// open the install wizard instead of showing "Catalog refreshed".
+	if a.pendingInstallAfterAddName != "" {
+		name := a.pendingInstallAfterAddName
+		typ := a.pendingInstallAfterAddType
+		a.pendingInstallAfterAddName = ""
+		a.pendingInstallAfterAddType = ""
+		for _, item := range a.catalog.Items {
+			if item.Library && item.Name == name && item.Type == typ {
+				var supporting []provider.Provider
+				for _, prov := range a.providers {
+					if prov.SupportsType != nil && prov.SupportsType(item.Type) {
+						supporting = append(supporting, prov)
+					}
+				}
+				if len(supporting) > 0 {
+					a.installWizard = openInstallWizard(item, supporting, a.projectRoot)
+					a.installWizard.width = a.width
+					a.installWizard.height = a.contentHeight()
+					a.installWizard.shell.SetWidth(a.width)
+					a.wizardMode = wizardInstall
+					a.updateNavState()
+					return a, nil
+				}
+				break
+			}
+		}
+	}
+
 	return a, a.toast.Push("Catalog refreshed", toastSuccess)
 }
 

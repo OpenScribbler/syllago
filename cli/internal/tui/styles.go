@@ -80,19 +80,21 @@ var (
 			Bold(true).
 			Align(lipgloss.Center)
 
-	// Panel borders — focus indicated by border color
-	focusedBorderFg = primaryColor
-
 	// General text
 	mutedStyle = lipgloss.NewStyle().Foreground(mutedColor)
 	boldStyle  = lipgloss.NewStyle().Bold(true).Foreground(primaryText)
 
-	// Library tab — Registry Clone items not yet Added to the local library
-	notInLibraryChipStyle = lipgloss.NewStyle().Foreground(mutedColor).Faint(true)
+	// Library filter chips — active chip is highlighted with background, inactive is muted
+	activeFilterChipStyle = lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.AdaptiveColor{Light: "#FFFCF0", Dark: "#100F0F"}). // paper/black
+				Background(primaryColor).
+				Padding(0, 1)
 
-	// Library filter chips — active chip is highlighted, inactive is muted
-	activeFilterChipStyle   = lipgloss.NewStyle().Foreground(primaryColor).Bold(true)
-	inactiveFilterChipStyle = lipgloss.NewStyle().Foreground(mutedColor).Faint(true)
+	inactiveFilterChipStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.AdaptiveColor{Light: "#575653", Dark: "#B7B5AC"}).
+				Background(lipgloss.AdaptiveColor{Light: "#DAD8CE", Dark: "#403E3C"}).
+				Padding(0, 1)
 
 	// Inline section title: ──Title──────────────────
 	sectionTitleStyle = lipgloss.NewStyle().Foreground(primaryColor)

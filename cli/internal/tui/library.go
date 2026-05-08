@@ -30,7 +30,8 @@ const (
 	filterAll          libraryFilter = iota // all items (default)
 	filterInLibrary                         // Library == true
 	filterNotInLibrary                      // Registry != "" && !Library
-	filterProject                           // Registry == "" && !Library
+	filterGlobal                            // Source == "global" (installed at global provider level)
+	filterProject                           // !Library && Registry == "" && Source != "global"
 )
 
 // filterChips is the ordered list of (zone-id, label, filter value) for rendering.
@@ -42,6 +43,7 @@ var filterChips = []struct {
 	{"lib-filter-all", "All", filterAll},
 	{"lib-filter-in-library", "In Library", filterInLibrary},
 	{"lib-filter-not-in-library", "Not in Library", filterNotInLibrary},
+	{"lib-filter-global", "Global", filterGlobal},
 	{"lib-filter-project", "Project", filterProject},
 }
 
@@ -82,6 +84,14 @@ type libraryAddInstallMsg struct {
 // field in the metapanel).
 type libraryTrustInspectMsg struct {
 	item *catalog.ContentItem
+}
+
+// libraryAddDoneMsg is the result of a direct library add operation.
+type libraryAddDoneMsg struct {
+	name         string
+	itemType     catalog.ContentType
+	err          error
+	installAfter bool // true when triggered by Add+Install
 }
 
 // libraryModel manages the Library tab: full-width table with drill-in detail view.
@@ -154,11 +164,8 @@ func (l *libraryModel) SetSize(width, height int) {
 
 	switch l.mode {
 	case libraryBrowse:
-		innerH := height - borderSize
-		if l.table.Len() > 0 {
-			innerH = max(3, innerH-l.metaBarTotal())
-		}
-		l.table.SetSize(width-borderSize, innerH)
+		tableH := max(3, height-borderSize-l.metaBarLines()-2) // -2 = separator + chip row
+		l.table.SetSize(width-borderSize, tableH)
 	case libraryDetail:
 		l.sizeDetailPanes()
 	}
@@ -191,10 +198,18 @@ func (l libraryModel) applyFilter() []catalog.ContentItem {
 			}
 		}
 		return out
+	case filterGlobal:
+		var out []catalog.ContentItem
+		for _, item := range l.allItems {
+			if item.Source == "global" {
+				out = append(out, item)
+			}
+		}
+		return out
 	case filterProject:
 		var out []catalog.ContentItem
 		for _, item := range l.allItems {
-			if !item.Library && item.Registry == "" {
+			if !item.Library && item.Registry == "" && item.Source != "global" {
 				out = append(out, item)
 			}
 		}
@@ -202,6 +217,36 @@ func (l libraryModel) applyFilter() []catalog.ContentItem {
 	default: // filterAll
 		return l.allItems
 	}
+}
+
+// itemMatchesFilter reports whether item satisfies filter f.
+func itemMatchesFilter(item catalog.ContentItem, f libraryFilter) bool {
+	switch f {
+	case filterInLibrary:
+		return item.Library
+	case filterNotInLibrary:
+		return notInLibrary(item)
+	case filterGlobal:
+		return item.Source == "global"
+	case filterProject:
+		return !item.Library && item.Registry == "" && item.Source != "global"
+	default: // filterAll
+		return true
+	}
+}
+
+// filterCount returns the number of items in allItems that match filter f.
+func (l libraryModel) filterCount(f libraryFilter) int {
+	if f == filterAll {
+		return len(l.allItems)
+	}
+	n := 0
+	for _, item := range l.allItems {
+		if itemMatchesFilter(item, f) {
+			n++
+		}
+	}
+	return n
 }
 
 // setFilter updates the active filter and refreshes the table items.
@@ -283,6 +328,9 @@ func (l libraryModel) updateBrowse(msg tea.KeyMsg) (libraryModel, tea.Cmd) {
 		}
 	case keyFilter:
 		l.filter = (l.filter + 1) % libraryFilter(len(filterChips))
+		l.table.SetItems(l.applyFilter())
+	case "F":
+		l.filter = (l.filter - 1 + libraryFilter(len(filterChips))) % libraryFilter(len(filterChips))
 		l.table.SetItems(l.applyFilter())
 	case keySearch:
 		l.table.StartSearch()
@@ -692,7 +740,7 @@ const metaBarLinesBase = 4
 func (l libraryModel) renderFilterChips(innerW int) string {
 	var parts []string
 	for _, chip := range filterChips {
-		label := chip.label
+		label := fmt.Sprintf("%s (%d)", chip.label, l.filterCount(chip.filter))
 		var rendered string
 		if l.filter == chip.filter {
 			rendered = activeFilterChipStyle.Render(label)
@@ -715,17 +763,8 @@ func (l libraryModel) viewBrowse() string {
 	innerW := l.width - borderSize
 	innerH := l.height - borderSize
 
-	chipLines := 1
-
-	if l.table.Len() == 0 {
-		tableH := max(3, innerH-chipLines)
-		l.table.SetSize(innerW, tableH)
-		chipRow := l.renderFilterChips(innerW)
-		content := chipRow + "\n" + l.table.View()
-		return borderedPanel(content, innerW, innerH, focusedBorderFg)
-	}
-
 	// metadata (3-5 lines) + separator (1 line) + chips (1 line) + table (rest)
+	chipLines := 1
 	sepLines := 1
 	tableH := max(3, innerH-l.metaBarLines()-sepLines-chipLines)
 	l.table.SetSize(innerW, tableH)

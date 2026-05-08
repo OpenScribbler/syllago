@@ -10,10 +10,10 @@
 │                                                                              │
 │ Trust: Unknown        Visibility: Public          [d] Remove      [e] Edit   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│All  In Library  Not in Library  Project                                      │
+│ All (3)    In Library (1)    Not in Library (1)    Global (0)    Project (1) │
 │   Tr Name ▲               Type     Scope        Files Installed              │
 │ >    local-skill          Skill    library      1     --                     │
-│      registry-skill       Skill    test-regi... 1     --     [not in library]│
+│      registry-skill       Skill    test-regi... 1     --                     │
 │      shared-rule          Rule     project      1     --                     │
 │                                                                              │
 │                                                                              │
