@@ -240,7 +240,7 @@ func TestExternalScanner_ValidOutput(t *testing.T) {
 		t.Fatalf("Scan: %v", err)
 	}
 	if len(res.Findings) != 1 {
-		t.Fatalf("expected 1 finding, got %d", len(res.Findings))
+		t.Fatalf("expected 1 finding, got %d; scanner errors: %v", len(res.Findings), res.Errors)
 	}
 	if res.Findings[0].Scanner != "good" {
 		t.Errorf("scanner tag = %q; want basename %q", res.Findings[0].Scanner, "good")
@@ -278,7 +278,7 @@ func TestExternalScanner_ExitCode1(t *testing.T) {
 		t.Fatalf("Scan: %v", err)
 	}
 	if len(res.Findings) != 1 {
-		t.Fatalf("expected 1 finding on exit 1, got %d", len(res.Findings))
+		t.Fatalf("expected 1 finding on exit 1, got %d; scanner errors: %v", len(res.Findings), res.Errors)
 	}
 }
 
