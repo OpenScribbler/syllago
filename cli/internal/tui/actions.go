@@ -1204,7 +1204,7 @@ func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleLibraryAdd adds a Registry Clone item to the local syllago library.
-func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
+func (a App) handleLibraryAdd(item *catalog.ContentItem, installAfter bool) (tea.Model, tea.Cmd) {
 	if item == nil {
 		return a, nil
 	}
@@ -1237,7 +1237,7 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
 		var primaryPath, sourceDir string
 		info, statErr := os.Stat(itemCopy.Path)
 		if statErr != nil {
-			return libraryAddDoneMsg{name: itemCopy.Name, err: fmt.Errorf("stat %s: %w", itemCopy.Path, statErr)}
+			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: fmt.Errorf("stat %s: %w", itemCopy.Path, statErr)}
 		}
 		if info.IsDir() {
 			// Directory-based item: derive primary file from Files list.
@@ -1277,13 +1277,13 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
 		}
 		results := add.AddItems([]add.DiscoveryItem{di}, opts, contentRoot, nil, "syllago")
 		if len(results) == 0 {
-			return libraryAddDoneMsg{name: itemCopy.Name, err: fmt.Errorf("no result")}
+			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: fmt.Errorf("no result")}
 		}
 		r := results[0]
 		if r.Status == add.AddStatusError {
-			return libraryAddDoneMsg{name: itemCopy.Name, err: r.Error}
+			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: r.Error}
 		}
-		return libraryAddDoneMsg{name: itemCopy.Name, err: nil}
+		return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, installAfter: installAfter}
 	}
 
 	return a, addCmd
@@ -1295,6 +1295,15 @@ func (a App) handleLibraryAddDone(msg libraryAddDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Failed to add: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
+	if msg.installAfter {
+		// Store the item identity so handleCatalogReady can open the install
+		// wizard once the rescan confirms the item is now a Library item.
+		a.pendingInstallAfterAddName = msg.name
+		a.pendingInstallAfterAddType = msg.itemType
+		cmd1 := a.toast.Push(fmt.Sprintf("Added %q — opening install wizard", msg.name), toastSuccess)
+		cmd2 := a.rescanCatalog()
+		return a, tea.Batch(cmd1, cmd2)
+	}
 	cmd1 := a.toast.Push(fmt.Sprintf("Added %q to library", msg.name), toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
@@ -1302,7 +1311,6 @@ func (a App) handleLibraryAddDone(msg libraryAddDoneMsg) (tea.Model, tea.Cmd) {
 
 // handleLibraryAddInstall adds a Registry Clone item to the local syllago
 // library and opens the install wizard to install it immediately.
-// Delegates to handleLibraryAdd — the user can press [i] after the catalog refreshes.
 func (a App) handleLibraryAddInstall(item *catalog.ContentItem) (tea.Model, tea.Cmd) {
-	return a.handleLibraryAdd(item)
+	return a.handleLibraryAdd(item, true)
 }

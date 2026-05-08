@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
@@ -637,5 +638,89 @@ func TestDoRegistryRemoveCmd_FailsLoudOnMismatch(t *testing.T) {
 	loaded, _ := config.LoadGlobal()
 	if len(loaded.Registries) != 1 || loaded.Registries[0].Name != "owner/full-identity" {
 		t.Errorf("expected registry preserved on mismatch, got %+v", loaded.Registries)
+	}
+}
+
+// TestApp_HandleLibraryAddDone_InstallAfter_SetsPendingInstall verifies that a
+// successful Add+Install done message records the item identity on the App so
+// handleCatalogReady can open the install wizard after the rescan.
+func TestApp_HandleLibraryAddDone_InstallAfter_SetsPendingInstall(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+
+	msg := libraryAddDoneMsg{name: "my-rule", itemType: catalog.Rules, installAfter: true}
+	m, _ := app.handleLibraryAddDone(msg)
+	updated := m.(App)
+
+	if updated.pendingInstallAfterAddName != "my-rule" {
+		t.Errorf("pendingInstallAfterAddName: want %q, got %q", "my-rule", updated.pendingInstallAfterAddName)
+	}
+	if updated.pendingInstallAfterAddType != catalog.Rules {
+		t.Errorf("pendingInstallAfterAddType: want %v, got %v", catalog.Rules, updated.pendingInstallAfterAddType)
+	}
+}
+
+// TestApp_HandleLibraryAddDone_NoInstallAfter_NoPending verifies that the plain
+// Add path does not set a pending install.
+func TestApp_HandleLibraryAddDone_NoInstallAfter_NoPending(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+
+	msg := libraryAddDoneMsg{name: "my-rule", itemType: catalog.Rules, installAfter: false}
+	m, _ := app.handleLibraryAddDone(msg)
+	updated := m.(App)
+
+	if updated.pendingInstallAfterAddName != "" {
+		t.Errorf("expected no pending install, got %q", updated.pendingInstallAfterAddName)
+	}
+}
+
+// TestApp_HandleCatalogReady_PendingInstall_OpensWizard verifies the full
+// Add+Install path: after the catalog rescan confirms the item is a Library
+// item, handleCatalogReady opens the install wizard and clears the pending state.
+func TestApp_HandleCatalogReady_PendingInstall_OpensWizard(t *testing.T) {
+	t.Parallel()
+
+	prov := provider.Provider{
+		Name: "Claude Code", Slug: "claude-code", Detected: true,
+		InstallDir:   func(_ string, _ catalog.ContentType) string { return "/tmp/cc" },
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Rules },
+	}
+
+	app := testApp(t)
+	app.providers = []provider.Provider{prov}
+	app.pendingInstallAfterAddName = "my-rule"
+	app.pendingInstallAfterAddType = catalog.Rules
+
+	newCatalog := &catalog.Catalog{
+		Items: []catalog.ContentItem{
+			{Name: "my-rule", Type: catalog.Rules, Library: true, Source: "library"},
+		},
+	}
+	result := &moat.ScanResult{Catalog: newCatalog, Config: &config.Config{}}
+	m, _ := app.handleCatalogReady(catalogReadyMsg{result: result})
+	updated := m.(App)
+
+	if updated.installWizard == nil {
+		t.Fatal("expected install wizard to be opened after Add+Install, got nil")
+	}
+	if updated.wizardMode != wizardInstall {
+		t.Errorf("wizardMode: want wizardInstall, got %v", updated.wizardMode)
+	}
+	if updated.pendingInstallAfterAddName != "" {
+		t.Errorf("pendingInstallAfterAddName should be cleared after wizard open, got %q", updated.pendingInstallAfterAddName)
+	}
+}
+
+// TestApp_HandleCatalogReady_NoPendingInstall_NoWizard verifies that a normal
+// rescan (no pending install) does not open the wizard.
+func TestApp_HandleCatalogReady_NoPendingInstall_NoWizard(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	result := &moat.ScanResult{Catalog: &catalog.Catalog{}, Config: &config.Config{}}
+	m, _ := app.handleCatalogReady(catalogReadyMsg{result: result})
+	updated := m.(App)
+	if updated.installWizard != nil {
+		t.Error("expected no wizard for normal rescan, got non-nil installWizard")
 	}
 }

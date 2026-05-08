@@ -88,8 +88,10 @@ type libraryTrustInspectMsg struct {
 
 // libraryAddDoneMsg is the result of a direct library add operation.
 type libraryAddDoneMsg struct {
-	name string
-	err  error
+	name         string
+	itemType     catalog.ContentType
+	err          error
+	installAfter bool // true when triggered by Add+Install
 }
 
 // libraryModel manages the Library tab: full-width table with drill-in detail view.
