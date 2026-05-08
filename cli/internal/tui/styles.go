@@ -80,9 +80,6 @@ var (
 			Bold(true).
 			Align(lipgloss.Center)
 
-	// Panel borders — focus indicated by border color
-	focusedBorderFg = primaryColor
-
 	// General text
 	mutedStyle = lipgloss.NewStyle().Foreground(mutedColor)
 	boldStyle  = lipgloss.NewStyle().Bold(true).Foreground(primaryText)
