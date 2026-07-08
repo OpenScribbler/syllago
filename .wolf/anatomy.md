@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-05-02T05:17:18.970Z
-> Files: 1306 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-08T23:28:19.035Z
+> Files: 1307 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -2279,6 +2279,7 @@
 ## docs/
 
 - `adding-a-provider.md` — Adding a Provider to Syllago (~2877 tok)
+- `simplification-audit.md` — Codebase Simplification Audit (~3978 tok)
 
 ## docs/adr/
 
