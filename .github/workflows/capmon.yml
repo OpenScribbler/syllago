@@ -2,14 +2,23 @@ name: capmon — capability monitor pipeline
 
 on:
   schedule:
-    # Run daily at 06:00 UTC
-    - cron: '0 6 * * *'
+    # Run every 4 days at 06:00 UTC (day-of-month based: 1,5,9,...,29)
+    - cron: '0 6 */4 * *'
   workflow_dispatch:
     inputs:
       stage:
         description: 'Pipeline stage: fetch-extract, report, or all (default)'
         required: false
         default: ''
+      provider:
+        description: 'Provider slug for the hash check (leave empty to check all providers)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Hash check: log actions without creating GitHub issues'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: read
@@ -137,6 +146,45 @@ jobs:
         run: |
           ./cli/syllago capmon verify \
             --staleness-check \
-            --threshold-hours 36
+            --threshold-hours 108
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  hash-check:
+    # Formerly .github/workflows/capmon-check.yml — merged here so the
+    # whole capmon pipeline runs on one schedule.
+    name: Content Hash Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Build syllago
+        run: make -C cli build
+
+      - name: Run capmon check (all providers)
+        if: ${{ github.event_name == 'schedule' || github.event.inputs.provider == '' }}
+        run: ./cli/syllago capmon check --all --providers-json=cli/providers.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run capmon check (single provider)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.provider != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CAPMON_PROVIDER: ${{ github.event.inputs.provider }}
+          CAPMON_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: |
+          FLAGS=""
+          if [ "$CAPMON_DRY_RUN" = "true" ]; then
+            FLAGS="--dry-run"
+          fi
+          ./cli/syllago capmon check --provider="$CAPMON_PROVIDER" --providers-json=cli/providers.json $FLAGS

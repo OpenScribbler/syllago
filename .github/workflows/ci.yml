@@ -83,10 +83,6 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Run tests
-        working-directory: cli
-        run: go test ./...
-
       - name: Run tests with race detector
         working-directory: cli
         run: go test -race ./...
