@@ -181,9 +181,21 @@ func Sync(name string) error {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry add`)", name, strings.TrimSpace(string(out)), name)
+		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
 	}
 	return nil
+}
+
+// CloneOrSync clones the registry if it has not been fetched yet, or runs
+// git pull when a clone already exists. This is the correct sync entry point
+// after `registry add --no-sync` (the default) where the clone is deferred.
+// url and ref are only used on first clone; subsequent calls use the existing
+// clone and ignore them.
+func CloneOrSync(url, name, ref string) error {
+	if IsCloned(name) {
+		return Sync(name)
+	}
+	return Clone(url, name, ref)
 }
 
 // SyncResult holds the outcome of a single registry sync.

@@ -41,10 +41,19 @@ directly with "syllago install --to <provider>".`,
 var registryAddCmd = &cobra.Command{
 	Use:   "add <git-url>",
 	Short: "Add a git registry",
-	Example: `  # Add a registry by URL
+	Long: `Registers a git repository as a content registry.
+
+By default, only the registry URL and name are saved to config — no network
+request is made. Run "registry sync" to fetch content when ready.
+
+Use --sync to clone immediately (original behaviour).`,
+	Example: `  # Register a registry (no clone — run 'registry sync' to fetch content)
   syllago registry add https://github.com/team/rules.git
 
-  # Add with a custom name
+  # Register and clone immediately
+  syllago registry add https://github.com/team/rules.git --sync
+
+  # Register with a custom name
   syllago registry add https://github.com/team/rules.git --name team-rules
 
   # Pin to a specific branch
@@ -117,10 +126,13 @@ var registryAddCmd = &cobra.Command{
 			fmt.Fprintf(output.Writer, "%s\n", msg)
 		}
 
+		syncFlag, _ := cmd.Flags().GetBool("sync")
+
 		opts := registryops.AddOpts{
-			URL:  gitURL,
-			Name: nameFlag,
-			Ref:  refFlag,
+			URL:       gitURL,
+			Name:      nameFlag,
+			Ref:       refFlag,
+			SkipClone: !syncFlag,
 		}
 		if signing != nil && signing.Profile != nil {
 			opts.SigningProfile = signing.Profile
@@ -128,12 +140,16 @@ var registryAddCmd = &cobra.Command{
 		}
 
 		// Resolve the effective name now (matches orchestrator's derivation)
-		// so the "Cloning X as Y" line matches what gets persisted.
+		// so the output line matches what gets persisted.
 		effectiveName := nameFlag
 		if effectiveName == "" {
 			effectiveName = registry.NameFromURL(gitURL)
 		}
-		fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, effectiveName)
+		if syncFlag {
+			fmt.Fprintf(output.Writer, "Cloning %s as %q...\n", gitURL, effectiveName)
+		} else {
+			fmt.Fprintf(output.Writer, "Registering %s as %q...\n", gitURL, effectiveName)
+		}
 
 		outcome, err := registryops.AddRegistry(cmd.Context(), opts)
 		if err != nil {
@@ -144,10 +160,12 @@ var registryAddCmd = &cobra.Command{
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", outcome.Registry.Name)
 		}
 
-		if registry.IsPrivate(outcome.Visibility) {
-			fmt.Fprintf(output.Writer, "Visibility: private (content from this registry will be tainted)\n")
-		} else {
-			fmt.Fprintf(output.Writer, "Visibility: public\n")
+		if outcome.Cloned {
+			if registry.IsPrivate(outcome.Visibility) {
+				fmt.Fprintf(output.Writer, "Visibility: private (content from this registry will be tainted)\n")
+			} else {
+				fmt.Fprintf(output.Writer, "Visibility: public\n")
+			}
 		}
 
 		if outcome.SelfDeclaredMOAT {
@@ -156,13 +174,13 @@ var registryAddCmd = &cobra.Command{
 
 		fmt.Fprintf(output.Writer, "Added registry: %s\n", outcome.Registry.Name)
 
-		// Chain a sync for MOAT registries so the manifest cache is populated
-		// before the next rescan — without it, EnrichFromMOATManifests sees
-		// an empty cache, downgrades trust to Unknown, and the listing shows
-		// zero content-type counts. Pinned profiles (allowlist or flag) sync
-		// silently. Self-declared profiles need --yes to clear TOFU; without
-		// it we print the manual hint and exit cleanly.
-		if outcome.Registry.IsMOAT() {
+		// When --sync was passed, chain a sync for MOAT registries so the
+		// manifest cache is populated before the next rescan. Without this,
+		// EnrichFromMOATManifests sees an empty cache, downgrades trust to
+		// Unknown, and the listing shows zero content-type counts. Pinned
+		// profiles (allowlist or flag) sync silently. Self-declared profiles
+		// need --yes to clear TOFU; without it we print the manual hint.
+		if syncFlag && outcome.Registry.IsMOAT() {
 			yes, _ := cmd.Flags().GetBool("yes")
 			pinned := outcome.Registry.SigningProfile != nil
 			if !pinned && !yes {
@@ -229,7 +247,10 @@ var registryAddCmd = &cobra.Command{
 		// One-time next-steps hint so the user knows to browse/install content.
 		freshCfgForHint, _ := config.LoadGlobal()
 		if shouldShowRegistryAddHint(freshCfgForHint) {
-			fmt.Fprintf(output.Writer, "\nTip: registry content is now visible with `syllago list --source registry`.\n")
+			if !syncFlag {
+				fmt.Fprintf(output.Writer, "\nRun `syllago registry sync %s` to fetch content.\n", outcome.Registry.Name)
+			}
+			fmt.Fprintf(output.Writer, "Tip: registry content is browsable with `syllago list --source registry`.\n")
 			fmt.Fprintf(output.Writer, "     Install items with `syllago add <name> --from %s`.\n", outcome.Registry.Name)
 		}
 
@@ -459,16 +480,9 @@ and "syllago install" to activate updated content.`,
 				}
 				return nil
 			}
-			if !registry.IsCloned(name) {
-				return output.NewStructuredError(output.ErrRegistryNotCloned, fmt.Sprintf("registry %q is not cloned locally", name), "Run 'syllago registry add' first")
-			}
 			fmt.Fprintf(output.Writer, "Syncing %s...\n", name)
-			client, err := registry.Open(name)
-			if err != nil {
-				return err
-			}
-			if err := client.Sync(cmd.Context()); err != nil {
-				return err
+			if err := registry.CloneOrSync(reg.URL, name, reg.Ref); err != nil {
+				return output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", name), "Check network connectivity and git credentials", err.Error())
 			}
 			// Re-probe visibility on sync
 			reprobeRegistryVisibility(cfg, name)
@@ -477,10 +491,11 @@ and "syllago install" to activate updated content.`,
 		}
 
 		// Sync all. MOAT registries run through the dispatcher one at a time
-		// so each can update its own lockfile row; git registries go through
-		// the existing SyncAll fan-out. A MOAT gate on any single registry
-		// trips the exit code for the whole command — if operators need to
-		// isolate which one, they sync by name.
+		// so each can update its own lockfile row; git registries are cloned
+		// or pulled one at a time via CloneOrSync (a registry registered with
+		// the local-only default has no clone yet, so the first sync clones).
+		// A MOAT gate on any single registry trips the exit code for the whole
+		// command — if operators need to isolate which one, they sync by name.
 
 		// Pre-scan: auto-upgrade git registries to MOAT before dispatching.
 		// Runs before the MOAT/git split so newly-upgraded registries flow
@@ -511,25 +526,23 @@ and "syllago install" to activate updated content.`,
 			}
 		}
 
-		var gitNames []string
+		var gitRegs []config.Registry
 		for _, r := range cfg.Registries {
 			if r.IsMOAT() {
 				continue
 			}
-			gitNames = append(gitNames, r.Name)
+			gitRegs = append(gitRegs, r)
 		}
 
 		hasErrors := false
-		if len(gitNames) > 0 {
-			results := registry.SyncAll(gitNames)
-			for _, res := range results {
-				if res.Err != nil {
-					fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", res.Name, res.Err)
-					hasErrors = true
-				} else {
-					reprobeRegistryVisibility(cfg, res.Name)
-					fmt.Fprintf(output.Writer, "Synced: %s\n", res.Name)
-				}
+		for _, r := range gitRegs {
+			fmt.Fprintf(output.Writer, "Syncing %s...\n", r.Name)
+			if err := registry.CloneOrSync(r.URL, r.Name, r.Ref); err != nil {
+				fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", r.Name, err)
+				hasErrors = true
+			} else {
+				reprobeRegistryVisibility(cfg, r.Name)
+				fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
 			}
 		}
 
@@ -837,6 +850,7 @@ func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, out io.Writer) (bo
 func init() {
 	registryAddCmd.Flags().String("name", "", "Override the registry name (default: derived from URL)")
 	registryAddCmd.Flags().String("ref", "", "Branch, tag, or commit to checkout (default: repo default branch)")
+	registryAddCmd.Flags().Bool("sync", false, "Clone and sync immediately after registering (default: register only, sync later with 'registry sync')")
 	registryAddCmd.Flags().Bool("moat", false, "Add as a MOAT-signed registry (required when URL is not in the bundled allowlist and no --signing-identity is passed)")
 	registryAddCmd.Flags().String("signing-identity", "", "Workflow subject SAN (e.g. https://github.com/OWNER/REPO/.github/workflows/moat.yml@refs/heads/main) — implies --moat")
 	registryAddCmd.Flags().String("signing-issuer", "", "OIDC issuer URL (default: GitHub Actions issuer)")

@@ -430,10 +430,13 @@ func TestDoRegistryAddCmd_AllowlistSetsMOATFields(t *testing.T) {
 	}
 }
 
-// TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields verifies the self-declaration
-// fallback: a non-allowlisted URL that ships a registry.yaml with manifest_uri
-// gets Type=moat + ManifestURI set from that self-declaration.
-func TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields(t *testing.T) {
+// TestDoRegistryAddCmd_SelfDeclarationDeferredToSync verifies the local-only
+// TUI default: because the TUI passes SkipClone=true, a non-allowlisted URL is
+// registered without a clone, so its registry.yaml self-declaration cannot be
+// read yet. Type/ManifestURI stay unset at add time and are discovered on the
+// first `syllago registry sync`. (The self-declaration parsing itself is covered
+// by the CLI --sync path in TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI.)
+func TestDoRegistryAddCmd_SelfDeclarationDeferredToSync(t *testing.T) {
 	// Not parallel: mutates cloneFn, config.GlobalDirOverride, registry.CacheDirOverride.
 	globalDir := t.TempDir()
 	cacheDir := t.TempDir()
@@ -446,8 +449,13 @@ func TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields(t *testing.T) {
 	registry.CacheDirOverride = cacheDir
 	t.Cleanup(func() { registry.CacheDirOverride = origCache })
 
-	const wantURI = "https://raw.githubusercontent.com/example/non-allowlisted-registry/moat-registry/registry.json"
-	stubCloneFn(t, "name: non-allowlisted-registry\nversion: \"1.0\"\nmanifest_uri: "+wantURI+"\n")
+	// CloneFn must never fire on the local-only TUI add path.
+	origClone := registryops.CloneFn
+	registryops.CloneFn = func(url, name, ref string) error {
+		t.Errorf("CloneFn called during local-only TUI add (URL=%s) — SkipClone should prevent any clone", url)
+		return nil
+	}
+	t.Cleanup(func() { registryops.CloneFn = origClone })
 
 	app := testApp(t)
 	cmd := app.doRegistryAddCmd(registryAddMsg{
@@ -474,11 +482,11 @@ func TestDoRegistryAddCmd_SelfDeclarationSetsMOATFields(t *testing.T) {
 		t.Fatalf("expected 1 registry, got %d", len(cfg.Registries))
 	}
 	r := cfg.Registries[0]
-	if r.Type != config.RegistryTypeMOAT {
-		t.Errorf("expected Type=moat from self-declaration, got %q", r.Type)
+	if r.Type != "" {
+		t.Errorf("expected empty Type (self-declaration deferred to sync), got %q", r.Type)
 	}
-	if r.ManifestURI != wantURI {
-		t.Errorf("expected ManifestURI=%q from self-declaration, got %q", wantURI, r.ManifestURI)
+	if r.ManifestURI != "" {
+		t.Errorf("expected empty ManifestURI (self-declaration deferred to sync), got %q", r.ManifestURI)
 	}
 }
 

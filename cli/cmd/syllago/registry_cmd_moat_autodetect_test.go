@@ -15,25 +15,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
-// stubSyncOne replaces the orchestrator's sync seam with a zero-value happy
-// path so the chained post-add sync does not try to fetch real sigstore
-// artifacts. Required for any test that adds a MOAT registry — both the
-// allowlist and self-declaration branches now auto-sync after add (S4).
-func stubSyncOne(t *testing.T) {
-	t.Helper()
-	orig := registryops.SyncOneFn
-	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
-		// Return enough to satisfy SyncOne's persistence path: a non-nil
-		// manifest with a non-empty IncomingProfile so the trust state can
-		// be written without crypto verification firing.
-		return moat.SyncResult{
-			NotModified: true,
-			FetchedAt:   time.Now().UTC(),
-		}, nil
-	}
-	t.Cleanup(func() { registryops.SyncOneFn = orig })
-}
-
 // stubClone swaps the orchestrator's clone seam (registryops.CloneFn) with a
 // stub that creates a fake clone dir at registry.CloneDir(name) containing a
 // registry.yaml with the given content. Restored on t.Cleanup.
@@ -56,14 +37,12 @@ func stubClone(t *testing.T, yamlContent string) {
 func TestRegistryAutoMOAT_AllowlistURL_SetsManifestURI(t *testing.T) {
 	// No t.Parallel — swaps package-level cloneFn and registry.OverrideProbeForTest.
 	// registry add for the meta-registry URL must auto-set type=moat + ManifestURI
-	// from the bundled allowlist — no --moat flag required.
+	// from the bundled allowlist — no clone or --moat flag required. With the
+	// local-only default, the allowlist check runs before any network I/O.
 	root := withRegistryProjectAndCache(t, nil, &config.Config{})
 	output.SetForTest(t)
-	overrideProbe(t, func(url string) (string, error) { return "public", nil })
-
-	// Fake clone: minimal registry.yaml with no manifest_uri — allowlist provides it.
-	stubClone(t, "name: syllago-meta-registry\nversion: \"1.0\"\n")
-	stubSyncOne(t)
+	// No clone stub needed — SkipClone=true is the default; no network call.
+	// No sync stub needed — auto-sync only happens with --sync.
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/OpenScribbler/syllago-meta-registry"})
 	if err != nil {
@@ -92,9 +71,10 @@ func TestRegistryAutoMOAT_AllowlistURL_SetsManifestURI(t *testing.T) {
 }
 
 func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
-	// No t.Parallel — swaps package-level cloneFn and registry.OverrideProbeForTest.
-	// registry add for a non-allowlisted URL that declares manifest_uri in registry.yaml
-	// must auto-set type=moat + ManifestURI from that self-declaration.
+	// No t.Parallel — swaps package-level cloneFn.
+	// registry add --sync for a non-allowlisted URL that declares manifest_uri in
+	// registry.yaml must auto-set type=moat + ManifestURI from that self-declaration.
+	// This requires --sync because registry.yaml is only readable after the clone.
 	root := withRegistryProjectAndCache(t, nil, &config.Config{})
 	output.SetForTest(t)
 	overrideProbe(t, func(url string) (string, error) { return "public", nil })
@@ -105,6 +85,9 @@ func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
 	stubClone(t, "name: non-allowlisted-registry\nversion: \"1.0\"\nmanifest_uri: "+wantManifestURI+"\n")
 	// Self-declared MOAT without --yes does not chain auto-sync, so no
 	// SyncOne stub is needed here.
+
+	registryAddCmd.Flags().Set("sync", "true")
+	t.Cleanup(func() { registryAddCmd.Flags().Set("sync", "false") })
 
 	err := registryAddCmd.RunE(registryAddCmd, []string{testURL})
 	if err != nil {
@@ -128,11 +111,11 @@ func TestRegistryAutoMOAT_RegistryYAML_SetsManifestURI(t *testing.T) {
 	}
 }
 
-// TestRegistryAdd_AllowlistChainsAutoSync is the regression for syllago-43qoo:
-// adding a MOAT registry via allowlist match must auto-chain a sync so the
-// manifest cache is populated before the next list/scan. Without this, trust
-// shows Unknown until the user runs a separate `syllago registry sync`.
-func TestRegistryAdd_AllowlistChainsAutoSync(t *testing.T) {
+// TestRegistryAdd_AllowlistSyncFlagChainsAutoSync verifies that adding a
+// MOAT registry via allowlist match WITH --sync auto-chains a sync so the
+// manifest cache is populated before the next list/scan. Without --sync,
+// the registry is registered only (local-only default) and sync is deferred.
+func TestRegistryAdd_AllowlistSyncFlagChainsAutoSync(t *testing.T) {
 	withRegistryProjectAndCache(t, nil, &config.Config{})
 	output.SetForTest(t)
 	overrideProbe(t, func(url string) (string, error) { return "public", nil })
@@ -146,19 +129,51 @@ func TestRegistryAdd_AllowlistChainsAutoSync(t *testing.T) {
 	}
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
+	registryAddCmd.Flags().Set("sync", "true")
+	t.Cleanup(func() { registryAddCmd.Flags().Set("sync", "false") })
+
 	if err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/OpenScribbler/syllago-meta-registry"}); err != nil {
 		t.Fatalf("registry add failed: %v", err)
 	}
 	if !called {
-		t.Fatal("expected auto-chained sync after allowlist-pinned MOAT add, but SyncOneFn was not called")
+		t.Fatal("expected auto-chained sync after allowlist-pinned MOAT add with --sync, but SyncOneFn was not called")
 	}
 }
 
-// TestRegistryAdd_SelfDeclaredWithoutYesSkipsSync is the second leg of
-// syllago-43qoo: when a self-declared MOAT registry is added without --yes,
-// the orchestrator must NOT auto-chain sync — TOFU consent requires explicit
-// approval. The hint to run `sync --yes` appears instead.
-func TestRegistryAdd_SelfDeclaredWithoutYesSkipsSync(t *testing.T) {
+// TestRegistryAdd_DefaultNoSync verifies that the local-only default (no --sync)
+// does not attempt any network I/O — SyncOneFn must not be called.
+func TestRegistryAdd_DefaultNoSync(t *testing.T) {
+	withRegistryProjectAndCache(t, nil, &config.Config{})
+	output.SetForTest(t)
+
+	called := false
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		called = true
+		return moat.SyncResult{}, nil
+	}
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
+
+	origClone := registryops.CloneFn
+	registryops.CloneFn = func(url, name, ref string) error {
+		t.Errorf("CloneFn called during local-only add (URL=%s) — no clone should happen without --sync", url)
+		return nil
+	}
+	t.Cleanup(func() { registryops.CloneFn = origClone })
+
+	if err := registryAddCmd.RunE(registryAddCmd, []string{"https://github.com/OpenScribbler/syllago-meta-registry"}); err != nil {
+		t.Fatalf("registry add failed: %v", err)
+	}
+	if called {
+		t.Error("SyncOneFn called during local-only add — no sync should happen without --sync")
+	}
+}
+
+// TestRegistryAdd_SelfDeclaredSyncWithoutYesSkipsAutoSync verifies that when
+// --sync is passed for a self-declared MOAT registry (detected via registry.yaml)
+// without --yes, the post-add auto-sync is skipped and a manual hint is shown.
+// TOFU consent requires explicit approval via --yes.
+func TestRegistryAdd_SelfDeclaredSyncWithoutYesSkipsAutoSync(t *testing.T) {
 	withRegistryProjectAndCache(t, nil, &config.Config{})
 	stdout, _ := output.SetForTest(t)
 	overrideProbe(t, func(url string) (string, error) { return "public", nil })
@@ -175,11 +190,14 @@ func TestRegistryAdd_SelfDeclaredWithoutYesSkipsSync(t *testing.T) {
 	}
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
+	registryAddCmd.Flags().Set("sync", "true")
+	t.Cleanup(func() { registryAddCmd.Flags().Set("sync", "false") })
+
 	if err := registryAddCmd.RunE(registryAddCmd, []string{testURL}); err != nil {
 		t.Fatalf("registry add failed: %v", err)
 	}
 	if called {
-		t.Error("self-declared MOAT add without --yes must NOT auto-chain sync; SyncOneFn was called")
+		t.Error("self-declared MOAT add with --sync but without --yes must NOT auto-chain sync; SyncOneFn was called")
 	}
 	if !strings.Contains(stdout.String(), "sync --yes") {
 		t.Errorf("expected manual-sync hint in stdout, got:\n%s", stdout.String())

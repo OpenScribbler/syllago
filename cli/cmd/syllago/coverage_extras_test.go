@@ -937,11 +937,18 @@ func TestRegistrySync_NameNotFound(t *testing.T) {
 	}
 }
 
+// TestRegistrySync_NameNotCloned verifies the local-only-default behavior:
+// syncing a registry that was registered but never cloned no longer errors with
+// "not cloned" — CloneOrSync attempts the deferred clone. The URL points at a
+// nonexistent local path so git clone fails immediately (no network), surfacing
+// as a REGISTRY_007 sync error — proving a clone was attempted rather than the
+// old not-cloned guard firing.
 func TestRegistrySync_NameNotCloned(t *testing.T) {
+	bogusURL := filepath.Join(t.TempDir(), "does-not-exist.git")
 	cfg := &config.Config{
 		Providers: []string{"claude-code"},
 		Registries: []config.Registry{
-			{Name: "uncloned", URL: "https://example.com/uncloned.git"},
+			{Name: "uncloned", URL: bogusURL},
 		},
 	}
 	withRegistryProjectAndCache(t, nil, cfg)
@@ -950,8 +957,8 @@ func TestRegistrySync_NameNotCloned(t *testing.T) {
 	registrySyncCmd.SilenceUsage = true
 	registrySyncCmd.SilenceErrors = true
 	err := registrySyncCmd.RunE(registrySyncCmd, []string{"uncloned"})
-	if err == nil || !strings.Contains(err.Error(), "not cloned") {
-		t.Errorf("got %v, want 'not cloned' error", err)
+	if err == nil || !strings.Contains(err.Error(), "sync failed") {
+		t.Errorf("got %v, want deferred-clone 'sync failed' error", err)
 	}
 }
 
