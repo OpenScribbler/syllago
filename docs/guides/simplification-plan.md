@@ -107,6 +107,15 @@ repo's concern after extraction.
 One PR per batch; each is behavior-preserving and guarded by the existing
 suite. Order chosen so nothing conflicts with the Tier 1 move.
 
+> **Status (2026-07-09, bead syllago-o0e):** 3a/3b/3d/3e/3h/3i/3k executed.
+> 3j was evaluated and **skipped on the merits**: the "twins" are one-line
+> forwarders (e.g. `DetectProviders()` → `DetectProvidersWithResolver(nil)`)
+> with ~21 call sites using the short form — removing them would make call
+> sites noisier to save ~3 lines per pair. During 3a,
+> `catalog.ParseFrontmatterWithBody` was found to be genuinely divergent
+> (accepts a bare `---` closing fence at EOF) and stays as-is. Remaining:
+> 3f, 3g (need a golden-regeneration pass), 3l (test reorganization).
+
 | # | Batch | Scope | Guardrail |
 |---|-------|-------|-----------|
 | 3a | `parse.SplitFrontmatter(content) (yaml []byte, body string, ok bool)` | Replace the 16 identical fence-cut blocks in converter/{rules,skills,agents,commands}.go, catalog/frontmatter.go, parse/cursor.go. Leave analyzer's and metadata's divergent hand-rolls for a follow-up — they have subtly different semantics (line-based scanning) that must be diffed first. | converter kitchen-sink + roundtrip tests |
