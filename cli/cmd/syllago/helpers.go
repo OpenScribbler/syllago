@@ -5,8 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -190,4 +192,62 @@ func filterBySource(item catalog.ContentItem, source string) bool {
 	default:
 		return item.Library
 	}
+}
+
+// --- Catalog-loading helpers (Tier 3b) ---
+//
+// The canonical find-root -> resolve-project-root -> scan sequence with the
+// CATALOG_001/CATALOG_002 structured errors, shared by the commands that
+// previously inlined identical copies. Sites with intentionally different
+// error text (loadout apply, install/uninstall, add, share) keep their own
+// inline handling.
+
+// requireContentRepoRoot locates the content repo root, returning the
+// canonical CATALOG_001 structured error on failure.
+func requireContentRepoRoot() (string, error) {
+	root, err := findContentRepoRoot()
+	if err != nil {
+		return "", output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
+	}
+	return root, nil
+}
+
+// resolveProjectRoot returns the project root, falling back to the content
+// repo root when no project markers are found.
+func resolveProjectRoot(root string) string {
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
+	}
+	return projectRoot
+}
+
+// scanCatalog wraps catalog.Scan with the canonical CATALOG_002 error.
+func scanCatalog(root, projectRoot string) (*catalog.Catalog, error) {
+	cat, err := catalog.Scan(root, projectRoot)
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+	}
+	return cat, nil
+}
+
+// loadTrustedScan wraps moat.LoadAndScan (the trust-enriched scan) with the
+// canonical CATALOG_002 error.
+func loadTrustedScan(root, projectRoot string) (*moat.ScanResult, error) {
+	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+	}
+	return scan, nil
+}
+
+// scanGlobalLibrary scans only the global library (plus registries) with the
+// canonical library-scan error, for commands that operate on ~/.syllago/content.
+func scanGlobalLibrary() (*catalog.Catalog, error) {
+	globalDir := catalog.GlobalContentDir()
+	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
+	}
+	return cat, nil
 }
