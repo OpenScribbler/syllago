@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/parse"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
@@ -170,26 +171,16 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 // --- Canonical parser ---
 
 func parseAgentCanonical(content []byte) (AgentMeta, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
-		return AgentMeta{}, strings.TrimSpace(string(normalized)), nil
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
+		return AgentMeta{}, body, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return AgentMeta{}, strings.TrimSpace(string(normalized)), nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var meta AgentMeta
 	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
 		return AgentMeta{}, "", err
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return meta, body, nil
 }
 
@@ -515,21 +506,11 @@ type kiroAgentMeta struct {
 
 func canonicalizeKiroAgent(content []byte) (*Result, error) {
 	// Kiro agents are markdown with YAML frontmatter (same shape as other providers).
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var ka kiroAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &ka); err != nil {
-				return nil, fmt.Errorf("parsing Kiro agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &ka); err != nil {
+			return nil, fmt.Errorf("parsing Kiro agent YAML frontmatter: %w", err)
 		}
 	}
 
@@ -653,21 +634,11 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 // canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
 // OpenCode agents use "steps" instead of "maxTurns" and tools as map[string]bool.
 func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var oc opencodeAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
-				return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
+			return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
 		}
 	}
 
@@ -823,21 +794,11 @@ type cursorAgentMeta struct {
 // Cursor agents use markdown with YAML frontmatter containing a small set of fields.
 // readonly maps to permissionMode:"plan", is_background maps to background.
 func canonicalizeCursorAgent(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var ca cursorAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &ca); err != nil {
-				return nil, fmt.Errorf("parsing Cursor agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &ca); err != nil {
+			return nil, fmt.Errorf("parsing Cursor agent YAML frontmatter: %w", err)
 		}
 	}
 

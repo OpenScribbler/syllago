@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/parse"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	toml "github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
@@ -188,35 +189,20 @@ func renderWindsurfCommand(meta CommandMeta, body string) (*Result, error) {
 // VS Code uses "tools" instead of "allowed-tools", "agent" for execution mode (ask/agent/plan),
 // and ${input:varName} for arguments instead of $ARGUMENTS.
 func canonicalizeVSCodeCopilotCommand(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		// No frontmatter — plain prompt
-		canonical, err := buildCommandCanonical(CommandMeta{}, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCommandCanonical(CommandMeta{}, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "command.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		canonical, err := buildCommandCanonical(CommandMeta{}, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "command.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var vc vscodeCopilotCommandMeta
 	if err := yaml.Unmarshal(yamlBytes, &vc); err != nil {
 		return nil, fmt.Errorf("parsing VS Code Copilot frontmatter: %w", err)
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	// Map to canonical
 	meta := CommandMeta{
@@ -336,26 +322,16 @@ func renderVSCodeCopilotCommand(meta CommandMeta, body string) (*Result, error) 
 // --- Canonical parser ---
 
 func parseCommandCanonical(content []byte) (CommandMeta, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
-		return CommandMeta{}, strings.TrimSpace(string(normalized)), nil
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
+		return CommandMeta{}, body, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return CommandMeta{}, strings.TrimSpace(string(normalized)), nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var meta CommandMeta
 	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
 		return CommandMeta{}, "", err
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return meta, body, nil
 }
 
@@ -402,34 +378,18 @@ func canonicalizeGeminiCommand(content []byte) (*Result, error) {
 func canonicalizeCodexCommand(content []byte) (*Result, error) {
 	// Codex commands can have YAML frontmatter with description and argument-hint.
 	// Parse it if present; otherwise treat as plain markdown body.
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
 	meta := CommandMeta{}
 
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			var cm codexCommandMeta
-			if err := yaml.Unmarshal(yamlBytes, &cm); err != nil {
-				return nil, fmt.Errorf("parsing Codex command frontmatter: %w", err)
-			}
-			meta.Description = cm.Description
-			meta.ArgumentHint = cm.ArgumentHint
-
-			body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
-			canonical, err := buildCommandCanonical(meta, body)
-			if err != nil {
-				return nil, err
-			}
-			return &Result{Content: canonical, Filename: "command.md"}, nil
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		var cm codexCommandMeta
+		if err := yaml.Unmarshal(yamlBytes, &cm); err != nil {
+			return nil, fmt.Errorf("parsing Codex command frontmatter: %w", err)
 		}
+		meta.Description = cm.Description
+		meta.ArgumentHint = cm.ArgumentHint
 	}
 
-	// No frontmatter — plain markdown body
-	body := strings.TrimSpace(string(normalized))
 	canonical, err := buildCommandCanonical(meta, body)
 	if err != nil {
 		return nil, err

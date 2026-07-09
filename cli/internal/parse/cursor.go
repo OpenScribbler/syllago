@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"bytes"
 	"errors"
 	"strings"
 
@@ -30,20 +29,11 @@ var errNoFrontmatter = errors.New("no frontmatter found")
 // ParseMDCFrontmatter extracts YAML frontmatter and body from .mdc content.
 // Returns the parsed frontmatter, the body text, and any error.
 func ParseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := SplitFrontmatter(content)
+	if !ok {
 		return CursorFrontmatter{}, "", errNoFrontmatter
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return CursorFrontmatter{}, "", errNoFrontmatter
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var raw cursorFrontmatterRaw
 	if err := yaml.Unmarshal(yamlBytes, &raw); err != nil {
 		return CursorFrontmatter{}, "", err
@@ -73,6 +63,5 @@ func ParseMDCFrontmatter(content []byte) (CursorFrontmatter, string, error) {
 		}
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return fm, body, nil
 }

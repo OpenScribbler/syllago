@@ -98,27 +98,17 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 
 // parseCanonical extracts RuleMeta and body from canonical format (YAML frontmatter + markdown).
 func parseCanonical(content []byte) (RuleMeta, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		// No frontmatter — treat as alwaysApply plain markdown
-		return RuleMeta{AlwaysApply: true}, strings.TrimSpace(string(normalized)), nil
+		return RuleMeta{AlwaysApply: true}, body, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return RuleMeta{AlwaysApply: true}, strings.TrimSpace(string(normalized)), nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var meta RuleMeta
 	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
 		return RuleMeta{}, "", err
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return meta, body, nil
 }
 
@@ -170,36 +160,20 @@ type windsurfFrontmatter struct {
 }
 
 func canonicalizeWindsurfRule(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCanonical(meta, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "rule.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var wfm windsurfFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &wfm); err != nil {
 		return nil, err
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	meta := RuleMeta{Description: wfm.Description}
 	switch wfm.Trigger {
@@ -239,36 +213,20 @@ type copilotFrontmatter struct {
 }
 
 func canonicalizeCopilotRule(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCanonical(meta, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "rule.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var cfm copilotFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &cfm); err != nil {
 		return nil, err
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	meta := RuleMeta{}
 	if cfm.ApplyTo != "" {
@@ -317,36 +275,20 @@ type kiroRuleFrontmatter struct {
 }
 
 func canonicalizeClineRule(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCanonical(meta, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "rule.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var cfm clineFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &cfm); err != nil {
 		return nil, err
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	meta := RuleMeta{}
 	if len(cfm.Paths) > 0 {
@@ -363,37 +305,21 @@ func canonicalizeClineRule(content []byte) (*Result, error) {
 }
 
 func canonicalizeKiroRule(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		// No frontmatter — treat as always-apply plain markdown
 		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCanonical(meta, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "rule.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var kfm kiroRuleFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &kfm); err != nil {
 		return nil, err
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	meta := RuleMeta{Description: kfm.Description}
 	switch kfm.Inclusion {
@@ -779,36 +705,20 @@ func stripImplicitGlobPrefix(g string) string {
 }
 
 func canonicalizeAmpRule(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
 		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
+		canonical, err := buildCanonical(meta, body)
 		if err != nil {
 			return nil, err
 		}
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		meta := RuleMeta{AlwaysApply: true}
-		canonical, err := buildCanonical(meta, strings.TrimSpace(string(normalized)))
-		if err != nil {
-			return nil, err
-		}
-		return &Result{Content: canonical, Filename: "rule.md"}, nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var afm ampRuleFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &afm); err != nil {
 		return nil, err
 	}
-
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 
 	meta := RuleMeta{}
 	if len(afm.Globs) > 0 {

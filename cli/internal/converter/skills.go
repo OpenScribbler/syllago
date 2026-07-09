@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/parse"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
@@ -252,26 +253,16 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 // --- Canonical parser ---
 
 func parseSkillCanonical(content []byte) (SkillMeta, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
-		return SkillMeta{}, strings.TrimSpace(string(normalized)), nil
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
+		return SkillMeta{}, body, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return SkillMeta{}, strings.TrimSpace(string(normalized)), nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var meta SkillMeta
 	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
 		return SkillMeta{}, "", err
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return meta, body, nil
 }
 
