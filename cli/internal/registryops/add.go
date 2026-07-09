@@ -82,6 +82,13 @@ type AddOpts struct {
 	// create --new` flows where the registry is already on local disk.
 	IsLocal bool
 
+	// SkipClone=true registers the registry in config without cloning. The
+	// caller is expected to trigger a sync (via `syllago registry sync`) to
+	// fetch content. When true, clone-dependent steps (analyzer stub
+	// generation, non-syllago rejection, visibility probing, MOAT
+	// self-declaration) are also skipped. Ignored when IsLocal=true.
+	SkipClone bool
+
 	// SigningProfile is non-nil when the caller resolved a signing profile
 	// from CLI flags or a bundled allowlist match. The orchestrator pins
 	// it and flips Type=moat. TUI callers pass nil (no signing flags) and
@@ -158,9 +165,10 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 		return out, fmt.Errorf("%w: %q", ErrAddNotAllowed, opts.URL)
 	}
 
-	// Clone (unless IsLocal). Failure here does not leave state on disk
-	// because we haven't touched config yet.
-	if !opts.IsLocal {
+	// Clone (unless IsLocal or SkipClone). Failure here does not leave state
+	// on disk because we haven't touched config yet.
+	shouldClone := !opts.IsLocal && !opts.SkipClone
+	if shouldClone {
 		if err := CloneFn(opts.URL, name, opts.Ref); err != nil {
 			return out, fmt.Errorf("%w: %w", ErrAddCloneFailed, err)
 		}
@@ -173,23 +181,18 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 	// Generate a registry.yaml stub via the analyzer when the repo lacks
 	// one. This lets the scanner discover content regardless of how the
 	// repo is organized — a syllago-format registry that's missing only
-	// the manifest still works after add. Skipped for IsLocal because the
-	// repo already lives at its source path; we don't write into it.
-	if !opts.IsLocal {
-		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil {
-			cfgA := analyzer.DefaultConfig()
-			a := analyzer.New(cfgA)
-			result, analyzeErr := a.Analyze(dir)
-			if analyzeErr == nil && len(result.AllItems()) > 0 {
-				_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
-			}
-		}
+	// the manifest still works after add. Skipped for IsLocal/SkipClone
+	// because the clone isn't present yet; the first `registry sync` runs
+	// GenerateManifestStub against the deferred clone instead.
+	if shouldClone {
+		GenerateManifestStub(name, dir)
 	}
 
 	// Reject non-syllago repos that contain provider-native content. The
 	// rejection reason is "we can't ingest this as a registry"; the user
 	// has tools to add provider-native content to their library directly.
-	if !opts.IsLocal {
+	// Skipped when SkipClone=true — validation runs on first sync instead.
+	if shouldClone {
 		scanResult := catalog.ScanNativeContent(dir)
 		if !scanResult.HasSyllagoStructure && len(scanResult.Providers) > 0 {
 			manifest, _ := registry.LoadManifestFromDir(dir)
@@ -204,24 +207,32 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 
 	// Probe visibility from the hosting platform API. Manifest-declared
 	// visibility wins when stricter (private overrides public-probe).
-	probeResult, _ := registry.ProbeVisibility(opts.URL)
-	manifestDecl := ""
-	if !opts.IsLocal {
-		if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
-			manifestDecl = manifest.Visibility
+	// Skipped when SkipClone=true — no manifest to read, no network call.
+	var visibility string
+	if !opts.SkipClone {
+		probeResult, _ := registry.ProbeVisibility(opts.URL)
+		manifestDecl := ""
+		if !opts.IsLocal {
+			if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
+				manifestDecl = manifest.Visibility
+			}
 		}
+		visibility = registry.ResolveVisibility(probeResult, manifestDecl)
 	}
-	visibility := registry.ResolveVisibility(probeResult, manifestDecl)
 	out.Visibility = visibility
 
 	now := nowFunc()
 	newRegistry := config.Registry{
-		Name:                name,
-		URL:                 opts.URL,
-		Ref:                 opts.Ref,
-		Visibility:          visibility,
-		VisibilityCheckedAt: &now,
+		Name: name,
+		URL:  opts.URL,
+		Ref:  opts.Ref,
 	}
+	// Only set VisibilityCheckedAt when we actually probed.
+	if !opts.SkipClone {
+		newRegistry.Visibility = visibility
+		newRegistry.VisibilityCheckedAt = &now
+	}
+
 	if opts.SigningProfile != nil {
 		newRegistry.Type = config.RegistryTypeMOAT
 		newRegistry.SigningProfile = opts.SigningProfile
@@ -234,8 +245,9 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 		newRegistry.Type = config.RegistryTypeMOAT
 		newRegistry.SigningProfile = entry.Profile
 		newRegistry.ManifestURI = entry.ManifestURI
-	} else if !opts.IsLocal {
+	} else if shouldClone {
 		// MOAT self-declaration via registry.yaml: TOFU on first sync.
+		// Only possible when we actually cloned and can read the manifest.
 		if selfDecl, _ := registry.LoadManifestFromDir(dir); selfDecl != nil && selfDecl.ManifestURI != "" {
 			newRegistry.Type = config.RegistryTypeMOAT
 			newRegistry.ManifestURI = selfDecl.ManifestURI
@@ -256,4 +268,21 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 
 	out.Registry = newRegistry
 	return out, nil
+}
+
+// GenerateManifestStub writes an analyzer-generated registry.yaml into the clone
+// at dir when the repo ships no manifest, so the scanner can discover content
+// regardless of how the repo is organized. No-op when a manifest already exists
+// or the analyzer finds no items. Shared by `registry add --sync` and the first
+// deferred `registry sync`, so a register-only registry gets the same content-
+// discovery treatment once its clone lands.
+func GenerateManifestStub(name, dir string) {
+	if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
+		return
+	}
+	a := analyzer.New(analyzer.DefaultConfig())
+	result, err := a.Analyze(dir)
+	if err == nil && len(result.AllItems()) > 0 {
+		_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
+	}
 }

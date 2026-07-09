@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-07-09T00:52:23Z",
+  "generatedAt": "2026-07-09T21:45:03Z",
   "syllagoVersion": "dev",
   "commands": [
     {
@@ -2635,7 +2635,7 @@
       "parent": "registry",
       "synopsis": "syllago registry add \u003cgit-url\u003e [flags]",
       "description": "Add a git registry",
-      "longDescription": null,
+      "longDescription": "Registers a git repository as a content registry.\n\nBy default, only the registry URL and name are saved to config — no network\nrequest is made. Run \"registry sync\" to fetch content when ready.\n\nUse --sync to clone immediately (original behaviour).",
       "aliases": [],
       "flags": [
         {
@@ -2695,6 +2695,14 @@
           "description": "GitHub numeric repository-owner ID (required for GitHub Actions issuer)"
         },
         {
+          "name": "--sync",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Clone and sync immediately after registering (default: register only, sync later with 'registry sync')"
+        },
+        {
           "name": "--yes",
           "shorthand": null,
           "type": "bool",
@@ -2746,7 +2754,7 @@
         "registry remove",
         "registry sync"
       ],
-      "examples": "  # Add a registry by URL\n  syllago registry add https://github.com/team/rules.git\n\n  # Add with a custom name\n  syllago registry add https://github.com/team/rules.git --name team-rules\n\n  # Pin to a specific branch\n  syllago registry add https://github.com/team/rules.git --ref main",
+      "examples": "  # Register a registry (no clone — run 'registry sync' to fetch content)\n  syllago registry add https://github.com/team/rules.git\n\n  # Register and clone immediately\n  syllago registry add https://github.com/team/rules.git --sync\n\n  # Register with a custom name\n  syllago registry add https://github.com/team/rules.git --name team-rules\n\n  # Pin to a specific branch\n  syllago registry add https://github.com/team/rules.git --ref main",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
