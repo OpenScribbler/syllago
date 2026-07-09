@@ -47,7 +47,7 @@ type SigningProfile struct {
 	ProfileVersion int `json:"profile_version,omitempty"`
 
 	// SubjectRegex / IssuerRegex relax the exact-match rule when set. The
-	// verifier (moat.VerifyManifest, moat.VerifyItemSigstore) forwards both
+	// verifier (moat.VerifyManifest, moat.VerifyAttestationItem) forwards both
 	// literal and regex fields to sigstore-go's NewShortCertificateIdentity,
 	// so allowlist entries may pin a regex without a literal Subject/Issuer.
 	SubjectRegex string `json:"subject_regex,omitempty"`

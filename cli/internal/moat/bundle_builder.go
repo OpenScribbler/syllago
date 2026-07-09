@@ -2,9 +2,9 @@ package moat
 
 // bundle_builder.go — Rekor API → sigstore-go Bundle translation.
 //
-// BuildBundle and VerifyItemSigstore were previously gated to _test.go scope
-// (sigstore_spike_test.go) per ADR 0007's read-only verification stance. They
-// are promoted here to enable the `moat sign` CLI subcommand (syllago-92i4c)
+// BuildBundle was previously gated to _test.go scope
+// (sigstore_spike_test.go) per ADR 0007's read-only verification stance. It
+// is promoted here to enable the `moat sign` CLI subcommand (syllago-92i4c)
 // and offline smoke-fixture generation without requiring `go test` internals.
 //
 // The design invariants are unchanged: production MOAT verification still
@@ -14,7 +14,6 @@ package moat
 // offline fixture generation).
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -25,8 +24,6 @@ import (
 	"github.com/sigstore/rekor/pkg/generated/models"
 	"github.com/sigstore/rekor/pkg/tle"
 	sgbundle "github.com/sigstore/sigstore-go/pkg/bundle"
-	"github.com/sigstore/sigstore-go/pkg/root"
-	"github.com/sigstore/sigstore-go/pkg/verify"
 )
 
 // bundleV03MediaType is the required mediaType for Sigstore bundle v0.3 with
@@ -127,58 +124,6 @@ func rekorEntryToTLE(entry *rekorEntry) (*protorekor.TransparencyLogEntry, error
 		},
 	}
 	return tle.GenerateTransparencyLogEntry(anon)
-}
-
-// VerifyItemSigstore performs full cryptographic + trust verification of a
-// MOAT attestation item using sigstore-go. Fulcio cert chain is checked
-// against trusted roots, Rekor inclusion proof and SET are verified, and the
-// OIDC identity is constrained to the expected publisher profile.
-//
-// trustedRootJSON is the contents of a Sigstore trusted_root.json file
-// (public-good instance), obtained either via TUF at runtime or bundled
-// at build time for offline use.
-func VerifyItemSigstore(item AttestationItem, profile SigningProfile, rekorRaw []byte, trustedRootJSON []byte) error {
-	payload := CanonicalPayloadFor(item.ContentHash)
-	b, err := BuildBundle(rekorRaw, payload)
-	if err != nil {
-		return fmt.Errorf("building bundle: %w", err)
-	}
-
-	tr, err := root.NewTrustedRootFromJSON(trustedRootJSON)
-	if err != nil {
-		return fmt.Errorf("loading trusted root: %w", err)
-	}
-
-	sev, err := verify.NewVerifier(tr,
-		verify.WithTransparencyLog(1),
-		verify.WithIntegratedTimestamps(1),
-		verify.WithSignedCertificateTimestamps(1),
-	)
-	if err != nil {
-		return fmt.Errorf("building verifier: %w", err)
-	}
-
-	// Forward both literal and regex SAN/issuer fields — see manifest_verify.go
-	// for why omitting the regex pair breaks regex-only allowlist entries.
-	certID, err := verify.NewShortCertificateIdentity(
-		profile.Issuer,
-		profile.IssuerRegex,
-		profile.Subject,
-		profile.SubjectRegex,
-	)
-	if err != nil {
-		return fmt.Errorf("building certificate identity: %w", err)
-	}
-
-	policy := verify.NewPolicy(
-		verify.WithArtifact(bytes.NewReader(payload)),
-		verify.WithCertificateIdentity(certID),
-	)
-
-	if _, err := sev.Verify(b, policy); err != nil {
-		return fmt.Errorf("sigstore-go verify: %w", err)
-	}
-	return nil
 }
 
 // ptr returns the address of its argument. Used to populate pointer-typed

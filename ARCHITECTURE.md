@@ -56,14 +56,11 @@ graph TB
         Registry["registry<br/>(git-based registries)"]
         RegistryOps["registryops<br/>(CLI/TUI orchestration)"]
         MOAT["moat<br/>(Sigstore + Rekor + OIDC pinning)"]
-        Signing["signing<br/>(hook content signatures)"]
         GitUtil["gitutil<br/>(clone/pull/status/diff)"]
     end
 
     %% ===== Capability Monitoring =====
     subgraph Capmon["Capability Monitoring"]
-        CapMon["capmon<br/>(extract + recognize + diff pipeline)"]
-        ProvMon["provmon<br/>(manifest + source-hash checker)"]
         Audit["audit<br/>(structured JSON audit log)"]
     end
 
@@ -83,7 +80,6 @@ graph TB
     CLI --> Converter
     CLI --> Registry
     CLI --> Doctor
-    CLI --> CapMon
     CLI --> Updater
     CLI --> Output
     CLI --> Telemetry
@@ -124,13 +120,10 @@ graph TB
     Registry --> MOAT
     RegistryOps --> Registry
     RegistryOps --> MOAT
-    MOAT --> Signing
     Add --> Registry
     Promote --> GitUtil
 
     %% ===== Capability + provider awareness =====
-    CapMon --> Provider
-    ProvMon --> Provider
     Doctor --> Config
     Doctor --> Provider
     Doctor --> InstallCheck
@@ -145,7 +138,7 @@ graph TB
     classDef trust fill:#3d3520,stroke:#c9a86b,color:#fff
     class CLI,TUI entry
     class Converter,Provider hub
-    class Registry,RegistryOps,MOAT,Signing,GitUtil trust
+    class Registry,RegistryOps,MOAT,GitUtil trust
 ```
 
 ## Package Map
@@ -167,10 +160,6 @@ Content type detection with confidence scoring. ADR 0002 (strict) defines this a
 ### internal/audit/
 
 Structured JSON audit logging for content and hook lifecycle events. Two files; small surface, opt-in via config.
-
-### internal/capmon/
-
-Capability monitoring pipeline. Extracts AI-tool capabilities from upstream documentation in seven source formats (HTML, Markdown, Go, Rust, TypeScript, JSON Schema, YAML, TOML), recognizes them against per-provider patterns, and diffs against the cached state to surface drift. Stages: `fetch` (chromedp + GitHub API) → `extract_*` (per-format extractors) → `derive` (per-provider recognizers) → `diff` (CSV / SIEM-friendly output) → `check` (CI gate). Backed by `cli/internal/capmon/testdata/fixtures/`. Driven by `syllago capmon` subcommands; CI runs the pipeline daily via `.github/workflows/capmon.yml`.
 
 ### internal/catalog/
 
@@ -244,10 +233,6 @@ Local-to-shared content promotion. Implements the `syllago share` workflow for c
 
 Provider detection and path resolution for all 15 supported providers (Claude Code, Cursor, Windsurf, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro, Amp, Factory Droid, Pi, Crush). `AllProviders` is the authoritative list. `DetectProvidersWithResolver()` checks default paths and custom overrides.
 
-### internal/provmon/
-
-Provider source manifest loading, URL health checking, and change detection. Sister package to `capmon` — `provmon` watches for upstream provider changes (rename, deprecation, URL drift) so capmon's source manifests stay accurate.
-
 ### internal/registry/
 
 Git-based registry management. Clone, sync, remove, and manifest parsing. Registries are git repositories following the syllago content layout. Registry names use `owner/repo` format.
@@ -263,10 +248,6 @@ On-disk persistence layer for library rules (D11). Hash, load, and write helpers
 ### internal/sandbox/
 
 Bubblewrap-based process isolation for AI CLI tools (Linux only). Twenty-four files implement the wrapped-tool runner (`runner.go`), bwrap invocation (`bwrap.go`), env-var allowlist (`envfilter.go`), network egress proxy (`proxy.go`), filesystem staging (`staging.go`), and config diff-and-approve (`configdiff.go`) for high-risk keys (`mcpServers`, `hooks`, `commands`). The CLI surface is `cmd/syllago/sandbox_cmd.go`.
-
-### internal/signing/
-
-Cryptographic signing and verification for hook content. Predates MOAT; remains in place for hook-level signatures distinct from registry-level MOAT signatures.
 
 ### internal/snapshot/
 
@@ -296,8 +277,18 @@ Install:    Library Store -> Converter -> Provider Format -> Installer -> Provid
 MOAT add:   Registry URL -> Pin (allowlist | flags) -> Clone+verify -> moatinstall -> Installer
 Convert:    Provider Format -> Canonical Format -> Target Provider Format
 Loadout:    loadout.yaml -> Resolver -> Snapshot -> Installer (per item) -> Installed
-Capmon:     Source URL -> Fetch -> Extract -> Recognize -> Diff -> CI gate / dashboard
 ```
+
+## Capability Monitoring (external)
+
+The capability-monitor pipeline (fetch → extract → recognize → diff → heal)
+lives in its own repository, [github.com/OpenScribbler/capmon](https://github.com/OpenScribbler/capmon),
+extracted from `internal/capmon` with history. The capability *data* stays
+here — `docs/provider-sources/`, `docs/provider-formats/`,
+`docs/provider-capabilities/`, `docs/spec/canonical-keys.yaml` — and capmon's
+scheduled workflow (every 4 days) checks this repo out, runs the pipeline,
+and opens PRs/issues here when upstream provider docs drift. The
+`provider-monitor` source-URL watcher lives there too.
 
 ## Conversion Model
 

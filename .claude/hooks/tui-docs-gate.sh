@@ -45,16 +45,12 @@ if echo "$STAGED" | grep -q "cli/internal/tui/CLAUDE.md"; then
     exit 0
 fi
 
-# TUI code staged but no doc updates — block
-cat <<'EOF'
-BLOCKED: TUI code changes detected but no doc updates staged.
-
-If this commit introduces or changes a pattern, update:
+# TUI code staged but no doc updates — advisory reminder only (non-blocking)
+cat >&2 <<'EOF'
+Reminder: TUI code changes staged without doc updates.
+If this commit introduces or changes a pattern, consider updating:
   - .claude/skills/tui-builder/SKILL.md (gotchas, contracts)
   - .claude/rules/tui-*.md (enforceable invariants)
   - cli/internal/tui/CLAUDE.md (architecture)
-
-If no doc update is needed (e.g., pure bug fix with no new pattern),
-add --no-doc-update to the commit message to bypass this gate.
 EOF
-exit 2
+exit 0

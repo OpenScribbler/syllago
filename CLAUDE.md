@@ -40,11 +40,10 @@ Active ADRs are indexed in `docs/adr/INDEX.md`. Before modifying files listed in
 
 ## Testing Requirements
 
-Every code change must include tests. Coverage target is **80% minimum per package, 95%+ aspirational**.
+Every behavioral code change must include tests. Coverage target is **80% on core logic packages** (converter, installer, catalog, loadout, moat, analyzer). Thin command wiring, print-only functions, and stubs are explicitly exempt — never write a test whose only purpose is to raise a coverage number.
 
-- **New functions** must have corresponding test cases covering the happy path and at least one error path.
+- **New logic** must have test cases covering the happy path and at least one error path.
 - **Bug fixes** must include a regression test that would have caught the bug.
-- **New files** must have a corresponding `_test.go` file unless they contain only types/constants.
 - **CLI commands** must have integration tests using cobra's `RunE` pattern (see `cli/CLAUDE.md` and `.claude/rules/cli-test-patterns.md`).
 - **TUI components** must have golden file tests for visual output and unit tests for logic (see `.claude/rules/tui-test-patterns.md`).
 
