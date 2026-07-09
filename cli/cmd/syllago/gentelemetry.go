@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -31,10 +29,7 @@ func init() {
 }
 
 func runGentelemetry(_ *cobra.Command, _ []string) error {
-	v := version
-	if v == "" {
-		v = "dev"
-	}
+	v := buildVersionOrDev()
 
 	manifest := TelemetryManifest{
 		Version:            "1",
@@ -45,7 +40,5 @@ func runGentelemetry(_ *cobra.Command, _ []string) error {
 		NeverCollected:     telemetry.NeverCollected(),
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }

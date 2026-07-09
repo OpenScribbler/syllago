@@ -5,12 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
@@ -95,18 +93,14 @@ type riskDetail struct {
 }
 
 func runInspect(cmd *cobra.Command, args []string) error {
-	root, err := findContentRepoRoot()
+	root, err := requireContentRepoRoot()
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
+		return err
 	}
 
-	projectRoot, _ := findProjectRoot()
-	if projectRoot == "" {
-		projectRoot = root
-	}
-	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
+	scan, err := loadTrustedScan(root, resolveProjectRoot(root))
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+		return err
 	}
 	cat := scan.Catalog
 

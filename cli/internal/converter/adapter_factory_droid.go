@@ -157,17 +157,5 @@ func (a *FactoryDroidAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *FactoryDroidAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"subagent_start", "subagent_stop",
-		},
-		SupportsMatchers:      true,
-		SupportsStatusMessage: true,
-		SupportsBlocking:      true,
-		TimeoutUnit:           "milliseconds",
-		SupportsCWD:           true,
-		SupportsEnv:           true,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

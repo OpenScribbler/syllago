@@ -450,18 +450,10 @@ func (g galleryModel) View() string {
 	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
 	bottomBorder := border("╰" + strings.Repeat("─", gridW) + "┴" + strings.Repeat("─", sidebarW) + "╯")
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if gap := w - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, topBorder)
 	for _, ml := range strings.Split(metaContent, "\n") {
-		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(ml, innerW)+border("│"))
 	}
 	lines = append(lines, separator)
 	for i := 0; i < paneH; i++ {
@@ -473,7 +465,7 @@ func (g galleryModel) View() string {
 		if i < len(sidebarLines) {
 			sl = sidebarLines[i]
 		}
-		lines = append(lines, border("│")+wrapLine(gl, gridW)+border("│")+wrapLine(sl, sidebarW)+border("│"))
+		lines = append(lines, border("│")+padCell(gl, gridW)+border("│")+padCell(sl, sidebarW)+border("│"))
 	}
 	lines = append(lines, bottomBorder)
 

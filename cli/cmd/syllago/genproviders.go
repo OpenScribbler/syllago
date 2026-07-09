@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -137,10 +136,7 @@ func runGenproviders(_ *cobra.Command, _ []string) error {
 		entries = append(entries, buildProviderEntry(prov, staticMeta[prov.Slug]))
 	}
 
-	v := version
-	if v == "" {
-		v = "dev"
-	}
+	v := buildVersionOrDev()
 
 	var ctNames []string
 	for _, ct := range catalog.AllContentTypes() {
@@ -155,9 +151,7 @@ func runGenproviders(_ *cobra.Command, _ []string) error {
 		ContentTypes:   ctNames,
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }
 
 func buildProviderEntry(prov provider.Provider, meta providerStaticMeta) ProviderCapEntry {

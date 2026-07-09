@@ -546,14 +546,10 @@ func (a *App) resizeContent() {
 	a.library.SetSize(a.width, ch)
 	a.explorer.SetSize(a.width, ch)
 	a.gallery.SetSize(a.width, ch)
-	a.help.SetSize(a.width, ch)
 	a.toast.SetSize(a.width, ch)
-	a.confirm.width = a.width
-	a.confirm.height = ch
-	a.remove.width = a.width
-	a.remove.height = ch
-	a.registryAdd.width = a.width
-	a.registryAdd.height = ch
+	for _, ov := range a.overlays() {
+		ov.SetSize(a.width, ch)
+	}
 	if a.installWizard != nil {
 		a.installWizard.width = a.width
 		a.installWizard.height = ch

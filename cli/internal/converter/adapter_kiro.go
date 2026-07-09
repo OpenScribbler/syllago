@@ -179,22 +179,5 @@ func (a *KiroAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *KiroAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start",
-			"file_changed", "file_created", "file_deleted", "before_task", "after_task",
-		},
-		SupportsMatchers:         true,
-		SupportsAsync:            false,
-		SupportsStatusMessage:    false,
-		SupportsStructuredOutput: false,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "milliseconds",
-		SupportsPlatform:         false,
-		SupportsCWD:              false,
-		SupportsEnv:              false,
-		SupportsLLMHooks:         false,
-		SupportsHTTPHooks:        false,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

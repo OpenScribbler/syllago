@@ -344,15 +344,5 @@ func tryMergeWildcard(hooks map[string][]wsHookEntry, events []string, canonEven
 }
 
 func (a *WindsurfAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end",
-			"worktree_create", "transcript_export",
-		},
-		SupportsMatchers: true,
-		SupportsBlocking: true,
-		SupportsCWD:      true,
-		TimeoutUnit:      "",
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

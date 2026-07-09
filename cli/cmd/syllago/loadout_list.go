@@ -36,17 +36,17 @@ func runLoadoutList(cmd *cobra.Command, args []string) error {
 	projectRoot, _ := findProjectRoot()
 	checkAndWarnStaleSnapshot(projectRoot)
 
-	root, err := findContentRepoRoot()
+	root, err := requireContentRepoRoot()
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
+		return err
 	}
 
 	if projectRoot == "" {
 		projectRoot = root
 	}
-	cat, err := catalog.Scan(root, projectRoot)
+	cat, err := scanCatalog(root, projectRoot)
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+		return err
 	}
 
 	var entries []loadoutListEntry

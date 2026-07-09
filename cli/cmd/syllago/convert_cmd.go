@@ -127,10 +127,9 @@ func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv prov
 
 // convertLibraryItem looks up an item in the library and converts it.
 func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provider.Provider, showDiff bool) error {
-	globalDir := catalog.GlobalContentDir()
-	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
+	cat, err := scanGlobalLibrary()
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
+		return err
 	}
 
 	var item *catalog.ContentItem

@@ -52,10 +52,9 @@ func init() {
 func runCompat(cmd *cobra.Command, args []string) error {
 	name := args[0]
 
-	globalDir := catalog.GlobalContentDir()
-	cat, err := catalog.ScanWithGlobalAndRegistries(globalDir, globalDir, nil)
+	cat, err := scanGlobalLibrary()
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
+		return err
 	}
 
 	var item *catalog.ContentItem

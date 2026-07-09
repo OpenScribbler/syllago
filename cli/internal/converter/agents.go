@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/parse"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
@@ -170,26 +171,16 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 // --- Canonical parser ---
 
 func parseAgentCanonical(content []byte) (AgentMeta, string, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
-	opening := []byte("---\n")
-	if !bytes.HasPrefix(normalized, opening) {
-		return AgentMeta{}, strings.TrimSpace(string(normalized)), nil
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if !ok {
+		return AgentMeta{}, body, nil
 	}
 
-	rest := normalized[len(opening):]
-	closingIdx := bytes.Index(rest, opening)
-	if closingIdx == -1 {
-		return AgentMeta{}, strings.TrimSpace(string(normalized)), nil
-	}
-
-	yamlBytes := rest[:closingIdx]
 	var meta AgentMeta
 	if err := yaml.Unmarshal(yamlBytes, &meta); err != nil {
 		return AgentMeta{}, "", err
 	}
 
-	body := strings.TrimSpace(string(rest[closingIdx+len(opening):]))
 	return meta, body, nil
 }
 
@@ -260,18 +251,7 @@ func renderGeminiAgent(meta AgentMeta, body string) (*Result, error) {
 		TimeoutMins: meta.TimeoutMins,
 		Kind:        meta.Kind,
 	}
-	fm, err := renderFrontmatter(gm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+	return renderWithFrontmatter(gm, outBody, "agent.md")
 }
 
 func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
@@ -329,25 +309,13 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 		Target:      target,
 		MCPServers:  meta.MCPServers,
 	}
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	// Filename: <name>.agent.md (Copilot convention)
 	agentName := meta.Name
 	if agentName == "" {
 		agentName = "agent"
 	}
-	filename := slugify(agentName) + ".agent.md"
 
-	return &Result{Content: buf.Bytes(), Filename: filename}, nil
+	return renderWithFrontmatter(cm, outBody, slugify(agentName)+".agent.md")
 }
 
 func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
@@ -378,18 +346,7 @@ func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
 		cleanBody = AppendNotes(cleanBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+	return renderWithFrontmatter(meta, cleanBody, "agent.md")
 }
 
 func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
@@ -515,21 +472,11 @@ type kiroAgentMeta struct {
 
 func canonicalizeKiroAgent(content []byte) (*Result, error) {
 	// Kiro agents are markdown with YAML frontmatter (same shape as other providers).
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var ka kiroAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &ka); err != nil {
-				return nil, fmt.Errorf("parsing Kiro agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &ka); err != nil {
+			return nil, fmt.Errorf("parsing Kiro agent YAML frontmatter: %w", err)
 		}
 	}
 
@@ -632,42 +579,22 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, "disallowedTools not supported by Kiro; consider using tool groups instead")
 	}
 
-	fm, err := renderFrontmatter(km)
+	res, err := renderWithFrontmatter(km, cleanBody, slugify(agentName)+".md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{
-		Content:  buf.Bytes(),
-		Filename: slugify(agentName) + ".md",
-		Warnings: warnings,
-	}, nil
+	res.Warnings = warnings
+	return res, nil
 }
 
 // canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
 // OpenCode agents use "steps" instead of "maxTurns" and tools as map[string]bool.
 func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var oc opencodeAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
-				return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
+			return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
 		}
 	}
 
@@ -788,22 +715,16 @@ func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 		outBody = AppendNotes(outBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(om)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	name := "agent"
 	if meta.Name != "" {
 		name = slugify(meta.Name)
 	}
-	return &Result{Content: buf.Bytes(), Filename: name + ".md", Warnings: warnings}, nil
+	res, err := renderWithFrontmatter(om, outBody, name+".md")
+	if err != nil {
+		return nil, err
+	}
+	res.Warnings = warnings
+	return res, nil
 }
 
 // --- Cursor agents ---
@@ -823,21 +744,11 @@ type cursorAgentMeta struct {
 // Cursor agents use markdown with YAML frontmatter containing a small set of fields.
 // readonly maps to permissionMode:"plan", is_background maps to background.
 func canonicalizeCursorAgent(content []byte) (*Result, error) {
-	normalized := bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-
 	var ca cursorAgentMeta
-	body := strings.TrimSpace(string(normalized))
-
-	opening := []byte("---\n")
-	if bytes.HasPrefix(normalized, opening) {
-		rest := normalized[len(opening):]
-		closingIdx := bytes.Index(rest, opening)
-		if closingIdx != -1 {
-			yamlBytes := rest[:closingIdx]
-			if err := yaml.Unmarshal(yamlBytes, &ca); err != nil {
-				return nil, fmt.Errorf("parsing Cursor agent YAML frontmatter: %w", err)
-			}
-			body = strings.TrimSpace(string(rest[closingIdx+len(opening):]))
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &ca); err != nil {
+			return nil, fmt.Errorf("parsing Cursor agent YAML frontmatter: %w", err)
 		}
 	}
 
@@ -944,40 +855,21 @@ func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not fully supported by Cursor (embedded as prose)", meta.PermissionMode))
 	}
 
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	agentName := meta.Name
 	if agentName == "" {
 		agentName = "agent"
 	}
 
-	return &Result{
-		Content:  buf.Bytes(),
-		Filename: slugify(agentName) + ".md",
-		Warnings: warnings,
-	}, nil
+	res, err := renderWithFrontmatter(cm, outBody, slugify(agentName)+".md")
+	if err != nil {
+		return nil, err
+	}
+	res.Warnings = warnings
+	return res, nil
 }
 
 // --- Helpers ---
 
 func buildAgentCanonical(meta AgentMeta, body string) ([]byte, error) {
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(body)
-	buf.WriteString("\n")
-	return buf.Bytes(), nil
+	return renderFrontmatterDoc(meta, body)
 }

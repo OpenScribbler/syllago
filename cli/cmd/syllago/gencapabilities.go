@@ -255,9 +255,7 @@ func runGencapabilities(_ *cobra.Command, _ []string) error {
 		Providers:     entries,
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }
 
 // qualitySidecar is the minimal shape of docs/provider-formats/<slug>.quality.json.

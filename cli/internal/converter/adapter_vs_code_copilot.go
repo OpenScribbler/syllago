@@ -164,23 +164,5 @@ func (a *VSCodeCopilotAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *VSCodeCopilotAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "subagent_start", "subagent_stop",
-			"error_occurred", "tool_use_failure",
-		},
-		SupportsMatchers:         true,
-		SupportsAsync:            true,
-		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: true,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "milliseconds",
-		SupportsPlatform:         true,
-		SupportsCWD:              true,
-		SupportsEnv:              true,
-		SupportsLLMHooks:         false,
-		SupportsHTTPHooks:        false,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

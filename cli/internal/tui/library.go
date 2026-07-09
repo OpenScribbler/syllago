@@ -780,11 +780,7 @@ func (l libraryModel) viewBrowse() string {
 
 	// Wrap each metadata and table line with side borders
 	wrapLine := func(s string) string {
-		s = lipgloss.NewStyle().MaxWidth(innerW).Render(s)
-		if gap := innerW - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
-		}
-		return sectionRuleStyle.Render("│") + s + sectionRuleStyle.Render("│")
+		return sectionRuleStyle.Render("│") + padCell(s, innerW) + sectionRuleStyle.Render("│")
 	}
 
 	var lines []string
@@ -861,18 +857,10 @@ func (l libraryModel) viewDetail() string {
 	bottomRight := strings.Repeat("─", previewInnerW)
 	bottomBorder := border("╰" + bottomLeft + "┴" + bottomRight + "╯")
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if g := w - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, topBorder)
 	for _, ml := range strings.Split(metaContent, "\n") {
-		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(ml, innerW)+border("│"))
 	}
 	lines = append(lines, separator)
 	for i := 0; i < paneH; i++ {
@@ -884,7 +872,7 @@ func (l libraryModel) viewDetail() string {
 		if i < len(previewLines) {
 			pl = previewLines[i]
 		}
-		lines = append(lines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+		lines = append(lines, border("│")+padCell(tl, treeInnerW)+border("│")+padCell(pl, previewInnerW)+border("│"))
 	}
 	lines = append(lines, bottomBorder)
 

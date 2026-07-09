@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/OpenScribbler/syllago/cli/internal/output"
-	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
@@ -35,17 +33,17 @@ func runLoadoutStatus(cmd *cobra.Command, args []string) error {
 	projectRoot, _ := findProjectRoot()
 	checkAndWarnStaleSnapshot(projectRoot)
 
-	manifest, _, err := snapshot.Load(projectRoot)
-	if errors.Is(err, snapshot.ErrNoSnapshot) {
+	manifest, found, err := loadSnapshotManifest(projectRoot)
+	if err != nil {
+		return err
+	}
+	if !found {
 		if output.JSON {
 			output.Print(loadoutStatusResult{Active: false})
 		} else {
 			fmt.Fprintln(output.Writer, "No active loadout.")
 		}
 		return nil
-	}
-	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading snapshot failed", "The snapshot file may be corrupted; try removing it manually", err.Error())
 	}
 
 	if output.JSON {
