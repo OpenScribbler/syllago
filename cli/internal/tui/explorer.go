@@ -750,18 +750,10 @@ func (e explorerModel) viewSideBySide() string {
 	topBorder := border("╭" + strings.Repeat("─", innerW) + "╮")
 	bottomBorder := border("╰" + strings.Repeat("─", itemsInnerW) + "┴" + strings.Repeat("─", previewInnerW) + "╯")
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if g := w - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, topBorder)
 	for _, ml := range strings.Split(metaContent, "\n") {
-		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(ml, innerW)+border("│"))
 	}
 	lines = append(lines, separator)
 	for i := 0; i < paneH; i++ {
@@ -773,7 +765,7 @@ func (e explorerModel) viewSideBySide() string {
 		if i < len(previewLines) {
 			pl = previewLines[i]
 		}
-		lines = append(lines, border("│")+wrapLine(il, itemsInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+		lines = append(lines, border("│")+padCell(il, itemsInnerW)+border("│")+padCell(pl, previewInnerW)+border("│"))
 	}
 	lines = append(lines, bottomBorder)
 
@@ -838,18 +830,10 @@ func (e explorerModel) viewDetail() string {
 	bottomRight := strings.Repeat("─", previewInnerW)
 	bottomBorder := border("╰" + bottomLeft + "┴" + bottomRight + "╯")
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if g := w - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, topBorder)
 	for _, ml := range strings.Split(metaContent, "\n") {
-		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(ml, innerW)+border("│"))
 	}
 	lines = append(lines, separator)
 	for i := 0; i < paneH; i++ {
@@ -861,7 +845,7 @@ func (e explorerModel) viewDetail() string {
 		if i < len(previewLines) {
 			pl = previewLines[i]
 		}
-		lines = append(lines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+		lines = append(lines, border("│")+padCell(tl, treeInnerW)+border("│")+padCell(pl, previewInnerW)+border("│"))
 	}
 	lines = append(lines, bottomBorder)
 
@@ -970,22 +954,14 @@ func (e explorerModel) viewStacked() string {
 	separator := border("├" + strings.Repeat("─", innerW) + "┤")
 	bottomBorder := border("╰" + strings.Repeat("─", innerW) + "╯")
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if g := w - lipgloss.Width(s); g > 0 {
-			s += strings.Repeat(" ", g)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, topBorder)
 	for _, ml := range strings.Split(metaContent, "\n") {
-		lines = append(lines, border("│")+wrapLine(ml, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(ml, innerW)+border("│"))
 	}
 	lines = append(lines, separator)
 	for _, pl := range paneLines {
-		lines = append(lines, border("│")+wrapLine(pl, innerW)+border("│"))
+		lines = append(lines, border("│")+padCell(pl, innerW)+border("│"))
 	}
 	lines = append(lines, bottomBorder)
 
