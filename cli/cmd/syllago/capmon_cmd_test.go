@@ -120,18 +120,6 @@ func TestCapmonFetch_InvalidSlug(t *testing.T) {
 	}
 }
 
-func TestCapmonExtract_Registered(t *testing.T) {
-	found := false
-	for _, cmd := range capmonCmd.Commands() {
-		if cmd.Use == "extract" {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("extract subcommand not registered under capmon")
-	}
-}
-
 func TestCapmonRun_StageFlag(t *testing.T) {
 	// Valid stage values should not produce a flag-parse error
 	validStages := []string{"fetch-extract", "report", ""}

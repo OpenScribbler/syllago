@@ -4,6 +4,12 @@
 **Scope:** Full repository — CLI command layer, TUI, content pipeline, capmon/telemetry, trust stack (MOAT/sandbox/registry), tests, CI, git hooks, and repo meta-systems.
 **Goal:** Reduce maintenance burden for a solo maintainer without changing or breaking existing functionality.
 
+> **Status update (2026-07-09):** All tiers approved. Tier 0 and Tier 2 are
+> executed on this branch. Tiers 1/3/4 are fleshed out in
+> [`simplification-plan.md`](simplification-plan.md), which also records four
+> audit claims that verification disproved (frontmatter registry, releases/,
+> kitchen-sink tests, TUI doc consolidation).
+
 ---
 
 ## Executive summary

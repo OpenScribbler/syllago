@@ -30,11 +30,10 @@ func TestLogger_Log(t *testing.T) {
 	logger := NewLoggerWriter(&buf)
 
 	err := logger.Log(Event{
-		EventType: EventHookInstall,
-		HookName:  "safety-check",
-		HookEvent: "before_tool_execute",
-		Provider:  "claude-code",
-		Source:    "export",
+		EventType: EventContentInstall,
+		ItemName:  "safety-check",
+		ItemType:  "rules",
+		Target:    "claude-code",
 	})
 	if err != nil {
 		t.Fatalf("Log: %v", err)
@@ -49,11 +48,11 @@ func TestLogger_Log(t *testing.T) {
 	if event.Version != 1 {
 		t.Errorf("expected version 1, got %d", event.Version)
 	}
-	if event.EventType != EventHookInstall {
-		t.Errorf("expected event_type %q, got %q", EventHookInstall, event.EventType)
+	if event.EventType != EventContentInstall {
+		t.Errorf("expected event_type %q, got %q", EventContentInstall, event.EventType)
 	}
-	if event.HookName != "safety-check" {
-		t.Errorf("expected hook_name %q, got %q", "safety-check", event.HookName)
+	if event.ItemName != "safety-check" {
+		t.Errorf("expected item_name %q, got %q", "safety-check", event.ItemName)
 	}
 	if event.Timestamp.IsZero() {
 		t.Error("expected non-zero timestamp")
@@ -64,8 +63,8 @@ func TestLogger_MultipleEvents(t *testing.T) {
 	var buf bytes.Buffer
 	logger := NewLoggerWriter(&buf)
 
-	logger.Log(Event{EventType: EventHookInstall, HookName: "hook-1"})
-	logger.Log(Event{EventType: EventHookScan, HookName: "hook-1", ScanResult: "pass"})
+	logger.Log(Event{EventType: EventContentInstall, ItemName: "item-1"})
+	logger.Log(Event{EventType: EventContentInstall, ItemName: "item-2"})
 
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if len(lines) != 2 {
@@ -84,10 +83,9 @@ func TestNewLogger_CreatesFileAndDirectories(t *testing.T) {
 
 	// Log an event through the file-backed logger.
 	err = logger.Log(Event{
-		EventType: EventHookInstall,
-		HookName:  "test-hook",
-		HookEvent: "before_tool_execute",
-		Provider:  "claude-code",
+		EventType: EventContentInstall,
+		ItemName:  "test-item",
+		Target:    "claude-code",
 	})
 	if err != nil {
 		t.Fatalf("Log: %v", err)
@@ -109,8 +107,8 @@ func TestNewLogger_CreatesFileAndDirectories(t *testing.T) {
 	if err := json.Unmarshal([]byte(line), &event); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if event.HookName != "test-hook" {
-		t.Errorf("expected hook_name %q, got %q", "test-hook", event.HookName)
+	if event.ItemName != "test-item" {
+		t.Errorf("expected item_name %q, got %q", "test-item", event.ItemName)
 	}
 	if event.Version != 1 {
 		t.Errorf("expected version 1, got %d", event.Version)
@@ -126,7 +124,7 @@ func TestNewLogger_AppendMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger (1st): %v", err)
 	}
-	logger1.Log(Event{EventType: EventHookInstall, HookName: "hook-a"})
+	logger1.Log(Event{EventType: EventContentInstall, ItemName: "item-a"})
 	logger1.Close()
 
 	// Open again and write second entry — should append, not overwrite.
@@ -134,7 +132,7 @@ func TestNewLogger_AppendMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger (2nd): %v", err)
 	}
-	logger2.Log(Event{EventType: EventHookScan, HookName: "hook-b"})
+	logger2.Log(Event{EventType: EventContentInstall, ItemName: "item-b"})
 	logger2.Close()
 
 	data, err := os.ReadFile(logPath)
@@ -182,21 +180,6 @@ func TestLogContent(t *testing.T) {
 	}
 	if event.Target != "claude-code" {
 		t.Errorf("expected target %q, got %q", "claude-code", event.Target)
-	}
-}
-
-func TestContentEventTypes(t *testing.T) {
-	// Verify all content event types are distinct and non-empty
-	types := []EventType{EventContentAdd, EventContentInstall, EventContentRemove, EventContentShare}
-	seen := make(map[EventType]bool)
-	for _, et := range types {
-		if et == "" {
-			t.Error("empty event type")
-		}
-		if seen[et] {
-			t.Errorf("duplicate event type: %s", et)
-		}
-		seen[et] = true
 	}
 }
 
@@ -262,10 +245,10 @@ func TestNewLogger_PathIsDirectory(t *testing.T) {
 
 // TestLogger_LogAfterClose_ReturnsErrorDoesNotPanic guards the lifecycle
 // contract: Log() on a Logger whose file has been closed must return an
-// error, not panic. Hook handlers and background goroutines frequently
-// outlive the Logger, so a panic here would surface as an opaque runtime
-// crash in production rather than a recoverable error. The defer/recover
-// turns a silent regression (panic) into a visible one (test fatal).
+// error, not panic. Callers can outlive the Logger, so a panic here would
+// surface as an opaque runtime crash in production rather than a
+// recoverable error. The defer/recover turns a silent regression (panic)
+// into a visible one (test fatal).
 func TestLogger_LogAfterClose_ReturnsErrorDoesNotPanic(t *testing.T) {
 	t.Parallel()
 
@@ -281,11 +264,11 @@ func TestLogger_LogAfterClose_ReturnsErrorDoesNotPanic(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			t.Errorf("regression: Log() after Close() must not panic — hook handlers and async goroutines can race Close() and a panic here would crash the whole process; got panic: %v", r)
+			t.Errorf("regression: Log() after Close() must not panic — async callers can race Close() and a panic here would crash the whole process; got panic: %v", r)
 		}
 	}()
 
-	err = logger.Log(Event{EventType: EventHookInstall, HookName: "post-close-hook"})
+	err = logger.Log(Event{EventType: EventContentInstall, ItemName: "post-close-item"})
 	if err == nil {
 		t.Error("regression: Log() after Close() must return a non-nil error — returning nil here means the caller assumes the event was persisted when it was not, breaking the audit trail")
 	}
@@ -293,7 +276,7 @@ func TestLogger_LogAfterClose_ReturnsErrorDoesNotPanic(t *testing.T) {
 
 // TestLogger_Log_PropagatesWriterError stands in for the disk-full case:
 // any io.Writer that fails mid-log must propagate its error up to the
-// caller so hook flows can decide whether to abort. A silent swallow here
+// caller so callers can decide whether to abort. A silent swallow here
 // would cause audit events to vanish without the caller knowing. Using a
 // deterministic failingWriter keeps the test portable — simulating real
 // disk exhaustion is not practical inside `go test`.
@@ -301,43 +284,11 @@ func TestLogger_Log_PropagatesWriterError(t *testing.T) {
 	t.Parallel()
 
 	logger := NewLoggerWriter(failingWriter{})
-	err := logger.Log(Event{EventType: EventHookInstall, HookName: "hook-x"})
+	err := logger.Log(Event{EventType: EventContentInstall, ItemName: "item-x"})
 	if err == nil {
 		t.Fatal("regression: Log() must return the underlying writer error — silently swallowing it would cause audit events to disappear without the caller knowing")
 	}
 	if !errors.Is(err, errFakeDiskFull) {
 		t.Errorf("regression: Log() must wrap or return the underlying writer error unchanged (errors.Is must match) — otherwise callers cannot programmatically distinguish disk-full from malformed-event; got: %v", err)
-	}
-}
-
-func TestLogger_SignalTrace(t *testing.T) {
-	t.Parallel()
-	var buf bytes.Buffer
-	l := NewLoggerWriter(&buf)
-	err := l.Log(Event{
-		EventType:               EventContentSignalClassify,
-		ItemName:                "redteam",
-		ItemType:                "skills",
-		ContentSignalFile:       "Packs/redteam/SKILL.md",
-		ContentSignalConfidence: 0.65,
-		ContentSignalBucket:     "confirm",
-		ContentSignalSource:     "content-signal",
-		ContentSignalStaticSignals: []SignalTrace{
-			{Signal: "filename_SKILL.md", Weight: 0.25},
-			{Signal: "directory_keyword_pack", Weight: 0.10},
-		},
-	})
-	if err != nil {
-		t.Fatalf("Log error: %v", err)
-	}
-	line := buf.String()
-	if !strings.Contains(line, `"event_type":"content-signal.classify"`) {
-		t.Errorf("missing event_type in: %s", line)
-	}
-	if !strings.Contains(line, `"filename_SKILL.md"`) {
-		t.Errorf("missing signal name in: %s", line)
-	}
-	if !strings.Contains(line, `"confidence":0.65`) {
-		t.Errorf("missing confidence in: %s", line)
 	}
 }

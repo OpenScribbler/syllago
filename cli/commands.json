@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-05-07T17:06:07Z",
-  "syllagoVersion": "0.12.0",
+  "generatedAt": "2026-07-09T00:02:03Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -221,8 +221,6 @@
         "backfill",
         "check",
         "derive",
-        "diff",
-        "extract",
         "fetch",
         "generate",
         "onboard",
@@ -311,8 +309,6 @@
         "capmon",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -440,8 +436,6 @@
         "capmon",
         "capmon backfill",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -537,162 +531,6 @@
         "capmon",
         "capmon backfill",
         "capmon check",
-        "capmon diff",
-        "capmon extract",
-        "capmon fetch",
-        "capmon generate",
-        "capmon onboard",
-        "capmon run",
-        "capmon seed",
-        "capmon test-fixtures",
-        "capmon validate-format-doc",
-        "capmon validate-sources",
-        "capmon verify"
-      ],
-      "examples": null,
-      "source": "cli/cmd/syllago/capmon_cmd.go"
-    },
-    {
-      "name": "capmon diff",
-      "displayName": "Capmon Diff",
-      "slug": "capmon-diff",
-      "parent": "capmon",
-      "synopsis": "syllago capmon diff [flags]",
-      "description": "Show field-level changes in provider-capabilities since a git ref",
-      "longDescription": null,
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--provider",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Limit diff to this provider slug"
-        },
-        {
-          "name": "--since",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Git ref to diff against (default: HEAD~1)"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [
-        "capmon",
-        "capmon backfill",
-        "capmon check",
-        "capmon derive",
-        "capmon extract",
-        "capmon fetch",
-        "capmon generate",
-        "capmon onboard",
-        "capmon run",
-        "capmon seed",
-        "capmon test-fixtures",
-        "capmon validate-format-doc",
-        "capmon validate-sources",
-        "capmon verify"
-      ],
-      "examples": null,
-      "source": "cli/cmd/syllago/capmon_cmd.go"
-    },
-    {
-      "name": "capmon extract",
-      "displayName": "Capmon Extract",
-      "slug": "capmon-extract",
-      "parent": "capmon",
-      "synopsis": "syllago capmon extract [flags]",
-      "description": "Run extraction on cached sources",
-      "longDescription": null,
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--provider",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Extract only this provider slug"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [
-        "capmon",
-        "capmon backfill",
-        "capmon check",
-        "capmon derive",
-        "capmon diff",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -789,8 +627,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon generate",
         "capmon onboard",
         "capmon run",
@@ -853,8 +689,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon onboard",
         "capmon run",
@@ -958,8 +792,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon run",
@@ -1047,8 +879,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -1136,8 +966,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -1217,8 +1045,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -1306,8 +1132,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -1387,8 +1211,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -1484,8 +1306,6 @@
         "capmon backfill",
         "capmon check",
         "capmon derive",
-        "capmon diff",
-        "capmon extract",
         "capmon fetch",
         "capmon generate",
         "capmon onboard",
@@ -3896,80 +3716,6 @@
       "seeAlso": [],
       "examples": "  # List providers and their supported types\n  syllago providers\n\n  # JSON output\n  syllago providers --json\n\n  # Data quality summary for one provider\n  syllago providers claude-code\n  syllago providers claude-code --json",
       "source": "cli/cmd/syllago/providers.go"
-    },
-    {
-      "name": "refresh",
-      "displayName": "Refresh",
-      "slug": "refresh",
-      "parent": null,
-      "synopsis": "syllago refresh [name] [flags]",
-      "description": "Check for and apply content updates from registries",
-      "longDescription": "Compares installed content versions against their source registries\nand updates items where a newer version is available.\n\nVersion comparison uses semver from .syllago.yaml metadata.\nItems installed from local projects (not registries) are skipped.",
-      "aliases": [],
-      "flags": [
-        {
-          "name": "--all",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Refresh all installed items"
-        },
-        {
-          "name": "--dry-run",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Show what would be updated without changing anything"
-        },
-        {
-          "name": "--registry",
-          "shorthand": null,
-          "type": "string",
-          "default": null,
-          "required": false,
-          "description": "Only refresh items from this registry"
-        }
-      ],
-      "inheritedFlags": [
-        {
-          "name": "--json",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Output in JSON format"
-        },
-        {
-          "name": "--no-color",
-          "shorthand": null,
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Disable color output"
-        },
-        {
-          "name": "--quiet",
-          "shorthand": "-q",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Suppress non-essential output"
-        },
-        {
-          "name": "--verbose",
-          "shorthand": "-v",
-          "type": "bool",
-          "default": null,
-          "required": false,
-          "description": "Verbose output"
-        }
-      ],
-      "subcommands": [],
-      "seeAlso": [],
-      "examples": "  # Refresh a specific item\n  syllago refresh my-skill\n\n  # Check and refresh all installed items\n  syllago refresh --all\n\n  # Dry-run: show what would be updated\n  syllago refresh --all --dry-run\n\n  # Only refresh items from a specific registry\n  syllago refresh --all --registry team-rules",
-      "source": "cli/cmd/syllago/refresh.go"
     },
     {
       "name": "registry",

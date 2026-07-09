@@ -56,7 +56,6 @@ graph TB
         Registry["registry<br/>(git-based registries)"]
         RegistryOps["registryops<br/>(CLI/TUI orchestration)"]
         MOAT["moat<br/>(Sigstore + Rekor + OIDC pinning)"]
-        Signing["signing<br/>(hook content signatures)"]
         GitUtil["gitutil<br/>(clone/pull/status/diff)"]
     end
 
@@ -124,7 +123,6 @@ graph TB
     Registry --> MOAT
     RegistryOps --> Registry
     RegistryOps --> MOAT
-    MOAT --> Signing
     Add --> Registry
     Promote --> GitUtil
 
@@ -145,7 +143,7 @@ graph TB
     classDef trust fill:#3d3520,stroke:#c9a86b,color:#fff
     class CLI,TUI entry
     class Converter,Provider hub
-    class Registry,RegistryOps,MOAT,Signing,GitUtil trust
+    class Registry,RegistryOps,MOAT,GitUtil trust
 ```
 
 ## Package Map
@@ -263,10 +261,6 @@ On-disk persistence layer for library rules (D11). Hash, load, and write helpers
 ### internal/sandbox/
 
 Bubblewrap-based process isolation for AI CLI tools (Linux only). Twenty-four files implement the wrapped-tool runner (`runner.go`), bwrap invocation (`bwrap.go`), env-var allowlist (`envfilter.go`), network egress proxy (`proxy.go`), filesystem staging (`staging.go`), and config diff-and-approve (`configdiff.go`) for high-risk keys (`mcpServers`, `hooks`, `commands`). The CLI surface is `cmd/syllago/sandbox_cmd.go`.
-
-### internal/signing/
-
-Cryptographic signing and verification for hook content. Predates MOAT; remains in place for hook-level signatures distinct from registry-level MOAT signatures.
 
 ### internal/snapshot/
 

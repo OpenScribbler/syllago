@@ -342,20 +342,6 @@ var capmonFetchCmd = &cobra.Command{
 	},
 }
 
-var capmonExtractCmd = &cobra.Command{
-	Use:   "extract",
-	Short: "Run extraction on cached sources",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		provider, _ := cmd.Flags().GetString("provider")
-		if provider != "" {
-			if _, err := capmon.SanitizeSlug(provider); err != nil {
-				return fmt.Errorf("invalid --provider: %w", err)
-			}
-		}
-		return fmt.Errorf("not yet implemented — use 'syllago capmon run --stage fetch-extract'")
-	},
-}
-
 var capmonRunCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the full capability monitor pipeline",
@@ -385,21 +371,6 @@ var capmonRunCmd = &cobra.Command{
 		}
 		os.Exit(exitClass)
 		return nil
-	},
-}
-
-var capmonDiffCmd = &cobra.Command{
-	Use:   "diff",
-	Short: "Show field-level changes in provider-capabilities since a git ref",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		provider, _ := cmd.Flags().GetString("provider")
-		if provider != "" {
-			if _, err := capmon.SanitizeSlug(provider); err != nil {
-				return fmt.Errorf("invalid --provider: %w", err)
-			}
-		}
-		// Full implementation wired via pipeline.go in Phase 9
-		return fmt.Errorf("diff output: not yet implemented")
 	},
 }
 
@@ -493,14 +464,9 @@ func init() {
 	capmonFetchCmd.Flags().String("sources-dir", "", "Path to provider-sources/ (default: docs/provider-sources)")
 	capmonFetchCmd.Flags().String("cache-root", "", "Path to .capmon-cache/ (default: .capmon-cache)")
 
-	capmonExtractCmd.Flags().String("provider", "", "Extract only this provider slug")
-
 	capmonRunCmd.Flags().String("stage", "", "Pipeline stage to run: 'fetch-extract' or 'report' (default: all stages)")
 	capmonRunCmd.Flags().Bool("dry-run", false, "Skip Stage 4 PR/issue creation; write report to stdout")
 	capmonRunCmd.Flags().String("provider", "", "Limit to this provider slug")
-
-	capmonDiffCmd.Flags().String("provider", "", "Limit diff to this provider slug")
-	capmonDiffCmd.Flags().String("since", "", "Git ref to diff against (default: HEAD~1)")
 
 	capmonSeedCmd.Flags().String("provider", "", "Seed only this provider slug")
 	capmonSeedCmd.Flags().Bool("force-overwrite-exclusive", false, "Allow overwriting provider_exclusive entries (prints warning)")
@@ -511,9 +477,7 @@ func init() {
 
 	capmonCmd.AddCommand(capmonVerifyCmd)
 	capmonCmd.AddCommand(capmonFetchCmd)
-	capmonCmd.AddCommand(capmonExtractCmd)
 	capmonCmd.AddCommand(capmonRunCmd)
-	capmonCmd.AddCommand(capmonDiffCmd)
 	capmonCmd.AddCommand(capmonGenerateCmd)
 	capmonCmd.AddCommand(capmonSeedCmd)
 	capmonCmd.AddCommand(capmonTestFixturesCmd)

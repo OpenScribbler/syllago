@@ -97,21 +97,6 @@ func TestCheckOrphans_WithOrphans(t *testing.T) {
 	}
 }
 
-// --- runExport (0% coverage, stub) ---
-
-func TestRunExport_NotImplemented(t *testing.T) {
-	stdout, _ := output.SetForTest(t)
-	_ = stdout
-
-	err := exportCmd.RunE(exportCmd, []string{"my-item"})
-	if err == nil {
-		t.Fatal("expected error from unimplemented export")
-	}
-	if !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("error = %q, want mention of not implemented", err)
-	}
-}
-
 // --- filterBySource (42.9% coverage) ---
 
 func TestFilterBySource(t *testing.T) {
@@ -1474,19 +1459,6 @@ func TestRunLoadoutCreate_EmptyNameErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid loadout name") {
 		t.Errorf("error should mention invalid loadout name, got %v", err)
-	}
-}
-
-// --- runRefresh (0% coverage, stub) ---
-
-func TestRunRefresh_NotImplemented(t *testing.T) {
-	output.SetForTest(t)
-	err := refreshCmd.RunE(refreshCmd, nil)
-	if err == nil {
-		t.Fatal("expected 'not yet implemented' error")
-	}
-	if !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("error should mention not-yet-implemented, got %v", err)
 	}
 }
 

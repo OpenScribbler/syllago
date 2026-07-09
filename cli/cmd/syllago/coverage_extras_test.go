@@ -19,48 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// --- runSign / runVerify (currently 0%, both stub errors) ---
-
-func TestRunSign_NotImplemented(t *testing.T) {
-	t.Parallel()
-	err := runSign(&cobra.Command{}, []string{"my-hook"})
-	if err == nil || !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("got %v, want 'not yet implemented' error", err)
-	}
-}
-
-func TestRunVerify_NotImplemented(t *testing.T) {
-	t.Parallel()
-	err := runVerify(&cobra.Command{}, []string{"my-hook"})
-	if err == nil || !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("got %v, want 'not yet implemented' error", err)
-	}
-}
-
-// --- reportFixtureAges (0% — pure print) ---
-
-func TestReportFixtureAges_AlwaysReturnsNil(t *testing.T) {
-	// Mutates os.Stdout — not parallel.
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout }()
-
-	err := reportFixtureAges("/some/fixtures/dir")
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
-
-	if err != nil {
-		t.Errorf("got err = %v, want nil", err)
-	}
-	out := buf.String()
-	if !strings.Contains(out, "/some/fixtures/dir") {
-		t.Errorf("output %q missing fixtures dir", out)
-	}
-}
-
 // --- runUpdate (0% — both branches reachable) ---
 
 func TestRunUpdate_DevBuildBranch(t *testing.T) {
