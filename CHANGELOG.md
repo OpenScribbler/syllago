@@ -5,6 +5,56 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-07-09
+
+### Changed
+
+- **`syllago capmon` moved to a standalone tool.** The capability-monitor
+  pipeline (fetch, extract, recognize, diff, heal) and the
+  `provider-monitor` source watcher now live in
+  [OpenScribbler/capmon](https://github.com/OpenScribbler/capmon), extracted
+  with full git history. The `capmon` binary replaces `syllago capmon`
+  1:1 (same subcommands and flags); its scheduled pipeline runs every 4
+  days against this repo and opens PRs/issues here on drift. Capability
+  data (`docs/provider-sources`, `docs/provider-formats`,
+  `docs/provider-capabilities`) stays in this repo.
+- The syllago build no longer requires CGO: chromedp, tree-sitter,
+  goquery, and goldmark left the dependency graph with the capmon
+  extraction.
+- Coverage policy: 80% on core logic packages; thin command wiring,
+  print-only functions, and stubs are exempt.
+
+### Removed
+
+- Unimplemented stub commands that only returned "not yet implemented":
+  `sign`, `verify`, `export` (all hidden), `refresh`, `capmon extract`,
+  `capmon diff`. The real signing surface remains `syllago moat sign`.
+- `internal/signing` (interface-only package superseded by MOAT) and the
+  MOAT spike verifiers (`VerifyItem`/`VerifyItemSigstore`), completing
+  ADR 0007 checklist item 8.
+
+### Security
+
+- Go toolchain 1.26.3 → 1.26.5 (GO-2026-5037, GO-2026-5039,
+  GO-2026-5856); sigstore/rekor v1.5.2 (GO-2026-5778);
+  timestamp-authority v2.1.0 (GO-2026-5851); x/crypto v0.54.0 (2026
+  ssh advisory batch). GO-2026-5932 (x/crypto/openpgp, no fix
+  available, reachable only via rekor's entry-type registry) is
+  allowlisted in the govulncheck CI step with inline rationale.
+
+### Internal
+
+- Simplification Tiers 0–3 (see `docs/guides/simplification-audit.md`
+  and `docs/guides/simplification-plan.md`): pre-push hook now lints
+  changed code only; per-tool-call agent hooks removed; TUI docs gate
+  demoted to advisory; ~1,100 lines of dead code deleted; shared
+  `parse.SplitFrontmatter`, catalog-loading helpers, converter render
+  tail + plain-markdown descriptor table, hook-capabilities data table,
+  TUI overlay interface and `padCell` helper replace ~30 copy-pasted
+  blocks (net ≈ −800 source lines with behavior pinned by the existing
+  suites; TUI goldens unchanged).
+- capmon CI cadence: daily → every 4 days, staleness threshold 36h → 108h.
+
 ## [0.10.3] - 2026-04-27
 
 ### Fixed

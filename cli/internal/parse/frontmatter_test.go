@@ -61,6 +61,12 @@ func TestSplitFrontmatter(t *testing.T) {
 			wantBody: "",
 			wantOK:   true,
 		},
+		{
+			name:     "fence not at byte zero",
+			in:       "\n---\nkey: v\n---\nbody\n",
+			wantBody: "---\nkey: v\n---\nbody",
+			wantOK:   false,
+		},
 	}
 
 	for _, tt := range tests {
