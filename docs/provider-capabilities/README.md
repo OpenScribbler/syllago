@@ -1,6 +1,6 @@
 # Provider Capabilities
 
-This directory contains the authoritative capability baseline for each AI coding tool provider that syllago supports. These files are maintained by the `syllago capmon` pipeline.
+This directory contains the authoritative capability baseline for each AI coding tool provider that syllago supports. These files are maintained by the [capmon](https://github.com/OpenScribbler/capmon) pipeline.
 
 ## Directory Structure
 
@@ -15,7 +15,7 @@ docs/provider-capabilities/
 
 ## File Format
 
-Each `<slug>.yaml` follows `schema_version: "1"` (validated by `syllago capmon verify`).
+Each `<slug>.yaml` follows `schema_version: "1"` (validated by `capmon verify`).
 
 ```yaml
 schema_version: "1"
@@ -34,16 +34,16 @@ content_types:
 
 ## Updating Baselines
 
-The `syllago capmon` pipeline manages these files automatically:
+The [capmon](https://github.com/OpenScribbler/capmon) pipeline manages these files automatically:
 
 | Command | Description |
 |---------|-------------|
-| `syllago capmon run` | Full pipeline: fetch → extract → diff → review |
-| `syllago capmon run --stage fetch-extract` | Stages 1–2 only (no write permissions needed) |
-| `syllago capmon run --stage report` | Stages 3–4 only (reads cached data, creates PRs) |
-| `syllago capmon seed --provider <slug>` | Bootstrap or re-seed a single provider's baseline |
-| `syllago capmon verify` | Validate all YAML files against the schema |
-| `syllago capmon generate` | Regenerate by-content-type views and spec tables |
+| `capmon run` | Full pipeline: fetch → extract → diff → review |
+| `capmon run --stage fetch-extract` | Stages 1–2 only (no write permissions needed) |
+| `capmon run --stage report` | Stages 3–4 only (reads cached data, creates PRs) |
+| `capmon seed --provider <slug>` | Bootstrap or re-seed a single provider's baseline |
+| `capmon verify` | Validate all YAML files against the schema |
+| `capmon generate` | Regenerate by-content-type views and spec tables |
 
 ## Pausing the Pipeline
 
@@ -59,6 +59,6 @@ rm .capmon-pause       # resume
 The `schema_version` field follows a strict evolution policy:
 
 - Current version: `"1"`
-- `syllago capmon verify` validates files against the current schema
-- `syllago capmon verify --migration-window` also accepts the immediately previous version (for gradual rollouts)
+- `capmon verify` validates files against the current schema
+- `capmon verify --migration-window` also accepts the immediately previous version (for gradual rollouts)
 - Never edit `schema.json` or `schema_version` without a corresponding change to the `ValidateAgainstSchema` function in `cli/internal/capmon/capyaml/validate.go`

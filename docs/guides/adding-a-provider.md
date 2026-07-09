@@ -205,7 +205,7 @@ If you don't have one yet, the inspection bead (Step 4) will generate a draft.
 ### 3. Fetch and extract
 
 ```bash
-syllago capmon run --stage=fetch-extract --provider=<slug>
+capmon run --stage=fetch-extract --provider=<slug>
 ```
 
 ### 4. Run the inspection bead
@@ -217,7 +217,7 @@ This produces `.develop/seeder-specs/<slug>-skills.yaml`.
 
 Open `.develop/seeder-specs/<slug>-skills.yaml`.
 Review `proposed_mappings`. Set `human_action: approve` and `reviewed_at: <ISO timestamp>`.
-Optionally run: `syllago capmon validate-spec --provider=<slug>`
+Optionally run: `capmon validate-spec --provider=<slug>`
 
 ### 6. Implement the recognizer
 
@@ -227,7 +227,7 @@ using the approved seeder spec as the source of truth.
 ### 7. Seed the provider
 
 ```bash
-syllago capmon seed --provider=<slug>
+capmon seed --provider=<slug>
 ```
 
 ### 8. Verify output
@@ -239,12 +239,12 @@ with `confidence: confirmed` entries.
 
 - [ ] Create `docs/provider-sources/<slug>.yaml`
 - [ ] Create or verify `docs/provider-formats/<slug>.md`
-- [ ] `syllago capmon run --stage=fetch-extract --provider=<slug>`
+- [ ] `capmon run --stage=fetch-extract --provider=<slug>`
 - [ ] Run inspection bead workflow (`docs/workflows/inspect-provider-skills.md`)
 - [ ] Review and approve `.develop/seeder-specs/<slug>-skills.yaml` (`human_action: approve`, `reviewed_at`)
-- [ ] `syllago capmon validate-spec --provider=<slug>` (confirm spec passes gate)
+- [ ] `capmon validate-spec --provider=<slug>` (confirm spec passes gate)
 - [ ] Implement `cli/internal/capmon/recognize_<slug_underscored>.go`
-- [ ] `syllago capmon seed --provider=<slug>`
+- [ ] `capmon seed --provider=<slug>`
 - [ ] Verify `docs/provider-capabilities/<slug>.yaml` has `confidence: confirmed` entries
 - [ ] Confirm `TestAllProviderSlugsRegistered` passes (auto-detects from filesystem)
 
@@ -283,7 +283,7 @@ notes: ""
 EOF
 
 # Validate with empty human_action — should error
-syllago capmon validate-spec --provider=scratch-test
+capmon validate-spec --provider=scratch-test
 
 # Set approval and re-validate — should pass
 # (edit human_action and reviewed_at in the file, then re-run)
@@ -299,7 +299,7 @@ Expected: first run errors with "seeder spec for scratch-test has not been revie
 After adding a provider or a new source URL to `docs/provider-sources/<slug>.yaml`, populate the `content_hash` baselines in the matching `docs/provider-formats/<slug>.yaml` so drift detection has something to compare against:
 
 ```
-cd cli && go run ./cmd/syllago capmon run --stage fetch-extract --provider=<slug>
+cd cli && go run ./cmd/capmon run --stage fetch-extract --provider=<slug>
 ```
 
 This fetches each source listed under `content_types.*.sources` and writes the sha256 of every fetched body back to the FormatDoc as the content_hash baseline. Commit both the source manifest and the updated FormatDoc in the same change. Without this step, `provider-monitor` will report `skipped: baseline empty` for any new sources on its next run.

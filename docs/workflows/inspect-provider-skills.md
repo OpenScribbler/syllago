@@ -177,7 +177,7 @@ Canonical filename: `SKILL.md` (fixed)
 After writing `.develop/seeder-specs/<slug>-skills.yaml`:
 
 1. Do NOT set `human_action` or `reviewed_at`.
-2. Optionally run `syllago capmon validate-spec --provider=<slug>` to check the spec
+2. Optionally run `capmon validate-spec --provider=<slug>` to check the spec
    schema (this will warn that human_action is empty — that is expected).
 3. Notify the human reviewer that the spec is ready for review.
 
@@ -186,4 +186,4 @@ The human reviewer will:
 2. Set `human_action: approve | adjust | skip`
 3. Set `reviewed_at: <ISO 8601 timestamp>`
 4. Optionally adjust proposed_mappings if the bead's proposals were incorrect
-5. Run `syllago capmon validate-spec --provider=<slug>` to confirm
+5. Run `capmon validate-spec --provider=<slug>` to confirm

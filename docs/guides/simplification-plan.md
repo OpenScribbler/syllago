@@ -44,7 +44,7 @@ dropped; it just stops living inside the product module.
 ### Target shape
 
 - **New repo:** `OpenScribbler/capmon` (suggested), a standalone Go module
-  with `cmd/capmon/` (the current `syllago capmon *` subcommands become
+  with `cmd/capmon/` (the former `syllago capmon *` subcommands become
   `capmon *`) and the pipeline packages from `cli/internal/capmon/`.
 - **Data stays in syllago.** `docs/provider-sources/`,
   `docs/provider-formats/`, `docs/provider-capabilities/`, and
@@ -53,19 +53,18 @@ dropped; it just stops living inside the product module.
   syllago-docs. The capmon repo's scheduled workflow checks out syllago,
   runs the pipeline against those dirs, and opens PRs/issues **on syllago**
   exactly as the healing layer does today.
-- **provmon stays in syllago.** It imports only four capmon symbols
-  (`FormatDoc`/`LoadFormatDoc`/`FormatDocPath`/`SourceRef`, `FetchChromedp`,
-  `ValidateContentResponse`, `SHA256Hex`). Resolution: move those into a
-  small `cli/internal/capshared/` package that both provmon (in-repo) and
-  the capmon repo (as a dependency, or a copied file — it is ~200 lines)
-  use. Preference: copy, to keep the repos decoupled.
+- **provmon moves too** (decision revised during execution): provmon is
+  consumed only by `cmd/provider-monitor` (a standalone dev binary, never
+  wired into CI or the product) and by capmon itself
+  (`fetch_validity.go`), so the whole monitoring family moves together.
+  This removes the need for any `capshared` shim in syllago and lets the
+  product shed chromedp completely.
 
 ### What changes for the user/dev (flagged, not silent)
 
-- `syllago capmon <sub>` disappears from the product binary; the standalone
-  `capmon <sub>` binary replaces it 1:1. This is dev/CI tooling, not an
-  end-user feature — README does not advertise it. If keeping `syllago
-  capmon` matters, the extraction cannot proceed; decide before step 1.
+- The `syllago capmon <sub>` command tree disappears from the product
+  binary; the standalone `capmon <sub>` binary replaces it 1:1. This is
+  dev/CI tooling, not an end-user feature — README does not advertise it.
 - The syllago build sheds chromedp, go-tree-sitter (CGO!), goquery,
   goldmark, and BurntSushi/toml (verify each with `go mod tidy` — toml may
   have other consumers). CI stops needing the headless-shell container.
