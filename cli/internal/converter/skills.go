@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -314,18 +313,12 @@ func renderGeminiSkill(meta SkillMeta, body string) (*Result, error) {
 		Name:        meta.Name,
 		Description: meta.Description,
 	}
-	fm, err := renderFrontmatter(gm)
+	res, err := renderWithFrontmatter(gm, outBody, "SKILL.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+	res.Warnings = hookWarnings
+	return res, nil
 }
 
 func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
@@ -341,18 +334,7 @@ func renderClaudeSkill(meta SkillMeta, body string) (*Result, error) {
 		meta.DisallowedTools = flexStringList(translated)
 	}
 
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return renderWithFrontmatter(meta, cleanBody, "SKILL.md")
 }
 
 // cursorSkillMeta is the subset of fields Cursor supports in SKILL.md frontmatter.
@@ -418,18 +400,12 @@ func renderCursorSkill(meta SkillMeta, body string) (*Result, error) {
 		Metadata:               meta.Metadata,
 		DisableModelInvocation: meta.DisableModelInvocation,
 	}
-	fm, err := renderFrontmatter(cm)
+	res, err := renderWithFrontmatter(cm, outBody, "SKILL.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+	res.Warnings = hookWarnings
+	return res, nil
 }
 
 // copilotSkillMeta is the subset of fields Copilot CLI supports in SKILL.md frontmatter.
@@ -495,18 +471,12 @@ func renderCopilotSkill(meta SkillMeta, body string) (*Result, error) {
 		DisableModelInvocation: meta.DisableModelInvocation,
 	}
 
-	fm, err := renderFrontmatter(cm)
+	res, err := renderWithFrontmatter(cm, outBody, "SKILL.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+	res.Warnings = hookWarnings
+	return res, nil
 }
 
 // windsurfSkillMeta is the subset of fields Windsurf supports in SKILL.md frontmatter.
@@ -566,18 +536,12 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 		Name:        meta.Name,
 		Description: meta.Description,
 	}
-	fm, err := renderFrontmatter(wm)
+	res, err := renderWithFrontmatter(wm, outBody, "SKILL.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+	res.Warnings = hookWarnings
+	return res, nil
 }
 
 // buildSkillProseNotes generates behavioral embedding notes for skill metadata
@@ -650,20 +614,12 @@ func renderKiroSkill(meta SkillMeta, body string) (*Result, error) {
 		Metadata:      meta.Metadata,
 	}
 
-	fm, err := renderFrontmatter(km)
+	res, err := renderWithFrontmatter(km, outBody, "SKILL.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md", Warnings: hookWarnings}, nil
+	res.Warnings = formatSkillHookWarnings(meta.Name, meta.Hooks, "kiro")
+	return res, nil
 }
 
 // opencodeSkillMeta is the subset of fields OpenCode supports in SKILL.md frontmatter.
@@ -698,18 +654,7 @@ func renderOpenCodeSkill(meta SkillMeta, body string) (*Result, error) {
 		Metadata:      meta.Metadata,
 	}
 
-	fm, err := renderFrontmatter(om)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return renderWithFrontmatter(om, outBody, "SKILL.md")
 }
 
 // ampSkillMeta is the subset of fields Amp supports in SKILL.md frontmatter.
@@ -737,18 +682,7 @@ func renderAmpSkill(meta SkillMeta, body string) (*Result, error) {
 		Description: meta.Description,
 	}
 
-	fm, err := renderFrontmatter(am)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return renderWithFrontmatter(am, outBody, "SKILL.md")
 }
 
 // clineSkillMeta is the subset of fields Cline supports in SKILL.md frontmatter.
@@ -776,18 +710,7 @@ func renderClineSkill(meta SkillMeta, body string) (*Result, error) {
 		Description: meta.Description,
 	}
 
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return renderWithFrontmatter(cm, outBody, "SKILL.md")
 }
 
 // rooCodeSkillMeta is the subset of fields Roo Code supports in SKILL.md frontmatter.
@@ -845,31 +768,11 @@ func renderRooCodeSkill(meta SkillMeta, body string) (*Result, error) {
 		Description: meta.Description,
 	}
 
-	fm, err := renderFrontmatter(rm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "SKILL.md"}, nil
+	return renderWithFrontmatter(rm, outBody, "SKILL.md")
 }
 
 // --- Helpers ---
 
 func buildSkillCanonical(meta SkillMeta, body string) ([]byte, error) {
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(body)
-	buf.WriteString("\n")
-	return buf.Bytes(), nil
+	return renderFrontmatterDoc(meta, body)
 }

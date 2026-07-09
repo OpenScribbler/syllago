@@ -301,22 +301,11 @@ func renderVSCodeCopilotCommand(meta CommandMeta, body string) (*Result, error) 
 	// Convert $ARGUMENTS to ${input:args} for VS Code
 	result = strings.ReplaceAll(result, "$ARGUMENTS", "${input:args}")
 
-	fm, err := renderFrontmatter(vc)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(result)
-	buf.WriteString("\n")
-
 	name := "command"
 	if meta.Name != "" {
 		name = slugify(meta.Name)
 	}
-	return &Result{Content: buf.Bytes(), Filename: name + ".prompt.md"}, nil
+	return renderWithFrontmatter(vc, result, name+".prompt.md")
 }
 
 // --- Canonical parser ---
@@ -480,18 +469,7 @@ func renderCodexCommand(meta CommandMeta, body string) (*Result, error) {
 		result = AppendNotes(cleanBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(result)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "command.md"}, nil
+	return renderWithFrontmatter(cm, result, "command.md")
 }
 
 // renderClineCommand renders a canonical command to Cline's plain markdown format.
@@ -550,18 +528,12 @@ func renderClaudeCommand(meta CommandMeta, body string) (*Result, error) {
 		warnings = append(warnings, "Command contains Gemini CLI template directives (!{...} or @{...}) that are not natively supported by this provider.")
 	}
 
-	fm, err := renderFrontmatter(meta)
+	res, err := renderWithFrontmatter(meta, cleanBody, "command.md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "command.md", Warnings: warnings}, nil
+	res.Warnings = warnings
+	return res, nil
 }
 
 // renderOpenCodeCommand renders a canonical command to OpenCode's markdown format.
@@ -599,33 +571,13 @@ func renderOpenCodeCommand(meta CommandMeta, body string) (*Result, error) {
 		result = AppendNotes(cleanBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(om)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(result)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: name + ".md"}, nil
+	return renderWithFrontmatter(om, result, name+".md")
 }
 
 // --- Helpers ---
 
 func buildCommandCanonical(meta CommandMeta, body string) ([]byte, error) {
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(body)
-	buf.WriteString("\n")
-	return buf.Bytes(), nil
+	return renderFrontmatterDoc(meta, body)
 }
 
 func containsGeminiDirectives(body string) bool {

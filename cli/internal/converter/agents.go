@@ -251,18 +251,7 @@ func renderGeminiAgent(meta AgentMeta, body string) (*Result, error) {
 		TimeoutMins: meta.TimeoutMins,
 		Kind:        meta.Kind,
 	}
-	fm, err := renderFrontmatter(gm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+	return renderWithFrontmatter(gm, outBody, "agent.md")
 }
 
 func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
@@ -320,25 +309,13 @@ func renderCopilotAgent(meta AgentMeta, body string) (*Result, error) {
 		Target:      target,
 		MCPServers:  meta.MCPServers,
 	}
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	// Filename: <name>.agent.md (Copilot convention)
 	agentName := meta.Name
 	if agentName == "" {
 		agentName = "agent"
 	}
-	filename := slugify(agentName) + ".agent.md"
 
-	return &Result{Content: buf.Bytes(), Filename: filename}, nil
+	return renderWithFrontmatter(cm, outBody, slugify(agentName)+".agent.md")
 }
 
 func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
@@ -369,18 +346,7 @@ func renderClaudeAgent(meta AgentMeta, body string) (*Result, error) {
 		cleanBody = AppendNotes(cleanBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{Content: buf.Bytes(), Filename: "agent.md"}, nil
+	return renderWithFrontmatter(meta, cleanBody, "agent.md")
 }
 
 func renderRooCodeAgent(meta AgentMeta, body string) (*Result, error) {
@@ -613,22 +579,12 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, "disallowedTools not supported by Kiro; consider using tool groups instead")
 	}
 
-	fm, err := renderFrontmatter(km)
+	res, err := renderWithFrontmatter(km, cleanBody, slugify(agentName)+".md")
 	if err != nil {
 		return nil, err
 	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(cleanBody)
-	buf.WriteString("\n")
-
-	return &Result{
-		Content:  buf.Bytes(),
-		Filename: slugify(agentName) + ".md",
-		Warnings: warnings,
-	}, nil
+	res.Warnings = warnings
+	return res, nil
 }
 
 // canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
@@ -759,22 +715,16 @@ func renderOpenCodeAgent(meta AgentMeta, body string) (*Result, error) {
 		outBody = AppendNotes(outBody, notesBlock)
 	}
 
-	fm, err := renderFrontmatter(om)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	name := "agent"
 	if meta.Name != "" {
 		name = slugify(meta.Name)
 	}
-	return &Result{Content: buf.Bytes(), Filename: name + ".md", Warnings: warnings}, nil
+	res, err := renderWithFrontmatter(om, outBody, name+".md")
+	if err != nil {
+		return nil, err
+	}
+	res.Warnings = warnings
+	return res, nil
 }
 
 // --- Cursor agents ---
@@ -905,40 +855,21 @@ func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
 		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not fully supported by Cursor (embedded as prose)", meta.PermissionMode))
 	}
 
-	fm, err := renderFrontmatter(cm)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(outBody)
-	buf.WriteString("\n")
-
 	agentName := meta.Name
 	if agentName == "" {
 		agentName = "agent"
 	}
 
-	return &Result{
-		Content:  buf.Bytes(),
-		Filename: slugify(agentName) + ".md",
-		Warnings: warnings,
-	}, nil
+	res, err := renderWithFrontmatter(cm, outBody, slugify(agentName)+".md")
+	if err != nil {
+		return nil, err
+	}
+	res.Warnings = warnings
+	return res, nil
 }
 
 // --- Helpers ---
 
 func buildAgentCanonical(meta AgentMeta, body string) ([]byte, error) {
-	fm, err := renderFrontmatter(meta)
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
-	buf.WriteString(body)
-	buf.WriteString("\n")
-	return buf.Bytes(), nil
+	return renderFrontmatterDoc(meta, body)
 }
