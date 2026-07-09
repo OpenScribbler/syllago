@@ -204,6 +204,91 @@ func TestRegistryAdd_SelfDeclaredSyncWithoutYesSkipsAutoSync(t *testing.T) {
 	}
 }
 
+// TestRegistrySync_DeferredClonePlainGit verifies the register-only default's
+// deferred-clone success path: a plain git registry registered without a clone
+// is cloned on its first `registry sync`, stays git (no manifest_uri), and syncs
+// cleanly. Regression for the finding that the first sync used pull-only Sync
+// (which fails when no clone exists) instead of cloning.
+func TestRegistrySync_DeferredClonePlainGit(t *testing.T) {
+	// No t.Parallel — swaps package-level CloneFn + probe.
+	cfg := &config.Config{
+		Providers:  []string{"claude-code"},
+		Registries: []config.Registry{{Name: "plain-reg", URL: "https://github.com/example/plain-reg"}},
+	}
+	withRegistryProjectAndCache(t, nil, cfg)
+	output.SetForTest(t)
+	overrideProbe(t, func(url string) (string, error) { return "public", nil })
+	stubClone(t, "name: plain-reg\nversion: \"1.0\"\n")
+
+	if registry.IsCloned("plain-reg") {
+		t.Fatal("precondition: registry should not be cloned before first sync")
+	}
+
+	registrySyncCmd.SilenceUsage = true
+	registrySyncCmd.SilenceErrors = true
+	if err := registrySyncCmd.RunE(registrySyncCmd, []string{"plain-reg"}); err != nil {
+		t.Fatalf("deferred-clone sync failed: %v", err)
+	}
+
+	if !registry.IsCloned("plain-reg") {
+		t.Error("expected registry to be cloned after first sync")
+	}
+	got, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	if got.Registries[0].Type == config.RegistryTypeMOAT {
+		t.Errorf("plain git registry must not become MOAT, got type %q", got.Registries[0].Type)
+	}
+}
+
+// TestRegistrySync_DeferredCloneDetectsSelfDeclaredMOAT is the regression for
+// the sync-ordering bug: a register-only registry whose registry.yaml self-
+// declares manifest_uri must be detected and upgraded to MOAT on the FIRST
+// sync. Before the fix, tryUpgradeToMOAT ran before the deferred clone, so the
+// self-declaration was invisible until a second sync.
+func TestRegistrySync_DeferredCloneDetectsSelfDeclaredMOAT(t *testing.T) {
+	// No t.Parallel — swaps package-level CloneFn, SyncOneFn, probe.
+	const manifestURI = "https://raw.githubusercontent.com/example/self-decl/moat-registry/registry.json"
+	cfg := &config.Config{
+		Providers:  []string{"claude-code"},
+		Registries: []config.Registry{{Name: "self-decl", URL: "https://github.com/example/self-decl"}},
+	}
+	withRegistryProjectAndCache(t, nil, cfg)
+	output.SetForTest(t)
+	overrideProbe(t, func(url string) (string, error) { return "public", nil })
+	stubClone(t, "name: self-decl\nversion: \"1.0\"\nmanifest_uri: "+manifestURI+"\n")
+
+	// Stub the post-upgrade MOAT sync so it does no real crypto/network. A
+	// NotModified result clears every gate and returns exit 0.
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		return moat.SyncResult{NotModified: true, FetchedAt: time.Now().UTC()}, nil
+	}
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
+
+	registrySyncCmd.SilenceUsage = true
+	registrySyncCmd.SilenceErrors = true
+	registrySyncCmd.Flags().Set("yes", "true")
+	t.Cleanup(func() { registrySyncCmd.Flags().Set("yes", "false") })
+
+	if err := registrySyncCmd.RunE(registrySyncCmd, []string{"self-decl"}); err != nil {
+		t.Fatalf("deferred-clone MOAT sync failed: %v", err)
+	}
+
+	got, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	r := got.Registries[0]
+	if r.Type != config.RegistryTypeMOAT {
+		t.Errorf("expected self-declared registry upgraded to MOAT on first sync, got type %q", r.Type)
+	}
+	if r.ManifestURI != manifestURI {
+		t.Errorf("expected ManifestURI %q after first sync, got %q", manifestURI, r.ManifestURI)
+	}
+}
+
 func TestRegistryList_TrustColumn(t *testing.T) {
 	// registry list must show the TRUST column header and "moat" for a synced MOAT registry.
 	now := time.Now()

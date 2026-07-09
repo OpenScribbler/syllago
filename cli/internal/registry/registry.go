@@ -186,18 +186,6 @@ func Sync(name string) error {
 	return nil
 }
 
-// CloneOrSync clones the registry if it has not been fetched yet, or runs
-// git pull when a clone already exists. This is the correct sync entry point
-// after `registry add --no-sync` (the default) where the clone is deferred.
-// url and ref are only used on first clone; subsequent calls use the existing
-// clone and ignore them.
-func CloneOrSync(url, name, ref string) error {
-	if IsCloned(name) {
-		return Sync(name)
-	}
-	return Clone(url, name, ref)
-}
-
 // SyncResult holds the outcome of a single registry sync.
 type SyncResult struct {
 	Name string

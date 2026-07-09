@@ -939,7 +939,7 @@ func TestRegistrySync_NameNotFound(t *testing.T) {
 
 // TestRegistrySync_NameNotCloned verifies the local-only-default behavior:
 // syncing a registry that was registered but never cloned no longer errors with
-// "not cloned" — CloneOrSync attempts the deferred clone. The URL points at a
+// "not cloned" — the sync path attempts the deferred clone. The URL points at a
 // nonexistent local path so git clone fails immediately (no network), surfacing
 // as a REGISTRY_007 sync error — proving a clone was attempted rather than the
 // old not-cloned guard firing.

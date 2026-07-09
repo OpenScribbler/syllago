@@ -418,7 +418,7 @@ func (a App) handleRegistryAdd() (tea.Model, tea.Cmd) {
 // handleRegistryAddResult receives the registry add modal result.
 func (a App) handleRegistryAddResult(msg registryAddMsg) (tea.Model, tea.Cmd) {
 	a.registryOpInProgress = true
-	cmd1 := a.toast.Push("Registering "+msg.name+"...", toastSuccess)
+	cmd1 := a.toast.Push("Adding registry: "+msg.name+"...", toastSuccess)
 	cmd2 := a.doRegistryAddCmd(msg)
 	return a, tea.Batch(cmd1, cmd2)
 }
@@ -446,11 +446,10 @@ func (a App) doRegistryAddCmd(msg registryAddMsg) tea.Cmd {
 		defer cancel()
 
 		outcome, err := registryops.AddRegistry(ctx, registryops.AddOpts{
-			URL:       url,
-			Name:      name,
-			Ref:       ref,
-			IsLocal:   isLocal,
-			SkipClone: !isLocal, // defer clone to explicit sync for git registries
+			URL:     url,
+			Name:    name,
+			Ref:     ref,
+			IsLocal: isLocal,
 		})
 		if err != nil {
 			return registryAddDoneMsg{name: name, err: humaniseAddErr(err, name, url)}
@@ -484,12 +483,12 @@ func humaniseAddErr(err error, name, url string) error {
 
 // handleRegistryAddDone processes the result of a registry add operation.
 //
-// Since the TUI uses SkipClone=true, no clone happens at add time. The registry
-// is registered in config only. isMOAT is true when the URL matched the bundled
-// allowlist (signing profile resolved at add time without a clone); for
-// self-declared MOAT registries the type is discovered on first sync. Allowlist-
-// matched MOAT registries chain into a sync immediately so the manifest cache is
-// populated and the gallery shows real trust badges instead of Unknown.
+// MOAT-typed registries chain straight into a sync so the manifest cache is
+// populated before the next rescan. Without this, EnrichFromMOATManifests
+// sees an empty cache, downgrades trust to Unknown, and the gallery shows
+// "Trust: Unknown" until the user manually presses S. For unpinned
+// (self-declared) registries, the sync surfaces the TOFU modal — which is
+// the correct gate for first-add consent.
 func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		a.registryOpInProgress = false
@@ -506,7 +505,7 @@ func (a App) handleRegistryAddDone(msg registryAddDoneMsg) (tea.Model, tea.Cmd) 
 		return a, tea.Batch(cmd1, cmd2)
 	}
 	a.registryOpInProgress = false
-	cmd1 := a.toast.Push("Registered "+msg.name+" — press [S] to sync", toastSuccess)
+	cmd1 := a.toast.Push("Added registry: "+msg.name, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	if hintNotDismissed(a.cfg) {
 		cmd3 := func() tea.Msg { return openHintModalMsg{} }

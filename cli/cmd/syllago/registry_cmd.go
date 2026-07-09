@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -454,6 +455,7 @@ and "syllago install" to activate updated content.`,
 		}
 
 		yes, _ := cmd.Flags().GetBool("yes")
+		cacheDir, _ := config.GlobalDirPath()
 
 		// Single registry sync
 		if len(args) == 1 {
@@ -462,87 +464,37 @@ and "syllago install" to activate updated content.`,
 			if reg == nil {
 				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
-			if reg.IsGit() {
-				if _, err := tryUpgradeToMOAT(reg, cfg, output.Writer); err != nil {
-					return err
-				}
-			}
-			if reg.IsMOAT() {
-				fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", name)
-				cacheDir, _ := config.GlobalDirPath()
-				code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, reg, root, cacheDir, time.Now(), yes)
-				if err != nil {
-					return err
-				}
-				if code != 0 {
-					moatSyncExit(code)
-					return nil
-				}
-				return nil
-			}
-			fmt.Fprintf(output.Writer, "Syncing %s...\n", name)
-			if err := registry.CloneOrSync(reg.URL, name, reg.Ref); err != nil {
-				return output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", name), "Check network connectivity and git credentials", err.Error())
-			}
-			// Re-probe visibility on sync
-			reprobeRegistryVisibility(cfg, name)
-			fmt.Fprintf(output.Writer, "Synced: %s\n", name)
-			return nil
-		}
-
-		// Sync all. MOAT registries run through the dispatcher one at a time
-		// so each can update its own lockfile row; git registries are cloned
-		// or pulled one at a time via CloneOrSync (a registry registered with
-		// the local-only default has no clone yet, so the first sync clones).
-		// A MOAT gate on any single registry trips the exit code for the whole
-		// command — if operators need to isolate which one, they sync by name.
-
-		// Pre-scan: auto-upgrade git registries to MOAT before dispatching.
-		// Runs before the MOAT/git split so newly-upgraded registries flow
-		// into the MOAT loop on the same sync invocation.
-		for i := range cfg.Registries {
-			r := &cfg.Registries[i]
-			if r.IsGit() {
-				if _, err := tryUpgradeToMOAT(r, cfg, output.Writer); err != nil {
-					return err
-				}
-			}
-		}
-
-		var moatGateExit int
-		cacheDir, _ := config.GlobalDirPath()
-		for i := range cfg.Registries {
-			r := &cfg.Registries[i]
-			if !r.IsMOAT() {
-				continue
-			}
-			fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", r.Name)
-			code, err := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, cfg, r, root, cacheDir, time.Now(), yes)
+			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, reg, root, cacheDir, yes)
 			if err != nil {
 				return err
 			}
-			if code != 0 && moatGateExit == 0 {
-				moatGateExit = code
+			if code != 0 {
+				moatSyncExit(code)
 			}
+			return nil
 		}
 
-		var gitRegs []config.Registry
-		for _, r := range cfg.Registries {
-			if r.IsMOAT() {
-				continue
-			}
-			gitRegs = append(gitRegs, r)
-		}
-
+		// Sync all. Each registry is cloned-if-needed (register-only registries
+		// have no clone until first sync), upgraded to MOAT when it self-declares,
+		// then synced. MOAT sync failures abort the batch (matching prior
+		// behaviour); git/clone failures accumulate and fail at the end. A MOAT
+		// verification gate on any registry trips the whole command's exit code —
+		// if operators need to isolate which one, they sync by name.
+		var moatGateExit int
 		hasErrors := false
-		for _, r := range gitRegs {
-			fmt.Fprintf(output.Writer, "Syncing %s...\n", r.Name)
-			if err := registry.CloneOrSync(r.URL, r.Name, r.Ref); err != nil {
+		for i := range cfg.Registries {
+			r := &cfg.Registries[i]
+			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, r, root, cacheDir, yes)
+			if err != nil {
+				if r.IsMOAT() {
+					return err
+				}
 				fmt.Fprintf(output.ErrWriter, "Error syncing %s: %s\n", r.Name, err)
 				hasErrors = true
-			} else {
-				reprobeRegistryVisibility(cfg, r.Name)
-				fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
+				continue
+			}
+			if code != 0 && moatGateExit == 0 {
+				moatGateExit = code
 			}
 		}
 
@@ -555,6 +507,82 @@ and "syllago install" to activate updated content.`,
 		}
 		return nil
 	},
+}
+
+// ensureRegistryCloned clones a git registry that has no local clone yet — the
+// register-only `registry add` default defers the clone to the first sync.
+// Returns true when a clone was performed; callers skip the follow-up git pull
+// in that case (a fresh clone is already current, and pulling a ref-pinned
+// detached HEAD would fail). Must run before tryUpgradeToMOAT so a registry.yaml
+// self-declaration becomes readable. Uses the registryops.CloneFn seam so tests
+// can stub the clone.
+func ensureRegistryCloned(r *config.Registry, out io.Writer) (bool, error) {
+	if registry.IsCloned(r.Name) {
+		return false, nil
+	}
+	fmt.Fprintf(out, "Cloning %s...\n", r.Name)
+	if err := registryops.CloneFn(r.URL, r.Name, r.Ref); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// syncGitOrMOATRegistry performs a full sync of one registry, handling the
+// register-only deferred clone. For git registries it clones first (if needed)
+// so a registry.yaml MOAT self-declaration is detectable, upgrades to MOAT when
+// declared, then either runs the MOAT sync or pulls the git clone. When the
+// clone lands for the first time it runs the content-discovery steps that
+// `registry add` skips for register-only registries (manifest stub + no-content
+// warning). Returns a non-zero MOAT gate exit code when a verification gate
+// trips.
+func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Registry, root, cacheDir string, yes bool) (int, error) {
+	justCloned := false
+	if r.IsGit() {
+		cloned, err := ensureRegistryCloned(r, output.Writer)
+		if err != nil {
+			return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
+		}
+		justCloned = cloned
+		if _, err := tryUpgradeToMOAT(r, cfg, output.Writer); err != nil {
+			return 0, err
+		}
+	}
+
+	if r.IsMOAT() {
+		fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", r.Name)
+		return syncMOATRegistry(ctx, output.Writer, output.ErrWriter, cfg, r, root, cacheDir, time.Now(), yes)
+	}
+
+	// Plain git registry.
+	fmt.Fprintf(output.Writer, "Syncing %s...\n", r.Name)
+	if justCloned {
+		// Deferred first clone just landed: run the clone-dependent content
+		// discovery that `add` deferred for register-only registries.
+		finalizeDeferredClone(r.Name)
+	} else if err := registry.Sync(r.Name); err != nil {
+		return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
+	}
+	reprobeRegistryVisibility(cfg, r.Name)
+	fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
+	return 0, nil
+}
+
+// finalizeDeferredClone runs the clone-dependent content-discovery steps that
+// `registry add` skips for register-only registries: it generates a registry.yaml
+// stub when the repo ships none, and warns when the repo has no recognizable
+// content. Called on the first sync after a deferred clone lands.
+func finalizeDeferredClone(name string) {
+	dir, err := registry.CloneDir(name)
+	if err != nil {
+		return
+	}
+	registryops.GenerateManifestStub(name, dir)
+	scan := catalog.ScanNativeContent(dir)
+	if !scan.HasSyllagoStructure && len(scan.Providers) == 0 {
+		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil || len(manifest.Items) == 0 {
+			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content.\n", name)
+		}
+	}
 }
 
 // findRegistryByName returns a pointer into cfg.Registries (so callers can

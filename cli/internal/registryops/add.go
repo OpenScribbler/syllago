@@ -182,16 +182,10 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 	// one. This lets the scanner discover content regardless of how the
 	// repo is organized — a syllago-format registry that's missing only
 	// the manifest still works after add. Skipped for IsLocal/SkipClone
-	// because the clone isn't present yet.
+	// because the clone isn't present yet; the first `registry sync` runs
+	// GenerateManifestStub against the deferred clone instead.
 	if shouldClone {
-		if manifest, _ := registry.LoadManifestFromDir(dir); manifest == nil {
-			cfgA := analyzer.DefaultConfig()
-			a := analyzer.New(cfgA)
-			result, analyzeErr := a.Analyze(dir)
-			if analyzeErr == nil && len(result.AllItems()) > 0 {
-				_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
-			}
-		}
+		GenerateManifestStub(name, dir)
 	}
 
 	// Reject non-syllago repos that contain provider-native content. The
@@ -274,4 +268,21 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 
 	out.Registry = newRegistry
 	return out, nil
+}
+
+// GenerateManifestStub writes an analyzer-generated registry.yaml into the clone
+// at dir when the repo ships no manifest, so the scanner can discover content
+// regardless of how the repo is organized. No-op when a manifest already exists
+// or the analyzer finds no items. Shared by `registry add --sync` and the first
+// deferred `registry sync`, so a register-only registry gets the same content-
+// discovery treatment once its clone lands.
+func GenerateManifestStub(name, dir string) {
+	if manifest, _ := registry.LoadManifestFromDir(dir); manifest != nil {
+		return
+	}
+	a := analyzer.New(analyzer.DefaultConfig())
+	result, err := a.Analyze(dir)
+	if err == nil && len(result.AllItems()) > 0 {
+		_ = analyzer.WriteGeneratedManifest(name, result.AllItems())
+	}
 }
