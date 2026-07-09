@@ -86,43 +86,32 @@ func runTelemetryStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-var telemetryOnCmd = &cobra.Command{
-	Use:     "on",
-	Short:   "Enable telemetry",
-	Example: `  syllago telemetry on`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := telemetry.SetEnabled(true); err != nil {
-			fmt.Fprintf(output.ErrWriter, "Warning: could not save telemetry config: %v\n", err)
-			fmt.Fprintf(output.ErrWriter, "Telemetry state may not persist across sessions.\n")
+// newTelemetryToggleCmd builds the `telemetry on` / `telemetry off`
+// subcommands, which differ only in the boolean and the wording.
+func newTelemetryToggleCmd(enable bool, use, short, past string) *cobra.Command {
+	return &cobra.Command{
+		Use:     use,
+		Short:   short,
+		Example: "  syllago telemetry " + use,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := telemetry.SetEnabled(enable); err != nil {
+				fmt.Fprintf(output.ErrWriter, "Warning: could not save telemetry config: %v\n", err)
+				fmt.Fprintf(output.ErrWriter, "Telemetry state may not persist across sessions.\n")
+				return nil
+			}
+			if output.JSON {
+				fmt.Fprintf(output.Writer, "{\"enabled\":%v}\n", enable)
+				return nil
+			}
+			fmt.Fprintf(output.Writer, "Telemetry %s.\n", past)
 			return nil
-		}
-		if output.JSON {
-			fmt.Fprintln(output.Writer, `{"enabled":true}`)
-			return nil
-		}
-		fmt.Fprintln(output.Writer, "Telemetry enabled.")
-		return nil
-	},
+		},
+	}
 }
 
-var telemetryOffCmd = &cobra.Command{
-	Use:     "off",
-	Short:   "Disable telemetry",
-	Example: `  syllago telemetry off`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := telemetry.SetEnabled(false); err != nil {
-			fmt.Fprintf(output.ErrWriter, "Warning: could not save telemetry config: %v\n", err)
-			fmt.Fprintf(output.ErrWriter, "Telemetry state may not persist across sessions.\n")
-			return nil
-		}
-		if output.JSON {
-			fmt.Fprintln(output.Writer, `{"enabled":false}`)
-			return nil
-		}
-		fmt.Fprintln(output.Writer, "Telemetry disabled.")
-		return nil
-	},
-}
+var telemetryOnCmd = newTelemetryToggleCmd(true, "on", "Enable telemetry", "enabled")
+
+var telemetryOffCmd = newTelemetryToggleCmd(false, "off", "Disable telemetry", "disabled")
 
 var telemetryResetCmd = &cobra.Command{
 	Use:   "reset",

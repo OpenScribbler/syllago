@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
 	"strings"
 	"time"
 
@@ -61,10 +59,7 @@ func runGendocs(cmd *cobra.Command, args []string) error {
 	var entries []CommandEntry
 	walkCommands(rootCmd, nil, &entries)
 
-	v := version
-	if v == "" {
-		v = "dev"
-	}
+	v := buildVersionOrDev()
 
 	manifest := CommandManifest{
 		Version:        "1",
@@ -73,9 +68,7 @@ func runGendocs(cmd *cobra.Command, args []string) error {
 		Commands:       entries,
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }
 
 // walkCommands recursively walks the command tree and appends entries.

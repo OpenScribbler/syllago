@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
 // findProjectRoot walks up from cwd looking for common project markers.
@@ -250,4 +253,35 @@ func scanGlobalLibrary() (*catalog.Catalog, error) {
 		return nil, output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
 	}
 	return cat, nil
+}
+
+// buildVersionOrDev returns the ldflags-injected build version, defaulting
+// to "dev" for local builds. Shared by the gen* manifest emitters.
+func buildVersionOrDev() string {
+	if version == "" {
+		return "dev"
+	}
+	return version
+}
+
+// emitManifestJSON writes v to stdout as indented JSON — the shared tail of
+// every gen* command.
+func emitManifestJSON(v any) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
+}
+
+// loadSnapshotManifest loads the active loadout snapshot for projectRoot.
+// found is false when no snapshot exists; any other failure returns the
+// canonical SYSTEM_004 structured error.
+func loadSnapshotManifest(projectRoot string) (manifest *snapshot.SnapshotManifest, found bool, err error) {
+	manifest, _, err = snapshot.Load(projectRoot)
+	if errors.Is(err, snapshot.ErrNoSnapshot) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, output.NewStructuredErrorDetail(output.ErrSystemIO, "reading snapshot failed", "The snapshot file may be corrupted; try removing it manually", err.Error())
+	}
+	return manifest, true, nil
 }
