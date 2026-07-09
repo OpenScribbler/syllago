@@ -216,26 +216,5 @@ func (a *ClaudeCodeAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *ClaudeCodeAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "subagent_start", "subagent_stop", "error_occurred",
-			"tool_use_failure", "permission_request", "after_compact",
-			"instructions_loaded", "config_change", "worktree_create",
-			"worktree_remove", "elicitation", "elicitation_result",
-			"teammate_idle", "task_completed", "stop_failure", "file_changed",
-		},
-		SupportsMatchers:         true,
-		SupportsAsync:            true,
-		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: true,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "milliseconds",
-		SupportsPlatform:         false,
-		SupportsCWD:              true,
-		SupportsEnv:              true,
-		SupportsLLMHooks:         true,
-		SupportsHTTPHooks:        true,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }
