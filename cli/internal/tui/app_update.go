@@ -25,19 +25,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.library.SetSize(msg.Width, ch)
 		a.explorer.SetSize(msg.Width, ch)
 		a.gallery.SetSize(msg.Width, ch)
-		a.help.SetSize(msg.Width, ch)
 		a.toast.SetSize(msg.Width, ch)
-		a.confirm.width = msg.Width
-		a.confirm.height = ch
-		a.remove.width = msg.Width
-		a.remove.height = ch
-		a.registryAdd.width = msg.Width
-		a.registryAdd.height = ch
-		a.tofu.width = msg.Width
-		a.tofu.height = ch
-		a.trustInspector.SetSize(msg.Width, ch)
+		for _, ov := range a.overlays() {
+			ov.SetSize(msg.Width, ch)
+		}
 		a.telemetryConsent.SetSize(msg.Width, ch)
-		a.hint.SetSize(msg.Width, ch)
 		a.configSettings.SetSize(msg.Width, ch)
 		a.configSystem.SetSize(msg.Width, ch)
 		a.configSandbox.SetSize(msg.Width, ch)
@@ -87,46 +79,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a.routeToWizard(msg)
 		}
-		// Modal and help overlay capture all mouse input when active
-		if a.modal.active {
-			var cmd tea.Cmd
-			a.modal, cmd = a.modal.Update(msg)
-			return a, cmd
-		}
-		if a.confirm.active {
-			var cmd tea.Cmd
-			a.confirm, cmd = a.confirm.Update(msg)
-			return a, cmd
-		}
-		if a.remove.active {
-			var cmd tea.Cmd
-			a.remove, cmd = a.remove.Update(msg)
-			return a, cmd
-		}
-		if a.registryAdd.active {
-			var cmd tea.Cmd
-			a.registryAdd, cmd = a.registryAdd.Update(msg)
-			return a, cmd
-		}
-		if a.tofu.active {
-			var cmd tea.Cmd
-			a.tofu, cmd = a.tofu.Update(msg)
-			return a, cmd
-		}
-		if a.trustInspector.active {
-			var cmd tea.Cmd
-			a.trustInspector, cmd = a.trustInspector.Update(msg)
-			return a, cmd
-		}
-		if a.hint.active {
-			var cmd tea.Cmd
-			a.hint, cmd = a.hint.Update(msg)
-			return a, cmd
-		}
-		if a.help.active {
-			var cmd tea.Cmd
-			a.help, cmd = a.help.Update(msg)
-			return a, cmd
+		// Modals and the help overlay capture all mouse input when active.
+		// The first active overlay wins (see overlays() for the priority
+		// order); only one is realistically active at a time.
+		for _, ov := range a.overlays() {
+			if ov.Active() {
+				return a, ov.routeUpdate(msg)
+			}
 		}
 		// Toast close button takes priority over content
 		if a.toast.visible {
@@ -178,81 +137,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a.routeToWizard(msg)
 		}
 
-		// Modal captures all key input when active (except ctrl+c)
-		if a.modal.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
+		// Modals and the help overlay capture all key input when active
+		// (except ctrl+c, which always quits). The first active overlay
+		// wins — see overlays() for the priority order. helpOverlay used to
+		// handle ctrl+c inside its own Update; hoisting the check here is
+		// observably identical (both paths return tea.Quit).
+		for _, ov := range a.overlays() {
+			if ov.Active() {
+				if msg.Type == tea.KeyCtrlC {
+					return a, tea.Quit
+				}
+				return a, ov.routeUpdate(msg)
 			}
-			var cmd tea.Cmd
-			a.modal, cmd = a.modal.Update(msg)
-			return a, cmd
-		}
-
-		// Confirm modal captures all key input when active (except ctrl+c)
-		if a.confirm.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.confirm, cmd = a.confirm.Update(msg)
-			return a, cmd
-		}
-
-		// Remove modal captures all key input when active (except ctrl+c)
-		if a.remove.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.remove, cmd = a.remove.Update(msg)
-			return a, cmd
-		}
-
-		// TOFU modal captures all key input when active (except ctrl+c)
-		if a.tofu.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.tofu, cmd = a.tofu.Update(msg)
-			return a, cmd
-		}
-
-		// Registry add modal captures all key input when active (except ctrl+c)
-		if a.registryAdd.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.registryAdd, cmd = a.registryAdd.Update(msg)
-			return a, cmd
-		}
-
-		// Trust inspector modal captures all key input when active (except ctrl+c)
-		if a.trustInspector.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.trustInspector, cmd = a.trustInspector.Update(msg)
-			return a, cmd
-		}
-
-		// Hint modal captures all key input when active (except ctrl+c)
-		if a.hint.active {
-			if msg.Type == tea.KeyCtrlC {
-				return a, tea.Quit
-			}
-			var cmd tea.Cmd
-			a.hint, cmd = a.hint.Update(msg)
-			return a, cmd
-		}
-
-		// Help overlay captures all key input when active
-		if a.help.active {
-			var cmd tea.Cmd
-			a.help, cmd = a.help.Update(msg)
-			return a, cmd
 		}
 
 		// Toast consumes Esc and 'c' when visible (after modal/help)

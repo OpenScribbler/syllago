@@ -21,30 +21,12 @@ func (a App) View() string {
 	content := a.renderContent()
 	helpBar := a.helpBar.View()
 
-	// Overlay modals on top of existing content
-	if a.modal.active {
-		content = overlayModal(content, a.modal.View(), a.width, a.contentHeight())
-	}
-	if a.confirm.active {
-		content = overlayModal(content, a.confirm.View(), a.width, a.contentHeight())
-	}
-	if a.remove.active {
-		content = overlayModal(content, a.remove.View(), a.width, a.contentHeight())
-	}
-	if a.registryAdd.active {
-		content = overlayModal(content, a.registryAdd.View(), a.width, a.contentHeight())
-	}
-	if a.tofu.active {
-		content = overlayModal(content, a.tofu.View(), a.width, a.contentHeight())
-	}
-	if a.trustInspector.active {
-		content = overlayModal(content, a.trustInspector.View(), a.width, a.contentHeight())
-	}
-	if a.hint.active {
-		content = overlayModal(content, a.hint.View(), a.width, a.contentHeight())
-	}
-	if a.help.active {
-		content = overlayModal(content, a.help.View(), a.width, a.contentHeight())
+	// Overlay modals on top of existing content. Later entries in the
+	// overlays() slice composite on top of earlier ones.
+	for _, ov := range a.overlays() {
+		if ov.Active() {
+			content = overlayModal(content, ov.View(), a.width, a.contentHeight())
+		}
 	}
 	// Consent modal overlays all other modals/wizards on first run. It is
 	// placed last (just before the toast layer) so nothing visually leaks
