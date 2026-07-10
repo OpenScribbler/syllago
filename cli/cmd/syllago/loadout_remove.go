@@ -9,7 +9,6 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
-	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
@@ -34,15 +33,15 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for active snapshot first to show what will be reverted
-	manifest, _, err := snapshot.Load(projectRoot)
-	if errors.Is(err, snapshot.ErrNoSnapshot) {
+	manifest, found, err := loadSnapshotManifest(projectRoot)
+	if err != nil {
+		return err
+	}
+	if !found {
 		if !autoMode {
 			fmt.Fprintln(output.Writer, "No active loadout to remove.")
 		}
 		return nil
-	}
-	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading snapshot failed", "The snapshot file may be corrupted; try removing it manually", err.Error())
 	}
 
 	// Without --auto, show what will happen and ask for confirmation

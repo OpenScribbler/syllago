@@ -83,3 +83,12 @@ tmp/
 .wolf/token-ledger.json
 .wolf/buglog.json
 .wolf/hooks/_session.json
+
+# OpenWolf generated state (hooks disabled; runtime churn stays untracked)
+.wolf/daemon.log
+.wolf/designqc-report.json
+.wolf/suggestions.json
+.wolf/cron-state.json
+.wolf/token-ledger.json
+.wolf/designqc-captures/
+.wolf/buglog.json

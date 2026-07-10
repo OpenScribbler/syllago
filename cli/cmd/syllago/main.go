@@ -123,7 +123,6 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(backfillCmd)
 	rootCmd.AddCommand(updateCmd)
-	rootCmd.AddCommand(capmonCmd)
 	rootCmd.AddCommand(moatCmd)
 }
 
@@ -150,13 +149,9 @@ var backfillCmd = &cobra.Command{
 			return err
 		}
 
-		projectRoot, _ := findProjectRoot()
-		if projectRoot == "" {
-			projectRoot = root
-		}
-		cat, err := catalog.Scan(root, projectRoot)
+		cat, err := scanCatalog(root, resolveProjectRoot(root))
 		if err != nil {
-			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+			return err
 		}
 
 		// Get git author

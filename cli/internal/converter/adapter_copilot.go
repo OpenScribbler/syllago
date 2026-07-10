@@ -179,22 +179,5 @@ func (a *CopilotCLIAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *CopilotCLIAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end",
-			"subagent_stop", "error_occurred", "tool_use_failure",
-		},
-		SupportsMatchers:         false,
-		SupportsAsync:            false,
-		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: false,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "seconds",
-		SupportsPlatform:         false,
-		SupportsCWD:              true,
-		SupportsEnv:              true,
-		SupportsLLMHooks:         false,
-		SupportsHTTPHooks:        false,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

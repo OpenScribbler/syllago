@@ -27,8 +27,7 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/provider` | Provider detection and configuration |
 | `internal/installer` | Install/uninstall operations per provider |
 | `internal/converter` | Content format conversion between providers. Hook conversion uses the canonical interchange format (`docs/spec/hooks.md`) with provider-neutral names, HookAdapter interface, and read-back verification |
-| `internal/signing` | Cryptographic signing interfaces (Sigstore + GPG) for hook provenance |
-| `internal/audit` | Structured JSON audit logging for hook lifecycle events |
+| `internal/audit` | Structured JSON audit logging for content lifecycle events |
 | `internal/config` | User configuration management |
 | `internal/registry` | Remote registry client |
 | `internal/loadout` | Loadout apply/remove/preview logic |
@@ -38,7 +37,6 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/model` | Shared data types |
 | `internal/output` | CLI output formatting (non-TUI) |
 | `internal/parse` | File parsing utilities |
-| `internal/readme` | *(removed)* |
 | `internal/sandbox` | Sandbox configuration |
 | `internal/snapshot` | Snapshot management |
 | `internal/updater` | Self-update logic |

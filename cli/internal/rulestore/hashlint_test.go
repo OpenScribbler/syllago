@@ -29,10 +29,9 @@ func TestNoRawHashFormatting(t *testing.T) {
 		filepath.Join(root, "internal/rulestore/hash.go"): true,
 		// Pre-existing unrelated hash constructions outside the library-rule
 		// storage domain. The D11 lint intent is to funnel library-rule hash
-		// construction through rulestore; these callers hash MOAT artifacts
-		// and capmon cache keys, neither of which touch .history/ filenames.
+		// construction through rulestore; these callers hash MOAT artifacts,
+		// which never touch .history/ filenames.
 		filepath.Join(root, "internal/moatinstall/fetch.go"): true,
-		filepath.Join(root, "internal/capmon/cache.go"):      true,
 		filepath.Join(root, "internal/moat/hash.go"):         true,
 	}
 	err = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {

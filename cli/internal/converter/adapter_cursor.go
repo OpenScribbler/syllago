@@ -223,23 +223,5 @@ func (a *CursorAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *CursorAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"tool_use_failure", "subagent_start", "subagent_stop",
-			"file_changed", "before_model", "after_model", "before_tool_selection",
-		},
-		SupportsMatchers:         true,
-		SupportsAsync:            false,
-		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: true,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "milliseconds",
-		SupportsPlatform:         false,
-		SupportsCWD:              false,
-		SupportsEnv:              false,
-		SupportsLLMHooks:         false,
-		SupportsHTTPHooks:        false,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

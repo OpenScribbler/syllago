@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -42,10 +40,7 @@ func runGenyamlschema(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("building schema doc: %w", err)
 	}
 
-	v := version
-	if v == "" {
-		v = "dev"
-	}
+	v := buildVersionOrDev()
 
 	manifest := YAMLSchemaManifest{
 		Version:        "1",
@@ -54,7 +49,5 @@ func runGenyamlschema(_ *cobra.Command, _ []string) error {
 		Schema:         doc,
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }

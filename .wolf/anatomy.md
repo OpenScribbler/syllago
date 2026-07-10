@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-05-02T05:17:18.970Z
-> Files: 1306 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-08T23:49:01.625Z
+> Files: 1308 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../
 
@@ -1394,7 +1394,7 @@
 
 ## .claude/
 
-- `settings.json` (~841 tok)
+- `settings.json` (~421 tok)
 - `settings.local.json` (~337 tok)
 
 ## .claude/hooks/
@@ -1602,6 +1602,10 @@
 - `roo-code-skills.yaml` — Declares Skill (~1209 tok)
 - `windsurf-rules.yaml` — Declares alternative (~1967 tok)
 - `zed-rules.yaml` — Declares mode (~1395 tok)
+
+## .githooks/
+
+- `pre-push` — Pre-push hook: fast lint of changed code only. (~243 tok)
 
 ## .github/
 
@@ -2279,6 +2283,7 @@
 ## docs/
 
 - `adding-a-provider.md` — Adding a Provider to Syllago (~2877 tok)
+- `simplification-audit.md` — Codebase Simplification Audit (~3978 tok)
 
 ## docs/adr/
 

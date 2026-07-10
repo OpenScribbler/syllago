@@ -1,28 +1,13 @@
 // Package moat implements a conforming client for MOAT v0.6.0 registries.
 //
-// STATUS: SPIKE (syllago-9jzgr). This file is the seed for the full Phase 2
-// implementation. The spike goal is to verify one real Rekor entry from the
-// syllago-meta-registry Phase 0 Publisher Action output end-to-end using
-// sigstore-go. If that works, the integration path for Phase 2 is validated.
-//
-// Verification flow (per moat-spec.md §Trust Model):
-//
-//  1. Reconstruct the canonical payload from the item's content_hash field.
-//  2. Compute SHA-256 of the canonical payload — this is the expected
-//     data.hash.value recorded in the Rekor hashedrekord entry.
-//  3. Fetch the Rekor entry at rekor_log_index from the public Rekor instance.
-//  4. Confirm Rekor data.hash.value matches the recomputed hash (signature
-//     covers the right payload).
-//  5. Extract the signing certificate from the Rekor body; verify the chain
-//     back to the Fulcio root.
-//  6. Confirm the certificate's OIDC SAN equals the expected signing profile
-//     subject, and the issuer extension matches profile.Issuer.
-//  7. Verify the Rekor Signed Entry Timestamp (inclusion proof).
+// This file holds the attestation data model (Attestation, AttestationItem,
+// SigningProfile) and the canonical-payload builders shared by the
+// production verifiers. Item-level verification lives in item_verify.go
+// (VerifyAttestationItem); manifest-level verification in manifest_verify.go
+// (VerifyManifest).
 package moat
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 )
@@ -188,64 +173,4 @@ func CanonicalPayloadForVersion(v int, contentHash string) (payload []byte, ok b
 func CanonicalPayloadFor(contentHash string) []byte {
 	payload, _ := CanonicalPayloadForVersion(CurrentPayloadVersion, contentHash)
 	return payload
-}
-
-// VerifyItem performs offline verification of a single attestation item
-// against a pre-fetched Rekor entry. In Phase 2, rekorRaw will be fetched
-// live from rekor.sigstore.dev; for the spike, callers pass fixture bytes.
-//
-// Verified invariants:
-//  1. rekorRaw parses as a one-entry Rekor API response.
-//  2. The entry's LogIndex matches item.RekorLogIndex.
-//  3. The body is a hashedrekord (apiVersion 0.0.1).
-//  4. sha256(CanonicalPayloadFor(item.ContentHash)) equals body.Spec.Data.Hash.Value.
-//  5. The body's ECDSA signature verifies against the canonical payload
-//     using the public key from the body's publicKey PEM.
-//  6. The cert's OIDC identity (issuer extension + first URI SAN) equals
-//     the expected profile.
-//
-// Not yet verified (delegated to sigstore-go in the Phase 2 production
-// implementation): Fulcio cert chain trust, Rekor Signed Entry Timestamp
-// and inclusion proof, and certificate validity at the integrated time.
-func VerifyItem(item AttestationItem, profile SigningProfile, rekorRaw []byte) error {
-	entry, err := parseRekorEntry(rekorRaw)
-	if err != nil {
-		return fmt.Errorf("parsing Rekor entry: %w", err)
-	}
-	if entry.LogIndex != item.RekorLogIndex {
-		return fmt.Errorf("rekor log index mismatch: entry=%d, item=%d", entry.LogIndex, item.RekorLogIndex)
-	}
-
-	body, err := decodeHashedRekordBody(entry.Body)
-	if err != nil {
-		return fmt.Errorf("decoding hashedrekord body: %w", err)
-	}
-
-	payload := CanonicalPayloadFor(item.ContentHash)
-	digest := sha256.Sum256(payload)
-	expectedHash := hex.EncodeToString(digest[:])
-	if body.Spec.Data.Hash.Value != expectedHash {
-		return fmt.Errorf("rekor data.hash.value mismatch: computed=%s recorded=%s",
-			expectedHash, body.Spec.Data.Hash.Value)
-	}
-
-	cert, err := extractCert(body)
-	if err != nil {
-		return fmt.Errorf("extracting cert: %w", err)
-	}
-	if err := verifySignature(cert, body, payload); err != nil {
-		return fmt.Errorf("verifying signature: %w", err)
-	}
-
-	issuer, subject, err := extractIdentity(cert)
-	if err != nil {
-		return fmt.Errorf("extracting identity: %w", err)
-	}
-	if issuer != profile.Issuer {
-		return fmt.Errorf("cert issuer mismatch: got=%q want=%q", issuer, profile.Issuer)
-	}
-	if subject != profile.Subject {
-		return fmt.Errorf("cert subject mismatch: got=%q want=%q", subject, profile.Subject)
-	}
-	return nil
 }

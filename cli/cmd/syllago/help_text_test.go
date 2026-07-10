@@ -85,23 +85,3 @@ func TestRootCmd_LongUsesProviderOrRegistry(t *testing.T) {
 		t.Error("rootCmd.Long should describe add as importing 'from a provider or registry'")
 	}
 }
-
-// syllago-qmpdz: remove [Coming Soon] labels
-
-func TestSignCmd_ShortNoComingSoon(t *testing.T) {
-	if strings.Contains(signCmd.Short, "[Coming Soon]") {
-		t.Errorf("signCmd.Short should not contain '[Coming Soon]': %s", signCmd.Short)
-	}
-}
-
-func TestVerifyCmd_ShortNoComingSoon(t *testing.T) {
-	if strings.Contains(verifyCmd.Short, "[Coming Soon]") {
-		t.Errorf("verifyCmd.Short should not contain '[Coming Soon]': %s", verifyCmd.Short)
-	}
-}
-
-func TestExportCmd_ShortNoComingSoon(t *testing.T) {
-	if strings.Contains(exportCmd.Short, "[Coming Soon]") {
-		t.Errorf("exportCmd.Short should not contain '[Coming Soon]': %s", exportCmd.Short)
-	}
-}

@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-05-07T17:06:07Z",
-  "syllagoVersion": "0.12.0",
+  "generatedAt": "2026-07-09T00:52:23Z",
+  "syllagoVersion": "dev",
   "events": [
     {
       "name": "command_executed",
@@ -27,14 +27,7 @@
             "uninstall",
             "loadout_apply",
             "sandbox_run",
-            "sync-and-export",
-            "capmon_validate_spec",
-            "capmon_validate_format_doc",
-            "capmon_validate_sources",
-            "capmon_derive",
-            "capmon_check",
-            "capmon_onboard",
-            "capmon_fetch"
+            "sync-and-export"
           ]
         },
         {
@@ -52,8 +45,7 @@
             "list",
             "share",
             "sync-and-export",
-            "registry_items",
-            "capmon_validate_spec"
+            "registry_items"
           ]
         },
         {
@@ -76,8 +68,7 @@
             "add",
             "uninstall",
             "remove",
-            "sync-and-export",
-            "capmon_fetch"
+            "sync-and-export"
           ]
         },
         {
@@ -142,24 +133,6 @@
           "commands": [
             "list",
             "registry_items"
-          ]
-        },
-        {
-          "name": "source_count",
-          "type": "int",
-          "description": "Total number of provider sources targeted by capmon fetch",
-          "example": 15,
-          "commands": [
-            "capmon_fetch"
-          ]
-        },
-        {
-          "name": "fetch_errors",
-          "type": "int",
-          "description": "Number of sources that failed to fetch in capmon fetch",
-          "example": 0,
-          "commands": [
-            "capmon_fetch"
           ]
         },
         {

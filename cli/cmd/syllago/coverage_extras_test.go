@@ -19,48 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// --- runSign / runVerify (currently 0%, both stub errors) ---
-
-func TestRunSign_NotImplemented(t *testing.T) {
-	t.Parallel()
-	err := runSign(&cobra.Command{}, []string{"my-hook"})
-	if err == nil || !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("got %v, want 'not yet implemented' error", err)
-	}
-}
-
-func TestRunVerify_NotImplemented(t *testing.T) {
-	t.Parallel()
-	err := runVerify(&cobra.Command{}, []string{"my-hook"})
-	if err == nil || !strings.Contains(err.Error(), "not yet implemented") {
-		t.Errorf("got %v, want 'not yet implemented' error", err)
-	}
-}
-
-// --- reportFixtureAges (0% — pure print) ---
-
-func TestReportFixtureAges_AlwaysReturnsNil(t *testing.T) {
-	// Mutates os.Stdout — not parallel.
-	r, w, _ := os.Pipe()
-	origStdout := os.Stdout
-	os.Stdout = w
-	defer func() { os.Stdout = origStdout }()
-
-	err := reportFixtureAges("/some/fixtures/dir")
-
-	w.Close()
-	var buf bytes.Buffer
-	_, _ = buf.ReadFrom(r)
-
-	if err != nil {
-		t.Errorf("got err = %v, want nil", err)
-	}
-	out := buf.String()
-	if !strings.Contains(out, "/some/fixtures/dir") {
-		t.Errorf("output %q missing fixtures dir", out)
-	}
-}
-
 // --- runUpdate (0% — both branches reachable) ---
 
 func TestRunUpdate_DevBuildBranch(t *testing.T) {
@@ -979,11 +937,18 @@ func TestRegistrySync_NameNotFound(t *testing.T) {
 	}
 }
 
+// TestRegistrySync_NameNotCloned verifies the local-only-default behavior:
+// syncing a registry that was registered but never cloned no longer errors with
+// "not cloned" — the sync path attempts the deferred clone. The URL points at a
+// nonexistent local path so git clone fails immediately (no network), surfacing
+// as a REGISTRY_007 sync error — proving a clone was attempted rather than the
+// old not-cloned guard firing.
 func TestRegistrySync_NameNotCloned(t *testing.T) {
+	bogusURL := filepath.Join(t.TempDir(), "does-not-exist.git")
 	cfg := &config.Config{
 		Providers: []string{"claude-code"},
 		Registries: []config.Registry{
-			{Name: "uncloned", URL: "https://example.com/uncloned.git"},
+			{Name: "uncloned", URL: bogusURL},
 		},
 	}
 	withRegistryProjectAndCache(t, nil, cfg)
@@ -992,8 +957,8 @@ func TestRegistrySync_NameNotCloned(t *testing.T) {
 	registrySyncCmd.SilenceUsage = true
 	registrySyncCmd.SilenceErrors = true
 	err := registrySyncCmd.RunE(registrySyncCmd, []string{"uncloned"})
-	if err == nil || !strings.Contains(err.Error(), "not cloned") {
-		t.Errorf("got %v, want 'not cloned' error", err)
+	if err == nil || !strings.Contains(err.Error(), "sync failed") {
+		t.Errorf("got %v, want deferred-clone 'sync failed' error", err)
 	}
 }
 

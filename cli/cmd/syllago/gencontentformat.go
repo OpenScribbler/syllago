@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"os"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/contentformat"
@@ -43,10 +41,7 @@ func init() {
 }
 
 func runGencontentformat(_ *cobra.Command, _ []string) error {
-	v := version
-	if v == "" {
-		v = "dev"
-	}
+	v := buildVersionOrDev()
 
 	manifest := ContentFormatManifest{
 		Version:        "1",
@@ -63,7 +58,5 @@ func runGencontentformat(_ *cobra.Command, _ []string) error {
 		},
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(manifest)
+	return emitManifestJSON(manifest)
 }

@@ -426,14 +426,6 @@ func (m *addWizardModel) viewTriage() string {
 		rightBorder = fBorder
 	}
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if gap := w - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
-		}
-		return s
-	}
-
 	var lines []string
 	lines = append(lines, title)
 	lines = append(lines, subtitle)
@@ -456,9 +448,9 @@ func (m *addWizardModel) viewTriage() string {
 			right = prevLines[i]
 		}
 		lines = append(lines,
-			leftBorder("│")+wrapLine(left, itemsW)+
+			leftBorder("│")+padCell(left, itemsW)+
 				mBorder("│")+
-				wrapLine(right, previewW)+rightBorder("│"))
+				padCell(right, previewW)+rightBorder("│"))
 	}
 
 	// Bottom border
@@ -980,14 +972,6 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 		prevBorder = fBorder
 	}
 
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if gap := w - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
-		}
-		return s
-	}
-
 	// Top border with focus coloring
 	lines = append(lines,
 		treeBorder("╭")+treeBorder(strings.Repeat("─", treeW))+
@@ -1038,9 +1022,9 @@ func (m *addWizardModel) viewReviewDrillIn() string {
 			pl = previewContent[i]
 		}
 		lines = append(lines,
-			treeBorder("│")+wrapLine(tl, treeW)+
+			treeBorder("│")+padCell(tl, treeW)+
 				mBorder("│")+
-				wrapLine(pl, previewW)+prevBorder("│"))
+				padCell(pl, previewW)+prevBorder("│"))
 	}
 
 	// Bottom border

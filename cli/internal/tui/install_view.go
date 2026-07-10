@@ -498,14 +498,6 @@ func (m *installWizardModel) viewReview() string {
 	m.reviewPreview.SetSize(previewInnerW, paneH)
 
 	// --- Build the frame ---
-	wrapLine := func(s string, w int) string {
-		s = lipgloss.NewStyle().MaxWidth(w).Render(s)
-		if gap := w - lipgloss.Width(s); gap > 0 {
-			s += strings.Repeat(" ", gap)
-		}
-		return s
-	}
-
 	var frameLines []string
 
 	// Top border: ╭─ Risk Indicators ───...──╮ or ╭──────╮
@@ -528,7 +520,7 @@ func (m *installWizardModel) viewReview() string {
 	if riskH > 0 {
 		riskView := m.riskBanner.ViewInline(innerW, m.reviewZone == reviewZoneRisks)
 		for _, rl := range strings.Split(riskView, "\n") {
-			frameLines = append(frameLines, border("│")+wrapLine(rl, innerW)+border("│"))
+			frameLines = append(frameLines, border("│")+padCell(rl, innerW)+border("│"))
 		}
 	}
 
@@ -578,13 +570,13 @@ func (m *installWizardModel) viewReview() string {
 			if i < len(previewContent) {
 				pl = previewContent[i]
 			}
-			frameLines = append(frameLines, border("│")+wrapLine(tl, treeInnerW)+border("│")+wrapLine(pl, previewInnerW)+border("│"))
+			frameLines = append(frameLines, border("│")+padCell(tl, treeInnerW)+border("│")+padCell(pl, previewInnerW)+border("│"))
 		} else {
 			pl := ""
 			if i < len(previewContent) {
 				pl = previewContent[i]
 			}
-			frameLines = append(frameLines, border("│")+wrapLine(pl, innerW)+border("│"))
+			frameLines = append(frameLines, border("│")+padCell(pl, innerW)+border("│"))
 		}
 	}
 

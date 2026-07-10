@@ -37,17 +37,17 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrInputTerminal, "loadout create requires an interactive terminal", "Run this command in an interactive terminal session")
 	}
 
-	root, err := findContentRepoRoot()
+	root, err := requireContentRepoRoot()
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogNotFound, "could not find syllago repo", "Run 'syllago init' to set up a content repository", err.Error())
+		return err
 	}
 	if projectRoot == "" {
 		projectRoot = root
 	}
 
-	cat, err := catalog.Scan(root, projectRoot)
+	cat, err := scanCatalog(root, projectRoot)
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning catalog failed", "Check that the content directory exists and is readable", err.Error())
+		return err
 	}
 
 	scanner := bufio.NewScanner(loadoutCreateStdin)

@@ -145,6 +145,17 @@ func borderedPanel(content string, innerW, innerH int, fg lipgloss.TerminalColor
 		Render(content)
 }
 
+// padCell truncates s to at most w columns (ANSI-aware, via MaxWidth) and
+// right-pads with spaces to exactly w. Use it for frame/panel rows that must
+// be exactly w columns wide regardless of content length. It never wraps.
+func padCell(s string, w int) string {
+	s = lipgloss.NewStyle().MaxWidth(w).Render(s)
+	if gap := w - lipgloss.Width(s); gap > 0 {
+		s += strings.Repeat(" ", gap)
+	}
+	return s
+}
+
 // renderSectionTitle renders a divider line: ──Title────────────
 func renderSectionTitle(title string, width int) string {
 	prefix := sectionRuleStyle.Render("──")

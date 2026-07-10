@@ -178,16 +178,5 @@ func (a *PiAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *PiAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "session_start", "session_end",
-			"before_prompt", "agent_stop", "before_compact", "subagent_start", "subagent_stop",
-			// Pi-specific events
-			"turn_start", "turn_end", "model_select", "user_bash",
-			"context_update", "message_start", "message_end",
-		},
-		SupportsMatchers: true,
-		SupportsBlocking: true,
-		TimeoutUnit:      "milliseconds",
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }

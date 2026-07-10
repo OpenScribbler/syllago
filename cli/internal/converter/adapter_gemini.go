@@ -181,22 +181,5 @@ func (a *GeminiCLIAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *GeminiCLIAdapter) Capabilities() ProviderCapabilities {
-	return ProviderCapabilities{
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "before_model", "after_model", "before_tool_selection",
-		},
-		SupportsMatchers:         true,
-		SupportsAsync:            true,
-		SupportsStatusMessage:    true,
-		SupportsStructuredOutput: true,
-		SupportsBlocking:         true,
-		TimeoutUnit:              "milliseconds",
-		SupportsPlatform:         false,
-		SupportsCWD:              false,
-		SupportsEnv:              false,
-		SupportsLLMHooks:         false,
-		SupportsHTTPHooks:        false,
-	}
+	return providerHookCapabilities[a.ProviderSlug()]
 }
