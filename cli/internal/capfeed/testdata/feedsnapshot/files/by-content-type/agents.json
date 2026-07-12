@@ -1,0 +1,491 @@
+{
+  "content_type": "agents",
+  "providers": {
+    "claude-code": {
+      "capabilities": {
+        "agent_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where agent definitions can live and the priority ordering when definitions exist at multiple levels. Common scopes: project, user/personal, managed/enterprise, CLI-defined.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "object"
+          },
+          "key_path": "agents.agent_scopes",
+          "mechanism": "five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table",
+          "supported": true
+        },
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings",
+          "supported": true
+        },
+        "invocation_patterns": {
+          "capabilities": {
+            "at_mention": {
+              "confidence": "inferred",
+              "mechanism": "@-mention syntax guarantees a specific subagent runs for one task (documented under 'Invoke subagents explicitly' heading)",
+              "supported": true
+            },
+            "background": {
+              "confidence": "inferred",
+              "mechanism": "foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading",
+              "supported": true
+            },
+            "natural_language": {
+              "confidence": "inferred",
+              "mechanism": "Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How agents are triggered. Mechanisms include natural language detection, @-mention syntax, slash commands, CLI flags, or automatic delegation.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "agents.invocation_patterns",
+          "supported": true
+        },
+        "model_selection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether per-agent model overrides are supported, allowing different agents to use different AI models.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.model_selection",
+          "mechanism": "per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)",
+          "supported": true
+        },
+        "subagent_spawning": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can spawn, delegate to, or resume other agents. Enables multi-agent coordination patterns.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE; canonical spawn tool name, ACIF-CORE Appendix A)",
+            "type": "bool"
+          },
+          "key_path": "agents.subagent_spawning",
+          "mechanism": "multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "codex": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "per-agent TOML files (e.g. awaiter.toml, explorer.toml under codex-rs/core/src/agent/builtins/) with developer_instructions (system prompt), model_reasoning_effort, and runtime knobs per AgentRoleToml + AgentsToml JSON Schema types",
+          "supported": true
+        },
+        "model_selection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether per-agent model overrides are supported, allowing different agents to use different AI models.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.model_selection",
+          "mechanism": "per-agent model_reasoning_effort field in the AgentRoleToml schema (ReasoningEffort enum) — each role declares its own reasoning effort even though codex uses one backing model across roles",
+          "supported": true
+        },
+        "subagent_spawning": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can spawn, delegate to, or resume other agents. Enables multi-agent coordination patterns.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE; canonical spawn tool name, ACIF-CORE Appendix A)",
+            "type": "bool"
+          },
+          "key_path": "agents.subagent_spawning",
+          "mechanism": "multi-agent coordination via MultiAgentV2ConfigToml + FeatureToml_for_MultiAgentV2ConfigToml feature flag — one agent can delegate to or spawn another",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "copilot-cli": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "markdown files with YAML frontmatter (name, description, tools, mcpServers fields) documented under 'YAML frontmatter properties' heading",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-agent mcpServers section in YAML frontmatter scopes which MCP servers each agent can access, documented under 'MCP server configuration details' / 'MCP server configurations' headings",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-agent tool allowlist via tools field, with tool aliases for renaming, documented under 'Tools' / 'Tool aliases' / 'Tools processing' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cursor": {
+      "capabilities": {
+        "agent_scopes": {
+          "capabilities": {
+            "project": {
+              "confidence": "inferred",
+              "mechanism": ".cursor/agents/ project scope, taking precedence over user scope (documented under 'File locations' heading)",
+              "supported": true
+            },
+            "user": {
+              "confidence": "inferred",
+              "mechanism": "~/.cursor/agents/ user-global scope (documented under 'File locations' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Where agent definitions can live and the priority ordering when definitions exist at multiple levels. Common scopes: project, user/personal, managed/enterprise, CLI-defined.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "object"
+          },
+          "key_path": "agents.agent_scopes",
+          "supported": true
+        },
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "Markdown files with YAML frontmatter (name, description, model, readonly, is_background) followed by a prompt body, documented under 'File format' heading",
+          "supported": true
+        },
+        "invocation_patterns": {
+          "capabilities": {
+            "automatic_delegation": {
+              "confidence": "inferred",
+              "mechanism": "Cursor's Agent proactively delegates tasks to subagents based on description, complexity, and available tools (documented under 'Automatic delegation' heading)",
+              "supported": true
+            },
+            "explicit": {
+              "confidence": "inferred",
+              "mechanism": "/<name> syntax or natural-language mentions invoke a specific subagent (documented under 'Explicit invocation' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How agents are triggered. Mechanisms include natural language detection, @-mention syntax, slash commands, CLI flags, or automatic delegation.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "agents.invocation_patterns",
+          "supported": true
+        },
+        "model_selection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether per-agent model overrides are supported, allowing different agents to use different AI models.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.model_selection",
+          "mechanism": "model frontmatter field accepts 'inherit', 'fast', or a specific model id; admin policies and Max Mode requirements may override (documented under 'Model configuration' heading)",
+          "supported": true
+        },
+        "subagent_spawning": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can spawn, delegate to, or resume other agents. Enables multi-agent coordination patterns.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE; canonical spawn tool name, ACIF-CORE Appendix A)",
+            "type": "bool"
+          },
+          "key_path": "agents.subagent_spawning",
+          "mechanism": "Since Cursor 2.5, subagents can launch child subagents to create a tree of coordinated work; nested launches require Task tool access and can be restricted by hooks or tool policies (FAQ heading 'Can subagents launch other subagents?')",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "readonly frontmatter flag restricts the subagent to read-only tools (documented in 'Configuration fields')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "factory-droid": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "gemini-cli": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "Markdown files with YAML frontmatter at .gemini/agents/<name>.md (project) and ~/.gemini/agents/<name>.md (user); body of the file becomes the subagent system prompt (documented under 'Agent definition files' / 'File format' headings)",
+          "supported": true
+        },
+        "invocation_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How agents are triggered. Mechanisms include natural language detection, @-mention syntax, slash commands, CLI flags, or automatic delegation.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "agents.invocation_patterns",
+          "mechanism": "two invocation patterns: (1) automatic delegation by the main agent based on subagent description, (2) explicit @-mention at start of prompt (documented under 'Automatic delegation' / 'Forcing a subagent (@ syntax)' / 'How to use subagents' headings)",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-subagent mcpServers{} frontmatter declares inline MCP server configurations scoped to this subagent only (documented under 'Configuring isolated tools and servers' heading)",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-subagent tool allow-listing via tools[] frontmatter with wildcards: '*', 'mcp_*', 'mcp_<server>_*' (documented under 'Tool wildcards' / 'Subagent tool isolation' / 'Configuring isolated tools and servers' headings)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "kiro": {
+      "capabilities": {
+        "agent_scopes": {
+          "capabilities": {
+            "project": {
+              "confidence": "inferred",
+              "mechanism": "project-scoped agents stored under .kiro/agents/ documented under 'Local agents (project-specific)' heading; precedence rules under 'Agent precedence'",
+              "supported": true
+            },
+            "user": {
+              "confidence": "inferred",
+              "mechanism": "user-scoped agents stored under ~/.kiro/agents/ documented under 'Global agents (user-wide)' heading; precedence rules under 'Agent precedence'",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Where agent definitions can live and the priority ordering when definitions exist at multiple levels. Common scopes: project, user/personal, managed/enterprise, CLI-defined.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "object"
+          },
+          "key_path": "agents.agent_scopes",
+          "supported": true
+        },
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "JSON config with Name/Description/Prompt fields (Inline prompt or File URI prompt) documented under 'Name field' / 'Description field' / 'Prompt field' headings",
+          "supported": true
+        },
+        "model_selection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether per-agent model overrides are supported, allowing different agents to use different AI models.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.model_selection",
+          "mechanism": "per-agent model override documented under 'Model field' heading in the configuration reference",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-agent MCP server scoping documented under 'McpServers field' heading; supports OAuth configuration per server",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-agent tool allowlist with exact matches, wildcard patterns, and MCP tool patterns documented under 'Tools field' / 'AllowedTools field' / 'ToolsSettings field' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "roo-code": {
+      "capabilities": {
+        "agent_scopes": {
+          "capabilities": {
+            "project": {
+              "confidence": "inferred",
+              "mechanism": "project-scoped custom modes via .roomodes file in repo root (mode source field = 'project')",
+              "supported": true
+            },
+            "user": {
+              "confidence": "inferred",
+              "mechanism": "user-scoped (global) custom modes via roo-code config (mode source field = 'global')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Where agent definitions can live and the priority ordering when definitions exist at multiple levels. Common scopes: project, user/personal, managed/enterprise, CLI-defined.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "object"
+          },
+          "key_path": "agents.agent_scopes",
+          "supported": true
+        },
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "YAML modes (.roomodes file or settings) with slug, name, description, roleDefinition, whenToUse, groups, source fields per ModeConfig + CustomModesSettings TypeScript types",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-mode tool group allowlist (read | edit | command | mcp) with optional inline filter (e.g. {fileRegex, description}) for the edit group, per GroupEntry / GroupOptions TypeScript types",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "zed": {
+      "capabilities": {
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-profile MCP context server scoping (AgentProfileSettings.context_servers IndexMap<server_id, ContextServerPreset> with per-tool granularity), documented under 'MCP Tool Permissions' heading",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-profile tool toggle map (AgentProfileSettings.tools IndexMap<tool_name, bool>) with default + per-tool override semantics, documented under 'Default Tool Permissions' / 'Per-tool Permission Rules' / 'Pattern Precedence' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}

@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -134,6 +136,132 @@ func TestMain_CheckFailsClosedOnStaleFeed(t *testing.T) {
 	if stderr.Len() == 0 {
 		t.Error("stderr is empty; want a staleness error message")
 	}
+}
+
+// serveSnapshotFeed serves the full captured snapshot: the index at
+// /index.json and every attested file from testdata/feedsnapshot/files/.
+// corrupt, when non-empty, names one feed-relative path whose bytes are
+// served with the first byte flipped.
+func serveSnapshotFeed(t *testing.T, indexBytes []byte, corrupt string) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rel := strings.TrimPrefix(r.URL.Path, "/")
+		if rel == "index.json" {
+			_, _ = w.Write(indexBytes)
+			return
+		}
+		data, err := os.ReadFile(filepath.Join(snapshotDir, "files", filepath.FromSlash(rel)))
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if rel == corrupt {
+			data = append([]byte(nil), data...)
+			data[0] ^= 0x01
+		}
+		_, _ = w.Write(data)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestMain_PullWritesVerifiedMirror(t *testing.T) {
+	indexBytes, revision, generatedAt := readSnapshot(t)
+	serveAttestations(t)
+	pinClock(t, generatedAt)
+
+	repoRoot := t.TempDir()
+	capDir := filepath.Join(repoRoot, "docs", "provider-capabilities")
+	if err := os.MkdirAll(capDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Pre-existing directory state: a stale YAML baseline (must be swept)
+	// and a keep-list README (must survive).
+	if err := os.WriteFile(filepath.Join(capDir, "claude-code.yaml"), []byte("stale: yaml"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(capDir, "README.md"), []byte("# keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	feed := serveSnapshotFeed(t, indexBytes, "")
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"-feed-url", feed.URL + "/index.json", "-repo-root", repoRoot}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("full pull exited %d; stderr: %s", code, stderr.String())
+	}
+
+	// A provider Capability Document is mirrored byte-for-byte.
+	want, err := os.ReadFile(filepath.Join(snapshotDir, "files", "capabilities", "claude-code.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(filepath.Join(capDir, "capabilities", "claude-code.json"))
+	if err != nil {
+		t.Fatalf("mirrored claude-code.json: %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Error("mirrored capabilities/claude-code.json is not byte-identical to the feed copy")
+	}
+
+	// Marker records the verified revision; sweep + keep-list applied;
+	// advisories.json is excluded from the mirror by design.
+	marker, err := os.ReadFile(filepath.Join(capDir, "provenance.json"))
+	if err != nil {
+		t.Fatalf("provenance.json: %v", err)
+	}
+	if !strings.Contains(string(marker), revision) {
+		t.Errorf("provenance.json %q does not record data_revision %q", marker, revision)
+	}
+	if _, err := os.Stat(filepath.Join(capDir, "claude-code.yaml")); !os.IsNotExist(err) {
+		t.Error("stale claude-code.yaml survived the sweep")
+	}
+	if _, err := os.Stat(filepath.Join(capDir, "README.md")); err != nil {
+		t.Error("keep-list README.md was swept away")
+	}
+	if _, err := os.Stat(filepath.Join(capDir, "advisories.json")); !os.IsNotExist(err) {
+		t.Error("advisories.json was mirrored; it is out of scope (not mirrored, not acted on)")
+	}
+
+	// Second run against a feed serving one corrupted file: exits non-zero
+	// and the mirrored tree is byte-for-byte unchanged.
+	before := treeDigest(t, capDir)
+	corruptFeed := serveSnapshotFeed(t, indexBytes, "capabilities/claude-code.json")
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"-feed-url", corruptFeed.URL + "/index.json", "-repo-root", repoRoot}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatal("pull with a corrupted feed file exited 0; want non-zero")
+	}
+	if after := treeDigest(t, capDir); after != before {
+		t.Error("mirror tree changed during a failed pull; fail-closed means nothing is written")
+	}
+}
+
+// treeDigest returns a digest of every file path + content under dir.
+func treeDigest(t *testing.T, dir string) string {
+	t.Helper()
+	h := sha256.New()
+	err := filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, p)
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		h.Write([]byte(rel))
+		h.Write(data)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("digesting %s: %v", dir, err)
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func TestMain_CheckFailsOnMalformedIndex(t *testing.T) {

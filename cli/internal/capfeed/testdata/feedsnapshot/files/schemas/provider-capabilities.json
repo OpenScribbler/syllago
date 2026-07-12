@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openscribbler.github.io/capmon/v1/schemas/provider-capabilities.json",
+  "schema_version": "1",
+  "title": "Provider capabilities document",
+  "description": "One self-describing provider document (capabilities/<slug>.json). Additional properties are permitted everywhere except referenceEntry: consumers MUST ignore unknown fields and producers MAY add them within a major.",
+  "type": "object",
+  "required": ["schema_version", "slug", "display_name"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "status": {"type": "string"},
+    "slug": {"type": "string"},
+    "display_name": {"type": "string", "minLength": 1},
+    "last_verified": {"type": "string"},
+    "superseded_by": {"type": "string"},
+    "frozen_at": {"type": "string"},
+    "content_types": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/contentTypeNode"}
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/referenceEntry"}
+    },
+    "provider_exclusive": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/providerExclusiveNode"}
+    }
+  },
+  "$defs": {
+    "capabilityNode": {
+      "description": "A recursive capability node. Registry-backed nodes carry key_path + key; vocabulary members omit them. Presence of key is the normative canonical-key discriminator.",
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": {"type": "boolean"},
+        "mechanism": {"type": "string"},
+        "confidence": {"type": "string"},
+        "refs": {"type": "array", "items": {"type": "string"}},
+        "key_path": {"type": "string", "pattern": "^[a-z_]+(\\.[a-z_]+)*$"},
+        "key": {"$ref": "#/$defs/keyMeta"},
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/capabilityNode"}
+        }
+      }
+    },
+    "providerExclusiveNode": {
+      "description": "A provider-exclusive capability node: the same shape as capabilityNode, but definitionally never a registered canonical key, so it MUST NOT carry key or key_path. The constraint is recursive — every descendant under a provider-exclusive root is itself provider-exclusive.",
+      "allOf": [{"$ref": "#/$defs/capabilityNode"}],
+      "not": {
+        "anyOf": [
+          {"required": ["key"]},
+          {"required": ["key_path"]}
+        ]
+      },
+      "properties": {
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/providerExclusiveNode"}
+        }
+      }
+    },
+    "keyMeta": {
+      "description": "Canonical-key metadata inlined from the key registry at every registry-backed node.",
+      "type": "object",
+      "required": ["description", "type", "spec_ref"],
+      "properties": {
+        "description": {"type": "string"},
+        "type": {"type": "string"},
+        "spec_ref": {"type": "string"}
+      }
+    },
+    "contentTypeNode": {
+      "description": "One content type for a provider. Direct children of capabilities are registry-backed capability nodes.",
+      "type": "object",
+      "required": ["supported"],
+      "properties": {
+        "supported": {"type": "boolean"},
+        "confidence": {"type": "string"},
+        "events": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/eventEntry"}
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/toolEntry"}
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/capabilityNode"}
+        }
+      }
+    },
+    "eventEntry": {
+      "type": "object",
+      "required": ["native_name"],
+      "properties": {
+        "native_name": {"type": "string"},
+        "blocking": {"type": "string"},
+        "refs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "toolEntry": {
+      "type": "object",
+      "required": ["native"],
+      "properties": {
+        "native": {"type": "string"},
+        "refs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "referenceEntry": {
+      "description": "Source reference, trimmed to {url, verified_at}. additionalProperties is false here — and only here — so pipeline-internal provenance (fetch_method, last_content_hash) can never leak into published output.",
+      "type": "object",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string"},
+        "verified_at": {"type": "string"}
+      }
+    }
+  }
+}

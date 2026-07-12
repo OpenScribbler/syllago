@@ -1,0 +1,88 @@
+{
+  "content_types": {
+    "agents": {
+      "capabilities": {
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-profile MCP context server scoping (AgentProfileSettings.context_servers IndexMap<server_id, ContextServerPreset> with per-tool granularity), documented under 'MCP Tool Permissions' heading",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-profile tool toggle map (AgentProfileSettings.tools IndexMap<tool_name, bool>) with default + per-tool override semantics, documented under 'Default Tool Permissions' / 'Per-tool Permission Rules' / 'Pattern Precedence' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "mcp": {
+      "capabilities": {
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-IDE MCP server marketplace via Zed's extension catalog documented under 'As Extensions' (vs 'As Custom Servers') sub-heading of 'Installing MCP Servers'",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-tool permission control documented under 'Tool Permissions' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "rules": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "project-root .rules file (or first-match fallback name) auto-included in every Agent Panel interaction; Library entries marked as Default Rules also load always_on (documented under '.rules files' / 'Default Rules')",
+              "supported": true
+            },
+            "manual": {
+              "confidence": "inferred",
+              "mechanism": "Library rules invoked via slash command to inject the rule into the current agent context (documented under 'Slash Commands in Rules')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "zed",
+  "schema_version": "1",
+  "slug": "zed",
+  "status": "live"
+}

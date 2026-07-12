@@ -1,0 +1,433 @@
+{
+  "content_type": "hooks",
+  "providers": {
+    "amp": {
+      "capabilities": {
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "per-tool input matching documented under 'Match Conditions' / 'Regular Expression Patterns' headings (hook_match_input_contains)",
+          "supported": true
+        },
+        "permission_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "claude-code": {
+      "capabilities": {
+        "async_execution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.async_execution",
+          "mechanism": "async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "decision control documented under 'Decision control' heading (exit codes + JSON output fields)",
+          "supported": true
+        },
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)",
+          "supported": true
+        },
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)",
+          "supported": true
+        },
+        "permission_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cline": {
+      "capabilities": {
+        "context_injection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.context_injection",
+          "mechanism": "context injection documented under 'Context Modification' heading",
+          "supported": true
+        },
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "hook handler types documented under 'Hook Types' heading",
+          "supported": true
+        },
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "hook scopes documented under 'Hook Locations' heading (project + global)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "codex": {
+      "capabilities": {
+        "async_execution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.async_execution",
+          "mechanism": "hook_execution_mode: Codex supports sync and async hook execution modes for fire-and-forget background hook runs (HookExecutionMode.ts enum)",
+          "supported": true
+        },
+        "context_injection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.context_injection",
+          "mechanism": "hook_system_message: UserPromptSubmit and SessionStart hooks inject context via the additionalContext field on *HookSpecificOutputWire types",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "hook_result_abort: Codex hooks can abort (block) the triggering action via decision wire types (BlockDecisionWire / PreToolUseDecisionWire in event output schemas)",
+          "supported": true
+        },
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "hook_handler_types: Codex supports shell command, LLM prompt, and agent handler types (HookHandlerType.ts enum, HookHandlerConfig in config.rs)",
+          "supported": true
+        },
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "hook_scope: Codex hooks can be scoped to global/user or project configuration (HookScope.ts enum)",
+          "supported": true
+        },
+        "input_modification": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.input_modification",
+          "mechanism": "hook_updated_input: PreToolUse hooks return modified tool input via the updatedInput field on PreToolUseHookSpecificOutputWire",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "hook_matcher: Codex hooks support pattern matching to filter which tools or events trigger the hook (MatcherGroup struct in config.rs)",
+          "supported": true
+        },
+        "permission_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "hook_permission_decision: PreToolUse hooks return allow/deny/ask permission decisions via PreToolUsePermissionDecisionWire",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "copilot-cli": {
+      "capabilities": {
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "hook handler types documented under 'Hook types' heading (session, prompt, tool, error)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Reading input' / 'Outputting JSON' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cursor": {
+      "capabilities": {
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "project + user-global hook scopes documented under 'Project Hooks (Version Control)' / 'Configuration' headings",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Common schema' / 'Input (all hooks)' headings (event data on stdin, structured decision JSON on stdout)",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "matcher patterns documented under 'Matcher Configuration' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "factory-droid": {
+      "capabilities": {
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event 'Decision Control' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "gemini-cli": {
+      "capabilities": {
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "kiro": {
+      "supported": true
+    },
+    "pi": {
+      "capabilities": {
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "TypeScript-native extension handlers documented under 'Writing an Extension' / 'Extension Styles' (beyond shell-only)",
+          "supported": true
+        },
+        "input_modification": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.input_modification",
+          "mechanism": "tool_call event handlers can intercept and modify tool call inputs before execution (documented under 'tool_call' event)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "windsurf": {
+      "capabilities": {
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "three-tier config scopes documented under 'System-Level' / 'User-Level' / 'Workspace-Level' headings",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON event context delivered via stdin documented under 'Common Input Structure' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}

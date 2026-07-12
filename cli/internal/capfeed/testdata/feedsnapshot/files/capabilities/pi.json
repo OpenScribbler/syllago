@@ -1,0 +1,133 @@
+{
+  "content_types": {
+    "commands": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "positional shell-style substitution ($1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}) documented under 'Argument Hints' / 'Arguments' / 'Usage' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "TypeScript-native extension handlers documented under 'Writing an Extension' / 'Extension Styles' (beyond shell-only)",
+          "supported": true
+        },
+        "input_modification": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.input_modification",
+          "mechanism": "tool_call event handlers can intercept and modify tool call inputs before execution (documented under 'tool_call' event)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "skills": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": ".pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "pi",
+  "provider_exclusive": {
+    "skills.baseDir": {
+      "confidence": "confirmed",
+      "mechanism": "yaml frontmatter key: baseDir",
+      "supported": true
+    },
+    "skills.disableModelInvocation": {
+      "confidence": "confirmed",
+      "mechanism": "yaml frontmatter key: disableModelInvocation",
+      "supported": true
+    },
+    "skills.filePath": {
+      "confidence": "confirmed",
+      "mechanism": "yaml frontmatter key: filePath",
+      "supported": true
+    },
+    "skills.sourceInfo": {
+      "confidence": "confirmed",
+      "mechanism": "yaml frontmatter key: sourceInfo",
+      "supported": true
+    }
+  },
+  "schema_version": "1",
+  "slug": "pi",
+  "status": "live"
+}

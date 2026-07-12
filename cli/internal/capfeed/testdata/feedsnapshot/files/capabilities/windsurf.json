@@ -1,0 +1,172 @@
+{
+  "content_types": {
+    "commands": {
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "three-tier config scopes documented under 'System-Level' / 'User-Level' / 'Workspace-Level' headings",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON event context delivered via stdin documented under 'Common Input Structure' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "mcp": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "organization-level MCP admin controls (whitelist, custom registries, regex matching) documented under 'Admin Controls (Teams & Enterprises)' / 'Admin Configuration Guidelines' headings",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "${env:VAR_NAME} and ${file:/path} interpolation documented under 'Config Interpolation' heading",
+          "supported": true
+        },
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-IDE MCP marketplace documented under 'MCP Registry' / 'Configuring Custom Registries' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool filtering documented under 'Configuring MCP tools' (UI tool toggles, 100-tool cap) and 'MCP Whitelist' (admin-side regex matching) headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types (stdio for local, Streamable HTTP and SSE for remote) documented under 'Remote HTTP MCPs' heading; remote servers use serverUrl/url instead of command/args",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "rules": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "always_on trigger value documented in 'Activation Modes' table — full rule content included in system prompt every message",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "glob trigger value documented in 'Activation Modes' table — activated when files matching glob pattern are in context",
+              "supported": true
+            },
+            "manual": {
+              "confidence": "inferred",
+              "mechanism": "manual trigger value documented in 'Activation Modes' table — activated via @-mention",
+              "supported": true
+            },
+            "model_decision": {
+              "confidence": "inferred",
+              "mechanism": "model_decision trigger value documented in 'Activation Modes' table — Cascade decides based on context",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "Cascade-managed Memories layer auto-writes context based on conversation (documented under 'Memories & Rules' / 'How to Manage Memories')",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md fallback documented in dedicated rules.1 doc with 'Comparison with Rules' section",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": ".windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "windsurf",
+  "schema_version": "1",
+  "slug": "windsurf",
+  "status": "live"
+}
