@@ -224,7 +224,12 @@ func TestMain_PullWritesVerifiedMirror(t *testing.T) {
 	}
 
 	// Second run against a feed serving one corrupted file: exits non-zero
-	// and the mirrored tree is byte-for-byte unchanged.
+	// and the mirrored tree is byte-for-byte unchanged. The marker is
+	// removed first so the data_revision short-circuit doesn't skip the
+	// re-fetch — this run must reach the per-file hash gate.
+	if err := os.Remove(filepath.Join(capDir, "provenance.json")); err != nil {
+		t.Fatal(err)
+	}
 	before := treeDigest(t, capDir)
 	corruptFeed := serveSnapshotFeed(t, indexBytes, "capabilities/claude-code.json")
 	stdout.Reset()
@@ -235,6 +240,65 @@ func TestMain_PullWritesVerifiedMirror(t *testing.T) {
 	}
 	if after := treeDigest(t, capDir); after != before {
 		t.Error("mirror tree changed during a failed pull; fail-closed means nothing is written")
+	}
+}
+
+func TestMain_SecondRunIsNoOp(t *testing.T) {
+	indexBytes, _, generatedAt := readSnapshot(t)
+	serveAttestations(t)
+	pinClock(t, generatedAt)
+
+	repoRoot := t.TempDir()
+	stateDir := t.TempDir()
+	etagFile := filepath.Join(stateDir, "etag")
+	summaryFile := filepath.Join(stateDir, "summary.json")
+	if err := os.MkdirAll(filepath.Join(repoRoot, "docs", "provider-capabilities"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	feed := serveSnapshotFeed(t, indexBytes, "")
+	pullArgs := []string{
+		"-feed-url", feed.URL + "/index.json",
+		"-repo-root", repoRoot,
+		"-etag-file", etagFile,
+		"-summary-file", summaryFile,
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := run(pullArgs, &stdout, &stderr); code != 0 {
+		t.Fatalf("first pull exited %d; stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "changed: true") {
+		t.Errorf("first pull stdout %q does not report changed: true", stdout.String())
+	}
+
+	capDir := filepath.Join(repoRoot, "docs", "provider-capabilities")
+	before := treeDigest(t, capDir)
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := run(pullArgs, &stdout, &stderr); code != 0 {
+		t.Fatalf("second pull exited %d; stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "changed: false") {
+		t.Errorf("second pull stdout %q does not report changed: false", stdout.String())
+	}
+	if after := treeDigest(t, capDir); after != before {
+		t.Error("second pull against an unchanged feed modified the mirror")
+	}
+
+	// The summary file reflects the no-op for the workflow to consume.
+	raw, err := os.ReadFile(summaryFile)
+	if err != nil {
+		t.Fatalf("summary file: %v", err)
+	}
+	var sum struct {
+		Changed bool `json:"changed"`
+	}
+	if err := json.Unmarshal(raw, &sum); err != nil {
+		t.Fatalf("summary JSON: %v", err)
+	}
+	if sum.Changed {
+		t.Error("summary changed = true after a no-op run; want false")
 	}
 }
 
