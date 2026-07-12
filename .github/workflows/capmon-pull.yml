@@ -1,0 +1,164 @@
+# Capmon Pull: daily ingestion of the Capability Feed published by
+# https://github.com/OpenScribbler/capmon (verified fail-closed, in-process
+# sigstore-go — see cli/internal/capfeed). On a new data_revision it
+# force-updates the fixed branch automation/capmon-pull and creates-or-updates
+# a single rolling PR, so the mirror diff always rides normal PR CI (including
+# the non-required Coverage Drift check).
+#
+# Security posture (mirrors moat-trusted-root-check.yml):
+# - Every action pinned to a full commit SHA.
+# - Top-level permissions read-only; escalation is per-job.
+# - No ${{ }} interpolation inside run: bodies — all dynamic content flows
+#   through env: or files (the slice6 checkpoint enforces this structurally).
+# - The push credential is Aembit-issued (design DQ1: A); GITHUB_TOKEN pushes
+#   would not trigger pull_request CI on the rolling PR.
+#
+# Failure semantics: verification failure or a stale feed exits non-zero →
+# red run + failure email. Nothing else is alerted; nothing is written.
+
+name: Capmon Pull
+
+on:
+  schedule:
+    # Daily, one hour after capmon's publish cadence settles.
+    - cron: '0 13 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: capmon-pull
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pull:
+    name: Pull and mirror the Capability Feed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.26.5'
+          cache-dependency-path: cli/go.sum
+
+      - name: Restore feed ETag cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .capmon-pull-etag
+          key: capmon-pull-etag-${{ github.run_id }}
+          restore-keys: |
+            capmon-pull-etag-
+
+      - name: Overlay provenance marker from the rolling branch
+        # Change detection compares the feed's data_revision against the
+        # marker on the rolling branch if it exists, else main (design).
+        # Without this, an unmerged rolling PR would be force-updated with
+        # an identical snapshot every day.
+        run: |
+          set -euo pipefail
+          if git fetch origin automation/capmon-pull 2>/dev/null; then
+            if git show origin/automation/capmon-pull:docs/provider-capabilities/provenance.json \
+              > docs/provider-capabilities/provenance.json 2>/dev/null; then
+              echo "Marker overlaid from automation/capmon-pull"
+            else
+              echo "Rolling branch exists but has no marker; using main's state"
+            fi
+          else
+            echo "No rolling branch; using main's state"
+          fi
+
+      - name: Run Capmon Pull
+        working-directory: cli
+        run: |
+          set -euo pipefail
+          go run ./cmd/capmon-pull \
+            -repo-root .. \
+            -etag-file ../.capmon-pull-etag \
+            -summary-file "${RUNNER_TEMP}/summary.json"
+
+      - name: Read summary
+        id: summary
+        run: |
+          set -euo pipefail
+          CHANGED="$(jq -r '.changed' "${RUNNER_TEMP}/summary.json")"
+          echo "changed=${CHANGED}" >> "${GITHUB_OUTPUT}"
+
+      - name: Get push credentials from Aembit
+        if: steps.summary.outputs.changed == 'true'
+        id: aembit
+        uses: Aembit/get-credentials@0b519d6b50789a1a7f6f82d5c18badd17c62415b # v1.2.0
+        with:
+          client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
+          credential-type: ApiKey
+          server-host: github.com
+
+      - name: Commit and force-push the rolling branch
+        if: steps.summary.outputs.changed == 'true'
+        env:
+          PUSH_TOKEN: ${{ steps.aembit.outputs.api-key }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PUSH_TOKEN}" ]; then
+            echo "::error::Push token is empty. Check the Aembit credential provider (credentialType must be ApiKey)."
+            exit 1
+          fi
+          DATA_REVISION="$(jq -r '.data_revision' "${RUNNER_TEMP}/summary.json")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B automation/capmon-pull
+          git add docs/provider-capabilities
+          git commit -m "chore(capmon-pull): mirror Capability Feed revision ${DATA_REVISION}"
+          git push --force "https://x-access-token:${PUSH_TOKEN}@github.com/${REPO}.git" automation/capmon-pull
+
+      - name: Build rolling PR body
+        if: steps.summary.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          DATA_REVISION="$(jq -r '.data_revision' "${RUNNER_TEMP}/summary.json")"
+          GENERATED_AT="$(jq -r '.generated_at' "${RUNNER_TEMP}/summary.json")"
+          {
+            echo "Automated mirror of the [Capability Feed](https://openscribbler.github.io/capmon/) — verified fail-closed (SLSA provenance + per-file sha256) before anything was written."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| \`data_revision\` | \`${DATA_REVISION}\` |"
+            echo "| \`generated_at\` | \`${GENERATED_AT}\` |"
+            echo
+            echo "**Changed providers:**"
+            jq -r '.changed_providers[]? | "- \(.)"' "${RUNNER_TEMP}/summary.json"
+            echo
+            echo "_This PR rolls: each new \`data_revision\` force-updates the same branch. Intermediate unreviewed snapshots are superseded by design; history lives in the capmon repo._"
+          } > "${RUNNER_TEMP}/pr-body.md"
+
+      - name: Create or update the rolling PR
+        if: steps.summary.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.aembit.outputs.api-key }}
+          PR_TITLE: 'chore(capmon-pull): Capability Feed mirror update'
+        run: |
+          set -euo pipefail
+          EXISTING="$(gh pr list \
+            --head automation/capmon-pull \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [ -n "${EXISTING}" ]; then
+            echo "Updating rolling PR #${EXISTING}"
+            gh pr edit "${EXISTING}" --body-file "${RUNNER_TEMP}/pr-body.md"
+          else
+            echo "Opening the rolling PR"
+            gh pr create \
+              --head automation/capmon-pull \
+              --base main \
+              --title "${PR_TITLE}" \
+              --body-file "${RUNNER_TEMP}/pr-body.md"
+          fi

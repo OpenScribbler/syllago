@@ -1,64 +1,47 @@
 # Provider Capabilities
 
-This directory contains the authoritative capability baseline for each AI coding tool provider that syllago supports. These files are maintained by the [capmon](https://github.com/OpenScribbler/capmon) pipeline.
+This directory is a **verbatim, attestation-verified mirror** of the Capability Feed published by the external [capmon](https://github.com/OpenScribbler/capmon) project at <https://openscribbler.github.io/capmon/>. Syllago is a consumer only: nothing here is edited by hand except the files on the keep-list below, and no capmon machinery runs in this repository.
 
-## Directory Structure
+## How it stays current
+
+The **Capmon Pull** maintainer tool (`cli/cmd/capmon-pull`, core logic in `cli/internal/capfeed`) runs daily via [`.github/workflows/capmon-pull.yml`](../../.github/workflows/capmon-pull.yml):
+
+1. Polls the feed's `v1/index.json` with a conditional GET (at most daily).
+2. Verifies **fail-closed** before anything is written: SLSA provenance on the index (in-process sigstore-go, pinned to capmon's `publish.yml` workflow identity), then every file's `sha256` against the verified index. A tampered, unsigned, or stale (`generated_at` older than the feed's `max_staleness_hours`) feed writes nothing and turns the run red — the committed mirror is always last-known-good.
+3. On a new `data_revision`, mirrors the feed byte-for-byte into this directory and force-updates the single rolling PR on the `automation/capmon-pull` branch.
+
+Run it locally (no `gh` binary or token needed):
+
+```bash
+cd cli && go run ./cmd/capmon-pull -check          # verify + inspect only
+cd cli && go run ./cmd/capmon-pull -repo-root ..   # full pull into this directory
+```
+
+## Directory contents
 
 ```
 docs/provider-capabilities/
-├── <slug>.yaml              # Per-provider capability baseline (one file per provider)
-├── by-content-type/         # Generated views grouped by content type (do not edit)
-├── compatibility-matrix.md  # Human-readable summary matrix (maintained by hand)
-├── schema.json              # JSON Schema for validating *.yaml files
-└── README.md                # This file
+├── capabilities/<slug>.json   # Capability Documents (verbatim feed mirror)
+├── by-content-type/*.json     # Feed views grouped by content type (verbatim)
+├── schemas/, spec/            # Feed schemas + field-semantics spec (verbatim)
+├── provenance.json            # Marker: data_revision + generated_at of the mirrored snapshot
+├── compatibility-matrix.md    # Human-maintained summary (keep-list)
+└── README.md                  # This file (keep-list)
 ```
 
-## File Format
+Everything except the keep-list (`README.md`, `compatibility-matrix.md`) is owned by the mirror: the pull sweeps away files the feed no longer publishes. Do not hand-edit mirrored files — the next pull will overwrite them, and edited bytes would no longer match any attested hash.
 
-Each `<slug>.yaml` follows `schema_version: "1"` (validated by `capmon verify`).
+`advisories.json` from the feed is deliberately **not** mirrored (out of scope for Capmon Pull).
 
-```yaml
-schema_version: "1"
-slug: claude-code
-display_name: Claude Code
-last_verified: "2026-04-09"
-content_types:
-  hooks:
-    supported: true
-    events:
-      before_tool_execute:
-        native_name: PreToolUse
-        blocking: prevent
-      # ...
-```
+## How the data is used
 
-## Updating Baselines
+- **Review queue:** a Capability Document records capmon's proposed canonical key mappings per provider. Maintainers review these before mappings graduate into a [Provider Format Document](../provider-formats/) — the authoritative source syllago's converter reads. No Go code reads this directory for runtime behavior.
+- **Coverage Drift:** the non-required `coverage-drift` CI job compares Go's `SupportsType` claims against the mirrored `content_types.<type>.supported` fields (`supported` absent = unknown = no finding). Red is a signal to reconcile, never a merge block. Reproduce locally:
 
-The [capmon](https://github.com/OpenScribbler/capmon) pipeline manages these files automatically:
+  ```bash
+  cd cli && SYLLAGO_COVERAGE_FEED=1 go test ./internal/provider/ -run TestCoverageFeedDrift
+  ```
 
-| Command | Description |
-|---------|-------------|
-| `capmon run` | Full pipeline: fetch → extract → diff → review |
-| `capmon run --stage fetch-extract` | Stages 1–2 only (no write permissions needed) |
-| `capmon run --stage report` | Stages 3–4 only (reads cached data, creates PRs) |
-| `capmon seed --provider <slug>` | Bootstrap or re-seed a single provider's baseline |
-| `capmon verify` | Validate all YAML files against the schema |
-| `capmon generate` | Regenerate by-content-type views and spec tables |
+## Semantics
 
-## Pausing the Pipeline
-
-Create a `.capmon-pause` file in the repo root to prevent Stage 4 (PR/issue creation) from running. Stages 1–3 still execute. Remove the file to resume.
-
-```bash
-touch .capmon-pause    # pause
-rm .capmon-pause       # resume
-```
-
-## Schema Evolution
-
-The `schema_version` field follows a strict evolution policy:
-
-- Current version: `"1"`
-- `capmon verify` validates files against the current schema
-- `capmon verify --migration-window` also accepts the immediately previous version (for gradual rollouts)
-- Never edit `schema.json` or `schema_version` without a corresponding change to the `ValidateAgainstSchema` function in `cli/internal/capmon/capyaml/validate.go`
+Consumption follows the feed's tolerant-reader contract (see the mirrored `spec/field-semantics.md`): unknown fields, files, and enum values are ignored, never errors; `supported` absent means unknown, never false.

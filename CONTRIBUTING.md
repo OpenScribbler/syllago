@@ -130,40 +130,29 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full package map and data flow.
 - TUI components: golden file visual regression tests
   - Regenerate baselines after visual changes: `cd cli && go test ./internal/tui/ -update-golden`
 
-### capmon (capability monitor)
+### Capmon and the Capability Feed
 
-capmon is the pipeline that extracts and tracks AI provider capability drift. It runs automatically on CI via `.github/workflows/capmon.yml`.
+Capability monitoring lives in the external [capmon](https://github.com/OpenScribbler/capmon) project, which scrapes provider documentation and publishes an attestation-verified JSON feed — the **Capability Feed** — at <https://openscribbler.github.io/capmon/>. Syllago is a **consumer only**: no scraping, extraction, or capability pipeline runs in this repository.
 
-**Pausing the pipeline:**
+**How feed data reaches this repo:**
 
-Create a `.capmon-pause` file in the repo root to prevent Stage 4 from opening PRs or issues:
-
-```bash
-touch .capmon-pause   # pause
-rm .capmon-pause      # resume
-```
-
-The pipeline still runs Stages 1-3 (fetch, extract, diff) when paused. Only the GitHub PR/issue step is skipped.
-
-**Updating test fixtures:**
-
-Static extraction fixtures live in `cli/internal/capmon/testdata/fixtures/`. When a provider changes its docs format, update the fixture and re-run the tests:
+The **Capmon Pull** tool (`cli/cmd/capmon-pull`) runs daily via `.github/workflows/capmon-pull.yml`. It verifies the feed fail-closed (SLSA provenance + per-file sha256) and mirrors it verbatim into `docs/provider-capabilities/` through a single rolling PR on the `automation/capmon-pull` branch. See [`docs/provider-capabilities/README.md`](docs/provider-capabilities/README.md) for the mirror contract, and run it locally with:
 
 ```bash
-# Update a fixture manually, then verify:
-cd cli && go test ./internal/capmon/ -run TestFixtures
+cd cli && go run ./cmd/capmon-pull -check
 ```
 
-Live network tests are gated behind `SYLLAGO_TEST_NETWORK=1` and require external access.
+**Coverage Drift:**
 
-**Manual audit workflow:**
+The non-required `coverage-drift` CI job flags contradictions between Go's `SupportsType` claims and the mirrored Capability Documents. A red check means reconcile the provider's Go declaration or wait for a feed correction — it never blocks merges. Reproduce locally:
 
-To review capability drift without CI:
+```bash
+cd cli && SYLLAGO_COVERAGE_FEED=1 go test ./internal/provider/ -run TestCoverageFeedDrift
+```
 
-1. Run `syllago capmon run --dry-run` to see what would change
-2. Review `docs/provider-capabilities/<slug>.yaml` for the affected provider
-3. Apply updates manually if the change is correct
-4. Run `syllago capmon generate` to regenerate derived views and spec tables
+**Reporting capability data problems:**
+
+Wrong or missing capability data is a capmon issue, not a syllago one — file it at [OpenScribbler/capmon](https://github.com/OpenScribbler/capmon/issues). Syllago-side drift (Go claims) is a syllago issue.
 
 ## Getting started
 
