@@ -179,8 +179,15 @@ func TestRun_ETagRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ETag file not persisted: %v", err)
 	}
-	if strings.TrimSpace(string(persisted)) != fx.indexETag {
-		t.Errorf("persisted ETag = %q; want server ETag %q", persisted, fx.indexETag)
+	var st etagState
+	if err := json.Unmarshal(persisted, &st); err != nil {
+		t.Fatalf("ETag state is not JSON: %v (contents %q)", err, persisted)
+	}
+	if st.ETag != fx.indexETag {
+		t.Errorf("persisted ETag = %q; want server ETag %q", st.ETag, fx.indexETag)
+	}
+	if st.GeneratedAt.IsZero() || st.MaxStalenessHours <= 0 {
+		t.Errorf("persisted state missing freshness fields: %+v", st)
 	}
 
 	// Second run must send it back: the fixture's index handler answers 304
@@ -192,6 +199,112 @@ func TestRun_ETagRoundTrip(t *testing.T) {
 	}
 	if n := fx.attRequests.Load(); n != 0 {
 		t.Error("second run did not send If-None-Match (no 304 short-circuit happened)")
+	}
+}
+
+// TestRun_NotModified304StaleFails verifies the 304 path enforces the
+// freshness gate from the persisted state: a CDN replaying 304 forever must
+// turn the run red once the last verified generated_at exceeds the feed's
+// max staleness, not stay a green no-op (syllago-u9s3l).
+func TestRun_NotModified304StaleFails(t *testing.T) {
+	indexBytes, _ := loadSnapshot(t)
+	fx := newRunFixture(t, indexBytes)
+
+	if _, err := Run(context.Background(), fx.opts); err != nil {
+		t.Fatalf("first Run: %v", err)
+	}
+	fx.attRequests.Store(0)
+	fx.fileRequests.Store(0)
+
+	var meta struct {
+		GeneratedAt       time.Time `json:"generated_at"`
+		MaxStalenessHours int       `json:"max_staleness_hours"`
+	}
+	if err := json.Unmarshal(indexBytes, &meta); err != nil {
+		t.Fatal(err)
+	}
+	fx.opts.Now = func() time.Time {
+		return meta.GeneratedAt.Add(time.Duration(meta.MaxStalenessHours+1) * time.Hour)
+	}
+
+	_, err := Run(context.Background(), fx.opts)
+	if err == nil || !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("stale 304 run error = %v; want freshness failure", err)
+	}
+	if n := fx.attRequests.Load(); n != 0 {
+		t.Errorf("stale 304 run fetched %d attestations; want 0", n)
+	}
+	if n := fx.fileRequests.Load(); n != 0 {
+		t.Errorf("stale 304 run made %d per-file requests; want 0", n)
+	}
+}
+
+// TestRun_Unsolicited304Fails verifies a 304 answered to a request that sent
+// no If-None-Match (protocol-illegal, e.g. a misbehaving CDN) is an error,
+// not a silent no-op — there is no persisted state to vouch for it.
+func TestRun_Unsolicited304Fails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotModified)
+	}))
+	t.Cleanup(srv.Close)
+
+	_, err := Run(context.Background(), Options{FeedURL: srv.URL + "/index.json"})
+	if err == nil || !strings.Contains(err.Error(), "304") {
+		t.Fatalf("unsolicited 304 error = %v; want 304 rejection", err)
+	}
+}
+
+// TestPersistETagState_EmptyETagClearsState verifies a verified 200 that
+// carries no ETag removes the superseded state file instead of leaving an
+// old validator (and its freshness fields) on disk.
+func TestPersistETagState_EmptyETagClearsState(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "etag")
+	idx := &Index{GeneratedAt: time.Now(), MaxStalenessHours: 48}
+	if err := persistETagState(path, `"e1"`, idx); err != nil {
+		t.Fatalf("persist: %v", err)
+	}
+	if err := persistETagState(path, "", idx); err != nil {
+		t.Fatalf("persist with empty etag: %v", err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("state file still present after empty-ETag persist (stat err = %v)", err)
+	}
+}
+
+// TestRun_LegacyETagFileIgnored verifies the retired plain-text ETag format
+// is treated as absent: the run sends an unconditional GET, re-verifies from
+// scratch, and upgrades the file to the JSON state format.
+func TestRun_LegacyETagFileIgnored(t *testing.T) {
+	indexBytes, _ := loadSnapshot(t)
+	fx := newRunFixture(t, indexBytes)
+
+	if _, err := Run(context.Background(), fx.opts); err != nil {
+		t.Fatalf("first Run: %v", err)
+	}
+	if err := os.WriteFile(fx.opts.ETagFile, []byte(fx.indexETag+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fx.attRequests.Store(0)
+
+	sum, err := Run(context.Background(), fx.opts)
+	if err != nil {
+		t.Fatalf("second Run: %v", err)
+	}
+	if sum.Changed {
+		t.Error("marker-match run Summary.Changed = true; want false")
+	}
+	if n := fx.attRequests.Load(); n == 0 {
+		t.Error("legacy ETag file was trusted: no re-verification happened (want full 200 + verify)")
+	}
+	var st etagState
+	data, err := os.ReadFile(fx.opts.ETagFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(data, &st); err != nil {
+		t.Fatalf("ETag file not upgraded to JSON state: %v (contents %q)", err, data)
 	}
 }
 
