@@ -1,7 +1,7 @@
 # 0012. --provider validation against LoadAllSourceManifests vs. provider.AllProviders
 
 Date: 2026-05-07
-Status: Accepted
+Status: Deprecated
 Feature: capmon-fetch-subcommand
 
 ## Context

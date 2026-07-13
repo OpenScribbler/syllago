@@ -1,7 +1,7 @@
 # 0009. per-provider anchor vs per-(provider, contentType) anchor
 
 Date: 2026-05-06
-Status: Accepted
+Status: Deprecated
 Feature: capmon-provider-batching
 
 ## Context
