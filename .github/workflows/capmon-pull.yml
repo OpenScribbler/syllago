@@ -38,7 +38,9 @@ jobs:
     permissions:
       contents: read
       # Aembit/get-credentials authenticates via the GitHub OIDC id-token
-      # (client-id is a github_idtoken identity) — same grant as release.yml.
+      # (client-id is a github_idtoken identity, same as release.yml);
+      # server-host api.github.com selects the capmon-pull access policy,
+      # whose PAT is scoped to this repo's contents + pull-requests only.
       id-token: write
     steps:
       - name: Checkout repository
@@ -101,7 +103,7 @@ jobs:
         with:
           client-id: aembit:useast2:c7053f:identity:github_idtoken:2bbc8270-85a4-4c27-8c49-19e5590dfa87
           credential-type: ApiKey
-          server-host: github.com
+          server-host: api.github.com
 
       - name: Commit and force-push the rolling branch
         if: steps.summary.outputs.changed == 'true'
