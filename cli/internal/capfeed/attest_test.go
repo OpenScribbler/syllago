@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	in_toto "github.com/in-toto/attestation/go/v1"
+	"github.com/sigstore/sigstore-go/pkg/verify"
+
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
@@ -45,6 +48,48 @@ func TestVerifyFeedProvenance_ValidSnapshot(t *testing.T) {
 	err := VerifyFeedProvenance(indexBytes, [][]byte{bundleBytes}, trustedRootBytes(t))
 	if err != nil {
 		t.Fatalf("VerifyFeedProvenance on the recorded live snapshot: %v", err)
+	}
+}
+
+// TestCheckProvenancePredicate is the regression test for the predicate
+// gate: a signature from the pinned workflow over the right digest is not
+// enough — the verified statement must actually be SLSA provenance.
+func TestCheckProvenancePredicate(t *testing.T) {
+	tests := []struct {
+		name    string
+		res     *verify.VerificationResult
+		wantErr bool
+	}{
+		{
+			name: "slsa provenance v1 accepted",
+			res: &verify.VerificationResult{Statement: &in_toto.Statement{
+				PredicateType: "https://slsa.dev/provenance/v1",
+			}},
+		},
+		{
+			name: "other predicate type rejected",
+			res: &verify.VerificationResult{Statement: &in_toto.Statement{
+				PredicateType: "https://spdx.dev/Document",
+			}},
+			wantErr: true,
+		},
+		{
+			name:    "missing statement rejected",
+			res:     &verify.VerificationResult{},
+			wantErr: true,
+		},
+		{
+			name:    "nil result rejected",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkProvenancePredicate(tt.res)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("checkProvenancePredicate = %v; wantErr %t", err, tt.wantErr)
+			}
+		})
 	}
 }
 

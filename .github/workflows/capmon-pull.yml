@@ -37,6 +37,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # Aembit/get-credentials authenticates via the GitHub OIDC id-token
+      # (client-id is a github_idtoken identity) — same grant as release.yml.
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

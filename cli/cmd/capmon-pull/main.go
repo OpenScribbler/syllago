@@ -44,12 +44,25 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	// Gate on the bundled root's staleness before anything runs — the
+	// loader contract says callers decide, and every other MOAT verification
+	// path fails closed on an Expired/Missing/Corrupt root (producer.go,
+	// registryops). Verifying against a root past its cliff could miss
+	// Fulcio/Rekor key rotations.
+	trInfo := moat.BundledTrustedRoot(nowFunc())
+	switch trInfo.Status {
+	case moat.TrustedRootStatusExpired, moat.TrustedRootStatusMissing, moat.TrustedRootStatusCorrupt:
+		fmt.Fprintf(stderr, "capmon-pull: bundled trusted root unusable (%s): %s\n",
+			trInfo.Status, moat.StalenessMessage(trInfo))
+		return 1
+	}
+
 	sum, err := capfeed.Run(context.Background(), capfeed.Options{
 		FeedURL:         *feedURL,
 		RepoRoot:        *repoRoot,
 		ETagFile:        *etagFile,
 		SummaryFile:     *summaryFile,
-		TrustedRootJSON: moat.BundledTrustedRoot(nowFunc()).Bytes,
+		TrustedRootJSON: trInfo.Bytes,
 		CheckOnly:       *check,
 		Now:             nowFunc,
 	})

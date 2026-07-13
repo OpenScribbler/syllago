@@ -31,6 +31,12 @@ const (
 	feedSignerIssuer  = "https://token.actions.githubusercontent.com"
 )
 
+// slsaProvenanceV1 is the only DSSE predicate type accepted for the feed.
+// The signature proves who signed which bytes; the predicate type is what
+// makes the statement a SLSA provenance claim rather than, say, an SBOM the
+// same workflow might someday also attest for the same artifact.
+const slsaProvenanceV1 = "https://slsa.dev/provenance/v1"
+
 // attestationsAPIBaseURL is a package var so tests can point it at an
 // httptest server (same seam pattern as updater.githubAPIURL).
 var attestationsAPIBaseURL = "https://api.github.com/repos/OpenScribbler/capmon/attestations/"
@@ -183,8 +189,22 @@ func verifyWithIdentity(indexBytes, bundleBytes, trustedRootJSON []byte, subject
 		verify.WithCertificateIdentity(certID),
 	)
 
-	if _, err := sev.Verify(b, policy); err != nil {
+	res, err := sev.Verify(b, policy)
+	if err != nil {
 		return err
+	}
+	return checkProvenancePredicate(res)
+}
+
+// checkProvenancePredicate confirms the verified DSSE statement actually
+// carries SLSA provenance. Runs strictly after signature verification —
+// the statement's contents are untrusted until then.
+func checkProvenancePredicate(res *verify.VerificationResult) error {
+	if res == nil || res.Statement == nil {
+		return errors.New("verified bundle carries no in-toto statement")
+	}
+	if pt := res.Statement.PredicateType; pt != slsaProvenanceV1 {
+		return fmt.Errorf("statement predicate type is %q; require %q", pt, slsaProvenanceV1)
 	}
 	return nil
 }

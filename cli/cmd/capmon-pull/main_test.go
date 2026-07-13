@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/capfeed"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // snapshotDir is the captured live feed snapshot shared with the capfeed
@@ -326,6 +327,29 @@ func treeDigest(t *testing.T, dir string) string {
 		t.Fatalf("digesting %s: %v", dir, err)
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// TestMain_FailsClosedOnExpiredTrustedRoot pins the clock past the bundled
+// trusted root's hard-fail cliff: the run must exit non-zero before any
+// network I/O (no test servers are set up — reaching the fetch would fail
+// with a different error than the one asserted here).
+func TestMain_FailsClosedOnExpiredTrustedRoot(t *testing.T) {
+	issued, err := time.Parse("2006-01-02", moat.TrustedRootIssuedAtISO)
+	if err != nil {
+		t.Fatalf("parsing TrustedRootIssuedAtISO: %v", err)
+	}
+	prev := nowFunc
+	nowFunc = func() time.Time { return issued.AddDate(0, 0, moat.TrustedRootEscalatedDays+1) }
+	t.Cleanup(func() { nowFunc = prev })
+
+	var stdout, stderr bytes.Buffer
+	code := run([]string{"-check"}, &stdout, &stderr)
+	if code == 0 {
+		t.Fatalf("run -check exited 0 with an expired trusted root; want non-zero. stdout: %s", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "trusted root") {
+		t.Errorf("stderr %q does not mention the trusted root", stderr.String())
+	}
 }
 
 func TestMain_CheckFailsOnMalformedIndex(t *testing.T) {

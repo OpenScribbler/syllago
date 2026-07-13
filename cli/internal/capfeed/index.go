@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -71,10 +73,47 @@ type rawProvider struct {
 	Status string `json:"status"`
 }
 
+// validateFeedPath rejects an index-supplied path that could escape the
+// mirror directory or clobber files the mirror does not own. The index is
+// provenance-verified before it is parsed, but the mirror's blast radius on
+// a compromised-yet-signed feed must stay confined to
+// docs/provider-capabilities/ — that containment is this tool's whole
+// purpose, so it cannot be delegated to the signature.
+func validateFeedPath(p string) error {
+	switch {
+	case p == "":
+		return errors.New("empty path")
+	case strings.Contains(p, `\`):
+		return errors.New("backslash in path")
+	case strings.HasPrefix(p, "/"):
+		return errors.New("absolute path")
+	case path.Clean(p) != p:
+		return errors.New("path is not in clean form")
+	}
+	for _, seg := range strings.Split(p, "/") {
+		if seg == ".." || seg == "." {
+			return errors.New("path traversal segment")
+		}
+	}
+	// The marker and the hand-maintained keep-list files belong to the
+	// mirror machinery, not the feed; a feed claiming them is malformed.
+	if p == MarkerFileName {
+		return fmt.Errorf("reserved path (provenance marker)")
+	}
+	for _, k := range mirrorKeepList {
+		if p == k {
+			return fmt.Errorf("reserved path (keep-list)")
+		}
+	}
+	return nil
+}
+
 // ParseIndex tolerantly decodes v1/index.json bytes. Missing data_revision,
 // generated_at, or an empty attested file list is an error — the tool cannot
 // change-detect or verify without them (fail-closed). A file entry without a
 // sha256 is likewise an error: an unverifiable file must never be mirrored.
+// Every attested path must pass validateFeedPath before it is fetched or
+// written.
 func ParseIndex(body []byte) (*Index, error) {
 	var raw rawIndex
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -100,13 +139,19 @@ func ParseIndex(body []byte) (*Index, error) {
 		idx.MaxStalenessHours = *raw.MaxStalenessHours
 	}
 
-	for path, f := range raw.Files {
-		if f.SHA256 == "" {
-			return nil, fmt.Errorf("capfeed index: file %q has no sha256", path)
+	for filePath, f := range raw.Files {
+		if err := validateFeedPath(filePath); err != nil {
+			return nil, fmt.Errorf("capfeed index: file %q: %w", filePath, err)
 		}
-		idx.Files = append(idx.Files, IndexFile{Path: path, SHA256: f.SHA256})
+		if f.SHA256 == "" {
+			return nil, fmt.Errorf("capfeed index: file %q has no sha256", filePath)
+		}
+		idx.Files = append(idx.Files, IndexFile{Path: filePath, SHA256: f.SHA256})
 	}
 	for _, p := range raw.Providers {
+		if err := validateFeedPath(p.Path); err != nil {
+			return nil, fmt.Errorf("capfeed index: provider %q file %q: %w", p.Slug, p.Path, err)
+		}
 		if p.SHA256 == "" {
 			return nil, fmt.Errorf("capfeed index: provider %q file %q has no sha256", p.Slug, p.Path)
 		}

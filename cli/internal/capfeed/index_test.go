@@ -1,6 +1,7 @@
 package capfeed
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -96,6 +97,44 @@ func TestParseIndex_LiveShape(t *testing.T) {
 	}
 	if len(idx.Files) != 3 {
 		t.Errorf("len(Files) = %d; want 3 (2 files-map entries + 1 provider)", len(idx.Files))
+	}
+}
+
+// TestParseIndex_RejectsUnsafePaths is the regression test for the path
+// containment gate: a provenance-verified index must still not be able to
+// direct writes outside docs/provider-capabilities/ or over files the
+// mirror does not own.
+func TestParseIndex_RejectsUnsafePaths(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "parent traversal", path: "../escape.json"},
+		{name: "embedded traversal", path: "capabilities/../../escape.json"},
+		{name: "absolute path", path: "/etc/passwd"},
+		{name: "backslash separator", path: `capabilities\amp.json`},
+		{name: "current-dir prefix", path: "./capabilities/amp.json"},
+		{name: "double slash", path: "capabilities//amp.json"},
+		{name: "empty path", path: ""},
+		{name: "provenance marker collision", path: "provenance.json"},
+		{name: "keep-list README collision", path: "README.md"},
+		{name: "keep-list compatibility-matrix collision", path: "compatibility-matrix.md"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Once as a files-map entry, once as a provider path: both
+			// routes feed the mirror and both must reject.
+			asFile := `{"data_revision": "rev", "generated_at": "2026-07-12T20:41:41Z",
+				"files": {` + strconv.Quote(tt.path) + `: {"sha256": "aa"}}}`
+			if idx, err := ParseIndex([]byte(asFile)); err == nil {
+				t.Errorf("ParseIndex accepted files-map path %q: %+v", tt.path, idx)
+			}
+			asProvider := `{"data_revision": "rev", "generated_at": "2026-07-12T20:41:41Z",
+				"providers": [{"path": ` + strconv.Quote(tt.path) + `, "sha256": "aa", "slug": "x"}]}`
+			if idx, err := ParseIndex([]byte(asProvider)); err == nil {
+				t.Errorf("ParseIndex accepted provider path %q: %+v", tt.path, idx)
+			}
+		})
 	}
 }
 
