@@ -1,0 +1,236 @@
+{
+  "content_types": {
+    "agents": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "Markdown files with YAML frontmatter at .gemini/agents/<name>.md (project) and ~/.gemini/agents/<name>.md (user); body of the file becomes the subagent system prompt (documented under 'Agent definition files' / 'File format' headings)",
+          "supported": true
+        },
+        "invocation_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How agents are triggered. Mechanisms include natural language detection, @-mention syntax, slash commands, CLI flags, or automatic delegation.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "agents.invocation_patterns",
+          "mechanism": "two invocation patterns: (1) automatic delegation by the main agent based on subagent description, (2) explicit @-mention at start of prompt (documented under 'Automatic delegation' / 'Forcing a subagent (@ syntax)' / 'How to use subagents' headings)",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-subagent mcpServers{} frontmatter declares inline MCP server configurations scoped to this subagent only (documented under 'Configuring isolated tools and servers' heading)",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-subagent tool allow-listing via tools[] frontmatter with wildcards: '*', 'mcp_*', 'mcp_<server>_*' (documented under 'Tool wildcards' / 'Subagent tool isolation' / 'Configuring isolated tools and servers' headings)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "commands": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under 'Handling arguments' / '1. Context-aware injection with {{args}}' / '3. Executing shell commands with !{...}' / '4. Injecting file content with @{...}' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "decision control via exit codes documented under 'Exit codes' heading (non-zero blocks, zero allows)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Strict JSON requirements' / 'Common output fields' headings",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "event/tool matchers documented under 'Matchers' / 'Matchers and tool names' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "mcp": {
+      "capabilities": {
+        "auto_approve": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether specific MCP tools or entire servers can be configured for automatic approval without per-invocation user confirmation. Boundary: auto_approve governs execution gating (user prompt suppression) for tools that are already visible; see tool_filtering for tool visibility control.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.auto_approve",
+          "mechanism": "auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings",
+          "supported": true
+        },
+        "resource_referencing": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP resources (not just tools) can be accessed, typically via @-mention syntax or similar referencing mechanisms.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.resource_referencing",
+          "mechanism": "MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "rules": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "GEMINI.md files load automatically within scope (global, workspace, or JIT) — no frontmatter activation modes documented",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "/memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "GEMINI.md supports importing other markdown files (documented under 'Modularize context with imports' heading)",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "three-tier hierarchy: global ~/.gemini/GEMINI.md + workspace + JIT ancestor scan up to trusted root (documented under 'Understand the context hierarchy')",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "gemini-cli",
+  "schema_version": "1",
+  "slug": "gemini-cli",
+  "status": "live"
+}

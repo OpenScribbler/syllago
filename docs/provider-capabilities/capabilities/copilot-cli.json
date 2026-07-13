@@ -1,0 +1,181 @@
+{
+  "content_types": {
+    "agents": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "markdown files with YAML frontmatter (name, description, tools, mcpServers fields) documented under 'YAML frontmatter properties' heading",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-agent mcpServers section in YAML frontmatter scopes which MCP servers each agent can access, documented under 'MCP server configuration details' / 'MCP server configurations' headings",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-agent tool allowlist via tools field, with tool aliases for renaming, documented under 'Tools' / 'Tool aliases' / 'Tools processing' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "three hook handler types - command (shell), HTTP (POST), and prompt hooks - documented under 'Hook configuration format' -> 'Command hooks' / 'HTTP hooks' / 'Prompt hooks' headings",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "hooks receive event-specific JSON on stdin (inline schema per event under 'Hook event input payloads') and return JSON decision output (per-event 'decision control' / 'postToolUse output' headings)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "rules": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": ".github/copilot-instructions.md applies to all requests in repository scope (documented under 'Repository-wide custom instructions')",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "NAME.instructions.md uses 'applyTo' frontmatter glob to scope to file patterns (documented under 'Path-specific custom instructions')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md at repository root, cwd, or COPILOT_CUSTOM_INSTRUCTIONS_DIRS (documented under 'Agent instructions' section)",
+              "supported": true
+            },
+            "claude_md": {
+              "confidence": "inferred",
+              "mechanism": "CLAUDE.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)",
+              "supported": true
+            },
+            "gemini_md": {
+              "confidence": "inferred",
+              "mechanism": "GEMINI.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "four-tier scope: Repository-wide + Path-specific + Agent (AGENTS.md) + Local ($HOME/.copilot/copilot-instructions.md) — files merge across tiers (documented under 'Repository-wide' / 'Path-specific' / 'Agent instructions' / 'Local instructions')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "skills": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "copilot-cli",
+  "provider_exclusive": {
+    "skills.cli_management": {
+      "confidence": "inferred",
+      "mechanism": "skill management commands documented under 'Skills commands in the CLI' heading",
+      "supported": true
+    }
+  },
+  "schema_version": "1",
+  "slug": "copilot-cli",
+  "status": "live"
+}

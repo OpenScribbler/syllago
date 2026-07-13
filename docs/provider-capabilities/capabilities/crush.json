@@ -1,0 +1,123 @@
+{
+  "content_types": {
+    "skills": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "compatibility": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Provider compatibility constraints — which AI tool versions or providers this skill is compatible with.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.compatibility",
+          "mechanism": "yaml frontmatter key: compatibility",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "user-global ~/.crush/skills/ directory",
+          "supported": true
+        },
+        "license": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "SPDX license identifier for the skill content. Typically \"MIT\", \"Apache-2.0\", etc.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.license",
+          "mechanism": "yaml frontmatter key: license",
+          "supported": true
+        },
+        "metadata_map": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Arbitrary key-value metadata attached to the skill. Provider-specific semantics; often used for tooling or automation metadata.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.metadata_map",
+          "mechanism": "yaml frontmatter key: metadata",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "per-project .crush/skills/ directory",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "crush",
+  "provider_exclusive": {
+    "skills.frontmatter_compatibility": {
+      "mechanism": "yaml key: compatibility",
+      "supported": true
+    },
+    "skills.frontmatter_description": {
+      "mechanism": "yaml key: description",
+      "supported": true
+    },
+    "skills.frontmatter_license": {
+      "mechanism": "yaml key: license",
+      "supported": true
+    },
+    "skills.frontmatter_metadata": {
+      "mechanism": "yaml key: metadata",
+      "supported": true
+    },
+    "skills.frontmatter_name": {
+      "mechanism": "yaml key: name",
+      "supported": true
+    }
+  },
+  "schema_version": "1",
+  "slug": "crush",
+  "status": "live"
+}

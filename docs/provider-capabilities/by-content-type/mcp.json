@@ -1,0 +1,458 @@
+{
+  "content_type": "mcp",
+  "providers": {
+    "amp": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "workspace-admin-enforced MCP registry with allowlist documented under 'MCP Registry Allowlist' heading (modelcontextprotocol.io schema; unreachable registry blocks all servers)",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 authentication for remote MCP servers documented under 'OAuth for Remote MCP Servers' heading",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-tool enable/disable documented under '3. Configure Tool Access' heading (VS Code UI exposes individual tool toggles within each configured server)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "claude-code": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "managed MCP config with managed-mcp.json + allowlists/denylists documented under 'Managed MCP configuration' / 'Option 1: Exclusive control with managed-mcp.json' / 'Option 2: Policy-based control with allowlists and denylists' headings",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading",
+          "supported": true
+        },
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings",
+          "supported": true
+        },
+        "resource_referencing": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP resources (not just tools) can be accessed, typically via @-mention syntax or similar referencing mechanisms.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.resource_referencing",
+          "mechanism": "MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "three transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cline": {
+      "capabilities": {
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cursor": {
+      "capabilities": {
+        "auto_approve": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether specific MCP tools or entire servers can be configured for automatic approval without per-invocation user confirmation. Boundary: auto_approve governs execution gating (user prompt suppression) for tools that are already visible; see tool_filtering for tool visibility control.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.auto_approve",
+          "mechanism": "auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "${env:NAME}, ${userHome}, ${workspaceFolder}, ${pathSeparator} variable interpolation documented under 'Config interpolation' / 'Combining with config interpolation' headings",
+          "supported": true
+        },
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "one-click MCP server installation from a curated catalog documented under 'One-click installation' heading",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 (with Client ID/Secret + scopes) documented under 'Static OAuth for remote servers' / 'Authentication' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "stdio transport documented under 'STDIO server configuration' heading; SSE and Streamable HTTP variants covered in body text and configuration tables",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "factory-droid": {
+      "capabilities": {
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "40+ pre-configured MCP servers (Linear, GitHub, Stripe, etc.) documented under 'Quick Start: Add from Registry' heading",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OS-keyring OAuth-token storage for HTTP MCP servers documented under 'OAuth Tokens' heading",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool allowlisting via the `disabledTools` field documented under 'Configuration Schema' heading",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "http and stdio transports documented under 'Adding HTTP Servers' and 'Adding Stdio Servers' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "gemini-cli": {
+      "capabilities": {
+        "auto_approve": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether specific MCP tools or entire servers can be configured for automatic approval without per-invocation user confirmation. Boundary: auto_approve governs execution gating (user prompt suppression) for tools that are already visible; see tool_filtering for tool visibility control.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.auto_approve",
+          "mechanism": "auto-approval via trust-based bypass and dynamic allow-listing documented under 'Trust-based bypass' / 'Dynamic allow-listing' headings (under '2. Confirmation process')",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "environment variable expansion documented under 'Environment variable expansion' heading with 'Security and environment sanitization' / 'Automatic redaction' / 'Explicit overrides' guidance",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 with automatic discovery, browser redirect flow, token management, and Google credentials documented under 'OAuth support for remote MCP servers' / 'Automatic OAuth discovery' / 'Authentication flow' headings",
+          "supported": true
+        },
+        "resource_referencing": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP resources (not just tools) can be accessed, typically via @-mention syntax or similar referencing mechanisms.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.resource_referencing",
+          "mechanism": "MCP resources (discovery, listing, in-conversation referencing) documented under 'Working with MCP resources' / 'Discovery and listing' / 'Referencing resources in a conversation' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool allow/deny filtering documented under 'MCP server with tool filtering' (Example configurations) and 'Dynamic allow-listing' headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types (stdio, HTTP, SSE) documented under 'Transport mechanisms' heading; per-transport sub-headings 'Adding an stdio server' / 'Adding an HTTP server' / 'Adding an SSE server' under 'gemini mcp add'",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "kiro": {
+      "capabilities": {
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types (stdio for local, HTTPS/HTTP for remote) documented under 'Local server' / 'Remote server' configuration sub-headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "windsurf": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "organization-level MCP admin controls (whitelist, custom registries, regex matching) documented under 'Admin Controls (Teams & Enterprises)' / 'Admin Configuration Guidelines' headings",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "${env:VAR_NAME} and ${file:/path} interpolation documented under 'Config Interpolation' heading",
+          "supported": true
+        },
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-IDE MCP marketplace documented under 'MCP Registry' / 'Configuring Custom Registries' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool filtering documented under 'Configuring MCP tools' (UI tool toggles, 100-tool cap) and 'MCP Whitelist' (admin-side regex matching) headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "transport types (stdio for local, Streamable HTTP and SSE for remote) documented under 'Remote HTTP MCPs' heading; remote servers use serverUrl/url instead of command/args",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "zed": {
+      "capabilities": {
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-IDE MCP server marketplace via Zed's extension catalog documented under 'As Extensions' (vs 'As Custom Servers') sub-heading of 'Installing MCP Servers'",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-tool permission control documented under 'Tool Permissions' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}

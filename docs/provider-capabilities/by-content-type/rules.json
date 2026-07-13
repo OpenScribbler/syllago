@@ -1,0 +1,590 @@
+{
+  "content_type": "rules",
+  "providers": {
+    "amp": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md files are always_on within their scope (cwd, parent dirs, subtrees) — documented under 'AGENTS.md' / 'Writing AGENTS.md Files'",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "@-mentioned files use 'globs' frontmatter for selective activation (documented under 'Granular Guidance'); globs implicitly prefixed with **/ unless ../ or ./",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "native AGENTS.md format; 'Migrating to AGENTS.md' documents one-time mv+symlink from CLAUDE.md and .cursorrules",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "@-mention syntax includes other files as context — supports relative, absolute, and ~/ paths (documented under 'Granular Guidance')",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "three-tier scope: AGENTS.md in cwd + parent dirs + subtrees + personal global at $HOME/.config/amp/AGENTS.md (documented under 'Writing AGENTS.md Files'); subtree loading is unique to amp",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "claude-code": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "CLAUDE.md auto-loads when present in project root or working tree",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "@-mention import syntax pulls referenced files into context (documented under 'Import additional files')",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cline": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "rules without conditionals load for every request (documented under 'Conditional Rules' / 'How It Works')",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "'paths' Conditional uses glob-based path matching to scope rule activation (documented under 'The paths Conditional' / 'Writing Conditional Rules')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "two-tier scope: Project rules (.clinerules/ in workspace) + Global rules (~/.cline/rules/ user-wide) — documented under 'Where Rules Live' / 'Global Rules Directory'",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "codex": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md files are always_on within their scope (project root and child directories) — documented under 'AGENTS.md' (per docs/agents_md.md, redirects to developers.openai.com spec)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "codex is a primary AGENTS.md spec implementer (per github.com/openai/codex docs); AGENTS.md is the cross-provider standard",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "hierarchical AGENTS.md loading gated by child_agents_md feature flag in config.toml; codex emits a precedence-explanation message to the model when enabled (documented under 'Hierarchical agents message')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "copilot-cli": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": ".github/copilot-instructions.md applies to all requests in repository scope (documented under 'Repository-wide custom instructions')",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "NAME.instructions.md uses 'applyTo' frontmatter glob to scope to file patterns (documented under 'Path-specific custom instructions')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md at repository root, cwd, or COPILOT_CUSTOM_INSTRUCTIONS_DIRS (documented under 'Agent instructions' section)",
+              "supported": true
+            },
+            "claude_md": {
+              "confidence": "inferred",
+              "mechanism": "CLAUDE.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)",
+              "supported": true
+            },
+            "gemini_md": {
+              "confidence": "inferred",
+              "mechanism": "GEMINI.md at repository root recognized alongside AGENTS.md (documented under 'Agent instructions' section)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "four-tier scope: Repository-wide + Path-specific + Agent (AGENTS.md) + Local ($HOME/.copilot/copilot-instructions.md) — files merge across tiers (documented under 'Repository-wide' / 'Path-specific' / 'Agent instructions' / 'Local instructions')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cursor": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "'Always' Rule Type — rule included in every prompt (documented under 'Activation and enforcement')",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "'Auto Attached' Rule Type — frontmatter glob patterns activate when matching files in context (documented under 'Activation and enforcement')",
+              "supported": true
+            },
+            "manual": {
+              "confidence": "inferred",
+              "mechanism": "'Apply Manually' Rule Type — activated via @-mention in chat (documented under 'Activation and enforcement')",
+              "supported": true
+            },
+            "model_decision": {
+              "confidence": "inferred",
+              "mechanism": "'Agent Requested' Rule Type — agent decides based on rule description (documented under 'Activation and enforcement')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md fallback with nested directory support (documented under 'AGENTS.md' / 'Nested AGENTS.md support' headings)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "rules can reference / import other rules (documented under 'Importing Rules' heading)",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "three-tier scope: Project rules (.cursor/rules) + Team Rules (org-wide) + User Rules (documented under 'Project rules' / 'Team Rules' / 'User Rules')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "gemini-cli": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "GEMINI.md files load automatically within scope (global, workspace, or JIT) — no frontmatter activation modes documented",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "/memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "GEMINI.md supports importing other markdown files (documented under 'Modularize context with imports' heading)",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "three-tier hierarchy: global ~/.gemini/GEMINI.md + workspace + JIT ancestor scan up to trusted root (documented under 'Understand the context hierarchy')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "kiro": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "steering loaded on every prompt by default (documented under 'Always included' inclusion mode)",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "glob-based path matching activates steering files (documented under 'Conditional inclusion' inclusion mode)",
+              "supported": true
+            },
+            "manual": {
+              "confidence": "inferred",
+              "mechanism": "user explicitly references the file to activate (documented under 'Manual inclusion' inclusion mode)",
+              "supported": true
+            },
+            "model_decision": {
+              "confidence": "inferred",
+              "mechanism": "agent decides based on context (documented under 'Auto inclusion' inclusion mode)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "Agents.md fallback for cross-tool compatibility (documented under 'Agents.md' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "steering files can reference other files (documented under 'File references' heading)",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "three-tier scope: workspace + global + team steering (documented under 'Workspace steering' / 'Global steering' / 'Team steering')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "windsurf": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "always_on trigger value documented in 'Activation Modes' table — full rule content included in system prompt every message",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "glob trigger value documented in 'Activation Modes' table — activated when files matching glob pattern are in context",
+              "supported": true
+            },
+            "manual": {
+              "confidence": "inferred",
+              "mechanism": "manual trigger value documented in 'Activation Modes' table — activated via @-mention",
+              "supported": true
+            },
+            "model_decision": {
+              "confidence": "inferred",
+              "mechanism": "model_decision trigger value documented in 'Activation Modes' table — Cascade decides based on context",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "Cascade-managed Memories layer auto-writes context based on conversation (documented under 'Memories & Rules' / 'How to Manage Memories')",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md fallback documented in dedicated rules.1 doc with 'Comparison with Rules' section",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": ".windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "zed": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "instructions are always-on context: personal ~/.config/zed/AGENTS.md applies to every project, and the first-match project-root instruction file applies to the current project, overriding personal on conflict (documented under 'Personal Instructions' / 'Project Instructions')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}
