@@ -4,6 +4,11 @@
 Companion to [`simplification-audit.md`](simplification-audit.md). This document
 turns the approved-but-not-yet-executed tiers into concrete, ordered work items.
 
+> **Historical note (2026-07-13):** the "data stays in syllago" shape described
+> below was later revised — `docs/provider-sources/` moved to the capmon repo
+> and capmon's pipeline runs entirely there (see ADR 0019). This plan is kept
+> as written for the record.
+
 **Approvals on record:** all tiers approved; capmon extraction to a separate
 repo with **zero functionality loss**; capmon cadence **every 4 days** (already
 applied — `capmon.yml` cron is `0 6 */4 * *`, staleness threshold bumped

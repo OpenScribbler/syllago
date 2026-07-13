@@ -12,7 +12,7 @@ This document shows which content types each provider supports natively, and whe
 - `✗` — Not supported by this provider
 - `—` — Provider not yet in syllago Go code (planned/future)
 
-Last updated: 2026-04-17. Authoritative sources: `cli/internal/provider/*.go` (syllago support), `docs/provider-sources/*.yaml` (native support + monitoring sources).
+Last updated: 2026-04-17. Authoritative sources: `cli/internal/provider/*.go` (syllago support), the Capability Feed mirror in `docs/provider-capabilities/capabilities/` (native support).
 
 ---
 
