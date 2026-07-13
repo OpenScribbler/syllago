@@ -21,8 +21,9 @@ type Options struct {
 	FeedURL string
 	// RepoRoot is the syllago repo root containing docs/provider-capabilities.
 	RepoRoot string
-	// ETagFile persists the index ETag between runs (best-effort politeness;
-	// empty disables persistence).
+	// ETagFile persists the index ETag plus the last verified index's
+	// freshness fields between runs (best-effort politeness; empty disables
+	// persistence — and with it the conditional GET).
 	ETagFile string
 	// SummaryFile receives the machine-readable run summary consumed by the
 	// cron workflow (empty disables).
@@ -52,7 +53,7 @@ var mirrorExcluded = map[string]bool{"advisories.json": true}
 
 // Run is the complete Capmon Pull pipeline with fail-closed ordering:
 //
-//	fetch index (conditional GET) → 304 short-circuit
+//	fetch index (conditional GET) → 304 short-circuit (freshness-gated)
 //	→ parse shape → fetch attestation → verify provenance → freshness
 //	→ data_revision marker short-circuit (only AFTER verification)
 //	→ fetch + sha256-verify every file → write mirror
@@ -71,15 +72,27 @@ func Run(ctx context.Context, opts Options) (*Summary, error) {
 
 	f := &Fetcher{}
 
-	prevETag := readETag(opts.ETagFile)
+	state := readETagState(opts.ETagFile)
+	prevETag := ""
+	if state != nil {
+		prevETag = state.ETag
+	}
 	res, err := f.Fetch(ctx, opts.FeedURL, prevETag)
 	if err != nil {
 		return nil, err
 	}
 
 	// 304: the exact bytes we last processed. Nothing to verify, nothing to
-	// write — the polite no-op.
+	// write — the polite no-op. The freshness gate still runs, against the
+	// state persisted with the ETag: an endlessly replayed 304 must not
+	// keep the cron green while the feed goes stale (syllago-u9s3l).
 	if res.NotModified {
+		if state == nil {
+			return nil, errors.New("capfeed run: server returned 304 Not Modified to a request without If-None-Match (writing nothing)")
+		}
+		if err := CheckFreshness(state.GeneratedAt, now(), state.MaxStalenessHours); err != nil {
+			return nil, err
+		}
 		sum := &Summary{Changed: false}
 		if err := writeSummary(opts.SummaryFile, sum); err != nil {
 			return nil, err
@@ -122,7 +135,7 @@ func Run(ctx context.Context, opts Options) (*Summary, error) {
 	}
 	if marker.DataRevision == idx.DataRevision {
 		sum := &Summary{Changed: false, DataRevision: idx.DataRevision, GeneratedAt: idx.GeneratedAt}
-		if err := persistETag(opts.ETagFile, res.ETag); err != nil {
+		if err := persistETagState(opts.ETagFile, res.ETag, idx); err != nil {
 			return nil, err
 		}
 		if err := writeSummary(opts.SummaryFile, sum); err != nil {
@@ -148,7 +161,7 @@ func Run(ctx context.Context, opts Options) (*Summary, error) {
 		return nil, err
 	}
 
-	if err := persistETag(opts.ETagFile, res.ETag); err != nil {
+	if err := persistETagState(opts.ETagFile, res.ETag, idx); err != nil {
 		return nil, err
 	}
 	sum := &Summary{
@@ -172,23 +185,61 @@ func baseURLOf(feedURL string) string {
 	return feedURL
 }
 
-func readETag(path string) string {
+// etagState is the between-runs conditional-GET state. GeneratedAt and
+// MaxStalenessHours are captured from the last verified index so the 304
+// path — which has no body to read them from — can still run the
+// freshness gate.
+type etagState struct {
+	ETag              string    `json:"etag"`
+	GeneratedAt       time.Time `json:"generated_at"`
+	MaxStalenessHours int       `json:"max_staleness_hours"`
+}
+
+// readETagState loads the persisted state. Anything unusable — missing
+// file, non-JSON (including the retired plain-text ETag format), or a
+// record missing any field the 304 path needs — yields nil: the run sends
+// an unconditional GET and verifies from scratch.
+func readETagState(path string) *etagState {
 	if path == "" {
-		return ""
+		return nil
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(data))
-}
-
-func persistETag(path, etag string) error {
-	if path == "" || etag == "" {
 		return nil
 	}
-	if err := os.WriteFile(path, []byte(etag+"\n"), 0o644); err != nil {
-		return fmt.Errorf("capfeed run: persisting ETag: %w", err)
+	var s etagState
+	if err := json.Unmarshal(data, &s); err != nil {
+		return nil
+	}
+	if s.ETag == "" || s.GeneratedAt.IsZero() || s.MaxStalenessHours <= 0 {
+		return nil
+	}
+	return &s
+}
+
+func persistETagState(path, etag string, idx *Index) error {
+	if path == "" {
+		return nil
+	}
+	if etag == "" {
+		// A verified 200 without an ETag supersedes whatever is on disk;
+		// leaving the old record would let a later 304 validate against an
+		// index we no longer hold.
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("capfeed run: clearing superseded ETag state: %w", err)
+		}
+		return nil
+	}
+	data, err := json.Marshal(etagState{
+		ETag:              etag,
+		GeneratedAt:       idx.GeneratedAt,
+		MaxStalenessHours: idx.MaxStalenessHours,
+	})
+	if err != nil {
+		return fmt.Errorf("capfeed run: encoding ETag state: %w", err)
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0o644); err != nil {
+		return fmt.Errorf("capfeed run: persisting ETag state: %w", err)
 	}
 	return nil
 }
