@@ -1,10 +1,10 @@
 {
   "feature": "capmon-pull",
   "started": "2026-07-12T21:26:13.824Z",
-  "updated": "2026-07-13T00:42:55.318Z",
+  "updated": "2026-07-13T00:46:22.434Z",
   "ticketBeadId": "syllago-mol-0wj",
   "autonomy": "pragmatic",
-  "currentStage": "pr",
+  "currentStage": "complete",
   "completed": [
     "lexicon-gate",
     "align",
@@ -14,7 +14,8 @@
     "plan",
     "create-beads",
     "execute",
-    "final-validate"
+    "final-validate",
+    "pr"
   ],
   "lexicon": {
     "path": "lexicon.md",
@@ -75,7 +76,7 @@
       ".ship/capmon-pull/adr/0017-separate-main-package-vs-hidden-prefixed-subcommand.md"
     ]
   },
-  "prUrl": null,
+  "prUrl": "https://github.com/OpenScribbler/syllago/pull/487",
   "execution": {
     "mode": "sequential",
     "tasksDispatched": [],
