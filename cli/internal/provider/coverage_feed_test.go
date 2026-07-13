@@ -13,10 +13,8 @@ import (
 func feedFixtureRoot(t *testing.T, slug, capDoc string) string {
 	t.Helper()
 	root := t.TempDir()
-	for _, d := range []string{"docs/provider-sources", "docs/provider-formats"} {
-		if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash(d)), 0o755); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.MkdirAll(filepath.Join(root, filepath.FromSlash("docs/provider-formats")), 0o755); err != nil {
+		t.Fatal(err)
 	}
 	if capDoc != "" {
 		dir := filepath.Join(root, "docs", "provider-capabilities", "capabilities")

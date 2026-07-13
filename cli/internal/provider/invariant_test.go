@@ -53,9 +53,9 @@ func TestCoverageInternalGoConsistency(t *testing.T) {
 }
 
 // TestCoverageNoDrift is the authoritative full-conformance gate. It fails if
-// ANY drift is found across all four assertions. This is the gate that Phase 3
+// ANY drift is found across all assertions. This is the gate that Phase 3
 // of the provider-coverage-reconciliation plan closes (by bringing
-// provider-sources/ and provider-formats/ YAMLs into sync with Go).
+// provider-formats/ YAMLs into sync with Go).
 //
 // Gated behind SYLLAGO_COVERAGE_STRICT=1 until Phase 3 lands. Once the YAMLs
 // are reconciled, delete the env-var gate so this test runs by default on

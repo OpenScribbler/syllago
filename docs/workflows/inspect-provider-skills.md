@@ -144,7 +144,8 @@ it was deliberately not implemented).
 For providers without a human-authored `docs/provider-formats/<slug>.md`
 (currently: crush, pi — and any new provider without a manually written doc):
 
-1. Read the source manifest at `docs/provider-sources/<slug>.yaml` to understand
+1. Read the source manifest at `docs/provider-sources/<slug>.yaml` in the
+   [capmon repo](https://github.com/OpenScribbler/capmon) to understand
    what sources were fetched and what was expected to be extracted.
 2. Read all `extracted.json` files and `raw.bin` files in `.capmon-cache/<slug>/`.
 3. Write `docs/provider-formats/<slug>.md` with the `method: subagent` header.

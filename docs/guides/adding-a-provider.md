@@ -203,7 +203,6 @@ Capability monitoring lives in the external [capmon](https://github.com/OpenScri
 
 ## Provider documentation checklist (syllago side)
 
-- [ ] `docs/provider-sources/<slug>.yaml` — Provider Source Manifest (provmon input; still authored here)
 - [ ] `docs/provider-formats/<slug>.yaml` — Provider Format Document (graduated, reviewed mappings; the converter's authoritative source)
 - [ ] Capability Document appears under `docs/provider-capabilities/capabilities/` after capmon tracks the provider (automatic, via Capmon Pull)
 - [ ] `coverage-drift` check green (or drift understood and filed upstream)

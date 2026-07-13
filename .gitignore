@@ -47,7 +47,6 @@ docs/*
 !docs/provider-formats/
 # Capmon pipeline sidecars (tracking issue URLs, written at runtime by jtafb)
 docs/provider-formats/*.quality.json
-!docs/provider-sources/
 !docs/runbooks/
 !docs/vhs/
 !docs/workflows/

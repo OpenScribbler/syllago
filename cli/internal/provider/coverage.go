@@ -10,8 +10,8 @@ import (
 )
 
 // CoverageDrift describes a single mismatch detected by CheckCoverage. Drift can be
-// internal to Go (assertions 3, 4) or between Go and the documentation YAMLs
-// (assertions 1, 2).
+// internal to Go (assertions 3, 4), between Go and the format YAMLs (assertion 2),
+// or between Go and the capability feed mirror (assertion 5).
 type CoverageDrift struct {
 	Provider    string
 	ContentType catalog.ContentType
@@ -30,7 +30,6 @@ func (d CoverageDrift) String() string {
 // Assertion names used by CheckCoverage. Kept as exported constants so tests
 // and telemetry can filter on them without string-matching.
 const (
-	AssertionGoVsSourceManifest     = "go-vs-source-manifest"
 	AssertionGoVsFormatYAML         = "go-vs-format-yaml"
 	AssertionConfigLocationsVsGo    = "configlocations-vs-supportstype"
 	AssertionInstallDirVsSupportsGo = "installdir-vs-supportstype"
@@ -47,33 +46,6 @@ var CoverageContentTypes = []catalog.ContentType{
 	catalog.Commands,
 	catalog.Hooks,
 	catalog.MCP,
-}
-
-// sourceManifest mirrors the subset of docs/provider-sources/<slug>.yaml that
-// CheckCoverage needs. Only the content_types map is consulted.
-type sourceManifest struct {
-	Slug         string                                `yaml:"slug"`
-	ContentTypes map[string]sourceManifestContentEntry `yaml:"content_types"`
-}
-
-// sourceManifestContentEntry captures the two ways a source manifest asserts
-// support: `supported: false` explicitly, or `sources: [...]` implicitly.
-type sourceManifestContentEntry struct {
-	Supported *bool         `yaml:"supported,omitempty"`
-	Sources   []interface{} `yaml:"sources,omitempty"`
-}
-
-// supportAssertion returns nil if the manifest does not make a claim about
-// this content type, otherwise the asserted value.
-func (e sourceManifestContentEntry) supportAssertion() *bool {
-	if e.Supported != nil {
-		return e.Supported
-	}
-	if len(e.Sources) > 0 {
-		t := true
-		return &t
-	}
-	return nil
 }
 
 // formatYAML mirrors the subset of docs/provider-formats/<slug>.yaml that
@@ -104,9 +76,9 @@ func (e formatYAMLContentEntry) supportAssertion() *bool {
 }
 
 // CheckCoverage validates provider coverage across three axes: Go internal
-// consistency (assertions 3, 4), Go vs source manifest (assertion 1), and Go
-// vs format YAML (assertion 2). It returns every drift it finds; callers can
-// render the full picture in one pass.
+// consistency (assertions 3, 4), Go vs format YAML (assertion 2), and Go vs
+// capability feed mirror (assertion 5). It returns every drift it finds;
+// callers can render the full picture in one pass.
 //
 // repoRoot must be the repository root (the directory containing docs/ and cli/).
 // Use FindRepoRoot to locate it from a test's working directory.
@@ -115,10 +87,6 @@ func CheckCoverage(repoRoot string) ([]CoverageDrift, error) {
 		return nil, fmt.Errorf("repoRoot is empty")
 	}
 
-	sourceManifests, err := loadSourceManifests(filepath.Join(repoRoot, "docs", "provider-sources"))
-	if err != nil {
-		return nil, fmt.Errorf("load source manifests: %w", err)
-	}
 	formatYAMLs, err := loadFormatYAMLs(filepath.Join(repoRoot, "docs", "provider-formats"))
 	if err != nil {
 		return nil, fmt.Errorf("load format YAMLs: %w", err)
@@ -159,20 +127,6 @@ func CheckCoverage(repoRoot string) ([]CoverageDrift, error) {
 				})
 			}
 
-			// Assertion 1: Go ↔ source manifest.
-			if sm, ok := sourceManifests[prov.Slug]; ok {
-				if entry, has := sm.ContentTypes[string(ct)]; has {
-					if asserted := entry.supportAssertion(); asserted != nil && *asserted != goSupported {
-						drifts = append(drifts, CoverageDrift{
-							Provider:    prov.Slug,
-							ContentType: ct,
-							Assertion:   AssertionGoVsSourceManifest,
-							Message:     fmt.Sprintf("source manifest says supported=%v but Go SupportsType(%s)=%v", *asserted, ct, goSupported),
-						})
-					}
-				}
-			}
-
 			// Assertion 2: Go ↔ format YAML.
 			if fy, ok := formatYAMLs[prov.Slug]; ok {
 				if entry, has := fy.ContentTypes[string(ct)]; has {
@@ -198,38 +152,6 @@ func CheckCoverage(repoRoot string) ([]CoverageDrift, error) {
 	}
 
 	return drifts, nil
-}
-
-// loadSourceManifests reads every *.yaml file in dir and returns a map keyed
-// by the manifest's slug. The _template.yaml file is skipped.
-func loadSourceManifests(dir string) (map[string]*sourceManifest, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("read dir %s: %w", dir, err)
-	}
-	out := make(map[string]*sourceManifest, len(entries))
-	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".yaml" {
-			continue
-		}
-		if e.Name() == "_template.yaml" {
-			continue
-		}
-		path := filepath.Join(dir, e.Name())
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", path, err)
-		}
-		var sm sourceManifest
-		if err := yaml.Unmarshal(data, &sm); err != nil {
-			return nil, fmt.Errorf("parse %s: %w", path, err)
-		}
-		if sm.Slug == "" {
-			continue
-		}
-		out[sm.Slug] = &sm
-	}
-	return out, nil
 }
 
 // loadFormatYAMLs reads every *.yaml file in dir and returns a map keyed by

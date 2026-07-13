@@ -5,6 +5,17 @@ All notable changes to syllago are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Removed
+
+- **`docs/provider-sources/` removed.** Provider source manifests are owned
+  by [OpenScribbler/capmon](https://github.com/OpenScribbler/capmon) and
+  live only in that repository. Syllago's static copies had fallen behind
+  capmon's and were consumed only by an internal coverage check, which now
+  validates against the Capability Feed mirror in
+  `docs/provider-capabilities/capabilities/` instead.
+
 ## [0.14.0] - 2026-07-09
 
 ### Changed

@@ -283,12 +283,13 @@ Loadout:    loadout.yaml -> Resolver -> Snapshot -> Installer (per item) -> Inst
 
 The capability-monitor pipeline (fetch → extract → recognize → diff → heal)
 lives in its own repository, [github.com/OpenScribbler/capmon](https://github.com/OpenScribbler/capmon),
-extracted from `internal/capmon` with history. The capability *data* stays
-here — `docs/provider-sources/`, `docs/provider-formats/`,
-`docs/provider-capabilities/`, `docs/spec/canonical-keys.yaml` — and capmon's
-scheduled workflow (every 4 days) checks this repo out, runs the pipeline,
-and opens PRs/issues here when upstream provider docs drift. The
-`provider-monitor` source-URL watcher lives there too.
+extracted from `internal/capmon` with history. Capmon owns the provider
+source manifests and runs its pipeline entirely in its own repo, publishing
+the attestation-verified Capability Feed. Syllago mirrors that feed into
+`docs/provider-capabilities/capabilities/` via the daily `capmon-pull`
+workflow; the graduated mappings in `docs/provider-formats/` and
+`docs/spec/canonical-keys.yaml` remain authored here. The
+`provider-monitor` source-URL watcher lives in capmon too.
 
 ## Conversion Model
 
