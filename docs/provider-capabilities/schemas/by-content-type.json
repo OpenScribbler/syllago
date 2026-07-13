@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openscribbler.github.io/capmon/v1/schemas/by-content-type.json",
+  "schema_version": "1",
+  "title": "By-content-type pivot document",
+  "description": "by-content-type/<type>.json: one content type across all providers. providers is omitted when no provider declares the type.",
+  "type": "object",
+  "required": ["schema_version", "content_type"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "content_type": {"type": "string"},
+    "providers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://openscribbler.github.io/capmon/v1/schemas/provider-capabilities.json#/$defs/contentTypeNode"
+      }
+    }
+  }
+}

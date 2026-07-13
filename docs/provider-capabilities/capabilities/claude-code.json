@@ -1,0 +1,429 @@
+{
+  "content_types": {
+    "agents": {
+      "capabilities": {
+        "agent_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where agent definitions can live and the priority ordering when definitions exist at multiple levels. Common scopes: project, user/personal, managed/enterprise, CLI-defined.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "object"
+          },
+          "key_path": "agents.agent_scopes",
+          "mechanism": "five-tier scope hierarchy (managed > --agents CLI > project > user > plugin) documented under 'Choose the subagent scope' heading; precedence rules in scope table",
+          "supported": true
+        },
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "markdown with YAML frontmatter (name/description required, plus tools/model/permissionMode/etc) documented under 'Write subagent files' / 'Supported frontmatter fields' headings",
+          "supported": true
+        },
+        "invocation_patterns": {
+          "capabilities": {
+            "at_mention": {
+              "confidence": "inferred",
+              "mechanism": "@-mention syntax guarantees a specific subagent runs for one task (documented under 'Invoke subagents explicitly' heading)",
+              "supported": true
+            },
+            "background": {
+              "confidence": "inferred",
+              "mechanism": "foreground (blocking) vs background (concurrent) execution modes documented under 'Run subagents in foreground or background' heading",
+              "supported": true
+            },
+            "natural_language": {
+              "confidence": "inferred",
+              "mechanism": "Claude decides whether to delegate based on the subagent's description (documented under 'Understand automatic delegation' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How agents are triggered. Mechanisms include natural language detection, @-mention syntax, slash commands, CLI flags, or automatic delegation.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "agents.invocation_patterns",
+          "supported": true
+        },
+        "model_selection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether per-agent model overrides are supported, allowing different agents to use different AI models.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.model_selection",
+          "mechanism": "per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
+          "supported": true
+        },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-subagent mcpServers field scopes which MCP servers each subagent can access (documented under 'Scope MCP servers to a subagent' heading)",
+          "supported": true
+        },
+        "subagent_spawning": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can spawn, delegate to, or resume other agents. Enables multi-agent coordination patterns.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE; canonical spawn tool name, ACIF-CORE Appendix A)",
+            "type": "bool"
+          },
+          "key_path": "agents.subagent_spawning",
+          "mechanism": "multi-agent coordination via parallel research, chained subagents, and resumable transcripts (documented under 'Run parallel research' / 'Chain subagents' / 'Resume subagents' headings)",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "per-subagent tool allowlist (tools), denylist (disallowedTools), and per-spawn restrictions documented under 'Control subagent capabilities' / 'Available tools' / 'Restrict which subagents can be spawned' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "async_execution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.async_execution",
+          "mechanism": "async execution documented under 'Run hooks in the background' / 'Configure an async hook' / 'How async hooks execute' headings",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "decision control documented under 'Decision control' heading (exit codes + JSON output fields)",
+          "supported": true
+        },
+        "handler_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "four handler types documented under 'Hook handler fields' (Common fields, Command hook fields, HTTP hook fields, Prompt and agent hook fields)",
+          "supported": true
+        },
+        "hook_scopes": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "hook scopes documented under 'Hook locations' heading (user, project, local, managed policy, plugin, component frontmatter)",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "JSON I/O protocol documented under 'Hook input and output' / 'JSON output' headings (continue, stopReason, suppressOutput, systemMessage, hookSpecificOutput)",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "matcher patterns documented under 'Matcher patterns' heading (exact, pipe-separated, regex)",
+          "supported": true
+        },
+        "permission_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "permission control documented under 'PermissionRequest' / 'Permission update entries' headings (addRules/replaceRules/removeRules/setMode)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "mcp": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "managed MCP config with managed-mcp.json + allowlists/denylists documented under 'Managed MCP configuration' / 'Option 1: Exclusive control with managed-mcp.json' / 'Option 2: Policy-based control with allowlists and denylists' headings",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "env-var expansion in .mcp.json documented under 'Environment variable expansion in .mcp.json' heading",
+          "supported": true
+        },
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 with callback port + pre-configured credentials documented under 'Authenticate with remote MCP servers' / 'Use a fixed OAuth callback port' / 'Use pre-configured OAuth credentials' headings",
+          "supported": true
+        },
+        "resource_referencing": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether MCP resources (not just tools) can be accessed, typically via @-mention syntax or similar referencing mechanisms.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.resource_referencing",
+          "mechanism": "MCP resource @-mention referencing documented under 'Use MCP resources' / 'Reference MCP resources' headings",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "three transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "rules": {
+      "capabilities": {
+        "activation_mode": {
+          "capabilities": {
+            "always": {
+              "confidence": "inferred",
+              "mechanism": "CLAUDE.md auto-loads when present in project root or working tree",
+              "supported": true
+            },
+            "glob": {
+              "confidence": "inferred",
+              "mechanism": "path-specific rules in .claude/rules/<name>.md fire on glob match (documented under 'Path-specific rules')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "supported": true
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "agent-managed automatic memory with /memory audit/edit (documented under 'Auto memory' heading)",
+          "supported": true
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "inferred",
+              "mechanism": "AGENTS.md fallback when CLAUDE.md absent (documented under 'AGENTS.md' heading)",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "@-mention import syntax pulls referenced files into context (documented under 'Import additional files')",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "user-level rules from ~/.claude/CLAUDE.md plus project + additional directories (documented under 'User-level rules')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "skills": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.claude/skills/<skill-name>/SKILL.md in user home directory",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": ".claude/skills/<skill-name>/SKILL.md committed to version control",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "claude-code",
+  "provider_exclusive": {
+    "skills.additional_directories": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Skills from additional directories' heading",
+      "supported": true
+    },
+    "skills.arguments": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Pass arguments to skills' heading",
+      "supported": true
+    },
+    "skills.dynamic_context": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Inject dynamic context' heading",
+      "supported": true
+    },
+    "skills.frontmatter": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Frontmatter reference' heading",
+      "supported": true
+    },
+    "skills.invoker_control": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Control who invokes a skill' heading",
+      "supported": true
+    },
+    "skills.live_reload": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Live change detection' heading",
+      "supported": true
+    },
+    "skills.nested_directories": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Automatic discovery from nested directories' heading",
+      "supported": true
+    },
+    "skills.subagent_invocation": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Run skills in a subagent' heading",
+      "supported": true
+    },
+    "skills.tool_preapproval": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Pre-approve tools for a skill' heading",
+      "supported": true
+    }
+  },
+  "schema_version": "1",
+  "slug": "claude-code",
+  "status": "live"
+}

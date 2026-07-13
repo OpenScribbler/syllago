@@ -1,0 +1,176 @@
+{
+  "content_types": {
+    "agents": {
+      "capabilities": {
+        "definition_format": {
+          "confidence": "inferred",
+          "key": {
+            "description": "What format agent definitions use. Varies widely: Markdown with YAML frontmatter, JSON config files, TOML sections, or AGENTS.md plain markdown.\n",
+            "spec_ref": "ACIF-AGENT §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "agents.definition_format",
+          "mechanism": "single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading",
+          "supported": true
+        },
+        "tool_restrictions": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can be restricted to specific tools via allowlists, denylists, tool categories, or per-tool configuration maps.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE); tool vocabulary ACIF-CORE Appendix A",
+            "type": "bool"
+          },
+          "key_path": "agents.tool_restrictions",
+          "mechanism": "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "commands": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "$ARGUMENTS substitution in Markdown commands plus positional shell args ($1, $2, ...) in Executable commands documented under '2 · Markdown commands' / '3 · Executable commands' / '5 · Usage patterns' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "hooks": {
+      "capabilities": {
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event 'Decision Control' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "mcp": {
+      "capabilities": {
+        "marketplace": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.marketplace",
+          "mechanism": "40+ pre-configured MCP servers (Linear, GitHub, Stripe, etc.) documented under 'Quick Start: Add from Registry' heading",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OS-keyring OAuth-token storage for HTTP MCP servers documented under 'OAuth Tokens' heading",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "per-server tool allowlisting via the `disabledTools` field documented under 'Configuration Schema' heading",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "http and stdio transports documented under 'Adding HTTP Servers' and 'Adding Stdio Servers' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "skills": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md (skill.mdx also accepted)",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.factory/skills/<skill-name>/SKILL.md",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "<repo>/.factory/skills/<skill-name>/SKILL.md or .agent/skills/<skill-name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "display_name": "factory-droid",
+  "provider_exclusive": {
+    "skills.creation_workflow": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Quickstart' heading",
+      "supported": true
+    },
+    "skills.directory_structure": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Where skills live' heading",
+      "supported": true
+    },
+    "skills.frontmatter": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Frontmatter reference' heading",
+      "supported": true
+    },
+    "skills.invocation": {
+      "confidence": "inferred",
+      "mechanism": "documented under 'Control who invokes a skill' heading",
+      "supported": true
+    }
+  },
+  "schema_version": "1",
+  "slug": "factory-droid",
+  "status": "live"
+}

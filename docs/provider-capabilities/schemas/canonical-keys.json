@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openscribbler.github.io/capmon/v1/schemas/canonical-keys.json",
+  "schema_version": "1",
+  "title": "Canonical-key registry document",
+  "description": "spec/canonical-keys.json: the published key registry, content type -> key -> {description, type, spec_ref}.",
+  "type": "object",
+  "required": ["schema_version", "content_types"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "content_types": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {"$ref": "#/$defs/keyMeta"}
+      }
+    }
+  },
+  "$defs": {
+    "keyMeta": {
+      "type": "object",
+      "required": ["description", "type", "spec_ref"],
+      "properties": {
+        "description": {"type": "string"},
+        "type": {"type": "string"},
+        "spec_ref": {"type": "string"}
+      }
+    }
+  }
+}
