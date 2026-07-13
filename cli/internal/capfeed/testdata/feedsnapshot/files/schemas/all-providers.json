@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openscribbler.github.io/capmon/v1/schemas/all-providers.json",
+  "schema_version": "1",
+  "title": "All-providers aggregate document",
+  "description": "capabilities/all.json: every provider under providers.<slug>, each the exact per-provider document shape.",
+  "type": "object",
+  "required": ["schema_version", "providers"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "providers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://openscribbler.github.io/capmon/v1/schemas/provider-capabilities.json"
+      }
+    }
+  }
+}

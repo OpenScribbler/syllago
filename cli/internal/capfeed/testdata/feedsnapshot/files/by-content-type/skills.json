@@ -1,0 +1,578 @@
+{
+  "content_type": "skills",
+  "providers": {
+    "amp": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "skill directory placed under .agents/skills/<name>/ or .claude/skills/<name>/ within the project root",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "claude-code": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.claude/skills/<skill-name>/SKILL.md in user home directory",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": ".claude/skills/<skill-name>/SKILL.md committed to version control",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cline": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "Skills stored in ~/.cline/skills/<name>/SKILL.md",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "Skills stored in .cline/skills/<name>/SKILL.md (recommended), .clinerules/skills/<name>/SKILL.md, or .claude/skills/<name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "codex": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md (SKILLS_FILENAME constant)",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: display_name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.agents/skills/<name>/ (SkillScope::User)",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": ".agents/skills/<name>/ under project config folder or between project root and cwd (SkillScope::Repo)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "copilot-cli": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "skill directory under ~/.copilot/skills/<name>/, ~/.claude/skills/<name>/, or ~/.agents/skills/<name>/",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "skill directory under .github/skills/<name>/, .claude/skills/<name>/, or .agents/skills/<name>/ in project repository",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "crush": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "compatibility": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Provider compatibility constraints — which AI tool versions or providers this skill is compatible with.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.compatibility",
+          "mechanism": "yaml frontmatter key: compatibility",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "user-global ~/.crush/skills/ directory",
+          "supported": true
+        },
+        "license": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "SPDX license identifier for the skill content. Typically \"MIT\", \"Apache-2.0\", etc.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.license",
+          "mechanism": "yaml frontmatter key: license",
+          "supported": true
+        },
+        "metadata_map": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Arbitrary key-value metadata attached to the skill. Provider-specific semantics; often used for tooling or automation metadata.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.metadata_map",
+          "mechanism": "yaml frontmatter key: metadata",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "per-project .crush/skills/ directory",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "cursor": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "inferred",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md is the canonical skill filename, documented under 'SKILL.md file format' heading",
+          "supported": true
+        },
+        "disable_model_invocation": {
+          "confidence": "inferred",
+          "key": {
+            "description": "When true, the AI cannot auto-invoke this skill; only the user can invoke it explicitly. Default: false.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+            "type": "bool"
+          },
+          "key_path": "skills.disable_model_invocation",
+          "mechanism": "disable-model-invocation frontmatter toggle documented under 'Disabling automatic invocation' heading",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "Skills stored in ~/.agents/skills/<name>/SKILL.md per the cross-provider Agent Skills convention",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "Skills stored in .cursor/skills/<name>/SKILL.md (cursor-native) or .agents/skills/<name>/SKILL.md (cross-provider Agent Skills convention)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "factory-droid": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md (skill.mdx also accepted)",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.factory/skills/<skill-name>/SKILL.md",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "<repo>/.factory/skills/<skill-name>/SKILL.md or .agent/skills/<skill-name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "kiro": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "POWER.md (fixed, all caps)",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "Self-contained directory installed via Kiro Powers panel (UI installation, no fixed filesystem path)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "pi": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "~/.pi/agent/skills/<name>/SKILL.md or ~/.agents/skills/<name>/SKILL.md",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": ".pi/skills/<name>/SKILL.md or .agents/skills/<name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "roo-code": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md",
+          "supported": true
+        },
+        "compatibility": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Provider compatibility constraints — which AI tool versions or providers this skill is compatible with.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.compatibility",
+          "mechanism": "yaml frontmatter key: compatibility",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "user-global ~/.roo/skills/ directory",
+          "supported": true
+        },
+        "license": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "SPDX license identifier for the skill content. Typically \"MIT\", \"Apache-2.0\", etc.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.license",
+          "mechanism": "yaml frontmatter key: license",
+          "supported": true
+        },
+        "metadata_map": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Arbitrary key-value metadata attached to the skill. Provider-specific semantics; often used for tooling or automation metadata.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.metadata_map",
+          "mechanism": "yaml frontmatter key: metadata",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "per-project .roo/skills/ directory",
+          "supported": true
+        }
+      },
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}

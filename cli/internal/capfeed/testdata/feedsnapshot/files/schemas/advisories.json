@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openscribbler.github.io/capmon/v1/schemas/advisories.json",
+  "schema_version": "1",
+  "title": "Advisories correction channel",
+  "description": "advisories.json: the correction channel for a major, regenerated on every deploy (the sole permitted post-freeze mutation). Launch-empty.",
+  "type": "object",
+  "required": ["schema_version", "advisories"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "advisories": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/advisory"}
+    }
+  },
+  "$defs": {
+    "advisory": {
+      "type": "object",
+      "required": ["id", "published_at", "severity", "path", "note"],
+      "properties": {
+        "id": {"type": "string"},
+        "published_at": {"type": "string"},
+        "severity": {"type": "string"},
+        "path": {"type": "string"},
+        "note": {"type": "string"},
+        "key_path": {"type": "string", "pattern": "^[a-z_]+(\\.[a-z_]+)*$"},
+        "corrected_value": {}
+      }
+    }
+  }
+}

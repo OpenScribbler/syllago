@@ -1,0 +1,73 @@
+{
+  "content_type": "commands",
+  "providers": {
+    "cline": {
+      "capabilities": {
+        "builtin_commands": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider ships default/built-in commands alongside user-defined custom commands.\n",
+            "spec_ref": "ACIF-COMMAND §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage row)",
+            "type": "bool"
+          },
+          "key_path": "commands.builtin_commands",
+          "mechanism": "6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "factory-droid": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "$ARGUMENTS substitution in Markdown commands plus positional shell args ($1, $2, ...) in Executable commands documented under '2 · Markdown commands' / '3 · Executable commands' / '5 · Usage patterns' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "gemini-cli": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "{{args}} placeholder substitution plus !{...} shell-injection and @{...} file-injection escapes documented under 'Handling arguments' / '1. Context-aware injection with {{args}}' / '3. Executing shell commands with !{...}' / '4. Injecting file content with @{...}' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "pi": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "positional shell-style substitution ($1, $2, $@, $ARGUMENTS, ${@:N}, ${@:N:L}) documented under 'Argument Hints' / 'Arguments' / 'Usage' headings",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "windsurf": {
+      "supported": true
+    }
+  },
+  "schema_version": "1"
+}

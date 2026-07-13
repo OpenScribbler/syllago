@@ -81,7 +81,7 @@ _Canonical domain vocabulary for this repo. When a term has a bold canonical nam
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Capability Document** | A per-provider, per-content-type YAML in `docs/provider-capabilities/` produced by capmon, recording proposed canonical key mappings with confidence levels. The machine-generated draft reviewed before graduating to a Provider Format Document. | capability YAML, cap doc |
+| **Capability Document** | A per-provider JSON file in `docs/provider-capabilities/`: a verbatim, attestation-verified mirror of the Capability Feed's `capabilities/<slug>.json`, reviewed by the maintainer before mappings graduate to a Provider Format Document. | capability YAML, cap doc |
 | **Provider Format Document** | A per-provider YAML in `docs/provider-formats/` containing finalized, reviewed canonical key mappings for all supported content types; the authoritative source syllago uses when converting between canonical and native format. | format doc, provider schema |
 | **Provider Source Manifest** | A per-provider YAML in `docs/provider-sources/` declaring documentation URLs, fetch tier, change detection method, and last-verified baseline; the input provmon reads for URL health and version drift checks. | source manifest, provider manifest |
 | **Provider Reference Docs** | Human-readable Markdown files under `docs/providers/<slug>/` documenting a provider's content structure (file formats, schemas, loading behavior) for human consumption; not machine-parsed. | provider docs, provider notes |
@@ -91,7 +91,10 @@ _Canonical domain vocabulary for this repo. When a term has a bold canonical nam
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Capmon** | The four-stage capability monitoring pipeline (fetch → extract → diff → review) that scrapes provider documentation, extracts structured capability fields, detects drift from a stored baseline, and opens GitHub issues or PRs when capabilities change. | capability monitor, cap-mon |
+| **Capmon** | The external OpenScribbler/capmon project that monitors provider documentation and publishes the **Capability Feed**; syllago is a consumer only. (Formerly syllago's in-repo four-stage pipeline, extracted 2026-07.) | capability monitor, cap-mon |
+| **Capability Feed** | The attestation-verified JSON feed published by capmon at https://openscribbler.github.io/capmon/ (`v1/index.json` plus per-provider capability files), consumed under tolerant-reader semantics. | registry, API, capmon site |
+| **Capmon Pull** | The syllago maintainer tool and daily cron that verifies the **Capability Feed** fail-closed and mirrors it into `docs/provider-capabilities/` via a single rolling PR. | sync job, capmon refresh |
+| **Coverage Drift** | A finding where Go's `SupportsType` claim contradicts the mirrored **Capability Feed** data (`supported` absent = unknown = no finding); surfaced by a non-required CI check. | coverage gap, capability mismatch |
 | **Provmon** | The provider source monitoring pipeline that reads Provider Source Manifests, checks URL health via HTTP HEAD requests, and detects version drift via the GitHub Releases API or content hashing. | provider monitor, prov-mon |
 | **Heal Pipeline** | Capmon's auto-repair subsystem that attempts to find valid replacement URLs when a source returns invalid or missing content, filing a GitHub issue if healing fails. | healer, self-heal |
 | **Version Drift** | A provmon finding where a provider's latest released version differs from the baseline recorded in the Provider Source Manifest; triggers an update recommendation. | drift, version mismatch |
@@ -104,6 +107,7 @@ _Canonical domain vocabulary for this repo. When a term has a bold canonical nam
 - A **Registry Clone** is the local materialization of a **Registry**; it has exactly one **Registry Manifest**.
 - A **Provider Format Document** is the reviewed and promoted form of one or more **Capability Documents** for that provider.
 - A **Provider Source Manifest** is the input to **Provmon**; a **Capability Document** is the output of **Capmon**.
+- **Capmon Pull** mirrors the **Capability Feed** into **Capability Documents**; it never touches the **Library**, **Registries**, or user content. **Refresh** remains the content-lifecycle verb for registry content ("pull" is still an alias to avoid in that context).
 
 ## Flagged Ambiguities
 

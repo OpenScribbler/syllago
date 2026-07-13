@@ -182,126 +182,30 @@ cd cli && go test ./internal/tui/ -update-golden
 
 ---
 
-# Capability Monitoring (capmon) Onboarding
+# Capability Data (external capmon + Capmon Pull)
 
-This section covers the capmon-specific workflow for registering a provider's capabilities in the capability monitoring system. Run this after completing the Go implementation steps above.
+Capability monitoring lives in the external [capmon](https://github.com/OpenScribbler/capmon) project, which publishes the attestation-verified **Capability Feed** at <https://openscribbler.github.io/capmon/>. Syllago consumes that feed — it does not run any capability pipeline of its own.
 
-## Prerequisites
+## What this means when adding a provider
 
-- Provider slug (kebab-case, matches filesystem convention)
-- Source documentation URLs
+1. **Register the provider with capmon** (in the capmon repo, not here): capmon owns source manifests, fetching, extraction, and baseline seeding. Follow capmon's own onboarding guide.
+2. **Capmon Pull mirrors the data here automatically.** Once capmon tracks the provider, its Capability Document appears in `docs/provider-capabilities/capabilities/<slug>.json` via the daily rolling PR from `.github/workflows/capmon-pull.yml`. Nothing to run manually; to pull ahead of the cron:
 
-## Steps
+   ```bash
+   cd cli && go run ./cmd/capmon-pull -repo-root ..
+   ```
 
-### 1. Create the provider source manifest
+3. **Watch Coverage Drift.** After your Go implementation lands, the non-required `coverage-drift` CI check compares your `SupportsType` declarations against the mirrored feed data. A red check on your PR means the feed disagrees with your Go claims — reconcile the declaration or, if the feed is wrong, file an issue at [OpenScribbler/capmon](https://github.com/OpenScribbler/capmon/issues). Reproduce locally:
 
-Write `docs/provider-sources/<slug>.yaml` manually. Use `docs/provider-sources/claude-code.yaml` as a template.
+   ```bash
+   cd cli && SYLLAGO_COVERAGE_FEED=1 go test ./internal/provider/ -run TestCoverageFeedDrift
+   ```
 
-### 2. Create or verify the format reference doc
+## Provider documentation checklist (syllago side)
 
-Write `docs/provider-formats/<slug>.md` — the human-authored ground truth for this provider's skills format.
-If you don't have one yet, the inspection bead (Step 4) will generate a draft.
+- [ ] `docs/provider-sources/<slug>.yaml` — Provider Source Manifest (provmon input; still authored here)
+- [ ] `docs/provider-formats/<slug>.yaml` — Provider Format Document (graduated, reviewed mappings; the converter's authoritative source)
+- [ ] Capability Document appears under `docs/provider-capabilities/capabilities/` after capmon tracks the provider (automatic, via Capmon Pull)
+- [ ] `coverage-drift` check green (or drift understood and filed upstream)
 
-### 3. Fetch and extract
-
-```bash
-capmon run --stage=fetch-extract --provider=<slug>
-```
-
-### 4. Run the inspection bead
-
-Follow the workflow in `docs/workflows/inspect-provider-skills.md` with `--provider=<slug>`.
-This produces `.develop/seeder-specs/<slug>-skills.yaml`.
-
-### 5. Review and approve the seeder spec
-
-Open `.develop/seeder-specs/<slug>-skills.yaml`.
-Review `proposed_mappings`. Set `human_action: approve` and `reviewed_at: <ISO timestamp>`.
-Optionally run: `capmon validate-spec --provider=<slug>`
-
-### 6. Implement the recognizer
-
-Implement `recognizeXxxSkills()` in `cli/internal/capmon/recognize_<slug_underscored>.go`
-using the approved seeder spec as the source of truth.
-
-### 7. Seed the provider
-
-```bash
-capmon seed --provider=<slug>
-```
-
-### 8. Verify output
-
-Check `docs/provider-capabilities/<slug>.yaml` for a populated `content_types.skills` section
-with `confidence: confirmed` entries.
-
-## capmon Checklist
-
-- [ ] Create `docs/provider-sources/<slug>.yaml`
-- [ ] Create or verify `docs/provider-formats/<slug>.md`
-- [ ] `capmon run --stage=fetch-extract --provider=<slug>`
-- [ ] Run inspection bead workflow (`docs/workflows/inspect-provider-skills.md`)
-- [ ] Review and approve `.develop/seeder-specs/<slug>-skills.yaml` (`human_action: approve`, `reviewed_at`)
-- [ ] `capmon validate-spec --provider=<slug>` (confirm spec passes gate)
-- [ ] Implement `cli/internal/capmon/recognize_<slug_underscored>.go`
-- [ ] `capmon seed --provider=<slug>`
-- [ ] Verify `docs/provider-capabilities/<slug>.yaml` has `confidence: confirmed` entries
-- [ ] Confirm `TestAllProviderSlugsRegistered` passes (auto-detects from filesystem)
-
-## Troubleshooting
-
-**Spec gate blocking (`seeder spec for <slug> has not been reviewed`):**
-The `validate-spec` command enforces that `human_action` is set to `approve` and `reviewed_at` is a non-empty ISO timestamp. Open `.develop/seeder-specs/<slug>-skills.yaml` and set both fields before re-running.
-
-**Missing cache (fetch-extract returns no output):**
-The source manifest at `docs/provider-sources/<slug>.yaml` must contain valid `documentation_urls`. Verify the URLs are reachable and re-run `--stage=fetch-extract`.
-
-**`TestAllProviderSlugsRegistered` fails after adding a new provider:**
-This test auto-detects providers from the filesystem (`docs/provider-sources/` and `docs/provider-capabilities/`). Ensure both files exist and the slug matches exactly (kebab-case). No code change is needed — the test picks up new files automatically.
-
-**Inspection bead produces empty `proposed_mappings`:**
-The format reference doc (`docs/provider-formats/<slug>.md`) may be missing or incomplete. Add field definitions and re-run the inspection bead workflow.
-
-## Smoke-Testing with a Scratch Provider
-
-To verify that the validate-spec command handles an unknown provider gracefully (no panic, clear error):
-
-```bash
-# Create a minimal scratch spec
-mkdir -p .develop/seeder-specs
-cat > .develop/seeder-specs/scratch-test-skills.yaml << 'EOF'
-provider: scratch-test
-content_type: skills
-format: markdown
-format_doc_provenance: human
-extraction_gaps: []
-source_excerpt: ""
-proposed_mappings: []
-human_action: ""
-reviewed_at: ""
-notes: ""
-EOF
-
-# Validate with empty human_action — should error
-capmon validate-spec --provider=scratch-test
-
-# Set approval and re-validate — should pass
-# (edit human_action and reviewed_at in the file, then re-run)
-
-# Clean up
-rm .develop/seeder-specs/scratch-test-skills.yaml
-```
-
-Expected: first run errors with "seeder spec for scratch-test has not been reviewed"; approved run succeeds.
-
-## After editing a provider source manifest
-
-After adding a provider or a new source URL to `docs/provider-sources/<slug>.yaml`, populate the `content_hash` baselines in the matching `docs/provider-formats/<slug>.yaml` so drift detection has something to compare against:
-
-```
-cd cli && go run ./cmd/capmon run --stage fetch-extract --provider=<slug>
-```
-
-This fetches each source listed under `content_types.*.sources` and writes the sha256 of every fetched body back to the FormatDoc as the content_hash baseline. Commit both the source manifest and the updated FormatDoc in the same change. Without this step, `provider-monitor` will report `skipped: baseline empty` for any new sources on its next run.
-
-For sources with `fetch_method: chromedp`, set `CHROMEDP_URL=ws://localhost:9222/devtools/browser/<id>` to reuse a remote headless-shell sidecar — faster and more reliable than launching a local Chrome for each fetch.
+Capability Documents are the review queue for graduating mappings into Provider Format Documents — see [`docs/provider-capabilities/README.md`](../provider-capabilities/README.md).

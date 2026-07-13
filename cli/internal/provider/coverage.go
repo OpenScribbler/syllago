@@ -30,6 +30,7 @@ const (
 	AssertionGoVsFormatYAML         = "go-vs-format-yaml"
 	AssertionConfigLocationsVsGo    = "configlocations-vs-supportstype"
 	AssertionInstallDirVsSupportsGo = "installdir-vs-supportstype"
+	AssertionGoVsCapabilityFeed     = "go-vs-capability-feed"
 )
 
 // CoverageContentTypes is the fixed set of content types evaluated by CheckCoverage.
@@ -182,6 +183,14 @@ func CheckCoverage(repoRoot string) ([]CoverageDrift, error) {
 				}
 			}
 		}
+
+		// Assertion 5: Go ↔ Capability Feed mirror (per provider, not per
+		// content type — the document is read once).
+		feedDrifts, err := checkFeedCoverage(repoRoot, prov)
+		if err != nil {
+			return nil, fmt.Errorf("feed coverage for %s: %w", prov.Slug, err)
+		}
+		drifts = append(drifts, feedDrifts...)
 	}
 
 	return drifts, nil

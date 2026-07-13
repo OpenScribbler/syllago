@@ -1,0 +1,104 @@
+{
+  "feature": "capmon-pull",
+  "started": "2026-07-12T21:26:13.824Z",
+  "updated": "2026-07-13T00:46:22.434Z",
+  "ticketBeadId": "syllago-mol-0wj",
+  "autonomy": "pragmatic",
+  "currentStage": "complete",
+  "completed": [
+    "lexicon-gate",
+    "align",
+    "research",
+    "design",
+    "structure",
+    "plan",
+    "create-beads",
+    "execute",
+    "final-validate",
+    "pr"
+  ],
+  "lexicon": {
+    "path": "lexicon.md",
+    "present": true,
+    "builtThisSession": false,
+    "lastUpdatedAt": "2026-07-12T21:59:58.451Z"
+  },
+  "designConcept": {
+    "summary": "## Design Concept — capmon-pull\n\n**Goal:** Syllago automatically ingests the published capmon feed — verified fail-closed — and keeps `docs/provider-capabilities/` current via an automated PR, so provider capability data flows in without manual monitoring.\n\n**Scope:**\n- A new maintainer tool in the syllago repo (same Go module, sharing MOAT internals; not part of the user-facing `syllago` CLI), runnable locally and invoked by a new daily GitHub Actions cron.\n- Polls `v1/index.json` with conditional GET (ETag in Actions cache, best-effort); change detection by comparing feed `data_revision` against a committed provenance marker (checked on the rolling branch if present, else main).\n- Fail-closed verification, in-process via sigstore-go: fetch the attestation bundle from GitHub's attestations API, verify SLSA provenance on `v1/index.json` (signer `OpenScribbler/capmon/.github/workflows/publish.yml@refs/heads/main`), then per-file sha256 from the index, before writing anything.\n- Verbatim mirror: commit `capabilities/<slug>.json` and `by-content-type/*.json` into `docs/provider-capabilities/`, plus a provenance marker (`data_revision`, `generated_at`). First PR retires the old YAML baselines and local `schema.json`.\n- Single rolling PR on a fixed branch, force-updated per new `data_revision`; PR body carries `data_revision` and the changed-provider list. Never duplicates, never goes stale.\n- Coverage check: extend the orphaned `CheckCoverage`/`CoverageDrift` machinery with a Go-claims-vs-feed assertion (Go `SupportsType` vs mirrored `supported` fields; absent = unknown = no finding), run as a CI check against the committed mirror on every PR — visible red on drift, not required for merge.\n- Tolerant reader throughout: unknown fields/files/keys ignored, open enums, `supported` absent = unknown (per the published field-semantics spec). 80%+ test coverage on new core logic.\n\n**Out of scope:**\n- `advisories.json` — not mirrored, not acted on.\n- Rewiring `CheckCoverage`'s four pre-existing orphaned assertions — only the new feed assertion gets a caller.\n- Docs site (separate Astro repo) and RSS digest — decided, closed.\n- Any change to the capmon repo or the published contract (consume-only).\n\n**User-visible behavior:**\nWhen capmon publishes a new `data_revision`, within a day a rolling PR appears (or updates in place) containing the verified mirror diff, the provenance marker bump, and a body listing the revision and changed providers; its CI shows a red (non-blocking) coverage check if Go's capability claims contradict the new data. When the feed is tampered/unsigned or stale (>48h), the run writes nothing, leaves any open rolling PR untouched, and exits non-zero — a red workflow run and failure email are the only alarm. Locally, Holden can run the same tool on WSL (no `gh` dependency) to debug any of this end-to-end.\n\n**Key decisions:**\n- Execution surface: separate maintainer tool + Actions cron — over re-adding a `syllago capmon` subcommand (would reverse the `ef6fdd2b` extraction) or Actions-only (undebuggable locally).\n- Repo artifact: verbatim JSON mirror — over projecting to the old slim YAML (lossy transform; committed bytes would no longer match any attested hash).\n- PR model: single rolling force-updated PR — over per-revision PRs (blocks newer data behind review) or per-provider PRs (noise).\n- State: committed provenance marker + cached ETag — over Actions-cache-only (loses in-repo provenance) or stateless (drops conditional GET).\n- Verification: in-process sigstore-go reusing MOAT — over shelling to `gh attestation verify` (needs gh ≥ 2.49; WSL has 2.45; external binary in the security-critical path).\n- Failure visibility: red workflow run for both verification failure and staleness — over silent staleness (defeats the heartbeat) or auto-filed issues (alert machinery for an audience of one).\n- Coverage check placement: CI against the committed mirror — over pull-job-only (blind to Go-side drift, since the pull only runs on feed change) or required-for-merge (feed legitimately outpaces Go).\n\n**Risks / open questions we accepted:**\n- JSON replaces YAML as the human review medium for capability changes; if diffs prove unpleasant, a review-rendering aid is a later, additive fix.\n- A non-required red check can be ignored indefinitely; drift hygiene relies on Holden noticing.\n- Force-updating the rolling branch discards unreviewed intermediate snapshots by design (the feed is a full snapshot; history lives in capmon).\n- Fetching attestation bundles from GitHub's API adds a GitHub dependency to the verification path; an API outage fails closed (red run), which is the intended bias.\n\n**Depends on / affects:**\n- `cli/internal/moat/` (sigstore-go verification internals — reuse, no behavior change).\n- `cli/internal/provider/coverage.go` (extend orphaned machinery with the feed assertion).\n- `docs/provider-capabilities/` (contents replaced by the mirror; README/schema retired or rewritten).\n- `.github/workflows/` (new daily cron; new non-required coverage check).\n- Unaffected: `docs/provider-formats/`, `gencapabilities`, and the graduation workflow — they read format docs, not capability docs.\n",
+    "signedOffAt": "2026-07-12T21:59:58.451Z"
+  },
+  "artifacts": {
+    "research": ".ship/capmon-pull/research.md",
+    "design": ".ship/capmon-pull/design.md",
+    "structure": ".ship/capmon-pull/structure.md",
+    "plan": ".ship/capmon-pull/plan.md"
+  },
+  "phaseB": {
+    "complete": true
+  },
+  "beads": {
+    "created": true,
+    "prefix": "syllago",
+    "epicIds": [],
+    "taskCount": 13,
+    "finalValidateId": "syllago-7n452",
+    "testBeadIds": [
+      "syllago-trfg4",
+      "syllago-9gw7u",
+      "syllago-s9qkx",
+      "syllago-fdpyo",
+      "syllago-uhxdb",
+      "syllago-h5p7t"
+    ],
+    "implBeadIds": [
+      "syllago-y453i",
+      "syllago-8z9ox",
+      "syllago-9rh46",
+      "syllago-vngs3",
+      "syllago-9pkdc",
+      "syllago-5aa9w"
+    ]
+  },
+  "researchQuestions": [
+    "What Sigstore verification entry points exist in cli/internal/moat/ — which functions verify a bundle, check Fulcio signer identity, and verify Rekor inclusion; what are their signatures and inputs; and do any of them handle DSSE/in-toto attestation statements (SLSA provenance) as opposed to plain artifact signatures?",
+    "What does cli/internal/provider/coverage.go define — the CheckCoverage and CoverageDrift shapes, each assertion it performs, the inputs it reads, and what callers or test files reference it anywhere in the module?",
+    "Where and how do providers declare per-content-type support in Go (SupportsType or equivalent) — what is the data shape, where is it defined per provider, and which packages consume it?",
+    "What is the current file inventory of docs/provider-capabilities/ (YAML files, schema.json, README, by-content-type/), and what references any of those paths — Go code, Makefile targets, CI workflows, scripts, or other docs?",
+    "What patterns do the existing .github/workflows/ files use for: cron schedules, actions/cache usage, creating or updating pull requests from automation, GITHUB_TOKEN permissions blocks, and action pinning (tags vs full SHAs)?",
+    "What HTTP client code exists for fetching remote resources (e.g. the updater package or GitHub API calls) — how do they handle conditional GET/ETag/If-None-Match, auth tokens for the GitHub API, timeouts, and how are they tested (httptest patterns)?",
+    "What precedent exists for non-user-facing maintainer tools in this module — separate main packages or cmd directories outside the syllago CLI (e.g. gentelemetry, gencapabilities), and how are they built and invoked (Makefile targets, go run, CI)?",
+    "What residual references remain to the deleted cli/internal/capmon package or the old docs/provider-capabilities generator — in the Makefile, CI workflows, docs, or Go code — as of the current HEAD?"
+  ],
+  "adrs": {
+    "drafted": [
+      ".ship/capmon-pull/adr/0015-bundle-based-sigstore-go-verifier-vs-manual-hashedrekord-ver.md",
+      ".ship/capmon-pull/adr/0016-new-conditional-get-fetch-code-vs-generalizing-moat-fetcher.md",
+      ".ship/capmon-pull/adr/0017-separate-main-package-vs-hidden-prefixed-subcommand.md"
+    ]
+  },
+  "prUrl": "https://github.com/OpenScribbler/syllago/pull/487",
+  "execution": {
+    "mode": "sequential",
+    "tasksDispatched": [],
+    "tasksCompleted": [
+      "syllago-trfg4",
+      "syllago-y453i",
+      "syllago-9gw7u",
+      "syllago-8z9ox",
+      "syllago-s9qkx",
+      "syllago-9rh46",
+      "syllago-fdpyo",
+      "syllago-vngs3",
+      "syllago-uhxdb",
+      "syllago-9pkdc",
+      "syllago-h5p7t",
+      "syllago-5aa9w",
+      "syllago-7n452"
+    ],
+    "currentTaskId": null,
+    "awaitingUserAck": false
+  },
+  "nextAction": null,
+  "featureBranch": "syllago/capmon-pull",
+  "baseBranch": "main"
+}
