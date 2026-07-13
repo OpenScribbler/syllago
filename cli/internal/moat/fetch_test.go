@@ -29,7 +29,10 @@ func TestFetcher_Fetch_Success(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{}
+	// srv.Client() gives each test its own transport. A zero-value Fetcher
+	// falls back to http.DefaultTransport, where another parallel test's
+	// srv.Close → CloseIdleConnections breaks in-flight requests (syllago-jm704).
+	f := &Fetcher{Client: srv.Client()}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
@@ -73,7 +76,7 @@ func TestFetcher_Fetch_NotModified(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{}
+	f := &Fetcher{Client: srv.Client()}
 	ctx := context.Background()
 
 	res, err := f.Fetch(ctx, srv.URL, etag)
@@ -107,7 +110,7 @@ func TestFetcher_Fetch_CustomUserAgent(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{UserAgent: want}
+	f := &Fetcher{UserAgent: want, Client: srv.Client()}
 	if _, err := f.Fetch(context.Background(), srv.URL, ""); err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
@@ -129,7 +132,7 @@ func TestFetcher_Fetch_DefaultUserAgent(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{}
+	f := &Fetcher{Client: srv.Client()}
 	if _, err := f.Fetch(context.Background(), srv.URL, ""); err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
@@ -163,10 +166,9 @@ func TestFetcher_Fetch_UnexpectedStatus(t *testing.T) {
 			t.Cleanup(srv.Close)
 
 			// Disable automatic redirect following so 308 surfaces as a status error.
-			client := &http.Client{
-				CheckRedirect: func(*http.Request, []*http.Request) error {
-					return http.ErrUseLastResponse
-				},
+			client := srv.Client()
+			client.CheckRedirect = func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
 			}
 			f := &Fetcher{Client: client}
 			_, err := f.Fetch(context.Background(), srv.URL, "")
@@ -190,7 +192,7 @@ func TestFetcher_Fetch_MalformedBody(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{}
+	f := &Fetcher{Client: srv.Client()}
 	_, err := f.Fetch(context.Background(), srv.URL, "")
 	if err == nil {
 		t.Fatal("expected parse error for malformed JSON")
@@ -212,7 +214,7 @@ func TestFetcher_Fetch_OversizedBody(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := &Fetcher{}
+	f := &Fetcher{Client: srv.Client()}
 	_, err := f.Fetch(context.Background(), srv.URL, "")
 	if err == nil {
 		t.Fatal("expected oversized body to error")
@@ -251,7 +253,7 @@ func TestFetcher_Fetch_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	f := &Fetcher{}
+	f := &Fetcher{Client: srv.Client()}
 	_, err := f.Fetch(ctx, srv.URL, "")
 	if err == nil {
 		t.Fatal("expected context-cancel error")
