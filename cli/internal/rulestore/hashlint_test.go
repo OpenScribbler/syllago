@@ -33,6 +33,10 @@ func TestNoRawHashFormatting(t *testing.T) {
 		// which never touch .history/ filenames.
 		filepath.Join(root, "internal/moatinstall/fetch.go"): true,
 		filepath.Join(root, "internal/moat/hash.go"):         true,
+		// capfeed builds the GitHub attestations API URL path segment
+		// ("sha256:<digest>", GitHub's REST format) — Capability Feed
+		// verification, not library-rule storage.
+		filepath.Join(root, "internal/capfeed/attest.go"): true,
 	}
 	err = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
