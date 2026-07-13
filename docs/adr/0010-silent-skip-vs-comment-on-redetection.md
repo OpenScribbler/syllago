@@ -1,7 +1,7 @@
 # 0010. silent skip vs comment-on-redetection
 
 Date: 2026-05-06
-Status: Accepted
+Status: Deprecated
 Feature: capmon-provider-batching
 
 ## Context

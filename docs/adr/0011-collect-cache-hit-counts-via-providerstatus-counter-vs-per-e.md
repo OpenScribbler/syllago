@@ -1,7 +1,7 @@
 # 0011. collect cache-hit counts via ProviderStatus counter vs. per-entry collection outside runStage1Fetch
 
 Date: 2026-05-07
-Status: Accepted
+Status: Deprecated
 Feature: capmon-fetch-subcommand
 
 ## Context

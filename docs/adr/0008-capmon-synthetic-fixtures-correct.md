@@ -1,7 +1,7 @@
 ---
 id: "0008"
 title: Synthetic Fixtures Are Correct for capmon Extractor Tests
-status: accepted
+status: deprecated
 date: 2026-04-21
 enforcement: advisory
 files: ["cli/internal/capmon/extract_*/**", "cli/internal/capmon/testdata/**", "cli/internal/capmon/extract_test.go"]
