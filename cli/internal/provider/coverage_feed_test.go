@@ -152,6 +152,49 @@ func TestCheckCoverage_FeedAssertionIntegrated(t *testing.T) {
 	}
 }
 
+// TestCheckFeedCoverage_AcceptedDrift verifies a contradiction listed in
+// acceptedFeedDrift is still reported but carries its AcceptedReason, and
+// that the same shape on an unlisted provider does not.
+func TestCheckFeedCoverage_AcceptedDrift(t *testing.T) {
+	root := feedFixtureRoot(t, "zed", `{"slug":"zed","content_types":{"agents":{"supported":true}}}`)
+	drifts, err := checkFeedCoverage(root, fakeProvider("zed" /* no agents */))
+	if err != nil {
+		t.Fatalf("checkFeedCoverage: %v", err)
+	}
+	if len(drifts) != 1 {
+		t.Fatalf("got %d drifts; want 1", len(drifts))
+	}
+	if drifts[0].AcceptedReason == "" {
+		t.Error("zed/agents drift should carry an AcceptedReason")
+	}
+
+	root = feedFixtureRoot(t, "fake", `{"slug":"fake","content_types":{"agents":{"supported":true}}}`)
+	drifts, err = checkFeedCoverage(root, fakeProvider("fake"))
+	if err != nil {
+		t.Fatalf("checkFeedCoverage: %v", err)
+	}
+	if len(drifts) != 1 {
+		t.Fatalf("got %d drifts; want 1", len(drifts))
+	}
+	if drifts[0].AcceptedReason != "" {
+		t.Errorf("fake/agents drift must not be accepted; got reason %q", drifts[0].AcceptedReason)
+	}
+
+	// The reverse direction — Go claims support the feed denies — is always
+	// a real finding, even for a listed pair (Codex review finding).
+	root = feedFixtureRoot(t, "zed", `{"slug":"zed","content_types":{"agents":{"supported":false}}}`)
+	drifts, err = checkFeedCoverage(root, fakeProvider("zed", catalog.Agents))
+	if err != nil {
+		t.Fatalf("checkFeedCoverage: %v", err)
+	}
+	if len(drifts) != 1 {
+		t.Fatalf("got %d drifts; want 1", len(drifts))
+	}
+	if drifts[0].AcceptedReason != "" {
+		t.Errorf("reverse-direction zed/agents drift must not be accepted; got reason %q", drifts[0].AcceptedReason)
+	}
+}
+
 // TestCoverageFeedDrift is the CI Coverage Drift gate: red (non-required)
 // when Go's SupportsType contradicts the committed Capability Documents.
 // Reproduce locally with: SYLLAGO_COVERAGE_FEED=1 go test ./internal/provider/ -run TestCoverageFeedDrift
@@ -166,10 +209,15 @@ func TestCoverageFeedDrift(t *testing.T) {
 	}
 	var failed bool
 	for _, d := range drifts {
-		if d.Assertion == AssertionGoVsCapabilityFeed {
-			failed = true
-			t.Errorf("Coverage Drift: %s", d)
+		if d.Assertion != AssertionGoVsCapabilityFeed {
+			continue
 		}
+		if d.AcceptedReason != "" {
+			t.Logf("Coverage Drift (accepted): %s — %s", d, d.AcceptedReason)
+			continue
+		}
+		failed = true
+		t.Errorf("Coverage Drift: %s", d)
 	}
 	if failed {
 		t.Log("Go SupportsType claims contradict the mirrored Capability Feed data; reconcile the provider's SupportsType or await a feed correction")

@@ -17,6 +17,10 @@ type CoverageDrift struct {
 	ContentType catalog.ContentType
 	Assertion   string
 	Message     string
+	// AcceptedReason is non-empty when this drift is a recorded, permanent
+	// disagreement (see acceptedFeedDrift): both sides are correct and the
+	// CI gate reports it as accepted instead of failing.
+	AcceptedReason string
 }
 
 func (d CoverageDrift) String() string {
