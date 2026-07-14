@@ -223,6 +223,7 @@ func IngestProviderNativeFrontmatter(kind string, frontmatter map[string]any) (*
 		result.Conformant = false
 		result.Installable = false
 		result.Reason = item.Verdict.Reason
+		result.Params = item.Verdict.Params
 	}
 	return result, nil
 }

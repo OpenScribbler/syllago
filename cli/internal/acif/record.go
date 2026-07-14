@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"gopkg.in/yaml.v3"
@@ -21,6 +22,7 @@ type RecordResult struct {
 	Conformant       bool
 	Installable      bool
 	Reason           string
+	Params           map[string]any
 	Classification   string
 	BodyHash         string
 	Canonical        map[string]any
@@ -103,6 +105,7 @@ func IngestFrontmatterFile(kind, bodyRoot, entryFile string) (*RecordResult, err
 		result.Conformant = false
 		result.Installable = false
 		result.Reason = item.Verdict.Reason
+		result.Params = item.Verdict.Params
 	}
 
 	if doc.Present {
@@ -145,6 +148,7 @@ func IngestExtensionBlock(kind string, sidecar map[string]any) (*RecordResult, e
 		result.Conformant = false
 		result.Installable = false
 		result.Reason = item.Verdict.Reason
+		result.Params = item.Verdict.Params
 	}
 	return result, nil
 }
@@ -251,11 +255,29 @@ func applyRequiresVerdict(block map[string]any) *HookVerdict {
 	if !ok {
 		return nil
 	}
-	if reqMap, ok := requires.(map[string]any); ok && len(reqMap) == 0 {
-		delete(block, "requires")
-		return nil
+	if reqMap, ok := requires.(map[string]any); ok {
+		if len(reqMap) == 0 {
+			delete(block, "requires")
+			return nil
+		}
+		return orphanKeyVerdict(reqMap)
 	}
 	return &HookVerdict{Reason: ReasonRequiresOrphanKey}
+}
+
+// orphanKeyVerdict builds the [ACIF-CORE] §9.4 uniform reject. The
+// asserted param is the offending requires key; with several present the
+// lexicographically first is reported for determinism.
+func orphanKeyVerdict(reqMap map[string]any) *HookVerdict {
+	keys := make([]string, 0, len(reqMap))
+	for k := range reqMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return &HookVerdict{
+		Reason: ReasonRequiresOrphanKey,
+		Params: map[string]any{"key": keys[0]},
+	}
 }
 
 func kindKey(kind string) string {

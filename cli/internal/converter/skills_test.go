@@ -534,6 +534,66 @@ func TestWindsurfSkillRoundTrip(t *testing.T) {
 	assertEqual(t, "SKILL.md", result.Filename)
 }
 
+// --- Zed skills ---
+
+func TestClaudeSkillToZed(t *testing.T) {
+	input := []byte("---\nname: go-expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\n  - Grep\nmodel: opus\ncontext: fork\ndisable-model-invocation: true\n---\n\nUse idiomatic Go patterns.\n")
+
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Zed)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: go-expert")
+	assertContains(t, out, "description: Go coding guidelines")
+	assertContains(t, out, "idiomatic Go")
+	// disable-model-invocation is a supported Zed frontmatter key — it must
+	// survive structurally, not as prose.
+	assertContains(t, out, "disable-model-invocation: true")
+	assertNotContains(t, out, "Only invoke when the user explicitly requests it")
+	// Claude-specific fields should be embedded as prose, not in frontmatter
+	assertNotContains(t, out, "allowed-tools:")
+	assertNotContains(t, out, "context: fork")
+	assertContains(t, out, "Tool restriction")
+	assertContains(t, out, "isolated context")
+	assertContains(t, out, "Designed for model: opus.")
+	assertContains(t, out, "syllago:converted")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
+func TestZedSkillRoundTrip(t *testing.T) {
+	input := []byte("---\nname: deploy-to-production\ndescription: Guides the deployment process\ndisable-model-invocation: true\n---\n\n## Steps\n\n1. Run pre-deployment checks\n2. Build the release artifact\n")
+
+	conv := &SkillsConverter{}
+
+	// Zed -> canonical
+	canonical, err := conv.Canonicalize(input, "zed")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	// canonical -> Zed
+	result, err := conv.Render(canonical.Content, provider.Zed)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: deploy-to-production")
+	assertContains(t, out, "description: Guides the deployment process")
+	assertContains(t, out, "disable-model-invocation: true")
+	assertContains(t, out, "pre-deployment checks")
+	assertContains(t, out, "release artifact")
+	assertEqual(t, "SKILL.md", result.Filename)
+}
+
 func TestSkillAllowedToolsCommaSeparated(t *testing.T) {
 	// Comma-separated string in frontmatter: "Read, Grep, Glob"
 	input := []byte("---\nname: test\nallowed-tools: \"Read, Grep, Glob\"\n---\n\nDo things.\n")

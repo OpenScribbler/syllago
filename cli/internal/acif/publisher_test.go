@@ -301,3 +301,23 @@ func metadataHashForMap(t *testing.T, section map[string]any) string {
 	}
 	return hash
 }
+
+func TestProviderNativeFrontmatterOrphanRequires(t *testing.T) {
+	t.Parallel()
+
+	got, err := IngestProviderNativeFrontmatter("agent", map[string]any{
+		"requires": map[string]any{"tool_restrictions": true},
+	})
+	if err != nil {
+		t.Fatalf("IngestProviderNativeFrontmatter(orphan requires): %v", err)
+	}
+	if got.Conformant || got.Installable {
+		t.Fatalf("conformant/installable = %v/%v, want false/false", got.Conformant, got.Installable)
+	}
+	if got.Reason != ReasonRequiresOrphanKey {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonRequiresOrphanKey)
+	}
+	if got.Params["key"] != "tool_restrictions" {
+		t.Fatalf("params = %#v, want key=tool_restrictions", got.Params)
+	}
+}

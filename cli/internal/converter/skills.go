@@ -114,6 +114,7 @@ func init() {
 	RegisterFrontmatter(catalog.Skills, "factory-droid", factoryDroidSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "pi", piSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "crush", crushSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "zed", zedSkillMeta{})
 }
 
 // flexStringList is a []string that also accepts a single YAML scalar string.
@@ -243,6 +244,8 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderCopilotSkill(meta, body)
 	case "roo-code":
 		return renderRooCodeSkill(meta, body)
+	case "zed":
+		return renderZedSkill(meta, body)
 	default:
 		// Claude Code — full frontmatter preserved
 		return renderClaudeSkill(meta, body)
@@ -748,6 +751,42 @@ type crushSkillMeta struct {
 	License       string            `yaml:"license,omitempty"`
 	Compatibility string            `yaml:"compatibility,omitempty"`
 	Metadata      map[string]string `yaml:"metadata,omitempty"`
+}
+
+// zedSkillMeta is the subset of fields Zed supports in SKILL.md frontmatter.
+// Zed supports name, description, and disable-model-invocation
+// (https://zed.dev/docs/ai/skills).
+type zedSkillMeta struct {
+	Name                   string `yaml:"name,omitempty"`
+	Description            string `yaml:"description,omitempty"`
+	DisableModelInvocation bool   `yaml:"disable-model-invocation,omitempty"`
+}
+
+// renderZedSkill renders a canonical skill to Zed's SKILL.md format.
+// Zed supports name, description, and disable-model-invocation fields.
+// CC-specific fields (allowed-tools, context, agent, etc.) are embedded as
+// prose notes; Zed has no lifecycle hooks, so hooks are prose too.
+func renderZedSkill(meta SkillMeta, body string) (*Result, error) {
+	cleanBody := StripConversionNotes(body)
+
+	// disable-model-invocation survives as a structured frontmatter field,
+	// so blank it before building prose notes to avoid duplicating it.
+	noteMeta := meta
+	noteMeta.DisableModelInvocation = false
+	notes := buildSkillProseNotes(noteMeta)
+	outBody := cleanBody
+	if len(notes) > 0 {
+		notesBlock := BuildConversionNotes("claude-code", notes)
+		outBody = AppendNotes(outBody, notesBlock)
+	}
+
+	zm := zedSkillMeta{
+		Name:                   meta.Name,
+		Description:            meta.Description,
+		DisableModelInvocation: meta.DisableModelInvocation,
+	}
+
+	return renderWithFrontmatter(zm, outBody, "SKILL.md")
 }
 
 // renderRooCodeSkill renders a canonical skill to Roo Code's SKILL.md format.

@@ -14,17 +14,9 @@ type FreshnessInput struct {
 	AttestationEvaluation    string         `json:"attestation_evaluation,omitempty"`
 	DeclaredToleranceSeconds any            `json:"declared_tolerance_seconds,omitempty"`
 	AttestationSystem        string         `json:"attestation_system,omitempty"`
-	ImplementationBehavior   string         `json:"implementation_behavior,omitempty"`
 }
 
 func EvaluateFreshness(input FreshnessInput) (map[string]any, error) {
-	if input.ImplementationBehavior == "staleness-from-generated_at" {
-		return map[string]any{
-			"conformant": false,
-			"reason":     ReasonResponseEnvelopeClockNotStalenessInput,
-		}, nil
-	}
-
 	fetchedAt, ok := parseRecordTime(input.Record, "fetched_at")
 	if !ok {
 		return timestampOffsetMissingVerdict(), nil

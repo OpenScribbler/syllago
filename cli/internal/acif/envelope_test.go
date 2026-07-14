@@ -25,22 +25,22 @@ func TestValidateEnvelopeTV11InvalidCases(t *testing.T) {
 		{
 			name:   "kind case mismatch",
 			raw:    `{"kind":"Skill","id":"f47ac10b-58cc-4372-a567-0e02b2c3d479","display_name":"Demo"}`,
-			reason: "kind-not-in-closed-enum",
+			reason: ReasonEnvelopeKindInvalid,
 		},
 		{
 			name:   "id not uuid",
 			raw:    `{"kind":"skill","id":"not-a-uuid","display_name":"Demo"}`,
-			reason: "id-not-uuid-v4",
+			reason: ReasonEnvelopeIDInvalid,
 		},
 		{
 			name:   "version not semver",
 			raw:    `{"kind":"skill","id":"f47ac10b-58cc-4372-a567-0e02b2c3d479","display_name":"Demo","version":"1.0"}`,
-			reason: "version-not-semver",
+			reason: ReasonEnvelopeVersionInvalid,
 		},
 		{
 			name:   "license spdx not identifier",
 			raw:    `{"kind":"skill","id":"f47ac10b-58cc-4372-a567-0e02b2c3d479","display_name":"Demo","license":{"spdx":"MIT License"}}`,
-			reason: "license-spdx-not-identifier",
+			reason: ReasonEnvelopeLicenseSPDXInvalid,
 		},
 	}
 
@@ -67,8 +67,11 @@ func TestValidateEnvelopeTV6ForbiddenEffectiveVersion(t *testing.T) {
 	if got.Conformant {
 		t.Fatalf("ValidateEnvelope() conformant, want forbidden-field rejection")
 	}
-	if got.Reason != "forbidden-field effective_version" {
-		t.Fatalf("reason = %q", got.Reason)
+	if got.Reason != ReasonEnvelopeForbiddenField {
+		t.Fatalf("reason = %q, want %q", got.Reason, ReasonEnvelopeForbiddenField)
+	}
+	if got.Params["field"] != "effective_version" {
+		t.Fatalf("params = %#v, want field=effective_version", got.Params)
 	}
 }
 
@@ -114,8 +117,11 @@ func TestValidateEnvelopeForbiddenFieldsInEachSection(t *testing.T) {
 				if got.Conformant {
 					t.Fatalf("ValidateEnvelope() conformant with forbidden %s in %s", field, location)
 				}
-				if want := "forbidden-field " + field; got.Reason != want {
-					t.Fatalf("reason = %q, want %q", got.Reason, want)
+				if got.Reason != ReasonEnvelopeForbiddenField {
+					t.Fatalf("reason = %q, want %q", got.Reason, ReasonEnvelopeForbiddenField)
+				}
+				if got.Params["field"] != field {
+					t.Fatalf("params = %#v, want field=%s", got.Params, field)
 				}
 			})
 		}
