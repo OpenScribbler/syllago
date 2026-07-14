@@ -69,6 +69,24 @@ const (
 	DiagMCPServerNameUnconventional    = "acif.mcp.server_name_unconventional"
 	DiagRegistryReferenceUnresolved    = "acif.registry.reference_unresolved"
 
+	ErrSourceURIMissing                 = "acif.source_uri.missing"
+	ErrSourceURIMalformed               = "acif.source_uri.malformed"
+	ErrSourceURISchemeForbidden         = "acif.source_uri.scheme_forbidden"
+	ErrSourceURIUserinfoPresent         = "acif.source_uri.userinfo_present"
+	ErrSourceURIQueryPresent            = "acif.source_uri.query_present"
+	ErrSourceURIRedirectDowngrade       = "acif.source_uri.redirect_downgrade"
+	ErrSourceURIRedirectLimit           = "acif.source_uri.redirect_limit"
+	ErrSourceURIDirectFileTrailingSlash = "acif.source_uri.direct_file_trailing_slash"
+	ErrSourceURIFilenameConflict        = "acif.source_uri.filename_conflict"
+
+	ErrRegistryExpiresBeforeFetchedAt = "acif.registry.expires_before_fetched_at"
+	ErrRegistryStale                  = "acif.registry.stale"
+
 	ReasonRequiresOrphanKey            = "acif.requires.orphan_key"
 	ReasonCommandHandlerScriptsMissing = "command-handler-scripts-missing"
+
+	ReasonRegistryTimestampOffsetMissing         = "acif.registry.timestamp_offset_missing"
+	ReasonRegistryMethodStampMissing             = "acif.registry.method_stamp_missing"
+	ReasonRegistryProvenanceTagMissing           = "acif.registry.provenance_tag_missing"
+	ReasonResponseEnvelopeClockNotStalenessInput = "response-envelope-clock-is-not-a-staleness-input"
 )

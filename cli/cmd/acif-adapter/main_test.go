@@ -3,6 +3,10 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"encoding/pem"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,7 +61,7 @@ func TestHello(t *testing.T) {
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
 			"adapter_protocol": float64(1),
-			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher"},
+			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry"},
 		},
 	}
 	if !reflect.DeepEqual(responses[0], want) {
@@ -392,6 +396,108 @@ func TestPublisherStage3NDJSON(t *testing.T) {
 	}
 }
 
+func TestRegistryStage4NDJSONOps(t *testing.T) {
+	t.Parallel()
+
+	request := `{"op":"normalize_uri","input":{"uri":"HTTPS://GitHub.IO/A%3ab"}}` + "\n" +
+		`{"op":"normalize_uri","input":{"uri":"https://example.com/x?token=secret"}}` + "\n" +
+		`{"op":"derive_url_name","input":{"uri":"https://example.com/skills/my-skill.md","body_classification":"single-file","frontmatter_name":"declared"}}` + "\n" +
+		`{"op":"evaluate_freshness","input":{"record":{"fetched_at":"2026-05-01T00:00:00Z","expires":"2026-05-02T00:00:00Z"},"consumer_clock":"2026-05-03T00:00:00Z","policies":["freshness-enforcement-opt-in"]}}` + "\n" +
+		`{"op":"project","input":{"projection":"tuple_endpoint","item":{"pack_members":[{"item_id":"one","publisher_section":"present"},{"item_id":"two","publisher_section":"absent"}]}}}` + "\n" +
+		`{"op":"project","input":{"projection":"install_scope_capabilities","item":{"filesystem":{"read":true}}}}` + "\n" +
+		`{"op":"project","input":{"projection":"advisory","item":{"warning":{"text":"needs review"}}}}` + "\n" +
+		`{"op":"evaluate_install","input":{"item":{"cross_references":[{"resolution":"revoked"}]}}}` + "\n" +
+		`{"op":"evaluate_install","input":{"item":{"registry_section":{"source_uri":"https://example.com/skill.md"}}}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"skill","sidecar":{"registry_section":{"source_uri":"https://example.com/skill.md"}}}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"skill","sidecar":{"registry_section":{}}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 11 {
+		t.Fatalf("responses = %d, want 11", len(responses))
+	}
+
+	normalized := responses[0]["result"].(map[string]any)
+	if normalized["source_uri"] != "https://github.io/A%3Ab" {
+		t.Fatalf("normalize_uri success = %#v", normalized)
+	}
+	if responses[1]["ok"] != false || responses[1]["error"] != "acif.source_uri.query_present" {
+		t.Fatalf("normalize_uri query error = %#v", responses[1])
+	}
+
+	name := responses[2]["result"].(map[string]any)
+	if name["url_derived_name"] != "my-skill" {
+		t.Fatalf("derive_url_name = %#v", name)
+	}
+	diag := name["diagnostics"].([]any)[0].(map[string]any)
+	if diag["id"] != "acif.source_uri.filename_conflict" {
+		t.Fatalf("derive_url_name diagnostics = %#v", name["diagnostics"])
+	}
+
+	freshness := responses[3]["result"].(map[string]any)
+	if freshness["staleness"] != "stale" || freshness["install"] != "refuse" || freshness["response_hash"] == "" {
+		t.Fatalf("evaluate_freshness = %#v", freshness)
+	}
+	if _, ok := freshness["combined_scalar"]; ok {
+		t.Fatalf("evaluate_freshness combined_scalar present: %#v", freshness)
+	}
+
+	tuple := responses[4]["result"].(map[string]any)["projection"].(map[string]any)
+	if tuple["member_1"].(map[string]any)["metadata_hash"] != "present" || tuple["member_2"].(map[string]any)["metadata_hash"] != nil {
+		t.Fatalf("tuple endpoint = %#v", tuple)
+	}
+	scopeVerdict := responses[5]["result"].(map[string]any)
+	if scopeVerdict["conformant"] != false || scopeVerdict["reason"] != "acif.registry.provenance_tag_missing" {
+		t.Fatalf("install scope capabilities = %#v", scopeVerdict)
+	}
+	advisoryVerdict := responses[6]["result"].(map[string]any)
+	if advisoryVerdict["conformant"] != false || advisoryVerdict["reason"] != "acif.registry.method_stamp_missing" {
+		t.Fatalf("registry advisory = %#v", advisoryVerdict)
+	}
+
+	if got := responses[7]["result"].(map[string]any)["install"]; got != "refuse-unless-operator-opt-in" {
+		t.Fatalf("evaluate_install cross refs = %#v", responses[7])
+	}
+	if got := responses[8]["result"].(map[string]any)["install"]; got != "proceed" {
+		t.Fatalf("evaluate_install non-hook = %#v", responses[8])
+	}
+	if result := responses[9]["result"].(map[string]any); result["conformant"] != true {
+		t.Fatalf("registry emit valid = %#v", result)
+	}
+	if responses[10]["ok"] != false || responses[10]["error"] != "acif.source_uri.missing" {
+		t.Fatalf("registry emit missing source_uri = %#v", responses[10])
+	}
+}
+
+func TestRegistryStage4FetchURINDJSON(t *testing.T) {
+	t.Parallel()
+
+	server, trustCA := newAdapterTLSServer(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/start":
+			w.Header().Set("Location", "/target")
+			w.WriteHeader(http.StatusMovedPermanently)
+		case "/target":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	defer server.Close()
+
+	request := `{"op":"fetch_uri","input":{"url":"https://127.0.0.1/start","trust_ca":` + mustJSON(t, trustCA) + `,"resolve":{"127.0.0.1":` + mustJSON(t, server.Listener.Addr().String()) + `}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	result := responses[0]["result"].(map[string]any)
+	if result["source_uri"] != "https://127.0.0.1/target" {
+		t.Fatalf("fetch_uri = %#v", responses[0])
+	}
+	if _, ok := result["source_status"]; ok {
+		t.Fatalf("fetch_uri emitted source_status: %#v", result)
+	}
+}
+
 func TestUnknownOpUnsupported(t *testing.T) {
 	t.Parallel()
 	responses := runLines(t, `{"op":"not_real","input":{}}`+"\n")
@@ -444,4 +550,30 @@ func mustJSON(t *testing.T, v any) string {
 		t.Fatalf("json marshal: %v", err)
 	}
 	return string(data)
+}
+
+func newAdapterTLSServer(t *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("sandbox blocks local sockets: %v", err)
+	}
+	server := httptest.NewUnstartedServer(handler)
+	server.Listener = ln
+	server.StartTLS()
+
+	cert := server.Certificate()
+	if cert == nil {
+		t.Fatal("test TLS server has no certificate")
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	if pemBytes == nil {
+		t.Fatal("encoding test TLS certificate PEM")
+	}
+	path := filepath.Join(t.TempDir(), "ca.pem")
+	if err := os.WriteFile(path, pemBytes, 0o644); err != nil {
+		t.Fatalf("write trust CA: %v", err)
+	}
+	return server, path
 }
