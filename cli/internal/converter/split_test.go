@@ -40,6 +40,45 @@ func TestSplitSettingsHooks_GeminiCLI(t *testing.T) {
 	}
 }
 
+func TestSplitSettingsHooks_Crush(t *testing.T) {
+	// Crush stores flat entries ({command, matcher, timeout}) under each event
+	// key — no nested matcher groups — with timeouts in seconds.
+	input := `{"hooks":{"PreToolUse":[{"matcher":"bash","command":"echo check","timeout":5},{"command":"echo all"}]}}`
+	items, err := SplitSettingsHooks([]byte(input), "crush")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(items))
+	}
+	byCmd := map[string]HookData{}
+	for _, it := range items {
+		if it.Event != "before_tool_execute" {
+			t.Errorf("expected event before_tool_execute, got %q", it.Event)
+		}
+		if len(it.Hooks) != 1 {
+			t.Fatalf("expected 1 hook entry per item, got %d", len(it.Hooks))
+		}
+		byCmd[it.Hooks[0].Command] = it
+	}
+	matched, ok := byCmd["echo check"]
+	if !ok {
+		t.Fatal("missing item for 'echo check'")
+	}
+	if matched.Matcher != "shell" {
+		t.Errorf("expected canonical matcher shell, got %q", matched.Matcher)
+	}
+	// Crush timeouts are already seconds — must NOT be divided by 1000.
+	if matched.Hooks[0].Timeout != 5 {
+		t.Errorf("expected timeout 5, got %d", matched.Hooks[0].Timeout)
+	}
+	if all, ok := byCmd["echo all"]; !ok {
+		t.Fatal("missing item for 'echo all'")
+	} else if all.Matcher != "" {
+		t.Errorf("expected empty matcher, got %q", all.Matcher)
+	}
+}
+
 func TestSplitSettingsHooks_CopilotCLI(t *testing.T) {
 	input := `{"hooks":{"preToolUse":[{"bash":"echo check","timeoutSec":5,"comment":"Safety"}]}}`
 	items, err := SplitSettingsHooks([]byte(input), "copilot-cli")

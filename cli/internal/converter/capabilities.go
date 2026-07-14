@@ -145,6 +145,24 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsCWD:           true,
 		SupportsEnv:           true,
 	},
+	"crush": {
+		// Crush fires hooks only before tool execution (PreToolUse); they run
+		// before permission checks with veto power (exit code 2 or a JSON
+		// decision of "deny" blocks the tool call).
+		Events: []string{"before_tool_execute"},
+
+		SupportsMatchers:         true,
+		SupportsAsync:            false,
+		SupportsStatusMessage:    false,
+		SupportsStructuredOutput: true, // JSON response: decision + context
+		SupportsBlocking:         true,
+		TimeoutUnit:              "seconds",
+		SupportsPlatform:         false,
+		SupportsCWD:              false,
+		SupportsEnv:              false,
+		SupportsLLMHooks:         false,
+		SupportsHTTPHooks:        false,
+	},
 	"pi": {
 		Events: []string{
 			"before_tool_execute", "after_tool_execute", "session_start", "session_end",

@@ -34,7 +34,30 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 	for event, matchersRaw := range eventMap {
 		canonicalEvent := ReverseTranslateHookEvent(event, sourceProvider)
 
-		if sourceProvider == "copilot-cli" {
+		switch sourceProvider {
+		case "crush":
+			// Crush format: flat entries {name, matcher, command, timeout};
+			// timeouts are seconds — already the canonical unit.
+			var entries []crushHookEntry
+			if err := json.Unmarshal(matchersRaw, &entries); err != nil {
+				return nil, fmt.Errorf("parsing crush hooks for event %q: %w", event, err)
+			}
+			for _, e := range entries {
+				matcher := e.Matcher
+				if matcher != "" {
+					matcher = ReverseTranslateMatcher(matcher, "crush")
+				}
+				items = append(items, HookData{
+					Event:   canonicalEvent,
+					Matcher: matcher,
+					Hooks: []HookEntry{{
+						Type:    "command",
+						Command: e.Command,
+						Timeout: e.Timeout,
+					}},
+				})
+			}
+		case "copilot-cli":
 			// Copilot format: array of {bash, powershell, timeoutSec, comment}
 			var entries []copilotHookEntry
 			if err := json.Unmarshal(matchersRaw, &entries); err != nil {
@@ -57,7 +80,7 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 					Hooks: []HookEntry{he},
 				})
 			}
-		} else {
+		default:
 			// Standard format (claude-code, gemini-cli, kiro): array of {matcher, hooks[]}
 			var matchers []hookMatcher
 			if err := json.Unmarshal(matchersRaw, &matchers); err != nil {

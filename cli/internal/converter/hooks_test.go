@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/tidwall/gjson"
 )
 
 func TestClaudeHooksToGemini(t *testing.T) {
@@ -620,6 +621,87 @@ func TestRenderFlat_Copilot(t *testing.T) {
 	assertContains(t, out, "\"version\": 1")
 	// Type field
 	assertContains(t, out, "\"type\": \"command\"")
+}
+
+func TestRenderFlat_Crush(t *testing.T) {
+	t.Parallel()
+	hook := HookData{
+		Event:   "before_tool_execute",
+		Matcher: "shell",
+		Hooks:   []HookEntry{{Type: "command", Command: "echo check", Timeout: 3}},
+	}
+	conv := &HooksConverter{}
+	result, err := conv.RenderFlat(hook, provider.Crush)
+	if err != nil {
+		t.Fatalf("RenderFlat: %v", err)
+	}
+	entry := gjson.GetBytes(result.Content, "hooks.PreToolUse.0")
+	if !entry.Exists() {
+		t.Fatalf("expected hooks.PreToolUse.0, got: %s", result.Content)
+	}
+	// Crush entries are flat — command lives directly on the entry, not in a
+	// nested hooks array.
+	if got := entry.Get("command").String(); got != "echo check" {
+		t.Errorf("command: got %q, want %q", got, "echo check")
+	}
+	if entry.Get("hooks").Exists() {
+		t.Error("crush entries must not contain a nested hooks array")
+	}
+	if got := entry.Get("matcher").String(); got != "bash" {
+		t.Errorf("matcher: got %q, want bash", got)
+	}
+	// Seconds stay seconds — 3 must not become 3000.
+	if got := entry.Get("timeout").Int(); got != 3 {
+		t.Errorf("timeout: got %d, want 3", got)
+	}
+}
+
+func TestRenderCrush_UnsupportedEventDropped(t *testing.T) {
+	t.Parallel()
+	hook := HookData{
+		Event: "session_start",
+		Hooks: []HookEntry{{Type: "command", Command: "echo hi"}},
+	}
+	conv := &HooksConverter{}
+	result, err := conv.RenderFlat(hook, provider.Crush)
+	if err != nil {
+		t.Fatalf("RenderFlat: %v", err)
+	}
+	if gjson.GetBytes(result.Content, "hooks").Exists() &&
+		len(gjson.GetBytes(result.Content, "hooks").Map()) > 0 {
+		t.Errorf("unsupported event should be dropped, got: %s", result.Content)
+	}
+	if len(result.Warnings) == 0 {
+		t.Error("expected warning for unsupported event")
+	}
+}
+
+func TestCanonicalize_Crush(t *testing.T) {
+	t.Parallel()
+	input := `{"hooks":{"PreToolUse":[{"matcher":"bash","command":"echo safe","timeout":5}]}}`
+	conv := &HooksConverter{}
+	result, err := conv.Canonicalize([]byte(input), "crush")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	var cfg hooksConfig
+	if err := json.Unmarshal(result.Content, &cfg); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	matchers, ok := cfg.Hooks["before_tool_execute"]
+	if !ok || len(matchers) != 1 {
+		t.Fatalf("expected 1 before_tool_execute matcher group, got: %+v", cfg.Hooks)
+	}
+	if matchers[0].Matcher != "shell" {
+		t.Errorf("matcher: got %q, want shell", matchers[0].Matcher)
+	}
+	if len(matchers[0].Hooks) != 1 || matchers[0].Hooks[0].Command != "echo safe" {
+		t.Fatalf("hooks: got %+v", matchers[0].Hooks)
+	}
+	// Crush timeouts are seconds — canonical unit, no /1000.
+	if matchers[0].Hooks[0].Timeout != 5 {
+		t.Errorf("timeout: got %d, want 5", matchers[0].Hooks[0].Timeout)
+	}
 }
 
 func TestLoadHookData_DirectoryFormat(t *testing.T) {

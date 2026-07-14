@@ -7,7 +7,7 @@ import (
 
 func TestAdapterRegistry(t *testing.T) {
 	// All expected adapters should be registered via init()
-	expected := []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "cursor", "windsurf", "vs-code-copilot", "factory-droid", "pi"}
+	expected := []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "cursor", "windsurf", "vs-code-copilot", "factory-droid", "pi", "crush"}
 	for _, slug := range expected {
 		if AdapterFor(slug) == nil {
 			t.Errorf("expected adapter for %q to be registered", slug)

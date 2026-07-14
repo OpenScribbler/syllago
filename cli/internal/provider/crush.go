@@ -8,8 +8,9 @@ import (
 
 // Crush is the Charmbracelet coding agent. XDG-compliant: global config
 // lives under ~/.config/crush/. Supports rules (AGENTS.md project only),
-// skills (Agent Skills standard), and MCP. No hooks (see charmbracelet/crush#2038),
-// no user-definable agents, no custom commands.
+// skills (Agent Skills standard), MCP, and hooks (PreToolUse only, flat
+// entries in crush.json — see docs/provider-formats/crush.yaml). No
+// user-definable agents, no custom commands.
 var Crush = Provider{
 	Name:      "Crush",
 	Slug:      "crush",
@@ -22,6 +23,8 @@ var Crush = Provider{
 			return filepath.Join(homeDir, ".config", "crush", "skills")
 		case catalog.MCP:
 			return JSONMergeSentinel
+		case catalog.Hooks:
+			return JSONMergeSentinel // merged into crush.json hooks key
 		}
 		return ""
 	},
@@ -37,13 +40,15 @@ var Crush = Provider{
 			return []string{filepath.Join(projectRoot, ".crush", "skills")}
 		case catalog.MCP:
 			return []string{filepath.Join(projectRoot, "crush.json")}
+		case catalog.Hooks:
+			return []string{filepath.Join(projectRoot, "crush.json")}
 		default:
 			return nil
 		}
 	},
 	FileFormat: func(ct catalog.ContentType) Format {
 		switch ct {
-		case catalog.MCP:
+		case catalog.MCP, catalog.Hooks:
 			return FormatJSON
 		default:
 			return FormatMarkdown
@@ -54,7 +59,7 @@ var Crush = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.MCP, catalog.Hooks:
 			return true
 		default:
 			return false
@@ -64,9 +69,12 @@ var Crush = Provider{
 		catalog.Rules:  true,
 		catalog.Skills: true,
 		catalog.MCP:    false, // JSON merge
+		catalog.Hooks:  false, // JSON merge
 	},
 	ConfigLocations: map[catalog.ContentType]string{
-		catalog.MCP: "crush.json",
+		catalog.MCP:   "crush.json",
+		catalog.Hooks: "crush.json",
 	},
 	MCPTransports: []string{"stdio", "http", "sse"},
+	HookTypes:     []string{"command"},
 }

@@ -112,11 +112,20 @@ var HookCapabilities = map[string]ProviderCapability{
 			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
 		},
 	},
+	"crush": {
+		Features: map[HookFeature]FeatureSupport{
+			FeatureMatcher:       {Supported: true, Notes: "regex against tool name"},
+			FeatureAsync:         {Supported: false, LostLevel: CompatBroken, Notes: "hook will block execution"},
+			FeatureStatusMessage: {Supported: false, LostLevel: CompatDegraded, Notes: "no user-visible status"},
+			FeatureLLMHook:       {Supported: false, LostLevel: CompatNone},
+			FeatureTimeout:       {Supported: true, Notes: "seconds"},
+		},
+	},
 }
 
 // HookProviders returns the slugs of providers that support hooks, in display order.
 func HookProviders() []string {
-	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "vs-code-copilot"}
+	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "vs-code-copilot", "crush"}
 }
 
 // --- Structured output capabilities ---
@@ -182,6 +191,11 @@ var HookOutputCapabilities = map[string]map[HookOutputField]bool{
 	},
 	"kiro":     {}, // No structured output support
 	"windsurf": {}, // No structured output support
+	"crush": {
+		// Crush hook responses support decision (allow/deny/none) and context
+		OutputDecision: true,
+		OutputContext:  true,
+	},
 }
 
 // OutputFieldsLostWarnings compares source and target provider structured output

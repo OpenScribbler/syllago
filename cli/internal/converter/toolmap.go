@@ -22,6 +22,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "read_file",
 		"factory-droid":   "Read",
 		"pi":              "read",
+		"crush":           "view",
 	},
 	"file_write": {
 		"claude-code":     "Write",
@@ -37,6 +38,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "apply_patch",
 		"factory-droid":   "Create",
 		"pi":              "write",
+		"crush":           "write",
 	},
 	"file_edit": {
 		"claude-code":     "Edit",
@@ -52,6 +54,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "apply_patch",
 		"factory-droid":   "Edit",
 		"pi":              "edit",
+		"crush":           "edit",
 	},
 	"shell": {
 		"claude-code":     "Bash",
@@ -67,6 +70,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "shell",
 		"factory-droid":   "Execute",
 		"pi":              "bash",
+		"crush":           "bash",
 	},
 	"find": {
 		"claude-code":     "Glob",
@@ -82,6 +86,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "list_dir",
 		"factory-droid":   "Glob",
 		"pi":              "find",
+		"crush":           "glob",
 	},
 	"search": {
 		"claude-code":     "Grep",
@@ -97,6 +102,7 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "grep_files",
 		"factory-droid":   "Grep",
 		"pi":              "grep",
+		"crush":           "grep",
 	},
 	"web_search": {
 		"claude-code":     "WebSearch",
@@ -109,7 +115,10 @@ var ToolNames = map[string]map[string]string{
 		"codex":           "web_search",
 		"kiro":            "web_search",
 		"factory-droid":   "WebSearch",
+		"crush":           "web_search",
 	},
+	// No crush entry: crush's native "agent" equals the canonical name, and
+	// this row is pinned verbatim to ACIF Appendix A (see acif/agentitem_test.go).
 	"agent": {
 		"claude-code":     "Agent",
 		"copilot-cli":     "task",
@@ -130,6 +139,7 @@ var ToolNames = map[string]map[string]string{
 		"zed":             "fetch",
 		"windsurf":        "read_url_content",
 		"factory-droid":   "FetchUrl",
+		"crush":           "web_fetch",
 	},
 	// Pi exposes an `ls` directory-listing tool distinct from `find`
 	"list": {"pi": "ls"},
@@ -146,7 +156,7 @@ var ToolNames = map[string]map[string]string{
 // HookEvents maps canonical (provider-neutral) event names to provider-specific equivalents.
 // Keys are snake_case neutral names; every provider including claude-code has an explicit entry.
 var HookEvents = map[string]map[string]string{
-	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse", "factory-droid": "PreToolUse", "pi": "tool_call"},
+	"before_tool_execute": {"claude-code": "PreToolUse", "gemini-cli": "BeforeTool", "copilot-cli": "preToolUse", "kiro": "preToolUse", "cursor": "PreToolUse", "opencode": "tool.execute.before", "vs-code-copilot": "PreToolUse", "factory-droid": "PreToolUse", "pi": "tool_call", "crush": "PreToolUse"},
 	"after_tool_execute":  {"claude-code": "PostToolUse", "gemini-cli": "AfterTool", "copilot-cli": "postToolUse", "kiro": "postToolUse", "cursor": "PostToolUse", "opencode": "tool.execute.after", "vs-code-copilot": "PostToolUse", "factory-droid": "PostToolUse", "pi": "tool_result"},
 	"before_prompt":       {"claude-code": "UserPromptSubmit", "gemini-cli": "BeforeAgent", "copilot-cli": "userPromptSubmitted", "kiro": "userPromptSubmit", "cursor": "UserPromptSubmit", "windsurf": "pre_user_prompt", "vs-code-copilot": "UserPromptSubmit", "factory-droid": "UserPromptSubmit", "pi": "input"},
 	"agent_stop":          {"claude-code": "Stop", "gemini-cli": "AfterAgent", "kiro": "stop", "copilot-cli": "agentStop", "cursor": "Stop", "windsurf": "post_cascade_response", "opencode": "session.idle", "vs-code-copilot": "Stop", "factory-droid": "Stop", "pi": "agent_end"},

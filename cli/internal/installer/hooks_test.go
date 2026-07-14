@@ -207,7 +207,7 @@ func TestParseHookFile_Valid(t *testing.T) {
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	event, matcherGroup, err := parseHookFile(hookFile)
+	event, _, matcherGroup, err := parseHookFile(hookFile)
 	if err != nil {
 		t.Fatalf("parseHookFile: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestParseHookFile_DirectoryFormat(t *testing.T) {
 	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
 
-	event, matcherGroup, err := parseHookFile(dir)
+	event, _, matcherGroup, err := parseHookFile(dir)
 	if err != nil {
 		t.Fatalf("parseHookFile with directory: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestParseHookFile_MissingEvent(t *testing.T) {
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	_, _, err := parseHookFile(hookFile)
+	_, _, _, err := parseHookFile(hookFile)
 	if err == nil {
 		t.Fatal("expected error for missing event field")
 	}
@@ -297,7 +297,7 @@ func TestInstallHook_HashComputation(t *testing.T) {
 	hookFile := filepath.Join(projectRoot, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	_, matcherGroup, err := parseHookFile(hookFile)
+	_, _, matcherGroup, err := parseHookFile(hookFile)
 	if err != nil {
 		t.Fatalf("parseHookFile: %v", err)
 	}
