@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 
@@ -47,10 +48,18 @@ func dispatch(req request) any {
 			"implementation":   "syllago",
 			"version":          adapterVersion,
 			"adapter_protocol": 1,
-			"scopes":           []string{"core"},
+			"scopes":           []string{"core", "hook"},
 		})
 	case "ingest":
 		return handleIngest(req.Input)
+	case "project":
+		return handleProject(req.Input)
+	case "render":
+		return handleRender(req.Input)
+	case "evaluate_install":
+		return handleEvaluateInstall(req.Input)
+	case "evaluate_requires":
+		return handleEvaluateRequires(req.Input)
 	case "derive_pack_id":
 		return handleDerivePackID(req.Input)
 	case "resolve_pack":
@@ -68,6 +77,10 @@ func errorResponse(message string) errorEnvelope {
 	return errorEnvelope{OK: false, Error: message}
 }
 
+func rejectResponse(reject *acif.RejectError) errorEnvelope {
+	return errorEnvelope{OK: false, Error: reject.ID, Diagnostics: reject.Diagnostics}
+}
+
 func unsupportedResponse() unsupportedEnvelope {
 	return unsupportedEnvelope{Unsupported: true}
 }
@@ -81,6 +94,10 @@ func handleIngest(raw json.RawMessage) any {
 	var input ingestInput
 	if err := json.Unmarshal(raw, &input); err != nil {
 		return errorResponse("adapter: " + err.Error())
+	}
+
+	if input.Kind == "hook" {
+		return handleHookIngest(rawInput, input)
 	}
 
 	if _, ok := rawInput["provider_config"]; ok {
@@ -106,6 +123,64 @@ func handleIngest(raw json.RawMessage) any {
 	return unsupportedResponse()
 }
 
+func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) any {
+	opts := acif.HookOpts{BodyRoot: input.BodyRoot}
+	var result *acif.HookResult
+	var err error
+	if rawProviderConfig, ok := rawInput["provider_config"]; ok {
+		var config map[string]any
+		if err := decodeJSONUseNumber(rawProviderConfig, &config); err != nil {
+			return errorResponse("adapter: " + err.Error())
+		}
+		result, err = acif.CanonicalizeProviderConfig(config, opts)
+	} else if rawSidecar, ok := rawInput["sidecar"]; ok {
+		var block map[string]any
+		if err := decodeJSONUseNumber(rawSidecar, &block); err != nil {
+			return errorResponse("adapter: " + err.Error())
+		}
+		result, err = acif.CanonicalizeHook(block, opts)
+	} else {
+		return unsupportedResponse()
+	}
+	if err != nil {
+		return hookErrorResponse(err)
+	}
+	if result.Verdict != nil {
+		return okResponse(map[string]any{
+			"conformant": false,
+			"reason":     result.Verdict.Reason,
+		})
+	}
+
+	rawCanonical, err := json.Marshal(result.Canonical)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	canonicalBytes, err := acif.CanonicalJSON(rawCanonical)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	bodyHash, computed, err := acif.HookBodyHash(result.Canonical, input.BodyRoot)
+	if err != nil {
+		return hookErrorResponse(err)
+	}
+
+	response := map[string]any{
+		"conformant":      true,
+		"installable":     true,
+		"canonical":       result.Canonical,
+		"canonical_bytes": string(canonicalBytes),
+		"provenance":      result.Provenance,
+	}
+	if computed {
+		response["body_hash"] = bodyHash
+	}
+	if len(result.Diagnostics) > 0 {
+		response["diagnostics"] = result.Diagnostics
+	}
+	return okResponse(response)
+}
+
 func isFrontmatterKind(kind string) bool {
 	switch kind {
 	case "skill", "rule", "agent", "command":
@@ -120,7 +195,7 @@ func handleBodyIngest(bodyRoot, entryFile string) any {
 	if err != nil {
 		var reject *acif.RejectError
 		if errors.As(err, &reject) {
-			return errorResponse(reject.ID)
+			return rejectResponse(reject)
 		}
 		return errorResponse("adapter: " + err.Error())
 	}
@@ -129,6 +204,127 @@ func handleBodyIngest(bodyRoot, entryFile string) any {
 		"classification": result.Classification,
 		"conformant":     true,
 	})
+}
+
+type projectInput struct {
+	Projection string          `json:"projection"`
+	Targets    []string        `json:"targets"`
+	Item       json.RawMessage `json:"item"`
+	Canonical  json.RawMessage `json:"canonical"`
+	Hook       json.RawMessage `json:"hook"`
+	Sidecar    json.RawMessage `json:"sidecar"`
+}
+
+func handleProject(raw json.RawMessage) any {
+	var input projectInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	switch input.Projection {
+	case "script_selection", "derived_capabilities", "os_coverage":
+	default:
+		return unsupportedResponse()
+	}
+	block, err := decodeHookBlockInput(input.Item, input.Canonical, input.Hook, input.Sidecar)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	switch input.Projection {
+	case "script_selection":
+		selection, diagnostics, err := acif.ScriptSelection(block, input.Targets)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		result := map[string]any{"selection": selection}
+		if len(diagnostics) > 0 {
+			result["diagnostics"] = diagnostics
+		}
+		return okResponse(result)
+	case "derived_capabilities":
+		caps, err := acif.DerivedCapabilities(block)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{"derived_capabilities": caps})
+	case "os_coverage":
+		projection, err := acif.OSCoverage(block)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{"projection": projection})
+	default:
+		return unsupportedResponse()
+	}
+}
+
+type renderInput struct {
+	Canonical  json.RawMessage `json:"canonical"`
+	Target     string          `json:"target"`
+	Invocation map[string]any  `json:"invocation"`
+}
+
+func handleRender(raw json.RawMessage) any {
+	var input renderInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	block, err := decodeHookBlockInput(nil, input.Canonical, nil, nil)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	result, err := acif.RenderHook(block, input.Target, input.Invocation)
+	if err != nil {
+		return hookErrorResponse(err)
+	}
+	if result.Unsupported {
+		return unsupportedResponse()
+	}
+	response := map[string]any{"output": result.Output}
+	if len(result.Diagnostics) > 0 {
+		response["diagnostics"] = result.Diagnostics
+	}
+	return okResponse(response)
+}
+
+type evaluateInstallInput struct {
+	Item            json.RawMessage `json:"item"`
+	InstallTargetOS string          `json:"install_target_os"`
+}
+
+func handleEvaluateInstall(raw json.RawMessage) any {
+	var input evaluateInstallInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	block, err := decodeHookBlockInput(input.Item, nil, nil, nil)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	result, err := acif.EvaluateInstall(block, input.InstallTargetOS)
+	if err != nil {
+		return hookErrorResponse(err)
+	}
+	return okResponse(result)
+}
+
+func handleEvaluateRequires(raw json.RawMessage) any {
+	var rawInput map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &rawInput); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	itemRequires := make(map[string]any)
+	if rawRequires, ok := rawInput["item_requires"]; ok {
+		if err := decodeJSONUseNumber(rawRequires, &itemRequires); err != nil {
+			return errorResponse("adapter: " + err.Error())
+		}
+	}
+	var recognizes []string
+	if rawRecognizes, ok := rawInput["consumer_recognizes"]; ok {
+		if err := json.Unmarshal(rawRecognizes, &recognizes); err != nil {
+			return errorResponse("adapter: " + err.Error())
+		}
+	}
+	return okResponse(acif.EvaluateRequires(itemRequires, recognizes))
 }
 
 type sidecarResult struct {
@@ -192,6 +388,34 @@ func parseJSONObject(raw json.RawMessage) (map[string]json.RawMessage, bool) {
 		return nil, false
 	}
 	return obj, true
+}
+
+func decodeHookBlockInput(candidates ...json.RawMessage) (map[string]any, error) {
+	for _, raw := range candidates {
+		if len(raw) == 0 || string(raw) == "null" {
+			continue
+		}
+		var block map[string]any
+		if err := decodeJSONUseNumber(raw, &block); err != nil {
+			return nil, err
+		}
+		return block, nil
+	}
+	return nil, errors.New("missing hook block")
+}
+
+func decodeJSONUseNumber(raw json.RawMessage, v any) error {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	return dec.Decode(v)
+}
+
+func hookErrorResponse(err error) any {
+	var reject *acif.RejectError
+	if errors.As(err, &reject) {
+		return rejectResponse(reject)
+	}
+	return errorResponse("adapter: " + err.Error())
 }
 
 type derivePackIDInput struct {
