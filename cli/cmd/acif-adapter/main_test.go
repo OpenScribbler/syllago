@@ -57,7 +57,7 @@ func TestHello(t *testing.T) {
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
 			"adapter_protocol": float64(1),
-			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp"},
+			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher"},
 		},
 	}
 	if !reflect.DeepEqual(responses[0], want) {
@@ -318,6 +318,77 @@ func TestStage2IngestProjectRenderAndResolveOps(t *testing.T) {
 		"resolution":  "resolved",
 	}) {
 		t.Fatalf("skill cross reference = %#v", cross)
+	}
+}
+
+func TestPublisherStage3NDJSON(t *testing.T) {
+	t.Parallel()
+
+	request := `{"op":"reconcile_frontmatter","input":{"sidecar_value":{"description":"canonical"},"source_frontmatter":{"description":"declared"},"mode":"default"}}` + "\n" +
+		`{"op":"reconcile_frontmatter","input":{"sidecar_value":{"description":"canonical"},"source_frontmatter":{"description":"declared"},"mode":"overwrite"}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"pack","manifests":[{"source":"package.json","name":"superpowers"},{"source":"gemini-extension.json","name":"super-powers"}]}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"pack","sidecar":{"source_kind":"declared"}}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"pack","sidecar":{"source_kind":"inferred"}}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"agent","provider_config":{"provider":"provider-native-frontmatter","content":{"frontmatter":{"tools":["Read","Task"]}}}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 6 {
+		t.Fatalf("responses = %d, want 6", len(responses))
+	}
+
+	defaultReconcile := responses[0]["result"].(map[string]any)
+	if defaultReconcile["action"] != "block" {
+		t.Fatalf("default reconcile = %#v", defaultReconcile)
+	}
+	overwriteReconcile := responses[1]["result"].(map[string]any)
+	if overwriteReconcile["action"] != "overwrite" {
+		t.Fatalf("overwrite reconcile = %#v", overwriteReconcile)
+	}
+
+	manifest := responses[2]["result"].(map[string]any)
+	if manifest["canonical_source"] != "package.json" || manifest["canonical_display_name"] != "superpowers" {
+		t.Fatalf("pack manifest result = %#v", manifest)
+	}
+	manifestDiag := manifest["diagnostics"].([]any)[0].(map[string]any)
+	params := manifestDiag["params"].(map[string]any)
+	if !reflect.DeepEqual(params["sources"], []any{"package.json", "gemini-extension.json"}) {
+		t.Fatalf("manifest sources = %#v", params["sources"])
+	}
+	if !reflect.DeepEqual(params["values"], []any{"superpowers", "super-powers"}) {
+		t.Fatalf("manifest values = %#v", params["values"])
+	}
+
+	declaredPack := responses[3]["result"].(map[string]any)
+	if declaredPack["metadata_hash"] == "" || declaredPack["publisher_section"] == nil {
+		t.Fatalf("declared pack missing publisher hash fields: %#v", declaredPack)
+	}
+	if _, ok := declaredPack["body_hash"]; ok {
+		t.Fatalf("declared pack body_hash present: %#v", declaredPack)
+	}
+
+	inferredPack := responses[4]["result"].(map[string]any)
+	if inferredPack["conformant"] != true || inferredPack["installable"] != true {
+		t.Fatalf("inferred pack = %#v", inferredPack)
+	}
+	for _, key := range []string{"publisher_section", "metadata_hash", "body_hash"} {
+		if _, ok := inferredPack[key]; ok {
+			t.Fatalf("inferred pack has %s: %#v", key, inferredPack)
+		}
+	}
+
+	agent := responses[5]["result"].(map[string]any)
+	publisherTools := agent["publisher_section"].(map[string]any)["agent"].(map[string]any)["tools"]
+	if !reflect.DeepEqual(publisherTools, []any{"Read", "Task"}) {
+		t.Fatalf("publisher tools = %#v", publisherTools)
+	}
+	canonicalTools := agent["canonical"].(map[string]any)["agent"].(map[string]any)["tools"]
+	if !reflect.DeepEqual(canonicalTools, []any{"file_read", "agent"}) {
+		t.Fatalf("canonical tools = %#v", canonicalTools)
+	}
+	if agent["metadata_hash"] == "" {
+		t.Fatalf("agent metadata_hash missing: %#v", agent)
+	}
+	if _, ok := agent["body_hash"]; ok {
+		t.Fatalf("agent body_hash present: %#v", agent)
 	}
 }
 
