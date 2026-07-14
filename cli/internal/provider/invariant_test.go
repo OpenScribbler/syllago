@@ -52,42 +52,50 @@ func TestCoverageInternalGoConsistency(t *testing.T) {
 	t.Fatal(b.String())
 }
 
-// TestCoverageNoDrift is the authoritative full-conformance gate. It fails if
-// ANY drift is found across all assertions. This is the gate that Phase 3
-// of the provider-coverage-reconciliation plan closes (by bringing
-// provider-formats/ YAMLs into sync with Go).
+// TestCoverageNoDrift is the authoritative conformance gate for the in-repo
+// assertions: Go internal consistency and Go vs the format YAMLs. It runs on
+// every `make test` and fails on any unaccepted drift in those axes — both
+// sides live in this repo, so drift is always fixable in the same commit.
 //
-// Gated behind SYLLAGO_COVERAGE_STRICT=1 until Phase 3 lands. Once the YAMLs
-// are reconciled, delete the env-var gate so this test runs by default on
-// every `make test`.
-//
-// Manual invocation during Phase 2/3 work:
-//
-//	SYLLAGO_COVERAGE_STRICT=1 go test ./internal/provider/... -run Coverage
+// Two kinds of drift are logged instead of failing:
+//   - Drifts carrying an AcceptedReason (recorded, permanent disagreements —
+//     see acceptedFeedDrift in coverage_feed.go).
+//   - Capability Feed drift (go-vs-capability-feed): the feed legitimately
+//     outpaces Go, so it is contractually a signal, never a merge block —
+//     the dedicated non-required coverage-drift CI job (TestCoverageFeedDrift)
+//     surfaces it. See docs/provider-capabilities/README.md.
 func TestCoverageNoDrift(t *testing.T) {
-	if os.Getenv("SYLLAGO_COVERAGE_STRICT") != "1" {
-		t.Skip("full Go↔YAML conformance gated behind SYLLAGO_COVERAGE_STRICT=1 until Phase 3 of provider-coverage-reconciliation lands")
-	}
-
 	repoRoot := mustFindRepoRoot(t)
 	drifts, err := CheckCoverage(repoRoot)
 	if err != nil {
 		t.Fatalf("CheckCoverage: %v", err)
 	}
 
-	if len(drifts) == 0 {
+	var failing []CoverageDrift
+	for _, d := range drifts {
+		if d.AcceptedReason != "" {
+			t.Logf("coverage drift (accepted): %s — %s", d, d.AcceptedReason)
+			continue
+		}
+		if d.Assertion == AssertionGoVsCapabilityFeed {
+			t.Logf("coverage drift (feed, non-blocking): %s", d)
+			continue
+		}
+		failing = append(failing, d)
+	}
+	if len(failing) == 0 {
 		return
 	}
 
 	var b strings.Builder
 	b.WriteString("provider coverage drift detected (")
-	b.WriteString(strconv.Itoa(len(drifts)))
+	b.WriteString(strconv.Itoa(len(failing)))
 	b.WriteString(" issue")
-	if len(drifts) != 1 {
+	if len(failing) != 1 {
 		b.WriteString("s")
 	}
 	b.WriteString("):\n")
-	for _, d := range drifts {
+	for _, d := range failing {
 		b.WriteString("  - ")
 		b.WriteString(d.String())
 		b.WriteString("\n")
