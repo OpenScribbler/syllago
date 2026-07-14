@@ -31,6 +31,9 @@ func TestRequiresVerdictCanonicalState(t *testing.T) {
 	if verdict == nil || verdict.Reason != ReasonRequiresOrphanKey {
 		t.Fatalf("foreign requires verdict = %#v, want orphan key", verdict)
 	}
+	if verdict.Params["key"] != "future" {
+		t.Fatalf("verdict params = %#v, want key=future", verdict.Params)
+	}
 	if _, ok := foreign["requires"]; !ok {
 		t.Fatalf("non-empty requires was removed: %#v", foreign)
 	}

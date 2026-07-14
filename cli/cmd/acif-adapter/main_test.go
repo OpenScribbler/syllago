@@ -60,7 +60,7 @@ func TestHello(t *testing.T) {
 		"result": map[string]any{
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
-			"adapter_protocol": float64(1),
+			"adapter_protocol": float64(2),
 			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
 		},
 	}

@@ -47,6 +47,7 @@ func CanonicalizeMCP(block map[string]any) (*RecordResult, error) {
 		result.Conformant = false
 		result.Installable = false
 		result.Reason = verdict.Reason
+		result.Params = verdict.Params
 	}
 	return result, nil
 }

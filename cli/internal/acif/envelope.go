@@ -10,6 +10,7 @@ import (
 type EnvelopeVerdict struct {
 	Conformant bool
 	Reason     string
+	Params     map[string]any
 }
 
 var (
@@ -27,7 +28,10 @@ func ValidateEnvelope(section map[string]json.RawMessage, allSections []map[stri
 	for _, name := range forbidden {
 		for _, s := range allSections {
 			if _, ok := s[name]; ok {
-				return EnvelopeVerdict{Reason: "forbidden-field " + name}
+				return EnvelopeVerdict{
+					Reason: ReasonEnvelopeForbiddenField,
+					Params: map[string]any{"field": name},
+				}
 			}
 		}
 	}
@@ -37,7 +41,7 @@ func ValidateEnvelope(section map[string]json.RawMessage, allSections []map[stri
 		return EnvelopeVerdict{Reason: "missing-required-field kind"}
 	}
 	if !validKind(kind) {
-		return EnvelopeVerdict{Reason: "kind-not-in-closed-enum"}
+		return EnvelopeVerdict{Reason: ReasonEnvelopeKindInvalid}
 	}
 
 	id, ok := stringField(section, "id")
@@ -46,7 +50,7 @@ func ValidateEnvelope(section map[string]json.RawMessage, allSections []map[stri
 	}
 	parsedID, err := uuid.Parse(id)
 	if err != nil || parsedID.Version() != 4 || parsedID.Variant() != uuid.RFC4122 {
-		return EnvelopeVerdict{Reason: "id-not-uuid-v4"}
+		return EnvelopeVerdict{Reason: ReasonEnvelopeIDInvalid}
 	}
 
 	displayName, ok := stringField(section, "display_name")
@@ -57,18 +61,18 @@ func ValidateEnvelope(section map[string]json.RawMessage, allSections []map[stri
 	if rawVersion, ok := section["version"]; ok {
 		var version string
 		if err := json.Unmarshal(rawVersion, &version); err != nil || !semverRe.MatchString(version) {
-			return EnvelopeVerdict{Reason: "version-not-semver"}
+			return EnvelopeVerdict{Reason: ReasonEnvelopeVersionInvalid}
 		}
 	}
 
 	if rawLicense, ok := section["license"]; ok {
 		var license map[string]json.RawMessage
 		if err := json.Unmarshal(rawLicense, &license); err != nil {
-			return EnvelopeVerdict{Reason: "license-spdx-not-identifier"}
+			return EnvelopeVerdict{Reason: ReasonEnvelopeLicenseSPDXInvalid}
 		}
 		spdx, ok := stringField(license, "spdx")
 		if !ok || !spdxIDRe.MatchString(spdx) {
-			return EnvelopeVerdict{Reason: "license-spdx-not-identifier"}
+			return EnvelopeVerdict{Reason: ReasonEnvelopeLicenseSPDXInvalid}
 		}
 	}
 

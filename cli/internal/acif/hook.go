@@ -16,7 +16,8 @@ type HookOpts struct {
 }
 
 type HookVerdict struct {
-	Reason string `json:"reason"`
+	Reason string         `json:"reason"`
+	Params map[string]any `json:"params,omitempty"`
 }
 
 type HookResult struct {
@@ -113,7 +114,7 @@ func CanonicalizeHook(block map[string]any, opts HookOpts) (*HookResult, error) 
 		if reqMap, ok := requires.(map[string]any); ok {
 			if len(reqMap) > 0 {
 				out["requires"] = cloneJSONValue(reqMap)
-				result.Verdict = &HookVerdict{Reason: ReasonRequiresOrphanKey}
+				result.Verdict = orphanKeyVerdict(reqMap)
 			}
 		} else {
 			out["requires"] = cloneJSONValue(requires)

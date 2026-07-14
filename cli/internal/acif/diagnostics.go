@@ -85,8 +85,13 @@ const (
 	ReasonRequiresOrphanKey            = "acif.requires.orphan_key"
 	ReasonCommandHandlerScriptsMissing = "command-handler-scripts-missing"
 
-	ReasonRegistryTimestampOffsetMissing         = "acif.registry.timestamp_offset_missing"
-	ReasonRegistryMethodStampMissing             = "acif.registry.method_stamp_missing"
-	ReasonRegistryProvenanceTagMissing           = "acif.registry.provenance_tag_missing"
-	ReasonResponseEnvelopeClockNotStalenessInput = "response-envelope-clock-is-not-a-staleness-input"
+	ReasonEnvelopeForbiddenField     = "acif.envelope.forbidden_field"
+	ReasonEnvelopeKindInvalid        = "acif.envelope.kind_invalid"
+	ReasonEnvelopeIDInvalid          = "acif.envelope.id_invalid"
+	ReasonEnvelopeVersionInvalid     = "acif.envelope.version_invalid"
+	ReasonEnvelopeLicenseSPDXInvalid = "acif.envelope.license_spdx_invalid"
+
+	ReasonRegistryTimestampOffsetMissing = "acif.registry.timestamp_offset_missing"
+	ReasonRegistryMethodStampMissing     = "acif.registry.method_stamp_missing"
+	ReasonRegistryProvenanceTagMissing   = "acif.registry.provenance_tag_missing"
 )

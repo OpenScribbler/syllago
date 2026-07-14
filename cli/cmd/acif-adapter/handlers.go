@@ -47,7 +47,7 @@ func dispatch(req request) any {
 		return okResponse(map[string]any{
 			"implementation":   "syllago",
 			"version":          adapterVersion,
-			"adapter_protocol": 1,
+			"adapter_protocol": 2,
 			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
 		})
 	case "ingest":
@@ -339,10 +339,14 @@ func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) an
 		return hookErrorResponse(err)
 	}
 	if result.Verdict != nil {
-		return okResponse(map[string]any{
+		verdict := map[string]any{
 			"conformant": false,
 			"reason":     result.Verdict.Reason,
-		})
+		}
+		if len(result.Verdict.Params) > 0 {
+			verdict["params"] = result.Verdict.Params
+		}
+		return okResponse(verdict)
 	}
 
 	rawCanonical, err := json.Marshal(result.Canonical)
@@ -443,6 +447,9 @@ func recordResponse(result *acif.RecordResult) map[string]any {
 	}
 	if result.Reason != "" {
 		response["reason"] = result.Reason
+	}
+	if len(result.Params) > 0 {
+		response["params"] = result.Params
 	}
 	if result.Classification != "" {
 		response["classification"] = result.Classification
@@ -712,6 +719,7 @@ type sidecarResult struct {
 	MetadataHash     string          `json:"metadata_hash"`
 	Conformant       bool            `json:"conformant"`
 	Reason           string          `json:"reason,omitempty"`
+	Params           map[string]any  `json:"params,omitempty"`
 	Installable      bool            `json:"installable"`
 }
 
@@ -757,6 +765,7 @@ func handleSidecarIngest(rawSidecar json.RawMessage) any {
 		MetadataHash:     hashHex,
 		Conformant:       verdict.Conformant,
 		Reason:           verdict.Reason,
+		Params:           verdict.Params,
 		Installable:      verdict.Conformant,
 	})
 }

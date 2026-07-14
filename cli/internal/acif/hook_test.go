@@ -288,6 +288,9 @@ func TestHookRejectsAndVerdicts(t *testing.T) {
 		if nonEmpty.Verdict == nil || nonEmpty.Verdict.Reason != ReasonRequiresOrphanKey {
 			t.Fatalf("Verdict = %#v, want %s", nonEmpty.Verdict, ReasonRequiresOrphanKey)
 		}
+		if nonEmpty.Verdict.Params["key"] != "handler_types" {
+			t.Fatalf("Verdict params = %#v, want key=handler_types", nonEmpty.Verdict.Params)
+		}
 	})
 }
 
