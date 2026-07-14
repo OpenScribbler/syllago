@@ -57,7 +57,7 @@ func TestHello(t *testing.T) {
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
 			"adapter_protocol": float64(1),
-			"scopes":           []any{"core"},
+			"scopes":           []any{"core", "hook"},
 		},
 	}
 	if !reflect.DeepEqual(responses[0], want) {
@@ -134,6 +134,126 @@ func TestIngestBodyRejectError(t *testing.T) {
 	}
 	if responses[0]["ok"] != false || responses[0]["error"] != "acif.body.symlink" {
 		t.Fatalf("response = %#v, want acif.body.symlink error", responses[0])
+	}
+}
+
+func TestHookIngestSidecar(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"ingest","input":{"kind":"hook","sidecar":{"event":"before_tool_execute","handlers":[{"scripts":[{"type":"inline","content":"#!/bin/sh\r\nexit 0\r\n"}]}]}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	if responses[0]["ok"] != true {
+		t.Fatalf("response = %#v, want ok true", responses[0])
+	}
+	result, ok := responses[0]["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("result missing: %#v", responses[0])
+	}
+	if result["conformant"] != true || result["installable"] != true {
+		t.Fatalf("conformant/installable = %#v/%#v", result["conformant"], result["installable"])
+	}
+	if got, want := result["body_hash"], "9c8ab2d7f2465728140264d725011daad97054aceaaedfa9dd0a03d68d06b629"; got != want {
+		t.Fatalf("body_hash = %#v, want %q", got, want)
+	}
+	if got, want := result["canonical_bytes"], `{"blocking":false,"event":"before_tool_execute","handlers":[{"async":false,"scripts":[{"content":"#!/bin/sh\nexit 0\n","type":"inline"}],"type":"command"}]}`; got != want {
+		t.Fatalf("canonical_bytes = %#v, want %q", got, want)
+	}
+}
+
+func TestHookIngestProviderConfig(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeAdapterFixture(t, dir, map[string]string{
+		"hooks/base.sh": "#!/bin/sh\necho base\n",
+		"hooks/win.cmd": "@echo off\r\necho win\r\n",
+		"hooks/lin.sh":  "#!/bin/sh\necho lin\n",
+		"hooks/mac.sh":  "#!/bin/sh\necho mac\n",
+	})
+	request := `{"op":"ingest","input":{"kind":"hook","body_root":` + mustJSON(t, dir) + `,"provider_config":{"provider":"per-os-key-map","path":"settings.json","content":{"command":"hooks/base.sh","windows":"hooks/win.cmd","linux":"hooks/lin.sh","osx":"hooks/mac.sh"}}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	if responses[0]["ok"] != true {
+		t.Fatalf("response = %#v, want ok true", responses[0])
+	}
+	result := responses[0]["result"].(map[string]any)
+	if got, want := result["body_hash"], "11f1e91480d2fdfd247311cc52240bf0fb2293febeccaeeadafacd74707cb32d"; got != want {
+		t.Fatalf("body_hash = %#v, want %q", got, want)
+	}
+	if result["provenance"] != "declared" {
+		t.Fatalf("provenance = %#v, want declared", result["provenance"])
+	}
+}
+
+func TestHookIngestReject(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"ingest","input":{"kind":"hook","sidecar":{"event":"before_tool_execute"}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	if responses[0]["ok"] != false || responses[0]["error"] != "acif.hook.handlers_missing" {
+		t.Fatalf("response = %#v, want handlers_missing error", responses[0])
+	}
+}
+
+func TestHookProjectOps(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"project","input":{"projection":"script_selection","targets":["linux","windows"],"item":{"event":"before_tool_execute","handlers":[{"scripts":[{"type":"file","path":"hooks/unix.sh","os":["darwin","linux"]}]}]}}}` + "\n" +
+		`{"op":"project","input":{"projection":"derived_capabilities","item":{"event":"before_tool_execute","matcher":"shell","handlers":[{"async":true,"scripts":[{"type":"inline","content":"x"}]}]}}}` + "\n" +
+		`{"op":"project","input":{"projection":"not-real","item":{}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 3 {
+		t.Fatalf("responses = %d, want 3", len(responses))
+	}
+	result := responses[0]["result"].(map[string]any)
+	selection := result["selection"].(map[string]any)
+	if selection["linux"] != "hooks/unix.sh" || selection["windows"] != "none" {
+		t.Fatalf("selection = %#v", selection)
+	}
+	diags := result["diagnostics"].([]any)
+	if len(diags) != 1 || diags[0].(map[string]any)["id"] != "acif.hook.script_no_platform_match" {
+		t.Fatalf("diagnostics = %#v", diags)
+	}
+	caps := responses[1]["result"].(map[string]any)["derived_capabilities"].(map[string]any)
+	if caps["handler_types"] != true || caps["matcher_patterns"] != true || caps["async_execution"] != true {
+		t.Fatalf("derived_capabilities = %#v", caps)
+	}
+	if !reflect.DeepEqual(responses[2], map[string]any{"unsupported": true}) {
+		t.Fatalf("unknown projection = %#v, want unsupported", responses[2])
+	}
+}
+
+func TestHookRenderOp(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"render","input":{"target":"no-mechanism-provider","invocation":{"target_os":"linux"},"canonical":{"event":"before_tool_execute","handlers":[{"scripts":[{"type":"file","path":"hooks/unix.sh","os":["darwin","linux"]}]}]}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	result := responses[0]["result"].(map[string]any)
+	if !strings.Contains(result["output"].(string), `"command":"hooks/unix.sh"`) {
+		t.Fatalf("render output = %#v", result["output"])
+	}
+}
+
+func TestHookEvaluateOps(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"evaluate_install","input":{"install_target_os":"windows","item":{"event":"before_tool_execute","blocking":true,"handlers":[{"scripts":[{"type":"file","path":"hooks/unix.sh","os":["darwin","linux"]}]}]}}}` + "\n" +
+		`{"op":"evaluate_requires","input":{"item_requires":{"handler_types":["command"]},"consumer_recognizes":["matcher_patterns"]}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 2 {
+		t.Fatalf("responses = %d, want 2", len(responses))
+	}
+	if got := responses[0]["result"].(map[string]any)["install"]; got != "refuse-unless-operator-opt-in" {
+		t.Fatalf("evaluate_install = %#v", responses[0])
+	}
+	result := responses[1]["result"].(map[string]any)
+	if result["evaluation"] != "unknown" || result["install"] != "refuse-unless-operator-opt-in" {
+		t.Fatalf("evaluate_requires = %#v", result)
 	}
 }
 
