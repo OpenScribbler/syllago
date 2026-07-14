@@ -25,11 +25,19 @@ func computeGroupHash(matcherGroup []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// hookSettingsPath returns the path to the provider's settings.json
-func hookSettingsPath(prov provider.Provider) (string, error) {
+// hookSettingsPath returns the path to the provider's hook config file.
+// Declared as a var so tests can override it (same pattern as mcpConfigPath).
+var hookSettingsPath = hookSettingsPathImpl
+
+func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
+	}
+	if prov.Slug == "crush" {
+		// Crush keeps hooks in its unified crush.json (global scope), not a
+		// settings.json.
+		return filepath.Join(home, ".config", "crush", "crush.json"), nil
 	}
 	return filepath.Join(home, prov.ConfigDir, "settings.json"), nil
 }
@@ -148,6 +156,16 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", err
 	}
 
+	// Crush stores flat hook entries ({command, matcher, timeout}) rather
+	// than CC-shape matcher groups. Flatten last so the whitelist, scanner,
+	// and script-resolution steps above all see the standard shape.
+	if prov.Slug == "crush" {
+		matcherGroup, err = flattenForCrush(matcherGroup)
+		if err != nil {
+			return "", fmt.Errorf("hook %q: %w", item.Name, err)
+		}
+	}
+
 	// Check installed.json for duplicate
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
@@ -191,8 +209,12 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
-	// Extract command from the hook for tracking
-	command := gjson.GetBytes(matcherGroup, "hooks.0.command").String()
+	// Extract command from the hook for tracking (crush entries are flat)
+	commandPath := "hooks.0.command"
+	if prov.Slug == "crush" {
+		commandPath = "command"
+	}
+	command := gjson.GetBytes(matcherGroup, commandPath).String()
 
 	// Record in installed.json
 	inst.Hooks = append(inst.Hooks, InstalledHook{
@@ -476,6 +498,31 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	}
 
 	return result, nil
+}
+
+// flattenForCrush converts a CC-shape matcher group ({matcher, hooks:[entry]})
+// into crush's flat HookConfig ({command, matcher, timeout}). Crush hooks are
+// shell commands only, its schema rejects unknown fields, and its timeouts are
+// seconds — the canonical unit, so the value passes through unchanged.
+func flattenForCrush(matcherGroup []byte) ([]byte, error) {
+	entry := gjson.GetBytes(matcherGroup, "hooks.0")
+	if hType := entry.Get("type").String(); hType != "" && hType != "command" {
+		return nil, fmt.Errorf("crush hooks only support command handlers (got type %q)", hType)
+	}
+	cmd := entry.Get("command").String()
+	if cmd == "" {
+		return nil, fmt.Errorf("crush hooks require a command")
+	}
+	flat := struct {
+		Matcher string `json:"matcher,omitempty"`
+		Command string `json:"command"`
+		Timeout int    `json:"timeout,omitempty"`
+	}{
+		Matcher: gjson.GetBytes(matcherGroup, "matcher").String(),
+		Command: cmd,
+		Timeout: int(entry.Get("timeout").Int()),
+	}
+	return json.Marshal(flat)
 }
 
 // hookMatcherGroup is a typed struct for whitelist-filtering hook matcher groups.

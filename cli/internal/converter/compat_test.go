@@ -171,9 +171,11 @@ func TestAnalyzeHookCompat_Async_Copilot_Broken(t *testing.T) {
 
 func TestAnalyzeHookCompat_NoMatcher_FullEverywhere(t *testing.T) {
 	t.Parallel()
-	// Hook with no matcher, no async, no statusMessage — should be Full everywhere
+	// Hook with no matcher, no async, no statusMessage — should be Full
+	// everywhere. Uses before_tool_execute: the only event every hook
+	// provider supports (crush supports nothing else).
 	hook := HookData{
-		Event: "session_start",
+		Event: "before_tool_execute",
 		Hooks: []HookEntry{{Type: "command", Command: "echo start"}},
 	}
 	for _, target := range HookProviders() {

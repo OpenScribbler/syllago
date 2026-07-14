@@ -234,6 +234,8 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	switch sourceProvider {
 	case "copilot-cli":
 		return canonicalizeCopilotHooks(content)
+	case "crush":
+		return canonicalizeCrushHooks(content)
 	case "cursor":
 		// Cursor hooks use CC-style event names (mapped via HookEvents).
 		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
@@ -304,6 +306,8 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 	switch target.Slug {
 	case "copilot-cli":
 		return renderCopilotHooks(cfg, mode)
+	case "crush":
+		return renderCrushHooks(cfg)
 	case "kiro":
 		return renderKiroHooks(cfg, mode)
 	case "cursor":
@@ -403,6 +407,43 @@ func canonicalizeCopilotHooks(content []byte) (*Result, error) {
 			})
 		}
 		canonical.Hooks[canonicalEvent] = matchers
+	}
+
+	out, err := json.MarshalIndent(canonical, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: out, Filename: "hooks.json"}, nil
+}
+
+// canonicalizeCrushHooks parses crush.json hook content. Crush entries are
+// flat ({command, matcher, timeout}) rather than CC-shape matcher groups,
+// and timeouts are seconds — already the canonical unit.
+func canonicalizeCrushHooks(content []byte) (*Result, error) {
+	var file struct {
+		Hooks map[string][]crushHookEntry `json:"hooks"`
+	}
+	if err := json.Unmarshal(content, &file); err != nil {
+		return nil, fmt.Errorf("parsing crush hooks JSON: %w", err)
+	}
+
+	canonical := hooksConfig{Hooks: make(map[string][]hookMatcher), SourceProvider: "crush"}
+	for event, entries := range file.Hooks {
+		canonicalEvent := ReverseTranslateHookEvent(event, "crush")
+		for _, e := range entries {
+			matcher := e.Matcher
+			if matcher != "" {
+				matcher = ReverseTranslateMatcher(matcher, "crush")
+			}
+			canonical.Hooks[canonicalEvent] = append(canonical.Hooks[canonicalEvent], hookMatcher{
+				Matcher: matcher,
+				Hooks: []HookEntry{{
+					Type:    "command",
+					Command: e.Command,
+					Timeout: e.Timeout,
+				}},
+			})
+		}
 	}
 
 	out, err := json.MarshalIndent(canonical, "", "  ")
@@ -595,6 +636,59 @@ func renderCopilotHooks(cfg hooksConfig, llmMode string) (*Result, error) {
 		r.ExtraFiles = extraFiles
 	}
 	return r, nil
+}
+
+// renderCrushHooks renders canonical hooks into crush's flat entry shape.
+// Only before_tool_execute maps to a crush event (PreToolUse). LLM-evaluated
+// and http hooks are dropped with a warning — crush hooks are shell commands
+// only, and syllago has no wrapper-script generation for crush.
+func renderCrushHooks(cfg hooksConfig) (*Result, error) {
+	var warnings []string
+	if cfg.SourceProvider != "" {
+		warnings = append(warnings, structuredOutputWarnings(cfg.SourceProvider, "crush")...)
+	}
+
+	out := struct {
+		Hooks map[string][]crushHookEntry `json:"hooks"`
+	}{Hooks: make(map[string][]crushHookEntry)}
+
+	for event, matchers := range cfg.Hooks {
+		targetEvent, supported := TranslateHookEvent(event, "crush")
+		if !supported {
+			warnings = append(warnings, fmt.Sprintf("hook event %q is not supported by crush (dropped)", event))
+			continue
+		}
+
+		for _, m := range matchers {
+			matcher := ""
+			if m.Matcher != "" {
+				matcher = TranslateMatcher(m.Matcher, "crush")
+			}
+
+			for _, h := range m.Hooks {
+				hType := h.Type
+				if hType == "" {
+					hType = "command"
+				}
+				if hType != "command" {
+					warnings = append(warnings, fmt.Sprintf("hook type %q is not supported by crush; dropped", hType))
+					continue
+				}
+				// Canonical timeout is seconds — crush reads seconds natively.
+				out.Hooks[targetEvent] = append(out.Hooks[targetEvent], crushHookEntry{
+					Matcher: matcher,
+					Command: h.Command,
+					Timeout: h.Timeout,
+				})
+			}
+		}
+	}
+
+	result, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return &Result{Content: result, Filename: "crush.json", Warnings: warnings}, nil
 }
 
 // --- Kiro hooks ---
