@@ -14,6 +14,10 @@ var Zed = Provider{
 		switch ct {
 		case catalog.Rules:
 			return ProjectScopeSentinel // Rules go in project root as .rules
+		case catalog.Skills:
+			// Zed's only skills location is the cross-provider convention
+			// (https://zed.dev/docs/ai/skills) — no zed-native directory.
+			return filepath.Join(homeDir, ".agents", "skills")
 		case catalog.MCP:
 			return JSONMergeSentinel // Merges into ~/.config/zed/settings.json
 		}
@@ -34,6 +38,8 @@ var Zed = Provider{
 				filepath.Join(projectRoot, ".cursorrules"),
 				filepath.Join(projectRoot, "CLAUDE.md"),
 			}
+		case catalog.Skills:
+			return []string{filepath.Join(projectRoot, ".agents", "skills")}
 		default:
 			return nil
 		}
@@ -51,15 +57,16 @@ var Zed = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.MCP:
+		case catalog.Rules, catalog.Skills, catalog.MCP:
 			return true
 		default:
 			return false
 		}
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
-		catalog.Rules: true,
-		catalog.MCP:   false, // JSON merge
+		catalog.Rules:  true,
+		catalog.Skills: true,
+		catalog.MCP:    false, // JSON merge
 	},
 	ConfigLocations: map[catalog.ContentType]string{
 		catalog.MCP: "~/.config/zed/settings.json",

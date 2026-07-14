@@ -62,15 +62,39 @@ func TestZedDetect(t *testing.T) {
 
 func TestZedSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.MCP} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.MCP} {
 		if !Zed.SupportsType(ct) {
 			t.Errorf("Zed.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Skills, catalog.Agents, catalog.Hooks, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Agents, catalog.Hooks, catalog.Commands} {
 		if Zed.SupportsType(ct) {
 			t.Errorf("Zed.SupportsType(%s) = true, want false", ct)
 		}
+	}
+}
+
+// TestZedSkillsPaths: Zed loads skills exclusively from the cross-provider
+// .agents/skills convention — ~/.agents/skills/<name>/SKILL.md globally and
+// <worktree>/.agents/skills/<name>/SKILL.md per project. There is no
+// zed-native skills directory (https://zed.dev/docs/ai/skills).
+func TestZedSkillsPaths(t *testing.T) {
+	t.Parallel()
+	if got, want := Zed.InstallDir("/home/user", catalog.Skills), filepath.Join("/home/user", ".agents", "skills"); got != want {
+		t.Errorf("Zed.InstallDir(Skills) = %q, want %q", got, want)
+	}
+	paths := Zed.DiscoveryPaths("/project", catalog.Skills)
+	if len(paths) != 1 {
+		t.Fatalf("expected 1 Skills discovery path, got %d: %v", len(paths), paths)
+	}
+	if want := filepath.Join("/project", ".agents", "skills"); paths[0] != want {
+		t.Errorf("expected Skills discovery path %q, got %q", want, paths[0])
+	}
+	if !Zed.SymlinkSupport[catalog.Skills] {
+		t.Error("Zed.SymlinkSupport[Skills] = false, want true")
+	}
+	if got := Zed.FileFormat(catalog.Skills); got != FormatMarkdown {
+		t.Errorf("Zed.FileFormat(Skills) = %q, want %q", got, FormatMarkdown)
 	}
 }
 

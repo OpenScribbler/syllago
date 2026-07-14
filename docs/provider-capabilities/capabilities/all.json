@@ -4,6 +4,83 @@
       "content_types": {
         "hooks": {
           "capabilities": {
+            "async_execution": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+                "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "hooks.async_execution",
+              "mechanism": "plugin event handlers are async TypeScript functions awaited inline in the request/response flow (a tool.call blocks until the handler resolves); no fire-and-forget or background hook execution is documented",
+              "supported": false
+            },
+            "context_injection": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.context_injection",
+              "mechanism": "agent.start handlers return {message: {content, display?}} to append context after the user's message; tool.result handlers rewrite tool results; agent.end can continue the loop (Plugin API, experimental)",
+              "supported": true
+            },
+            "decision_control": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "object"
+              },
+              "key_path": "hooks.decision_control",
+              "mechanism": "a tool.call handler returns {action: allow | reject-and-continue | modify | synthesize | error} deciding each tool invocation (Plugin API, experimental)",
+              "supported": true
+            },
+            "handler_types": {
+              "confidence": "inferred",
+              "key": {
+                "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+                "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+                "type": "object"
+              },
+              "key_path": "hooks.handler_types",
+              "mechanism": "TypeScript handlers via amp.on(event, handler) run in Amp's Bun runtime; handlers can shell out (ctx.$), call amp.ai.ask, or register tools/commands (Plugin API, experimental)",
+              "supported": true
+            },
+            "hook_scopes": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+                "type": "object"
+              },
+              "key_path": "hooks.hook_scopes",
+              "mechanism": "three plugin load locations — project .amp/plugins/*.ts, user ~/.config/amp/plugins/*.ts, and a workspace-configured global location (Plugin API, experimental)",
+              "supported": true
+            },
+            "input_modification": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.input_modification",
+              "mechanism": "a tool.call handler returns {action: modify, input} to replace the tool's input arguments before it executes (Plugin API, experimental)",
+              "supported": true
+            },
+            "json_io_protocol": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.json_io_protocol",
+              "mechanism": "plugins are in-process TypeScript modules exchanging typed event objects and return values through the @ampcode/plugin PluginAPI, not a serialized JSON stdin/stdout protocol",
+              "supported": false
+            },
             "matcher_patterns": {
               "confidence": "inferred",
               "key": {
@@ -12,7 +89,7 @@
                 "type": "bool"
               },
               "key_path": "hooks.matcher_patterns",
-              "mechanism": "per-tool input matching documented under 'Match Conditions' / 'Regular Expression Patterns' headings (hook_match_input_contains)",
+              "mechanism": "amp.on() subscriptions carry no declarative matcher (handlers discriminate in code); declarative glob/regex matching survives in legacy amp.permissions rules enforced via the internal compat plugin",
               "supported": true
             },
             "permission_control": {
@@ -23,7 +100,7 @@
                 "type": "bool"
               },
               "key_path": "hooks.permission_control",
-              "mechanism": "hooks integrate with amp's permission system to control tool availability (documented under 'How Permissions Work' / 'Add Rules' headings)",
+              "mechanism": "a tool.call handler decides each invocation; legacy amp.permissions / amp.guardedFiles.allowlist rules are enforced via an internal compat plugin (Plugin API, experimental)",
               "supported": true
             }
           },
@@ -152,7 +229,7 @@
                 "type": "bool"
               },
               "key_path": "skills.global_scope",
-              "mechanism": "skill directory placed under ~/.config/agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/",
+              "mechanism": "skill directory placed under ~/.config/agents/skills/<name>/, ~/.agents/skills/<name>/, ~/.config/amp/skills/<name>/, or ~/.claude/skills/<name>/",
               "supported": true
             },
             "project_scope": {
@@ -170,21 +247,11 @@
           "supported": true
         }
       },
-      "display_name": "amp",
+      "display_name": "Amp",
       "provider_exclusive": {
         "skills.creation_workflow": {
           "confidence": "inferred",
           "mechanism": "documented under 'Creating Skills' heading",
-          "supported": true
-        },
-        "skills.executable_tools": {
-          "confidence": "inferred",
-          "mechanism": "documented under 'Executable Tools in Skills' heading",
-          "supported": true
-        },
-        "skills.installation_workflow": {
-          "confidence": "inferred",
-          "mechanism": "documented under 'Installing Skills' heading",
           "supported": true
         },
         "skills.mcp_integration": {
@@ -193,7 +260,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "amp",
       "status": "live"
     },
@@ -257,7 +325,7 @@
                 "type": "bool"
               },
               "key_path": "agents.model_selection",
-              "mechanism": "per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
+              "mechanism": "per-subagent model override (sonnet/opus/haiku/fable alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
               "supported": true
             },
             "per_agent_mcp": {
@@ -410,8 +478,8 @@
                 "type": "bool"
               },
               "key_path": "mcp.marketplace",
-              "mechanism": "in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace",
-              "supported": true
+              "mechanism": "no in-IDE MCP marketplace; the former in-doc 'Popular MCP servers' catalog is now 'Find and build MCP servers', which points to the external Anthropic Directory (claude.ai/directory) added via `claude mcp add` rather than an in-IDE discovery/install surface",
+              "supported": false
             },
             "oauth_support": {
               "confidence": "inferred",
@@ -443,8 +511,8 @@
                 "type": "object"
               },
               "key_path": "mcp.tool_filtering",
-              "mechanism": "allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings",
-              "supported": true
+              "mechanism": "no per-tool visibility allowlist/blocklist; allowedMcpServers/deniedMcpServers control per-server access (enterprise_management), not individual tool visibility, and those headings moved to the separate /en/managed-mcp page",
+              "supported": false
             },
             "transport_types": {
               "confidence": "inferred",
@@ -454,7 +522,7 @@
                 "type": "object"
               },
               "key_path": "mcp.transport_types",
-              "mechanism": "three transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' headings",
+              "mechanism": "four transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' / 'Option 4: Add a remote WebSocket server' headings",
               "supported": true
             }
           },
@@ -574,7 +642,7 @@
           "supported": true
         }
       },
-      "display_name": "claude-code",
+      "display_name": "Claude Code",
       "provider_exclusive": {
         "skills.additional_directories": {
           "confidence": "inferred",
@@ -608,7 +676,7 @@
         },
         "skills.nested_directories": {
           "confidence": "inferred",
-          "mechanism": "documented under 'Automatic discovery from nested directories' heading",
+          "mechanism": "documented under 'Automatic discovery from parent and nested directories' heading",
           "supported": true
         },
         "skills.subagent_invocation": {
@@ -622,7 +690,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "claude-code",
       "status": "live"
     },
@@ -638,7 +707,7 @@
                 "type": "bool"
               },
               "key_path": "commands.builtin_commands",
-              "mechanism": "6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable",
+              "mechanism": "5 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /reportbug); hardcoded, not user-modifiable",
               "supported": true
             }
           },
@@ -646,15 +715,37 @@
         },
         "hooks": {
           "capabilities": {
-            "context_injection": {
+            "async_execution": {
               "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+                "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "hooks.async_execution",
+              "mechanism": "plugin hook policies (mode: async) run hooks off the critical path on SDK/CLI/Kanban; filesystem-script hooks on VS Code/JetBrains remain synchronous with a 30s timeout",
+              "supported": true
+            },
+            "context_injection": {
+              "confidence": "confirmed",
               "key": {
                 "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
                 "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
                 "type": "bool"
               },
               "key_path": "hooks.context_injection",
-              "mechanism": "context injection documented under 'Context Modification' heading",
+              "mechanism": "filesystem hooks inject context via the contextModification stdout field on VS Code/JetBrains; the plugin before_agent_start hook stage injects context or modifies the prompt on SDK/CLI/Kanban",
+              "supported": true
+            },
+            "decision_control": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "object"
+              },
+              "key_path": "hooks.decision_control",
+              "mechanism": "filesystem PreToolUse hooks block a tool invocation by returning cancel: true on VS Code/JetBrains; the plugin tool_call_before hook stage blocks tool calls on SDK/CLI/Kanban",
               "supported": true
             },
             "handler_types": {
@@ -665,47 +756,69 @@
                 "type": "object"
               },
               "key_path": "hooks.handler_types",
-              "mechanism": "hook handler types documented under 'Hook Types' heading",
-              "supported": true
+              "mechanism": "neither surface documents handler-type selection: filesystem hooks (VS Code/JetBrains) execute shell or PowerShell scripts only; plugin hooks (SDK/CLI/Kanban) are TypeScript lifecycle handlers only",
+              "supported": false
             },
             "hook_scopes": {
-              "confidence": "inferred",
+              "confidence": "confirmed",
               "key": {
                 "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
                 "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
                 "type": "object"
               },
               "key_path": "hooks.hook_scopes",
-              "mechanism": "hook scopes documented under 'Hook Locations' heading (project + global)",
+              "mechanism": "both surfaces support global + project scope: filesystem hooks in .clinerules/hooks (project) and ~/Documents/Cline/Hooks (global); plugins in .cline/plugins (project) and ~/.cline/plugins (global)",
+              "supported": true
+            },
+            "input_modification": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.input_modification",
+              "mechanism": "filesystem PreToolUse hooks return modified context/input before tool execution via contextModification on VS Code/JetBrains; the plugin before_agent_start / tool_call_before stages modify input on SDK/CLI/Kanban",
               "supported": true
             },
             "json_io_protocol": {
-              "confidence": "inferred",
+              "confidence": "confirmed",
               "key": {
                 "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
                 "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
                 "type": "bool"
               },
               "key_path": "hooks.json_io_protocol",
-              "mechanism": "JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings",
+              "mechanism": "the filesystem-script model (VS Code/JetBrains) receives JSON via stdin and returns JSON to stdout with cancel, contextModification, and errorMessage fields; NOT the plugin mechanism (in-process TypeScript)",
               "supported": true
+            },
+            "matcher_patterns": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+                "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "hooks.matcher_patterns",
+              "mechanism": "neither surface documents per-tool pattern matching: filesystem PreToolUse and plugin tool_call_before both fire for every tool call regardless of tool identity",
+              "supported": false
+            },
+            "permission_control": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.permission_control",
+              "mechanism": "neither surface grants/denies tool availability: hooks can only block/cancel a specific tool call (decision_control); the plugin approval-policy concept governs blocking a call, not tool-availability permissioning",
+              "supported": false
             }
           },
           "supported": true
         },
         "mcp": {
           "capabilities": {
-            "marketplace": {
-              "confidence": "inferred",
-              "key": {
-                "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
-                "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
-                "type": "bool"
-              },
-              "key_path": "mcp.marketplace",
-              "mechanism": "in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)",
-              "supported": true
-            },
             "transport_types": {
               "confidence": "inferred",
               "key": {
@@ -714,7 +827,7 @@
                 "type": "object"
               },
               "key_path": "mcp.transport_types",
-              "mechanism": "transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)",
+              "mechanism": "transport types documented under 'Transport types' heading (STDIO + remote streamableHttp/sse) on the consolidated mcp-overview page",
               "supported": true
             }
           },
@@ -796,7 +909,7 @@
           "supported": true
         }
       },
-      "display_name": "cline",
+      "display_name": "Cline",
       "provider_exclusive": {
         "skills.bundled_files": {
           "confidence": "inferred",
@@ -839,7 +952,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "cline",
       "status": "live"
     },
@@ -1011,14 +1125,14 @@
               "supported": true
             },
             "hierarchical_loading": {
-              "confidence": "inferred",
+              "confidence": "confirmed",
               "key": {
                 "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
                 "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
                 "type": "bool"
               },
               "key_path": "rules.hierarchical_loading",
-              "mechanism": "hierarchical AGENTS.md loading gated by child_agents_md feature flag in config.toml; codex emits a precedence-explanation message to the model when enabled (documented under 'Hierarchical agents message')",
+              "mechanism": "Codex unconditionally collects every AGENTS.md from the project root down to the cwd and combines them (codex-rs/core/src/agents_md.rs module doc + find_nearest_ancestor_with_markers). The former child_agents_md feature flag was removed upstream (openai/codex #28993); base hierarchical loading is now always-on.",
               "supported": true
             }
           },
@@ -1085,7 +1199,7 @@
           "supported": true
         }
       },
-      "display_name": "codex",
+      "display_name": "Codex",
       "provider_exclusive": {
         "skills.allow_implicit_invocation": {
           "confidence": "confirmed",
@@ -1178,7 +1292,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "codex",
       "status": "live"
     },
@@ -1351,7 +1466,7 @@
           "supported": true
         }
       },
-      "display_name": "copilot-cli",
+      "display_name": "Copilot CLI",
       "provider_exclusive": {
         "skills.cli_management": {
           "confidence": "inferred",
@@ -1359,7 +1474,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "copilot-cli",
       "status": "live"
     },
@@ -1398,6 +1514,17 @@
               },
               "key_path": "skills.description",
               "mechanism": "yaml frontmatter key: description",
+              "supported": true
+            },
+            "disable_model_invocation": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "When true, the AI cannot auto-invoke this skill; only the user can invoke it explicitly. Default: false.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+                "type": "bool"
+              },
+              "key_path": "skills.disable_model_invocation",
+              "mechanism": "yaml frontmatter key: disable-model-invocation",
               "supported": true
             },
             "display_name": {
@@ -1454,12 +1581,23 @@
               "key_path": "skills.project_scope",
               "mechanism": "per-project .crush/skills/ directory",
               "supported": true
+            },
+            "user_invocable": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "When false, the skill is hidden from user-facing menus (e.g., the / command menu). The AI can still invoke it. Default: true.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "skills.user_invocable",
+              "mechanism": "yaml frontmatter key: user-invocable",
+              "supported": true
             }
           },
           "supported": true
         }
       },
-      "display_name": "crush",
+      "display_name": "Crush",
       "provider_exclusive": {
         "skills.frontmatter_compatibility": {
           "mechanism": "yaml key: compatibility",
@@ -1482,7 +1620,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "crush",
       "status": "live"
     },
@@ -1627,7 +1766,18 @@
                 "type": "bool"
               },
               "key_path": "mcp.auto_approve",
-              "mechanism": "auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading",
+              "mechanism": "auto-approval via Run Mode — MCP follows the same Run Modes as terminal commands; in Auto-review mode allowlisted MCP tools run immediately (documented under 'Run Mode' heading)",
+              "supported": true
+            },
+            "enterprise_management": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+                "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+                "type": "bool"
+              },
+              "key_path": "mcp.enterprise_management",
+              "mechanism": "enterprise admins configure MCP policy from the Cursor dashboard — team MCP distribution, server/tool allowlists, and per-server network controls (documented under 'Enterprise admin controls' / 'Team MCP distribution' / 'Network controls' headings)",
               "supported": true
             },
             "env_var_expansion": {
@@ -1671,7 +1821,7 @@
                 "type": "object"
               },
               "key_path": "mcp.tool_filtering",
-              "mechanism": "per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings",
+              "mechanism": "per-server tool allowlists restrict which tools from an approved server may run automatically; command/URL entries approve servers (documented under 'MCP Allowlist' heading)",
               "supported": true
             },
             "transport_types": {
@@ -1812,8 +1962,9 @@
           "supported": true
         }
       },
-      "display_name": "cursor",
-      "schema_version": "1",
+      "display_name": "Cursor",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "cursor",
       "status": "live"
     },
@@ -1832,6 +1983,17 @@
               "mechanism": "single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading",
               "supported": true
             },
+            "per_agent_mcp": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+                "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "agents.per_agent_mcp",
+              "mechanism": "per-droid MCP scoping via the mcpServers frontmatter field documented under 'Selecting MCP servers' heading",
+              "supported": true
+            },
             "tool_restrictions": {
               "confidence": "inferred",
               "key": {
@@ -1840,7 +2002,7 @@
                 "type": "bool"
               },
               "key_path": "agents.tool_restrictions",
-              "mechanism": "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading",
+              "mechanism": "categorical tool policy using named categories (read-only, edit, execute, web, mcp) documented under 'Tool categories → concrete tools' heading",
               "supported": true
             }
           },
@@ -1880,6 +2042,28 @@
         },
         "mcp": {
           "capabilities": {
+            "enterprise_management": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+                "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+                "type": "bool"
+              },
+              "key_path": "mcp.enterprise_management",
+              "mechanism": "org-managed mcpPolicy allowlist and mcpAutonomyUrlOverrides documented under 'Enterprise MCP policy' heading",
+              "supported": true
+            },
+            "env_var_expansion": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+                "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+                "type": "bool"
+              },
+              "key_path": "mcp.env_var_expansion",
+              "mechanism": "${VAR} and ${VAR:-default} expansion in mcp.json documented under 'Variable expansion' heading",
+              "supported": true
+            },
             "marketplace": {
               "confidence": "inferred",
               "key": {
@@ -1899,7 +2083,7 @@
                 "type": "bool"
               },
               "key_path": "mcp.oauth_support",
-              "mechanism": "OS-keyring OAuth-token storage for HTTP MCP servers documented under 'OAuth Tokens' heading",
+              "mechanism": "OS-keyring OAuth-token storage for HTTP/SSE MCP servers documented under 'OAuth Tokens' heading",
               "supported": true
             },
             "tool_filtering": {
@@ -1910,7 +2094,7 @@
                 "type": "object"
               },
               "key_path": "mcp.tool_filtering",
-              "mechanism": "per-server tool allowlisting via the `disabledTools` field documented under 'Configuration Schema' heading",
+              "mechanism": "per-server tool filtering via enabledTools/disabledTools fields documented under 'Configuration Schema' / 'Per-tool filtering' headings",
               "supported": true
             },
             "transport_types": {
@@ -1921,7 +2105,7 @@
                 "type": "object"
               },
               "key_path": "mcp.transport_types",
-              "mechanism": "http and stdio transports documented under 'Adding HTTP Servers' and 'Adding Stdio Servers' headings",
+              "mechanism": "http, sse, and stdio transports documented under 'Adding HTTP Servers', 'Adding SSE Servers', and 'Adding Stdio Servers' headings",
               "supported": true
             }
           },
@@ -1966,7 +2150,7 @@
           "supported": true
         }
       },
-      "display_name": "factory-droid",
+      "display_name": "Factory Droid",
       "provider_exclusive": {
         "skills.creation_workflow": {
           "confidence": "inferred",
@@ -1989,7 +2173,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "factory-droid",
       "status": "live"
     },
@@ -2195,7 +2380,7 @@
                 "type": "bool"
               },
               "key_path": "rules.auto_memory",
-              "mechanism": "/memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')",
+              "mechanism": "/memory show / reload slash commands manage the hierarchical GEMINI.md memory (documented under 'Manage context with the /memory command'); the /memory add append subcommand was removed upstream",
               "supported": true
             },
             "file_imports": {
@@ -2224,8 +2409,9 @@
           "supported": true
         }
       },
-      "display_name": "gemini-cli",
-      "schema_version": "1",
+      "display_name": "Gemini CLI",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "gemini-cli",
       "status": "live"
     },
@@ -2302,6 +2488,41 @@
           "supported": true
         },
         "hooks": {
+          "capabilities": {
+            "context_injection": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "bool"
+              },
+              "key_path": "hooks.context_injection",
+              "mechanism": "exit code 0 adds hook command STDOUT to the agent context for SessionStart and UserPromptSubmit events; documented under the 'Exit code behavior' heading",
+              "supported": true
+            },
+            "decision_control": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+                "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+                "type": "object"
+              },
+              "key_path": "hooks.decision_control",
+              "mechanism": "exit code 2 blocks execution for PreToolUse / UserPromptSubmit / PreTaskExec (block only, no allow/modify); documented under the 'Exit code behavior' heading",
+              "supported": true
+            },
+            "matcher_patterns": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+                "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "hooks.matcher_patterns",
+              "mechanism": "per-hook 'matcher' regex field filters by tool name or file path; the 'Trigger reference' table 'Matcher matches' column documents Tool name (regex) for PreToolUse/PostToolUse and File path (regex) for file events",
+              "supported": true
+            }
+          },
           "supported": true
         },
         "mcp": {
@@ -2315,6 +2536,17 @@
               },
               "key_path": "mcp.env_var_expansion",
               "mechanism": "environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets",
+              "supported": true
+            },
+            "oauth_support": {
+              "confidence": "inferred",
+              "key": {
+                "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+                "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "mcp.oauth_support",
+              "mechanism": "browser-based OAuth flows with Dynamic Client Registration; oauth.clientId / oauth.redirectUri / oauthScopes config fields and automatic token re-authentication documented under 'OAuth authentication' heading",
               "supported": true
             },
             "transport_types": {
@@ -2433,7 +2665,7 @@
           "supported": true
         }
       },
-      "display_name": "kiro",
+      "display_name": "Kiro",
       "provider_exclusive": {
         "skills.directory_structure": {
           "confidence": "inferred",
@@ -2471,13 +2703,15 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "beta",
+      "schema_version": "2",
       "slug": "kiro",
       "status": "live"
     },
     "opencode": {
-      "display_name": "opencode",
-      "schema_version": "1",
+      "display_name": "OpenCode",
+      "provider_status": "archived",
+      "schema_version": "2",
       "slug": "opencode",
       "status": "live"
     },
@@ -2587,7 +2821,7 @@
           "supported": true
         }
       },
-      "display_name": "pi",
+      "display_name": "Pi",
       "provider_exclusive": {
         "skills.baseDir": {
           "confidence": "confirmed",
@@ -2610,7 +2844,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "pi",
       "status": "live"
     },
@@ -2758,7 +2993,7 @@
           "supported": true
         }
       },
-      "display_name": "roo-code",
+      "display_name": "Roo Code",
       "provider_exclusive": {
         "skills.frontmatter_compatibility": {
           "mechanism": "yaml key: compatibility",
@@ -2781,7 +3016,8 @@
           "supported": true
         }
       },
-      "schema_version": "1",
+      "provider_status": "archived",
+      "schema_version": "2",
       "slug": "roo-code",
       "status": "live"
     },
@@ -2952,8 +3188,9 @@
           "supported": true
         }
       },
-      "display_name": "windsurf",
-      "schema_version": "1",
+      "display_name": "Windsurf",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "windsurf",
       "status": "live"
     },
@@ -3033,10 +3270,115 @@
             }
           },
           "supported": true
+        },
+        "skills": {
+          "capabilities": {
+            "auto_invocable": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Whether the provider supports automatic model-driven skill invocation — the model selects and activates a skill without explicit user syntax. Implementations vary: description-field semantic matching, explicit keyword arrays, and boolean flags are all equivalent mechanisms for the same concept. Note: a description field paired with an opt-out disable_model_invocation flag is functionally equivalent to an explicit auto_invocable boolean — both express that the skill participates in automatic activation unless suppressed.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+                "type": "bool"
+              },
+              "key_path": "skills.auto_invocable",
+              "mechanism": "the agent sees a catalog of installed skills (name + description) and auto-invokes the one whose description matches the task; opt out via disable-model-invocation",
+              "supported": true
+            },
+            "canonical_filename": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+                "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+                "type": "string"
+              },
+              "key_path": "skills.canonical_filename",
+              "mechanism": "SKILL.md is the required fixed filename inside each skill folder (YAML frontmatter + Markdown body)",
+              "supported": true
+            },
+            "description": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+                "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+                "type": "string"
+              },
+              "key_path": "skills.description",
+              "mechanism": "yaml frontmatter key: description (required); the agent uses it to decide when to auto-invoke; keep under 1024 bytes",
+              "supported": true
+            },
+            "disable_model_invocation": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "When true, the AI cannot auto-invoke this skill; only the user can invoke it explicitly. Default: false.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+                "type": "bool"
+              },
+              "key_path": "skills.disable_model_invocation",
+              "mechanism": "yaml frontmatter key: disable-model-invocation (optional bool, default false); hides the skill from the autonomous catalog while leaving it slash/@-invocable",
+              "supported": true
+            },
+            "display_name": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+                "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+                "type": "string"
+              },
+              "key_path": "skills.display_name",
+              "mechanism": "yaml frontmatter key: name (required); lowercase letters/numbers/hyphens, 1-64 chars, should match the skill folder name and doubles as the identifier",
+              "supported": true
+            },
+            "global_scope": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+                "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+                "type": "bool"
+              },
+              "key_path": "skills.global_scope",
+              "mechanism": "global skills live in ~/.agents/skills/<name>/SKILL.md and apply to every project",
+              "supported": true
+            },
+            "project_scope": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+                "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+                "type": "bool"
+              },
+              "key_path": "skills.project_scope",
+              "mechanism": "project-local skills live in <worktree>/.agents/skills/<name>/SKILL.md and load only from trusted worktrees",
+              "supported": true
+            },
+            "skill_bundled_resources": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "Whether the skill directory may contain arbitrary co-located files (scripts, templates, configs, checklists) beyond SKILL.md that the agent can access when the skill is invoked. Enables multi-file skill bundles without converting supporting files into separate skills or rules.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE; multi-file classification ACIF-CORE §7.2)",
+                "type": "bool"
+              },
+              "key_path": "skills.skill_bundled_resources",
+              "mechanism": "a skill folder may co-locate scripts/, references/, and assets/ subfolders that the agent loads on demand via read_file/list_directory",
+              "supported": true
+            },
+            "user_invocable": {
+              "confidence": "confirmed",
+              "key": {
+                "description": "When false, the skill is hidden from user-facing menus (e.g., the / command menu). The AI can still invoke it. Default: true.\n",
+                "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE)",
+                "type": "bool"
+              },
+              "key_path": "skills.user_invocable",
+              "mechanism": "skills are user-invocable via / slash command or @skill mention, injecting the skill instructions as context (shown as a crease button)",
+              "supported": true
+            }
+          },
+          "supported": true
         }
       },
-      "display_name": "zed",
-      "schema_version": "1",
+      "display_name": "Zed",
+      "provider_status": "active",
+      "schema_version": "2",
       "slug": "zed",
       "status": "live"
     }
