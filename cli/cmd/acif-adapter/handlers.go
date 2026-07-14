@@ -48,10 +48,12 @@ func dispatch(req request) any {
 			"implementation":   "syllago",
 			"version":          adapterVersion,
 			"adapter_protocol": 1,
-			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp"},
+			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher"},
 		})
 	case "ingest":
 		return handleIngest(req.Input)
+	case "reconcile_frontmatter":
+		return handleReconcileFrontmatter(req.Input)
 	case "project":
 		return handleProject(req.Input)
 	case "render":
@@ -106,8 +108,11 @@ func handleIngest(raw json.RawMessage) any {
 		return handleProviderConfigIngest(input.Kind, input.ProviderConfig)
 	}
 	if input.Kind == "pack" {
-		if _, ok := rawInput["manifests"]; ok {
-			return unsupportedResponse()
+		if rawManifests, ok := rawInput["manifests"]; ok {
+			return handlePackManifests(rawManifests)
+		}
+		if rawSidecar, ok := rawInput["sidecar"]; ok {
+			return handlePackSidecar(rawSidecar)
 		}
 	}
 
@@ -127,6 +132,9 @@ func handleIngest(raw json.RawMessage) any {
 			result, err := acif.CanonicalizeMCP(block)
 			if err != nil {
 				return hookErrorResponse(err)
+			}
+			if err := attachEnvelopePublisher(result, block); err != nil {
+				return errorResponse("adapter: " + err.Error())
 			}
 			return okResponse(recordResponse(result))
 		}
@@ -161,6 +169,21 @@ func handleProviderConfigIngest(kind string, rawProviderConfig json.RawMessage) 
 	var config map[string]any
 	if err := decodeJSONUseNumber(rawProviderConfig, &config); err != nil {
 		return errorResponse("adapter: " + err.Error())
+	}
+	if provider, _ := config["provider"].(string); provider == "provider-native-frontmatter" && isFrontmatterKind(kind) {
+		content, ok := config["content"].(map[string]any)
+		if !ok {
+			return errorResponse("adapter: provider-native-frontmatter content must be object")
+		}
+		frontmatter, ok := content["frontmatter"].(map[string]any)
+		if !ok {
+			return errorResponse("adapter: provider-native-frontmatter frontmatter must be object")
+		}
+		result, err := acif.IngestProviderNativeFrontmatter(kind, frontmatter)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(recordResponse(result))
 	}
 	switch kind {
 	case "rule":
@@ -202,6 +225,7 @@ func handleProviderConfigIngest(kind string, rawProviderConfig json.RawMessage) 
 func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) any {
 	opts := acif.HookOpts{BodyRoot: input.BodyRoot}
 	var result *acif.HookResult
+	var sidecarBlock map[string]any
 	var err error
 	if rawProviderConfig, ok := rawInput["provider_config"]; ok {
 		var config map[string]any
@@ -214,6 +238,7 @@ func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) an
 		if err := decodeJSONUseNumber(rawSidecar, &block); err != nil {
 			return errorResponse("adapter: " + err.Error())
 		}
+		sidecarBlock = block
 		result, err = acif.CanonicalizeHook(block, opts)
 	} else {
 		return unsupportedResponse()
@@ -251,10 +276,51 @@ func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) an
 	if computed {
 		response["body_hash"] = bodyHash
 	}
+	if sidecarBlock != nil {
+		section := acif.EnvelopePublisherSection(sidecarBlock)
+		if section != nil {
+			rawSection, err := json.Marshal(section)
+			if err != nil {
+				return errorResponse("adapter: " + err.Error())
+			}
+			hashHex, _, err := acif.MetadataHash(rawSection)
+			if err != nil {
+				return errorResponse("adapter: " + err.Error())
+			}
+			response["publisher_section"] = section
+			response["metadata_hash"] = hashHex
+		}
+	}
 	if len(result.Diagnostics) > 0 {
 		response["diagnostics"] = result.Diagnostics
 	}
 	return okResponse(response)
+}
+
+func handlePackManifests(rawManifests json.RawMessage) any {
+	var manifests []acif.PackManifest
+	if err := json.Unmarshal(rawManifests, &manifests); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	return okResponse(acif.ReconcilePackManifests(manifests))
+}
+
+func handlePackSidecar(rawSidecar json.RawMessage) any {
+	if _, ok := parseJSONObject(rawSidecar); !ok {
+		return okResponse(map[string]any{
+			"conformant": false,
+			"reason":     "sidecar-not-object",
+		})
+	}
+	var block map[string]any
+	if err := decodeJSONUseNumber(rawSidecar, &block); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	result, err := acif.IngestPackSidecar(block)
+	if err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	return okResponse(recordResponse(result))
 }
 
 func isFrontmatterKind(kind string) bool {
@@ -308,6 +374,20 @@ func recordResponse(result *acif.RecordResult) map[string]any {
 		response["diagnostics"] = result.Diagnostics
 	}
 	return response
+}
+
+type reconcileFrontmatterInput struct {
+	SidecarValue      map[string]any `json:"sidecar_value"`
+	SourceFrontmatter map[string]any `json:"source_frontmatter"`
+	Mode              string         `json:"mode"`
+}
+
+func handleReconcileFrontmatter(raw json.RawMessage) any {
+	var input reconcileFrontmatterInput
+	if err := decodeJSONUseNumber(raw, &input); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	return okResponse(acif.ReconcileFrontmatter(input.SidecarValue, input.SourceFrontmatter, input.Mode))
 }
 
 type projectInput struct {
@@ -534,6 +614,24 @@ func handleSidecarIngest(rawSidecar json.RawMessage) any {
 		Reason:           verdict.Reason,
 		Installable:      verdict.Conformant,
 	})
+}
+
+func attachEnvelopePublisher(result *acif.RecordResult, block map[string]any) error {
+	section := acif.EnvelopePublisherSection(block)
+	if section == nil {
+		return nil
+	}
+	rawSection, err := json.Marshal(section)
+	if err != nil {
+		return err
+	}
+	hashHex, _, err := acif.MetadataHash(rawSection)
+	if err != nil {
+		return err
+	}
+	result.PublisherSection = section
+	result.MetadataHash = hashHex
+	return nil
 }
 
 func parseJSONObject(raw json.RawMessage) (map[string]json.RawMessage, bool) {
