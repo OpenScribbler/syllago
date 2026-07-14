@@ -577,3 +577,26 @@ func newAdapterTLSServer(t *testing.T, handler http.HandlerFunc) (*httptest.Serv
 	}
 	return server, path
 }
+
+func TestIngestAgentProviderConfigOrphanRequires(t *testing.T) {
+	t.Parallel()
+	request := `{"op":"ingest","input":{"kind":"agent","provider_config":{"provider":"claude-code","content":"---\nrequires:\n  tool_restrictions: true\n---\nAgent body.\n"}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 1 {
+		t.Fatalf("responses = %d, want 1", len(responses))
+	}
+	result, ok := responses[0]["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("result = %#v", responses[0])
+	}
+	if result["conformant"] != false || result["installable"] != false {
+		t.Fatalf("conformant/installable = %#v/%#v, want false/false", result["conformant"], result["installable"])
+	}
+	if result["reason"] != "acif.requires.orphan_key" {
+		t.Fatalf("reason = %#v, want acif.requires.orphan_key", result["reason"])
+	}
+	params, ok := result["params"].(map[string]any)
+	if !ok || params["key"] != "tool_restrictions" {
+		t.Fatalf("params = %#v, want key=tool_restrictions", result["params"])
+	}
+}

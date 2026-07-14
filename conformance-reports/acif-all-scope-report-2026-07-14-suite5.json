@@ -178,9 +178,9 @@
       "id": "TV-1",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-4o9sfw59\",\"entry_file\":\"SKILL.md\",\"context\":{}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-4kh_frqe\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"11111111-1111-4111-8111-111111111111\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-72byxvg1\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"22222222-2222-4222-8222-222222222222\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-0n01o2rr\",\"entry_file\":\"SKILL.md\",\"context\":{}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-661a04mq\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"11111111-1111-4111-8111-111111111111\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-c_5b3gp3\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"22222222-2222-4222-8222-222222222222\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -556,9 +556,9 @@
       "id": "TV-12",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-_u0ikngi\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-w_jtm257\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-rvn8c7yq\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-x2ms3jm8\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gakyp6c8\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-nni812h_\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -592,9 +592,9 @@
       "id": "TV-13",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gneznfe0\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-l7cbwfdu\",\"entry_file\":\"caf\u00e9.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-jrh9zlj1\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-97x7t70r\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-pcwk6ku8\",\"entry_file\":\"caf\u00e9.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-eq9pd78o\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -649,8 +649,8 @@
       "id": "TV-L2-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-4muo3hr_\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-mlu8gye9\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-9im67aam\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-kkarvmc1\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1379,7 +1379,7 @@
       "id": "TV-HOOK-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"sidecar\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"}]}]},\"body_root\":\"/tmp/acif-fixture-ok070qiv\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"sidecar\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"}]}]},\"body_root\":\"/tmp/acif-fixture-ltgj1ua4\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1488,8 +1488,8 @@
       "id": "TV-PLATFORM-c",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qx2uzhfq\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[]}]}],\"blocking\":false}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-2hajjit4\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"arch\":[]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-igftgvp4\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-mve0ts9m\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"arch\":[]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1516,8 +1516,8 @@
       "id": "TV-PLATFORM-d",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6of7u03t\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\",\"freebsd\"]}]}],\"blocking\":false}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-4driguoa\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"Linux\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-42tftarp\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\",\"freebsd\"]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ovyytaxf\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"Linux\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1537,7 +1537,7 @@
       "id": "TV-PLATFORM-e",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-h7acvr5_\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"},{\"type\":\"file\",\"path\":\"hooks/run.ps1\"}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-rl8b4yrw\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"},{\"type\":\"file\",\"path\":\"hooks/run.ps1\"}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1579,7 +1579,7 @@
       "id": "TV-PLATFORM-f",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-u0h5hsou\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/lin.sh\",\"os\":[\"linux\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-7basf3kw\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/lin.sh\",\"os\":[\"linux\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1599,7 +1599,7 @@
       "id": "TV-PLATFORM-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-yiil6ten\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6hikv89b\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1626,7 +1626,7 @@
       "id": "TV-PLATFORM-g2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-mckzp13o\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-cwrm_y42\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"hook\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}},\"projection\":\"os_coverage\"}}"
       ],
       "status": "pass",
@@ -1753,7 +1753,7 @@
       "id": "TV-PLATFORM-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-si69ora3\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/lin.sh\",\"osx\":\"hooks/mac.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-_lh5rnmc\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/lin.sh\",\"osx\":\"hooks/mac.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1827,7 +1827,7 @@
       "id": "TV-PLATFORM-i2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-boc7y8q2\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/unix.sh\",\"osx\":\"hooks/unix.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-brxtzers\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/unix.sh\",\"osx\":\"hooks/unix.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1856,7 +1856,7 @@
       "id": "TV-PLATFORM-j",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-4as0ianp\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"osx\":\"hooks/mac.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-8ihgyrre\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"osx\":\"hooks/mac.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1926,7 +1926,7 @@
       "id": "TV-PLATFORM-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-y5b1fg0k\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{\"bash\":\"hooks/run.sh\",\"powershell\":\"hooks/run.ps1\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-nav569a3\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{\"bash\":\"hooks/run.sh\",\"powershell\":\"hooks/run.ps1\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2060,12 +2060,12 @@
       "id": "TV-PLATFORM-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-vbvw1b82\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/a.ps1\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-_h_t4x40\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/b.cmd\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-42u_vglv\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/c.bat\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-iyxn7p75\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/d.sh\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-t9wy65nu\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/pwsh-shebang\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-3q8c7ieo\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/e.xyz\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6x9c2tn8\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/a.ps1\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qkgx2ciw\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/b.cmd\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-_t2hdb8y\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/c.bat\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-q1j24xxn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/d.sh\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-tguvm0tn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/pwsh-shebang\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-m17kc_vn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/e.xyz\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2118,7 +2118,7 @@
       "id": "TV-PLATFORM-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-kusoqof6\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6kth9jhy\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\"}}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"blocking\":false,\"event\":\"before_tool_execute\",\"handlers\":[{\"async\":false,\"scripts\":[{\"path\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\",\"type\":\"file\"}],\"type\":\"command\"}]},\"target\":\"per-os-key-map-provider\"}}"
       ],
       "status": "pass",
@@ -2139,7 +2139,7 @@
       "id": "TV-PLATFORM-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-czq8kruk\",\"provider_config\":{\"provider\":\"unknown-per-os-table\",\"path\":\"hooks.json\",\"content\":{\"platforms\":{\"win32\":\"hooks/w.cmd\"}}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ewqurjsx\",\"provider_config\":{\"provider\":\"unknown-per-os-table\",\"path\":\"hooks.json\",\"content\":{\"platforms\":{\"win32\":\"hooks/w.cmd\"}}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2255,9 +2255,9 @@
       "id": "TV-PLATFORM-q",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-69338h4r\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ixe7fp2k\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"windows\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-jq49xw2m\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"],\"shell\":\"powershell\"}]}]}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-aafqlvvd\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qgyhwwx_\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"windows\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-3cj4ad92\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"],\"shell\":\"powershell\"}]}]}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2304,8 +2304,8 @@
       "id": "TV-PLATFORM-q2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-jor7jrok\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-8dz1v016\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]},{\"type\":\"inline\",\"content\":\"#!/bin/sh\\r\\necho hi\\r\\n\",\"os\":[\"linux\",\"darwin\"]}]}]}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-b3zu42gf\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-21vdqr27\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]},{\"type\":\"inline\",\"content\":\"#!/bin/sh\\r\\necho hi\\r\\n\",\"os\":[\"linux\",\"darwin\"]}]}]}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2764,11 +2764,11 @@
       "id": "TV-SKILL-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-45uv1lz9\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-hdisx3b1\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-3ykwa5ev\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yvpq9y2h\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-g1zmjrue\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-rwdbhbo3\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"multi-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}"
       ],
       "status": "pass",
@@ -2818,8 +2818,8 @@
       "id": "TV-SKILL-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-1wmmvygp\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-jxk5lbzq\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-6p8c7ojw\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-lkumqnlv\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2846,8 +2846,8 @@
       "id": "TV-SKILL-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-4cwgs_h4\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-n2lci9pb\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-ffc_o5jr\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yxo3cf50\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2935,9 +2935,9 @@
       "id": "TV-SKILL-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-zyzzb_w9\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-i9qyet5s\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-sbjhjqww\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-xovflvkx\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-_pfan4uz\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yf2wxv37\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3052,8 +3052,8 @@
       "id": "TV-SKILL-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-5ueh5r24\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-mwdsd9jd\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gliz2c0r\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-_9ri2pfn\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3099,8 +3099,8 @@
       "id": "TV-RULE-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-9j7acxj3\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-g2s90qt6\",\"entry_file\":\"conventions.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-i93b68ke\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-e9ipgmkb\",\"entry_file\":\"conventions.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3501,7 +3501,7 @@
       "id": "TV-RULE-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-ej6puk8j\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-crq8scpw\",\"entry_file\":\"conventions.md\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"kind\":\"rule\",\"rule\":{\"activation\":{\"mode\":\"always\"},\"body\":\"Follow @security.md and @~/company-standards.md.\\n\"}},\"target\":\"native-rule-format\"}}"
       ],
       "status": "pass",
@@ -3555,9 +3555,9 @@
       "id": "TV-RULE-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-r9gfcef1\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-m9_twckg\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-y4mfbrd_\",\"entry_file\":\"conventions.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-jy3tafp3\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-cmnxetu9\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-revixfms\",\"entry_file\":\"conventions.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3669,8 +3669,8 @@
       "id": "TV-COMMAND-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-923ueakc\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-n1ovpeg0\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-savfuz9v\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-n8y5g76j\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review PR $ARGUMENTS carefully.\\n\"},\"kind\":\"command\"},\"target\":\"gemini-form\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review PR $ARGUMENTS carefully.\\n\"},\"kind\":\"command\"},\"target\":\"no-row-target\"}}"
       ],
@@ -3752,8 +3752,8 @@
       "id": "TV-COMMAND-b",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-d05yplq4\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-3n18wyf_\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-qfcb_ghc\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-55s2qbvx\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Open $ARGUMENTS now.\\n\"},\"kind\":\"command\"},\"target\":\"input-form\"}}"
       ],
       "status": "pass",
@@ -3825,7 +3825,7 @@
       "id": "TV-COMMAND-d",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-aocf6xxg\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-3lwps_d2\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Use it like:\\n```\\nreview $ARGUMENTS\\n```\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3853,7 +3853,7 @@
       "id": "TV-COMMAND-e",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-__t7iuya\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-zt8hm8v7\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"The token $ARGUMENTS is special.\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3889,7 +3889,7 @@
       "id": "TV-COMMAND-f",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-wu5z2235\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-mtws0006\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"git rebase --onto $1 $2 && echo ${@:3}\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3917,7 +3917,7 @@
       "id": "TV-COMMAND-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-h9f4cuqg\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-z8oqoyq5\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Context: !{git status} and @{docs/notes.md}\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3965,8 +3965,8 @@
       "id": "TV-COMMAND-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-q4qsl8lu\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-oyzap3ux\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-aealy8pl\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-a5tjdmau\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -4173,7 +4173,7 @@
       "id": "TV-COMMAND-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-9z3twqq0\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-dxwqxbzm\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review $ARGUMENTS.\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -4659,11 +4659,11 @@
       "id": "TV-AGENT-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-u4v52jt2\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-rbolm7_3\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-2me0o5kj\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-ig2q7onq\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-8tld8bjq\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-sp0rj2tf\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-nm_4nm26\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-xktvavsu\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-q67tthje\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-zf7wxgrq\",\"entry_file\":\"agent.md\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"agent\":{\"tools\":[\"agent\"]}},\"target\":\"claude-code\"}}",
         "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"provider_config\":{\"provider\":\"claude-code\",\"path\":\"agent.rendered\",\"content\":\"---\\ntools:\\n    - Agent\\n---\\n\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"agent\":{\"tools\":[\"agent\"]}},\"target\":\"copilot-cli\"}}",
@@ -4732,9 +4732,9 @@
       "id": "TV-AGENT-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-b59brj64\",\"entry_file\":\"scout.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-mu6gm0aj\",\"entry_file\":\"scout.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-0lbbsyib\",\"entry_file\":\"scout.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-ytam53od\",\"entry_file\":\"scout.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-5eemf0ck\",\"entry_file\":\"scout.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-5wmus_k1\",\"entry_file\":\"scout.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5785,7 +5785,7 @@
       "id": "TV-URI-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"new.example.com\":\"127.0.0.1:38389\",\"old.example.com\":\"127.0.0.1:43901\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"new.example.com\":\"127.0.0.1:33879\",\"old.example.com\":\"127.0.0.1:38055\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5805,7 +5805,7 @@
       "id": "TV-URI-l2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:37925\",\"edge.example.com\":\"127.0.0.1:45681\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:37137\",\"edge.example.com\":\"127.0.0.1:46453\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5825,7 +5825,7 @@
       "id": "TV-URI-l3",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:44171\",\"b.example.com\":\"127.0.0.1:41221\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:40437\",\"b.example.com\":\"127.0.0.1:37279\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5845,7 +5845,7 @@
       "id": "TV-URI-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"b.example.com\":\"127.0.0.1:40993\",\"a.example.com\":\"127.0.0.1:42591\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"b.example.com\":\"127.0.0.1:39339\",\"a.example.com\":\"127.0.0.1:44447\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5865,7 +5865,7 @@
       "id": "TV-URI-m2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"c.example.com\":\"127.0.0.1:46207\",\"a.example.com\":\"127.0.0.1:38061\",\"b.example.com\":\"127.0.0.1:42457\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"c.example.com\":\"127.0.0.1:35715\",\"a.example.com\":\"127.0.0.1:38305\",\"b.example.com\":\"127.0.0.1:36811\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5892,8 +5892,8 @@
       "id": "TV-URI-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/0\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:45063\",\"b.example.com\":\"127.0.0.1:44771\"}}}",
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/loop\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:45063\",\"b.example.com\":\"127.0.0.1:44771\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/0\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35383\",\"b.example.com\":\"127.0.0.1:42955\"}}}",
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/loop\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35383\",\"b.example.com\":\"127.0.0.1:42955\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5913,7 +5913,7 @@
       "id": "TV-URI-w",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35905\",\"c.example.com\":\"127.0.0.1:46487\",\"edge.example.com\":\"127.0.0.1:37919\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:44935\",\"c.example.com\":\"127.0.0.1:40995\",\"edge.example.com\":\"127.0.0.1:40767\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5933,7 +5933,7 @@
       "id": "TV-URI-x",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"edge.example.com\":\"127.0.0.1:39253\",\"new.example.com\":\"127.0.0.1:44571\",\"old.example.com\":\"127.0.0.1:46157\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"edge.example.com\":\"127.0.0.1:40503\",\"new.example.com\":\"127.0.0.1:39931\",\"old.example.com\":\"127.0.0.1:38385\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5953,7 +5953,7 @@
       "id": "TV-URI-y",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:34903\",\"b.example.com\":\"127.0.0.1:39365\",\"c.example.com\":\"127.0.0.1:38217\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:41867\",\"b.example.com\":\"127.0.0.1:40825\",\"c.example.com\":\"127.0.0.1:36749\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5973,7 +5973,7 @@
       "id": "TV-URI-z",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35305\",\"b.example.com\":\"127.0.0.1:37561\",\"d.example.com\":\"127.0.0.1:34619\",\"edge.example.com\":\"127.0.0.1:42387\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:43639\",\"b.example.com\":\"127.0.0.1:44475\",\"d.example.com\":\"127.0.0.1:43875\",\"edge.example.com\":\"127.0.0.1:37447\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -6158,8 +6158,8 @@
       "id": "TV-URI-s",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-j45cpidy\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://a.example.com/SKILL.md\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-mcc0lzs1\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://mirror.example.org/SKILL.md\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-q86df5mg\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://a.example.com/SKILL.md\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-vd37oq69\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://mirror.example.org/SKILL.md\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -6182,8 +6182,8 @@
       "id": "TV-URI-t",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:41667\",\"edge-1.example.com\":\"127.0.0.1:43407\"}}}",
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-fus80h2e/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:41667\",\"edge-1.example.com\":\"127.0.0.1:43407\",\"edge-2.example.com\":\"127.0.0.1:40493\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:34969\",\"edge-1.example.com\":\"127.0.0.1:42381\"}}}",
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:34969\",\"edge-1.example.com\":\"127.0.0.1:42381\",\"edge-2.example.com\":\"127.0.0.1:42371\"}}}"
       ],
       "status": "pass",
       "vacuous": false

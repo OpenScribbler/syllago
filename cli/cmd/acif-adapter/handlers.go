@@ -295,14 +295,23 @@ func handleProviderConfigIngest(kind string, rawProviderConfig json.RawMessage) 
 		if err != nil {
 			return hookErrorResponse(err)
 		}
-		return okResponse(map[string]any{
+		response := map[string]any{
 			"conformant":  true,
 			"installable": true,
 			"canonical": map[string]any{
 				"kind":  "agent",
 				"agent": result.Canonical,
 			},
-		})
+		}
+		if result.Verdict != nil {
+			response["conformant"] = false
+			response["installable"] = false
+			response["reason"] = result.Verdict.Reason
+			if len(result.Verdict.Params) > 0 {
+				response["params"] = result.Verdict.Params
+			}
+		}
+		return okResponse(response)
 	case "mcp_config":
 		result, err := acif.CanonicalizeMCPProviderConfig(config)
 		if err != nil {
