@@ -350,7 +350,8 @@ func TestRun_VerifyPrecedesMarkerCompare(t *testing.T) {
 func tamperOneSHA256(t *testing.T, indexBytes []byte) []byte {
 	t.Helper()
 	var meta struct {
-		Files map[string]struct {
+		DataRevision string `json:"data_revision"`
+		Files        map[string]struct {
 			SHA256 string `json:"sha256"`
 		} `json:"files"`
 	}
@@ -358,6 +359,12 @@ func tamperOneSHA256(t *testing.T, indexBytes []byte) []byte {
 		t.Fatal(err)
 	}
 	for _, f := range meta.Files {
+		// data_revision is the sha256 of one of the files, and it appears in
+		// the raw JSON before the files map — flipping that file's digest via
+		// first-occurrence Replace would tamper data_revision instead.
+		if f.SHA256 == meta.DataRevision {
+			continue
+		}
 		old := []byte(`"` + f.SHA256 + `"`)
 		flipped := []byte(f.SHA256)
 		if flipped[0] == 'a' {
