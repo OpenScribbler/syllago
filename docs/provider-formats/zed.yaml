@@ -176,11 +176,42 @@ content_types:
     notes: "Both stdio and HTTP/HTTPS transports are documented and confirmed in source. OAuth prompting is automatic for remote servers without an Authorization header. Per-profile tool filtering and global tool_permissions (v0.224.0+) provide fine-grained approval control. Settings merge follows Zed's standard project/user override model."
 
   skills:
-    status: unsupported
-    sources: []
-    canonical_mappings: {}
+    status: supported
+    sources:
+      - uri: "https://zed.dev/docs/ai/skills"
+        type: documentation
+        fetch_method: web
+        fetched_at: "2026-07-14T00:00:00Z"
+    canonical_mappings:
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md (required, fixed name per the Agent Skills standard)"
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: ".agents/skills/<name>/SKILL.md — the cross-provider convention is Zed's only skills location; there is no zed-native directory"
+        paths:
+          - ".agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "~/.agents/skills/<name>/SKILL.md (cross-provider convention)"
+        paths:
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      display_name:
+        supported: true
+        provider_field: "name"
+        mechanism: "yaml frontmatter key: name (required) per the Agent Skills standard"
+        confidence: confirmed
+      description:
+        supported: true
+        provider_field: "description"
+        mechanism: "yaml frontmatter key: description (required) per the Agent Skills standard"
+        confidence: confirmed
     provider_extensions: []
-    notes: "Zed does not document an Agent Skills loader; skills are not a first-class content type in Zed."
+    loading_model: "A skill is a directory containing a SKILL.md file. Zed discovers skills exclusively through the cross-provider Agent Skills convention: .agents/skills/<name>/SKILL.md (project scope) and ~/.agents/skills/<name>/SKILL.md (user global scope). There is no zed-native skills directory."
+    notes: "Zed shipped Agent Skills support in 2026 (https://zed.dev/docs/ai/skills); Go support landed in PR #503. This entry reconciles the stale unsupported assertion; the full capmon formatdoc refresh (source content hashes, complete canonical mappings) is tracked separately."
 
   hooks:
     status: unsupported
