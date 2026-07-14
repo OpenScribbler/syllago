@@ -48,7 +48,7 @@ func dispatch(req request) any {
 			"implementation":   "syllago",
 			"version":          adapterVersion,
 			"adapter_protocol": 1,
-			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry"},
+			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
 		})
 	case "ingest":
 		return handleIngest(req.Input)
@@ -617,6 +617,7 @@ func handleRender(raw json.RawMessage) any {
 
 func renderItem(block map[string]any, target string, invocation map[string]any) (*acif.RenderResult, error) {
 	renderers := []func(map[string]any, string) (*acif.RenderResult, error){
+		acif.RenderStructured,
 		acif.RenderCommand,
 		acif.RenderRule,
 		acif.RenderAgent,

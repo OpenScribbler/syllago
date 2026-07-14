@@ -61,7 +61,7 @@ func TestHello(t *testing.T) {
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
 			"adapter_protocol": float64(1),
-			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry"},
+			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
 		},
 	}
 	if !reflect.DeepEqual(responses[0], want) {
