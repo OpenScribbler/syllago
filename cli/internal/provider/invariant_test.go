@@ -52,14 +52,18 @@ func TestCoverageInternalGoConsistency(t *testing.T) {
 	t.Fatal(b.String())
 }
 
-// TestCoverageNoDrift is the authoritative full-conformance gate. It fails
-// if ANY unaccepted drift is found across all assertions (Go internal
-// consistency, Go vs format YAMLs, Go vs the Capability Feed mirror). It
-// runs on every `make test`.
+// TestCoverageNoDrift is the authoritative conformance gate for the in-repo
+// assertions: Go internal consistency and Go vs the format YAMLs. It runs on
+// every `make test` and fails on any unaccepted drift in those axes — both
+// sides live in this repo, so drift is always fixable in the same commit.
 //
-// Drifts carrying an AcceptedReason (recorded, permanent disagreements —
-// see acceptedFeedDrift in coverage_feed.go) are logged but never fail the
-// gate, matching TestCoverageFeedDrift's semantics.
+// Two kinds of drift are logged instead of failing:
+//   - Drifts carrying an AcceptedReason (recorded, permanent disagreements —
+//     see acceptedFeedDrift in coverage_feed.go).
+//   - Capability Feed drift (go-vs-capability-feed): the feed legitimately
+//     outpaces Go, so it is contractually a signal, never a merge block —
+//     the dedicated non-required coverage-drift CI job (TestCoverageFeedDrift)
+//     surfaces it. See docs/provider-capabilities/README.md.
 func TestCoverageNoDrift(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
 	drifts, err := CheckCoverage(repoRoot)
@@ -71,6 +75,10 @@ func TestCoverageNoDrift(t *testing.T) {
 	for _, d := range drifts {
 		if d.AcceptedReason != "" {
 			t.Logf("coverage drift (accepted): %s — %s", d, d.AcceptedReason)
+			continue
+		}
+		if d.Assertion == AssertionGoVsCapabilityFeed {
+			t.Logf("coverage drift (feed, non-blocking): %s", d)
 			continue
 		}
 		failing = append(failing, d)
