@@ -20,6 +20,10 @@ type BodyResult struct {
 	HashHex        string
 }
 
+type bodyHashOptions struct {
+	entryOverride []byte
+}
+
 type bodyFile struct {
 	abs                 string
 	rel                 string
@@ -33,6 +37,14 @@ var acifVCSDirs = map[string]bool{
 
 // BodyHash computes body_hash for a frontmatter-bearing content type.
 func BodyHash(bodyRoot, entryFile string) (*BodyResult, error) {
+	return bodyHash(bodyRoot, entryFile, bodyHashOptions{})
+}
+
+func BodyHashWithEntryBytes(bodyRoot, entryFile string, entryContent []byte) (*BodyResult, error) {
+	return bodyHash(bodyRoot, entryFile, bodyHashOptions{entryOverride: entryContent})
+}
+
+func bodyHash(bodyRoot, entryFile string, opts bodyHashOptions) (*BodyResult, error) {
 	absRoot, err := filepath.Abs(bodyRoot)
 	if err != nil {
 		return nil, fmt.Errorf("resolving body root: %w", err)
@@ -93,14 +105,14 @@ func BodyHash(bodyRoot, entryFile string) (*BodyResult, error) {
 	}
 
 	if len(contentCandidates) == 1 && contentCandidates[0].rel == entryRel {
-		hash, err := hashEntryFile(contentCandidates[0].abs)
+		hash, err := hashEntryFile(contentCandidates[0].abs, opts.entryOverride)
 		if err != nil {
 			return nil, err
 		}
 		return &BodyResult{Classification: "single-file", HashHex: hash}, nil
 	}
 
-	hash, err := multiFileBodyHash(files, entryRel)
+	hash, err := multiFileBodyHash(files, entryRel, opts.entryOverride)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +124,10 @@ func isRootLicenseOrReadme(name string) bool {
 	return strings.HasPrefix(upper, "LICENSE") || strings.HasPrefix(upper, "README")
 }
 
-func hashEntryFile(path string) (string, error) {
+func hashEntryFile(path string, override []byte) (string, error) {
+	if override != nil {
+		return sha256Hex(override), nil
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading entry file: %w", err)
@@ -120,7 +135,7 @@ func hashEntryFile(path string) (string, error) {
 	return sha256Hex(stripFrontmatter(moat.CanonicalText(data))), nil
 }
 
-func multiFileBodyHash(files []bodyFile, entryRel string) (string, error) {
+func multiFileBodyHash(files []bodyFile, entryRel string, entryOverride []byte) (string, error) {
 	type manifestEntry struct {
 		rel  string
 		hash string
@@ -141,7 +156,7 @@ func multiFileBodyHash(files []bodyFile, entryRel string) (string, error) {
 		var fileHash string
 		var err error
 		if f.rel == entryRel {
-			fileHash, err = hashEntryFile(f.abs)
+			fileHash, err = hashEntryFile(f.abs, entryOverride)
 		} else {
 			fileHash, err = moat.FileHash(f.abs)
 		}

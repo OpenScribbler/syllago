@@ -48,7 +48,7 @@ func dispatch(req request) any {
 			"implementation":   "syllago",
 			"version":          adapterVersion,
 			"adapter_protocol": 1,
-			"scopes":           []string{"core", "hook"},
+			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp"},
 		})
 	case "ingest":
 		return handleIngest(req.Input)
@@ -64,6 +64,8 @@ func dispatch(req request) any {
 		return handleDerivePackID(req.Input)
 	case "resolve_pack":
 		return handleResolvePack(req.Input)
+	case "resolve_reference":
+		return handleResolveReference(req.Input)
 	default:
 		return unsupportedResponse()
 	}
@@ -101,7 +103,7 @@ func handleIngest(raw json.RawMessage) any {
 	}
 
 	if _, ok := rawInput["provider_config"]; ok {
-		return unsupportedResponse()
+		return handleProviderConfigIngest(input.Kind, input.ProviderConfig)
 	}
 	if input.Kind == "pack" {
 		if _, ok := rawInput["manifests"]; ok {
@@ -111,16 +113,90 @@ func handleIngest(raw json.RawMessage) any {
 
 	if _, hasBodyRoot := rawInput["body_root"]; hasBodyRoot {
 		if isFrontmatterKind(input.Kind) {
-			return handleBodyIngest(input.BodyRoot, input.EntryFile)
+			return handleBodyIngest(input.Kind, input.BodyRoot, input.EntryFile)
 		}
 		return unsupportedResponse()
 	}
 
 	if _, hasSidecar := rawInput["sidecar"]; hasSidecar {
+		if input.Kind == "mcp_config" {
+			var block map[string]any
+			if err := decodeJSONUseNumber(input.Sidecar, &block); err != nil {
+				return errorResponse("adapter: " + err.Error())
+			}
+			result, err := acif.CanonicalizeMCP(block)
+			if err != nil {
+				return hookErrorResponse(err)
+			}
+			return okResponse(recordResponse(result))
+		}
+		if isFrontmatterKind(input.Kind) {
+			sidecar, ok := parseJSONObject(input.Sidecar)
+			if !ok {
+				return okResponse(map[string]any{
+					"conformant": false,
+					"reason":     "sidecar-not-object",
+				})
+			}
+			if _, ok := sidecar[input.Kind]; !ok {
+				return handleSidecarIngest(input.Sidecar)
+			}
+			var block map[string]any
+			if err := decodeJSONUseNumber(input.Sidecar, &block); err != nil {
+				return errorResponse("adapter: " + err.Error())
+			}
+			result, err := acif.IngestExtensionBlock(input.Kind, block)
+			if err != nil {
+				return hookErrorResponse(err)
+			}
+			return okResponse(recordResponse(result))
+		}
 		return handleSidecarIngest(input.Sidecar)
 	}
 
 	return unsupportedResponse()
+}
+
+func handleProviderConfigIngest(kind string, rawProviderConfig json.RawMessage) any {
+	var config map[string]any
+	if err := decodeJSONUseNumber(rawProviderConfig, &config); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	switch kind {
+	case "rule":
+		result, err := acif.CanonicalizeRuleProviderConfig(config)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{
+			"conformant": true,
+			"canonical": map[string]any{
+				"kind": "rule",
+				"rule": result.Canonical,
+			},
+		})
+	case "agent":
+		result, err := acif.CanonicalizeAgentProviderConfig(config)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{
+			"conformant":  true,
+			"installable": true,
+			"canonical": map[string]any{
+				"kind":  "agent",
+				"agent": result.Canonical,
+			},
+		})
+	case "mcp_config":
+		result, err := acif.CanonicalizeMCPProviderConfig(config)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(recordResponse(result))
+	default:
+		return unsupportedResponse()
+	}
 }
 
 func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) any {
@@ -190,8 +266,8 @@ func isFrontmatterKind(kind string) bool {
 	}
 }
 
-func handleBodyIngest(bodyRoot, entryFile string) any {
-	result, err := acif.BodyHash(bodyRoot, entryFile)
+func handleBodyIngest(kind, bodyRoot, entryFile string) any {
+	result, err := acif.IngestFrontmatterFile(kind, bodyRoot, entryFile)
 	if err != nil {
 		var reject *acif.RejectError
 		if errors.As(err, &reject) {
@@ -199,11 +275,39 @@ func handleBodyIngest(bodyRoot, entryFile string) any {
 		}
 		return errorResponse("adapter: " + err.Error())
 	}
-	return okResponse(map[string]any{
-		"body_hash":      result.HashHex,
-		"classification": result.Classification,
-		"conformant":     true,
-	})
+	return okResponse(recordResponse(result))
+}
+
+func recordResponse(result *acif.RecordResult) map[string]any {
+	response := map[string]any{
+		"conformant":  result.Conformant,
+		"installable": result.Installable,
+	}
+	if result.Reason != "" {
+		response["reason"] = result.Reason
+	}
+	if result.Classification != "" {
+		response["classification"] = result.Classification
+	}
+	if result.BodyHash != "" {
+		response["body_hash"] = result.BodyHash
+	}
+	if result.Canonical != nil {
+		response["canonical"] = result.Canonical
+	}
+	if result.CanonicalBytes != "" {
+		response["canonical_bytes"] = result.CanonicalBytes
+	}
+	if result.PublisherSection != nil {
+		response["publisher_section"] = result.PublisherSection
+	}
+	if result.MetadataHash != "" {
+		response["metadata_hash"] = result.MetadataHash
+	}
+	if len(result.Diagnostics) > 0 {
+		response["diagnostics"] = result.Diagnostics
+	}
+	return response
 }
 
 type projectInput struct {
@@ -221,7 +325,7 @@ func handleProject(raw json.RawMessage) any {
 		return errorResponse("adapter: " + err.Error())
 	}
 	switch input.Projection {
-	case "script_selection", "derived_capabilities", "os_coverage":
+	case "script_selection", "derived_capabilities", "os_coverage", "rule_activation", "advisory", "builtin_shadowing_advisory":
 	default:
 		return unsupportedResponse()
 	}
@@ -241,7 +345,7 @@ func handleProject(raw json.RawMessage) any {
 		}
 		return okResponse(result)
 	case "derived_capabilities":
-		caps, err := acif.DerivedCapabilities(block)
+		caps, err := acif.DerivedCapabilitiesForItem(block)
 		if err != nil {
 			return hookErrorResponse(err)
 		}
@@ -252,6 +356,20 @@ func handleProject(raw json.RawMessage) any {
 			return hookErrorResponse(err)
 		}
 		return okResponse(map[string]any{"projection": projection})
+	case "rule_activation":
+		projection, err := acif.RuleActivationProjection(block)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{"projection": projection})
+	case "advisory":
+		projection, err := acif.CommandAdvisoryProjection(block)
+		if err != nil {
+			return hookErrorResponse(err)
+		}
+		return okResponse(map[string]any{"projection": projection})
+	case "builtin_shadowing_advisory":
+		return okResponse(map[string]any{})
 	default:
 		return unsupportedResponse()
 	}
@@ -259,6 +377,8 @@ func handleProject(raw json.RawMessage) any {
 
 type renderInput struct {
 	Canonical  json.RawMessage `json:"canonical"`
+	Item       json.RawMessage `json:"item"`
+	Sidecar    json.RawMessage `json:"sidecar"`
 	Target     string          `json:"target"`
 	Invocation map[string]any  `json:"invocation"`
 }
@@ -268,11 +388,11 @@ func handleRender(raw json.RawMessage) any {
 	if err := json.Unmarshal(raw, &input); err != nil {
 		return errorResponse("adapter: " + err.Error())
 	}
-	block, err := decodeHookBlockInput(nil, input.Canonical, nil, nil)
+	block, err := decodeHookBlockInput(input.Canonical, input.Item, nil, input.Sidecar)
 	if err != nil {
 		return errorResponse("adapter: " + err.Error())
 	}
-	result, err := acif.RenderHook(block, input.Target, input.Invocation)
+	result, err := renderItem(block, input.Target, input.Invocation)
 	if err != nil {
 		return hookErrorResponse(err)
 	}
@@ -283,7 +403,29 @@ func handleRender(raw json.RawMessage) any {
 	if len(result.Diagnostics) > 0 {
 		response["diagnostics"] = result.Diagnostics
 	}
+	if len(result.Lossy) > 0 {
+		response["lossy"] = result.Lossy
+	}
 	return okResponse(response)
+}
+
+func renderItem(block map[string]any, target string, invocation map[string]any) (*acif.RenderResult, error) {
+	renderers := []func(map[string]any, string) (*acif.RenderResult, error){
+		acif.RenderCommand,
+		acif.RenderRule,
+		acif.RenderAgent,
+		acif.RenderMCP,
+	}
+	for _, render := range renderers {
+		result, err := render(block, target)
+		if err != nil {
+			return nil, err
+		}
+		if !result.Unsupported {
+			return result, nil
+		}
+	}
+	return acif.RenderHook(block, target, invocation)
 }
 
 type evaluateInstallInput struct {
@@ -325,6 +467,18 @@ func handleEvaluateRequires(raw json.RawMessage) any {
 		}
 	}
 	return okResponse(acif.EvaluateRequires(itemRequires, recognizes))
+}
+
+func handleResolveReference(raw json.RawMessage) any {
+	var input map[string]any
+	if err := decodeJSONUseNumber(raw, &input); err != nil {
+		return errorResponse("adapter: " + err.Error())
+	}
+	result, err := acif.ResolveReference(input)
+	if err != nil {
+		return hookErrorResponse(err)
+	}
+	return okResponse(result)
 }
 
 type sidecarResult struct {
