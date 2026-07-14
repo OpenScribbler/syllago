@@ -111,7 +111,6 @@ func TestEvaluateFreshnessBattery(t *testing.T) {
 		ConsumerClock:            "2026-05-01T23:59:45Z",
 		DeclaredToleranceSeconds: 30,
 		AttestationEvaluation:    "lapsed",
-		ImplementationBehavior:   "",
 		Policies:                 nil,
 		AttestationSystem:        "ignored",
 	})
@@ -151,15 +150,21 @@ func TestEvaluateFreshnessBattery(t *testing.T) {
 		t.Fatalf("generated_at/max_staleness affected staleness: %#v", generatedIgnored)
 	}
 
-	generatedBehavior, err := EvaluateFreshness(FreshnessInput{
-		Record:                 cloneMap(baseRecord),
-		ImplementationBehavior: "staleness-from-generated_at",
+	// TV-FRESH-k (suite 5, behavioral): sidecar clock says stale while
+	// generated_at is ahead of the consumer clock — computing staleness
+	// from generated_at would wrongly report fresh.
+	divergentClocks, err := EvaluateFreshness(FreshnessInput{
+		Record: map[string]any{
+			"fetched_at":   "2026-05-01T00:00:00Z",
+			"generated_at": "2026-05-11T00:00:00Z",
+		},
+		ConsumerClock: "2026-05-10T00:00:00Z",
 	})
 	if err != nil {
-		t.Fatalf("EvaluateFreshness(generated behavior) error: %v", err)
+		t.Fatalf("EvaluateFreshness(divergent clocks) error: %v", err)
 	}
-	if generatedBehavior["conformant"] != false || generatedBehavior["reason"] != ReasonResponseEnvelopeClockNotStalenessInput {
-		t.Fatalf("generated behavior verdict = %#v", generatedBehavior)
+	if divergentClocks["staleness"] != "stale" {
+		t.Fatalf("divergent clocks staleness = %#v, want stale", divergentClocks)
 	}
 }
 

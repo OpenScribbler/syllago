@@ -47,7 +47,7 @@ func dispatch(req request) any {
 		return okResponse(map[string]any{
 			"implementation":   "syllago",
 			"version":          adapterVersion,
-			"adapter_protocol": 1,
+			"adapter_protocol": 2,
 			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
 		})
 	case "ingest":
@@ -295,14 +295,23 @@ func handleProviderConfigIngest(kind string, rawProviderConfig json.RawMessage) 
 		if err != nil {
 			return hookErrorResponse(err)
 		}
-		return okResponse(map[string]any{
+		response := map[string]any{
 			"conformant":  true,
 			"installable": true,
 			"canonical": map[string]any{
 				"kind":  "agent",
 				"agent": result.Canonical,
 			},
-		})
+		}
+		if result.Verdict != nil {
+			response["conformant"] = false
+			response["installable"] = false
+			response["reason"] = result.Verdict.Reason
+			if len(result.Verdict.Params) > 0 {
+				response["params"] = result.Verdict.Params
+			}
+		}
+		return okResponse(response)
 	case "mcp_config":
 		result, err := acif.CanonicalizeMCPProviderConfig(config)
 		if err != nil {
@@ -339,10 +348,14 @@ func handleHookIngest(rawInput map[string]json.RawMessage, input ingestInput) an
 		return hookErrorResponse(err)
 	}
 	if result.Verdict != nil {
-		return okResponse(map[string]any{
+		verdict := map[string]any{
 			"conformant": false,
 			"reason":     result.Verdict.Reason,
-		})
+		}
+		if len(result.Verdict.Params) > 0 {
+			verdict["params"] = result.Verdict.Params
+		}
+		return okResponse(verdict)
 	}
 
 	rawCanonical, err := json.Marshal(result.Canonical)
@@ -443,6 +456,9 @@ func recordResponse(result *acif.RecordResult) map[string]any {
 	}
 	if result.Reason != "" {
 		response["reason"] = result.Reason
+	}
+	if len(result.Params) > 0 {
+		response["params"] = result.Params
 	}
 	if result.Classification != "" {
 		response["classification"] = result.Classification
@@ -712,6 +728,7 @@ type sidecarResult struct {
 	MetadataHash     string          `json:"metadata_hash"`
 	Conformant       bool            `json:"conformant"`
 	Reason           string          `json:"reason,omitempty"`
+	Params           map[string]any  `json:"params,omitempty"`
 	Installable      bool            `json:"installable"`
 }
 
@@ -757,6 +774,7 @@ func handleSidecarIngest(rawSidecar json.RawMessage) any {
 		MetadataHash:     hashHex,
 		Conformant:       verdict.Conformant,
 		Reason:           verdict.Reason,
+		Params:           verdict.Params,
 		Installable:      verdict.Conformant,
 	})
 }
