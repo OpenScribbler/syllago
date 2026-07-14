@@ -6,6 +6,7 @@ type RenderResult struct {
 	Output      string
 	Diagnostics []Diagnostic
 	Unsupported bool
+	Lossy       []string
 }
 
 func RenderHook(block map[string]any, target string, invocation map[string]any) (*RenderResult, error) {

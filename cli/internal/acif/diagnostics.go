@@ -47,6 +47,28 @@ const (
 	DiagHookPlatformFilenameUninferable = "acif.hook.platform_filename_uninferable"
 	DiagHookScriptNoPlatformMatch       = "acif.hook.script_no_platform_match"
 
+	ErrSkillActivationTypeMissing = "acif.skill.activation_type_missing"
+	ErrSkillActivationTypeInvalid = "acif.skill.activation_type_invalid"
+	ErrSkillHookRefForbidden      = "acif.skill.hook_ref_forbidden"
+	ErrSkillHookRefIDMissing      = "acif.skill.hook_ref_id_missing"
+
+	ErrRuleActivationModeMissing    = "acif.rule.activation_mode_missing"
+	ErrRuleActivationModeInvalid    = "acif.rule.activation_mode_invalid"
+	ErrRuleGlobModeWithoutGlobs     = "acif.rule.glob_mode_without_globs"
+	ErrRuleGlobsWithoutGlobMode     = "acif.rule.globs_without_glob_mode"
+	ErrRuleActivationModeUnmappable = "acif.rule.activation_mode_unmappable"
+	ErrRuleActivationDegraded       = "acif.rule.activation_degraded"
+
+	DiagCommandPlaceholderNamedArgCollapsed = "acif.command.placeholder_named_arg_collapsed"
+	DiagCommandPlaceholderUntranslated      = "acif.command.placeholder_untranslated"
+
+	ErrMCPServersMissing               = "acif.mcp.servers_missing"
+	ErrMCPTransportTypeInvalid         = "acif.mcp.transport_type_invalid"
+	ErrMCPTransportDefaultAmbiguous    = "acif.mcp.transport_default_ambiguous"
+	ErrMCPTransportDefaultUndetermined = "acif.mcp.transport_default_undetermined"
+	DiagMCPServerNameUnconventional    = "acif.mcp.server_name_unconventional"
+	DiagRegistryReferenceUnresolved    = "acif.registry.reference_unresolved"
+
 	ReasonRequiresOrphanKey            = "acif.requires.orphan_key"
 	ReasonCommandHandlerScriptsMissing = "command-handler-scripts-missing"
 )

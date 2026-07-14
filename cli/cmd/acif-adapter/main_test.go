@@ -57,7 +57,7 @@ func TestHello(t *testing.T) {
 			"implementation":   "syllago",
 			"version":          "0.0.0-dev",
 			"adapter_protocol": float64(1),
-			"scopes":           []any{"core", "hook"},
+			"scopes":           []any{"core", "hook", "skill", "rule", "command", "agent", "mcp"},
 		},
 	}
 	if !reflect.DeepEqual(responses[0], want) {
@@ -254,6 +254,70 @@ func TestHookEvaluateOps(t *testing.T) {
 	result := responses[1]["result"].(map[string]any)
 	if result["evaluation"] != "unknown" || result["install"] != "refuse-unless-operator-opt-in" {
 		t.Fatalf("evaluate_requires = %#v", result)
+	}
+}
+
+func TestStage2IngestProjectRenderAndResolveOps(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	writeAdapterFixture(t, dir, map[string]string{
+		"COMMAND.md": "---\ndescription: review\n---\nReview PR {{args}} carefully.\n",
+	})
+	request := `{"op":"ingest","input":{"kind":"command","body_root":` + mustJSON(t, dir) + `,"entry_file":"COMMAND.md"}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"skill","sidecar":{"skill":{"activation":{"type":"manual"}}}}}` + "\n" +
+		`{"op":"ingest","input":{"kind":"mcp_config","sidecar":{"servers":{"demo":{"command":"npx","args":["-y","@demo/mcp-server"]}}}}}` + "\n" +
+		`{"op":"project","input":{"projection":"derived_capabilities","item":{"agent":{"tools":["spawn_agent"],"model":"gpt-5-codex","mcp_servers":["demo"]}}}}` + "\n" +
+		`{"op":"project","input":{"projection":"rule_activation","item":{"rule":{"activation":{"mode":"glob","globs":["*.go","cmd/**","internal/**"]}}}}}` + "\n" +
+		`{"op":"project","input":{"projection":"advisory","item":{"command":{"body":"Review $ARGUMENTS."}}}}` + "\n" +
+		`{"op":"project","input":{"projection":"builtin_shadowing_advisory","item":{"command":{"body":"x"}}}}` + "\n" +
+		`{"op":"render","input":{"target":"input-form","canonical":{"command":{"body":"Review $ARGUMENTS."}}}}` + "\n" +
+		`{"op":"resolve_reference","input":{"item":{"skill":{"activation":{"type":"hook","hook_ref":{"id":"550e8400-e29b-41d4-a716-446655440000"}}}},"registry_state":{"known_hooks":["550e8400-e29b-41d4-a716-446655440000"]}}}` + "\n"
+	responses := runLines(t, request)
+	if len(responses) != 9 {
+		t.Fatalf("responses = %d, want 9", len(responses))
+	}
+
+	commandIngest := responses[0]["result"].(map[string]any)
+	if commandIngest["body_hash"] != "eb6f4eb9bc130773a45fb39b20e9ad8e8a05fdabc011d85eeaf47dec08fa5cea" {
+		t.Fatalf("command ingest = %#v", commandIngest)
+	}
+	skillIngest := responses[1]["result"].(map[string]any)
+	if skillIngest["conformant"] != true || skillIngest["installable"] != true {
+		t.Fatalf("skill sidecar = %#v", skillIngest)
+	}
+	mcpIngest := responses[2]["result"].(map[string]any)
+	if mcpIngest["body_hash"] != "26387bc7f0b779925f2d6e704f3dfe590fd381893aa301bc28d2ae399f5e3b52" {
+		t.Fatalf("mcp ingest = %#v", mcpIngest)
+	}
+
+	agentCaps := responses[3]["result"].(map[string]any)["derived_capabilities"].(map[string]any)
+	if agentCaps["subagent_spawning"] != true || agentCaps["per_agent_mcp"] != true {
+		t.Fatalf("agent caps = %#v", agentCaps)
+	}
+	ruleProjection := responses[4]["result"].(map[string]any)["projection"].(map[string]any)
+	if ruleProjection["mode"] != "glob" {
+		t.Fatalf("rule projection = %#v", ruleProjection)
+	}
+	advisory := responses[5]["result"].(map[string]any)["projection"].(map[string]any)
+	token := advisory["argument_substitution_token"].(map[string]any)
+	if token["present"] != true || token["method"] != "substring-canonical-v1" {
+		t.Fatalf("advisory = %#v", advisory)
+	}
+	if _, ok := responses[6]["result"].(map[string]any)["projection"]; ok {
+		t.Fatalf("builtin shadowing advisory should be vacuous-pass: %#v", responses[6])
+	}
+	rendered := responses[7]["result"].(map[string]any)
+	if rendered["output"] != "Review ${input:args}." {
+		t.Fatalf("render output = %#v", rendered)
+	}
+	cross := responses[8]["result"].(map[string]any)["cross_reference"].(map[string]any)
+	if !reflect.DeepEqual(cross, map[string]any{
+		"source_path": "skill.activation.hook_ref",
+		"target_kind": "hook",
+		"resolution":  "resolved",
+	}) {
+		t.Fatalf("skill cross reference = %#v", cross)
 	}
 }
 
