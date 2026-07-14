@@ -161,6 +161,55 @@ func TestCrushAdapterEncode_NonBlockingWarns(t *testing.T) {
 	}
 }
 
+func TestCrushAdapterEncode_ArrayMatcherJoins(t *testing.T) {
+	// Spec-valid array matchers must become a regex alternation, not silently
+	// vanish into a match-all entry (Codex review finding on PR #505).
+	hooks := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:    "before_tool_execute",
+				Matcher:  json.RawMessage(`["shell","file_write"]`),
+				Blocking: true,
+				Handler:  HookHandler{Type: "command", Command: "echo check"},
+			},
+		},
+	}
+
+	encoded, err := AdapterFor("crush").Encode(hooks)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if got := gjson.GetBytes(encoded.Content, "hooks.PreToolUse.0.matcher").String(); got != "bash|write" {
+		t.Errorf("matcher: got %q, want %q", got, "bash|write")
+	}
+}
+
+func TestCrushAdapterEncode_EmptyCommandSkipped(t *testing.T) {
+	// Crush's schema requires command; an empty command entry is invalid
+	// config and must be skipped with a warning (Codex review finding).
+	hooks := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{
+				Event:   "before_tool_execute",
+				Handler: HookHandler{Type: "command", Command: ""},
+			},
+		},
+	}
+
+	encoded, err := AdapterFor("crush").Encode(hooks)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if gjson.GetBytes(encoded.Content, "hooks.PreToolUse").Exists() {
+		t.Errorf("empty-command hook should be skipped, got: %s", encoded.Content)
+	}
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected a warning for the skipped empty-command hook")
+	}
+}
+
 func TestCrushAdapterDecode_Basic(t *testing.T) {
 	input := []byte(`{
 		"hooks": {

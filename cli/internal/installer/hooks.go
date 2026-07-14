@@ -43,16 +43,17 @@ func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 }
 
 // parseHookFile reads a canonical hook.json (hooks/0.1 Manifest) and returns
-// the event plus a provider-settings matcher group JSON built from the
-// single hook's handler. If path is a directory, resolves hook.json inside it.
+// the event, the manifest's optional hook name, and a provider-settings
+// matcher group JSON built from the single hook's handler. If path is a
+// directory, resolves hook.json inside it.
 //
 // The returned matcher group has shape {matcher, hooks:[entry]} — the same
 // shape provider settings.json expects. Syllago-written hook.json always
 // contains exactly one hook per Manifest (see converter.SplitSettingsHooks).
-func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
+func parseHookFile(path string) (event string, hookName string, matcherGroup []byte, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 	if fi.IsDir() {
 		path = filepath.Join(path, "hook.json")
@@ -60,20 +61,20 @@ func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
 	manifest, err := converter.ParseManifest(data)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 	if len(manifest.Hooks) != 1 {
-		return "", nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
+		return "", "", nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
 	}
 
 	hds, err := converter.HookDataFromManifest(manifest)
 	if err != nil {
-		return "", nil, fmt.Errorf("converting manifest: %w", err)
+		return "", "", nil, fmt.Errorf("converting manifest: %w", err)
 	}
 	hd := hds[0]
 
@@ -87,15 +88,15 @@ func parseHookFile(path string) (event string, matcherGroup []byte, err error) {
 	}
 	matcherGroup, err = json.Marshal(group)
 	if err != nil {
-		return "", nil, fmt.Errorf("building matcher group: %w", err)
+		return "", "", nil, fmt.Errorf("building matcher group: %w", err)
 	}
 
-	return hd.Event, matcherGroup, nil
+	return hd.Event, manifest.Hooks[0].Name, matcherGroup, nil
 }
 
 func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
 	// item.Path is already absolute (set by scanner)
-	event, matcherGroup, err := parseHookFile(item.Path)
+	event, hookName, matcherGroup, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
@@ -156,11 +157,16 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", err
 	}
 
-	// Crush stores flat hook entries ({command, matcher, timeout}) rather
-	// than CC-shape matcher groups. Flatten last so the whitelist, scanner,
-	// and script-resolution steps above all see the standard shape.
+	// Crush stores flat hook entries ({name, command, matcher, timeout})
+	// rather than CC-shape matcher groups, and fires hooks only on
+	// PreToolUse — any other event key would be dead config crush never
+	// reads. Flatten last so the whitelist, scanner, and script-resolution
+	// steps above all see the standard shape.
 	if prov.Slug == "crush" {
-		matcherGroup, err = flattenForCrush(matcherGroup)
+		if event != "PreToolUse" {
+			return "", fmt.Errorf("hook %q: crush supports only the before_tool_execute (PreToolUse) hook event; got %q", item.Name, event)
+		}
+		matcherGroup, err = flattenForCrush(matcherGroup, hookName)
 		if err != nil {
 			return "", fmt.Errorf("hook %q: %w", item.Name, err)
 		}
@@ -235,7 +241,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
 	// item.Path is already absolute (set by scanner)
-	event, _, err := parseHookFile(item.Path)
+	event, _, _, err := parseHookFile(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
@@ -333,7 +339,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 
 func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
 	// item.Path is already absolute (set by scanner)
-	event, _, err := parseHookFile(item.Path)
+	event, _, _, err := parseHookFile(item.Path)
 	if err != nil {
 		return StatusNotAvailable
 	}
@@ -501,10 +507,12 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 }
 
 // flattenForCrush converts a CC-shape matcher group ({matcher, hooks:[entry]})
-// into crush's flat HookConfig ({command, matcher, timeout}). Crush hooks are
-// shell commands only, its schema rejects unknown fields, and its timeouts are
-// seconds — the canonical unit, so the value passes through unchanged.
-func flattenForCrush(matcherGroup []byte) ([]byte, error) {
+// into crush's flat HookConfig ({name, matcher, command, timeout}). Crush
+// hooks are shell commands only, its schema rejects unknown fields, and its
+// timeouts are seconds — the canonical unit, so the value passes through
+// unchanged. Canonical matcher tool names translate to crush's native names
+// (crush matchers are regexes tested against the tool name).
+func flattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
 	entry := gjson.GetBytes(matcherGroup, "hooks.0")
 	if hType := entry.Get("type").String(); hType != "" && hType != "command" {
 		return nil, fmt.Errorf("crush hooks only support command handlers (got type %q)", hType)
@@ -513,12 +521,18 @@ func flattenForCrush(matcherGroup []byte) ([]byte, error) {
 	if cmd == "" {
 		return nil, fmt.Errorf("crush hooks require a command")
 	}
+	matcher := gjson.GetBytes(matcherGroup, "matcher").String()
+	if matcher != "" {
+		matcher = converter.TranslateMatcher(matcher, "crush")
+	}
 	flat := struct {
+		Name    string `json:"name,omitempty"`
 		Matcher string `json:"matcher,omitempty"`
 		Command string `json:"command"`
 		Timeout int    `json:"timeout,omitempty"`
 	}{
-		Matcher: gjson.GetBytes(matcherGroup, "matcher").String(),
+		Name:    hookName,
+		Matcher: matcher,
 		Command: cmd,
 		Timeout: int(entry.Get("timeout").Int()),
 	}

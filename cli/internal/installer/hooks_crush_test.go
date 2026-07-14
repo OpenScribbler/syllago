@@ -41,7 +41,7 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 
 	hookDir := filepath.Join(projectRoot, "hooks", "crush-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":".*","handler":{"type":"command","command":"echo lint","timeout":5}}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"name":"lint-guard","event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo lint","timeout":5}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	item := catalog.ContentItem{
@@ -73,6 +73,15 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 	}
 	if entry.Get("hooks").Exists() {
 		t.Errorf("crush entry must be flat, found nested hooks array: %s", entry.Raw)
+	}
+	// Canonical matcher tool names must translate to crush's native names
+	// (Codex review finding on PR #505).
+	if got := entry.Get("matcher").String(); got != "bash" {
+		t.Errorf("matcher: got %q, want %q (canonical shell -> crush bash)", got, "bash")
+	}
+	// The manifest's optional hook name maps to crush's display name field.
+	if got := entry.Get("name").String(); got != "lint-guard" {
+		t.Errorf("name: got %q, want %q", got, "lint-guard")
 	}
 	// Canonical timeout is seconds; crush reads seconds — value unchanged.
 	if got := entry.Get("timeout").Int(); got != 5 {
@@ -112,6 +121,38 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 	inst, _ = LoadInstalled(projectRoot)
 	if inst.FindHook("crush-hook", "PreToolUse") >= 0 {
 		t.Error("hook should be removed from installed.json")
+	}
+}
+
+// TestInstallHook_Crush_RejectsUnsupportedEvent: crush fires hooks only on
+// PreToolUse; installing any other event would write dead config that crush
+// never reads (Codex review finding on PR #505).
+func TestInstallHook_Crush_RejectsUnsupportedEvent(t *testing.T) {
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(projectRoot, "hooks", "session-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"session_start","handler":{"type":"command","command":"echo hi"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	item := catalog.ContentItem{
+		Name: "session-hook",
+		Type: catalog.Hooks,
+		Path: hookDir,
+	}
+
+	configDir := t.TempDir()
+	configPath := filepath.Join(configDir, "crush.json")
+	os.WriteFile(configPath, []byte(`{}`), 0644)
+	overrideHookSettingsPath(t, configPath)
+
+	if _, err := installHook(item, provider.Crush, projectRoot); err == nil {
+		t.Fatal("expected error installing a session_start hook to crush")
+	}
+	data, _ := os.ReadFile(configPath)
+	if gjson.GetBytes(data, "hooks").Exists() {
+		t.Errorf("no hook should have been written, got: %s", data)
 	}
 }
 
