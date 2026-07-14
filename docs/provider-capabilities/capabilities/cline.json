@@ -10,7 +10,7 @@
             "type": "bool"
           },
           "key_path": "commands.builtin_commands",
-          "mechanism": "6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable",
+          "mechanism": "5 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /reportbug); hardcoded, not user-modifiable",
           "supported": true
         }
       },
@@ -18,15 +18,37 @@
     },
     "hooks": {
       "capabilities": {
-        "context_injection": {
+        "async_execution": {
           "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.async_execution",
+          "mechanism": "plugin hook policies (mode: async) run hooks off the critical path on SDK/CLI/Kanban; filesystem-script hooks on VS Code/JetBrains remain synchronous with a 30s timeout",
+          "supported": true
+        },
+        "context_injection": {
+          "confidence": "confirmed",
           "key": {
             "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
             "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
             "type": "bool"
           },
           "key_path": "hooks.context_injection",
-          "mechanism": "context injection documented under 'Context Modification' heading",
+          "mechanism": "filesystem hooks inject context via the contextModification stdout field on VS Code/JetBrains; the plugin before_agent_start hook stage injects context or modifies the prompt on SDK/CLI/Kanban",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "filesystem PreToolUse hooks block a tool invocation by returning cancel: true on VS Code/JetBrains; the plugin tool_call_before hook stage blocks tool calls on SDK/CLI/Kanban",
           "supported": true
         },
         "handler_types": {
@@ -37,47 +59,69 @@
             "type": "object"
           },
           "key_path": "hooks.handler_types",
-          "mechanism": "hook handler types documented under 'Hook Types' heading",
-          "supported": true
+          "mechanism": "neither surface documents handler-type selection: filesystem hooks (VS Code/JetBrains) execute shell or PowerShell scripts only; plugin hooks (SDK/CLI/Kanban) are TypeScript lifecycle handlers only",
+          "supported": false
         },
         "hook_scopes": {
-          "confidence": "inferred",
+          "confidence": "confirmed",
           "key": {
             "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
             "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
             "type": "object"
           },
           "key_path": "hooks.hook_scopes",
-          "mechanism": "hook scopes documented under 'Hook Locations' heading (project + global)",
+          "mechanism": "both surfaces support global + project scope: filesystem hooks in .clinerules/hooks (project) and ~/Documents/Cline/Hooks (global); plugins in .cline/plugins (project) and ~/.cline/plugins (global)",
+          "supported": true
+        },
+        "input_modification": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.input_modification",
+          "mechanism": "filesystem PreToolUse hooks return modified context/input before tool execution via contextModification on VS Code/JetBrains; the plugin before_agent_start / tool_call_before stages modify input on SDK/CLI/Kanban",
           "supported": true
         },
         "json_io_protocol": {
-          "confidence": "inferred",
+          "confidence": "confirmed",
           "key": {
             "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
             "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
             "type": "bool"
           },
           "key_path": "hooks.json_io_protocol",
-          "mechanism": "JSON I/O protocol documented under 'Input Structure' / 'Output Structure' headings",
+          "mechanism": "the filesystem-script model (VS Code/JetBrains) receives JSON via stdin and returns JSON to stdout with cancel, contextModification, and errorMessage fields; NOT the plugin mechanism (in-process TypeScript)",
           "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "neither surface documents per-tool pattern matching: filesystem PreToolUse and plugin tool_call_before both fire for every tool call regardless of tool identity",
+          "supported": false
+        },
+        "permission_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "neither surface grants/denies tool availability: hooks can only block/cancel a specific tool call (decision_control); the plugin approval-policy concept governs blocking a call, not tool-availability permissioning",
+          "supported": false
         }
       },
       "supported": true
     },
     "mcp": {
       "capabilities": {
-        "marketplace": {
-          "confidence": "inferred",
-          "key": {
-            "description": "Whether the provider offers an in-IDE MCP server discovery and installation experience.\n",
-            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
-            "type": "bool"
-          },
-          "key_path": "mcp.marketplace",
-          "mechanism": "in-IDE MCP Marketplace introduced under 'Finding MCP Servers' heading (mcp.0)",
-          "supported": true
-        },
         "transport_types": {
           "confidence": "inferred",
           "key": {
@@ -86,7 +130,7 @@
             "type": "object"
           },
           "key_path": "mcp.transport_types",
-          "mechanism": "transport types documented under 'MCP Transport Mechanisms' / 'STDIO Transport' / 'SSE Transport' headings (mcp.1)",
+          "mechanism": "transport types documented under 'Transport types' heading (STDIO + remote streamableHttp/sse) on the consolidated mcp-overview page",
           "supported": true
         }
       },
@@ -168,7 +212,7 @@
       "supported": true
     }
   },
-  "display_name": "cline",
+  "display_name": "Cline",
   "provider_exclusive": {
     "skills.bundled_files": {
       "confidence": "inferred",
@@ -211,7 +255,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "cline",
   "status": "live"
 }

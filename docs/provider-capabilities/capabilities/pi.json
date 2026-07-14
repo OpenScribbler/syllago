@@ -104,7 +104,7 @@
       "supported": true
     }
   },
-  "display_name": "pi",
+  "display_name": "Pi",
   "provider_exclusive": {
     "skills.baseDir": {
       "confidence": "confirmed",
@@ -127,7 +127,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "pi",
   "status": "live"
 }

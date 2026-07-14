@@ -167,7 +167,7 @@
       "supported": true
     }
   },
-  "display_name": "copilot-cli",
+  "display_name": "Copilot CLI",
   "provider_exclusive": {
     "skills.cli_management": {
       "confidence": "inferred",
@@ -175,7 +175,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "copilot-cli",
   "status": "live"
 }

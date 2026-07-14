@@ -165,8 +165,9 @@
       "supported": true
     }
   },
-  "display_name": "windsurf",
-  "schema_version": "1",
+  "display_name": "Windsurf",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "windsurf",
   "status": "live"
 }

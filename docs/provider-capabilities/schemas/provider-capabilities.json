@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openscribbler.github.io/capmon/v1/schemas/provider-capabilities.json",
-  "schema_version": "1",
+  "schema_version": "2",
   "title": "Provider capabilities document",
   "description": "One self-describing provider document (capabilities/<slug>.json). Additional properties are permitted everywhere except referenceEntry: consumers MUST ignore unknown fields and producers MAY add them within a major.",
   "type": "object",
@@ -9,6 +9,7 @@
   "properties": {
     "schema_version": {"type": "string"},
     "status": {"type": "string"},
+    "provider_status": {"type": "string"},
     "slug": {"type": "string"},
     "display_name": {"type": "string", "minLength": 1},
     "last_verified": {"type": "string"},

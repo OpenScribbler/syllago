@@ -1,6 +1,7 @@
 {
-  "display_name": "opencode",
-  "schema_version": "1",
+  "display_name": "OpenCode",
+  "provider_status": "archived",
+  "schema_version": "2",
   "slug": "opencode",
   "status": "live"
 }

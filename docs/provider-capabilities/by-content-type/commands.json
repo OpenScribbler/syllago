@@ -11,7 +11,7 @@
             "type": "bool"
           },
           "key_path": "commands.builtin_commands",
-          "mechanism": "6 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /explain-changes, /reportbug); hardcoded, not user-modifiable",
+          "mechanism": "5 built-in slash commands documented as individual headings (/newtask, /smol, /newrule, /deep-planning, /reportbug); hardcoded, not user-modifiable",
           "supported": true
         }
       },

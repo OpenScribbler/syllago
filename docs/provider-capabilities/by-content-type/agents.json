@@ -59,7 +59,7 @@
             "type": "bool"
           },
           "key_path": "agents.model_selection",
-          "mechanism": "per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
+          "mechanism": "per-subagent model override (sonnet/opus/haiku/fable alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
           "supported": true
         },
         "per_agent_mcp": {
@@ -278,6 +278,17 @@
           "mechanism": "single-file .md droids with system prompt, model preference, and tooling policy documented under 'Configuration' heading",
           "supported": true
         },
+        "per_agent_mcp": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether agents can have their own MCP server configuration, scoping which external tools each agent can access.\n",
+            "spec_ref": "ACIF-AGENT §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "agents.per_agent_mcp",
+          "mechanism": "per-droid MCP scoping via the mcpServers frontmatter field documented under 'Selecting MCP servers' heading",
+          "supported": true
+        },
         "tool_restrictions": {
           "confidence": "inferred",
           "key": {
@@ -286,7 +297,7 @@
             "type": "bool"
           },
           "key_path": "agents.tool_restrictions",
-          "mechanism": "categorical tool policy using named categories (filesystem, shell, search, browser, web_fetch) documented under 'Tool categories → concrete tools' heading",
+          "mechanism": "categorical tool policy using named categories (read-only, edit, execute, web, mcp) documented under 'Tool categories → concrete tools' heading",
           "supported": true
         }
       },

@@ -58,7 +58,7 @@
             "type": "bool"
           },
           "key_path": "agents.model_selection",
-          "mechanism": "per-subagent model override (sonnet/opus/haiku alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
+          "mechanism": "per-subagent model override (sonnet/opus/haiku/fable alias, full model ID, or inherit) documented under 'Choose a model' heading; resolution order via CLAUDE_CODE_SUBAGENT_MODEL env var, --model flag, frontmatter, or main session",
           "supported": true
         },
         "per_agent_mcp": {
@@ -211,8 +211,8 @@
             "type": "bool"
           },
           "key_path": "mcp.marketplace",
-          "mechanism": "in-doc curated server list documented under 'Popular MCP servers' heading; Claude Code surfaces servers via this catalog rather than an in-IDE marketplace",
-          "supported": true
+          "mechanism": "no in-IDE MCP marketplace; the former in-doc 'Popular MCP servers' catalog is now 'Find and build MCP servers', which points to the external Anthropic Directory (claude.ai/directory) added via `claude mcp add` rather than an in-IDE discovery/install surface",
+          "supported": false
         },
         "oauth_support": {
           "confidence": "inferred",
@@ -244,8 +244,8 @@
             "type": "object"
           },
           "key_path": "mcp.tool_filtering",
-          "mechanism": "allowlist + denylist tool filtering documented under 'Allowlist behavior (allowedMcpServers)' / 'Denylist behavior (deniedMcpServers)' headings",
-          "supported": true
+          "mechanism": "no per-tool visibility allowlist/blocklist; allowedMcpServers/deniedMcpServers control per-server access (enterprise_management), not individual tool visibility, and those headings moved to the separate /en/managed-mcp page",
+          "supported": false
         },
         "transport_types": {
           "confidence": "inferred",
@@ -255,7 +255,7 @@
             "type": "object"
           },
           "key_path": "mcp.transport_types",
-          "mechanism": "three transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' headings",
+          "mechanism": "four transport options documented under 'Option 1: Add a remote HTTP server' / 'Option 2: Add a remote SSE server' / 'Option 3: Add a local stdio server' / 'Option 4: Add a remote WebSocket server' headings",
           "supported": true
         }
       },
@@ -375,7 +375,7 @@
       "supported": true
     }
   },
-  "display_name": "claude-code",
+  "display_name": "Claude Code",
   "provider_exclusive": {
     "skills.additional_directories": {
       "confidence": "inferred",
@@ -409,7 +409,7 @@
     },
     "skills.nested_directories": {
       "confidence": "inferred",
-      "mechanism": "documented under 'Automatic discovery from nested directories' heading",
+      "mechanism": "documented under 'Automatic discovery from parent and nested directories' heading",
       "supported": true
     },
     "skills.subagent_invocation": {
@@ -423,7 +423,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "claude-code",
   "status": "live"
 }
