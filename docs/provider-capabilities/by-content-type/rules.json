@@ -212,14 +212,14 @@
           "supported": true
         },
         "hierarchical_loading": {
-          "confidence": "inferred",
+          "confidence": "confirmed",
           "key": {
             "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
             "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
             "type": "bool"
           },
           "key_path": "rules.hierarchical_loading",
-          "mechanism": "hierarchical AGENTS.md loading gated by child_agents_md feature flag in config.toml; codex emits a precedence-explanation message to the model when enabled (documented under 'Hierarchical agents message')",
+          "mechanism": "Codex unconditionally collects every AGENTS.md from the project root down to the cwd and combines them (codex-rs/core/src/agents_md.rs module doc + find_nearest_ancestor_with_markers). The former child_agents_md feature flag was removed upstream (openai/codex #28993); base hierarchical loading is now always-on.",
           "supported": true
         }
       },
@@ -388,7 +388,7 @@
             "type": "bool"
           },
           "key_path": "rules.auto_memory",
-          "mechanism": "/memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')",
+          "mechanism": "/memory show / reload slash commands manage the hierarchical GEMINI.md memory (documented under 'Manage context with the /memory command'); the /memory add append subcommand was removed upstream",
           "supported": true
         },
         "file_imports": {

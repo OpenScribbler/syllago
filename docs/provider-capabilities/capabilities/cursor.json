@@ -139,7 +139,18 @@
             "type": "bool"
           },
           "key_path": "mcp.auto_approve",
-          "mechanism": "auto-approval / auto-run mode for trusted tools documented under 'Auto-run' heading",
+          "mechanism": "auto-approval via Run Mode — MCP follows the same Run Modes as terminal commands; in Auto-review mode allowlisted MCP tools run immediately (documented under 'Run Mode' heading)",
+          "supported": true
+        },
+        "enterprise_management": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "enterprise admins configure MCP policy from the Cursor dashboard — team MCP distribution, server/tool allowlists, and per-server network controls (documented under 'Enterprise admin controls' / 'Team MCP distribution' / 'Network controls' headings)",
           "supported": true
         },
         "env_var_expansion": {
@@ -183,7 +194,7 @@
             "type": "object"
           },
           "key_path": "mcp.tool_filtering",
-          "mechanism": "per-server enable/disable toggle and per-tool approval documented under 'Tool approval' / 'Using MCP in chat' headings",
+          "mechanism": "per-server tool allowlists restrict which tools from an approved server may run automatically; command/URL entries approve servers (documented under 'MCP Allowlist' heading)",
           "supported": true
         },
         "transport_types": {
@@ -324,8 +335,9 @@
       "supported": true
     }
   },
-  "display_name": "cursor",
-  "schema_version": "1",
+  "display_name": "Cursor",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "cursor",
   "status": "live"
 }

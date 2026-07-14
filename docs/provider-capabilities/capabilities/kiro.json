@@ -71,6 +71,41 @@
       "supported": true
     },
     "hooks": {
+      "capabilities": {
+        "context_injection": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.context_injection",
+          "mechanism": "exit code 0 adds hook command STDOUT to the agent context for SessionStart and UserPromptSubmit events; documented under the 'Exit code behavior' heading",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "exit code 2 blocks execution for PreToolUse / UserPromptSubmit / PreTaskExec (block only, no allow/modify); documented under the 'Exit code behavior' heading",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "per-hook 'matcher' regex field filters by tool name or file path; the 'Trigger reference' table 'Matcher matches' column documents Tool name (regex) for PreToolUse/PostToolUse and File path (regex) for file events",
+          "supported": true
+        }
+      },
       "supported": true
     },
     "mcp": {
@@ -84,6 +119,17 @@
           },
           "key_path": "mcp.env_var_expansion",
           "mechanism": "environment variable expansion (${VAR} syntax) documented under 'Environment variables' heading with security warning against inline secrets",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "browser-based OAuth flows with Dynamic Client Registration; oauth.clientId / oauth.redirectUri / oauthScopes config fields and automatic token re-authentication documented under 'OAuth authentication' heading",
           "supported": true
         },
         "transport_types": {
@@ -202,7 +248,7 @@
       "supported": true
     }
   },
-  "display_name": "kiro",
+  "display_name": "Kiro",
   "provider_exclusive": {
     "skills.directory_structure": {
       "confidence": "inferred",
@@ -240,7 +286,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "beta",
+  "schema_version": "2",
   "slug": "kiro",
   "status": "live"
 }

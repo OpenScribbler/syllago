@@ -142,7 +142,7 @@
       "supported": true
     }
   },
-  "display_name": "roo-code",
+  "display_name": "Roo Code",
   "provider_exclusive": {
     "skills.frontmatter_compatibility": {
       "mechanism": "yaml key: compatibility",
@@ -165,7 +165,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "archived",
+  "schema_version": "2",
   "slug": "roo-code",
   "status": "live"
 }

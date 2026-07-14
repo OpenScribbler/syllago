@@ -35,6 +35,17 @@
           "mechanism": "yaml frontmatter key: description",
           "supported": true
         },
+        "disable_model_invocation": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "When true, the AI cannot auto-invoke this skill; only the user can invoke it explicitly. Default: false.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+            "type": "bool"
+          },
+          "key_path": "skills.disable_model_invocation",
+          "mechanism": "yaml frontmatter key: disable-model-invocation",
+          "supported": true
+        },
         "display_name": {
           "confidence": "confirmed",
           "key": {
@@ -89,12 +100,23 @@
           "key_path": "skills.project_scope",
           "mechanism": "per-project .crush/skills/ directory",
           "supported": true
+        },
+        "user_invocable": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "When false, the skill is hidden from user-facing menus (e.g., the / command menu). The AI can still invoke it. Default: true.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "skills.user_invocable",
+          "mechanism": "yaml frontmatter key: user-invocable",
+          "supported": true
         }
       },
       "supported": true
     }
   },
-  "display_name": "crush",
+  "display_name": "Crush",
   "provider_exclusive": {
     "skills.frontmatter_compatibility": {
       "mechanism": "yaml key: compatibility",
@@ -117,7 +139,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "crush",
   "status": "live"
 }

@@ -74,10 +74,115 @@
         }
       },
       "supported": true
+    },
+    "skills": {
+      "capabilities": {
+        "auto_invocable": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the provider supports automatic model-driven skill invocation — the model selects and activates a skill without explicit user syntax. Implementations vary: description-field semantic matching, explicit keyword arrays, and boolean flags are all equivalent mechanisms for the same concept. Note: a description field paired with an opt-out disable_model_invocation flag is functionally equivalent to an explicit auto_invocable boolean — both express that the skill participates in automatic activation unless suppressed.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+            "type": "bool"
+          },
+          "key_path": "skills.auto_invocable",
+          "mechanism": "the agent sees a catalog of installed skills (name + description) and auto-invokes the one whose description matches the task; opt out via disable-model-invocation",
+          "supported": true
+        },
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "SKILL.md is the required fixed filename inside each skill folder (YAML frontmatter + Markdown body)",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description (required); the agent uses it to decide when to auto-invoke; keep under 1024 bytes",
+          "supported": true
+        },
+        "disable_model_invocation": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "When true, the AI cannot auto-invoke this skill; only the user can invoke it explicitly. Default: false.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE); activation enum ACIF-SKILL §6.2, Appendix A",
+            "type": "bool"
+          },
+          "key_path": "skills.disable_model_invocation",
+          "mechanism": "yaml frontmatter key: disable-model-invocation (optional bool, default false); hides the skill from the autonomous catalog while leaving it slash/@-invocable",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name (required); lowercase letters/numbers/hyphens, 1-64 chars, should match the skill folder name and doubles as the identifier",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "global skills live in ~/.agents/skills/<name>/SKILL.md and apply to every project",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "project-local skills live in <worktree>/.agents/skills/<name>/SKILL.md and load only from trusted worktrees",
+          "supported": true
+        },
+        "skill_bundled_resources": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill directory may contain arbitrary co-located files (scripts, templates, configs, checklists) beyond SKILL.md that the agent can access when the skill is invoked. Enables multi-file skill bundles without converting supporting files into separate skills or rules.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE; multi-file classification ACIF-CORE §7.2)",
+            "type": "bool"
+          },
+          "key_path": "skills.skill_bundled_resources",
+          "mechanism": "a skill folder may co-locate scripts/, references/, and assets/ subfolders that the agent loads on demand via read_file/list_directory",
+          "supported": true
+        },
+        "user_invocable": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "When false, the skill is hidden from user-facing menus (e.g., the / command menu). The AI can still invoke it. Default: true.\n",
+            "spec_ref": "ACIF-SKILL §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "skills.user_invocable",
+          "mechanism": "skills are user-invocable via / slash command or @skill mention, injecting the skill instructions as context (shown as a crease button)",
+          "supported": true
+        }
+      },
+      "supported": true
     }
   },
-  "display_name": "zed",
-  "schema_version": "1",
+  "display_name": "Zed",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "zed",
   "status": "live"
 }
