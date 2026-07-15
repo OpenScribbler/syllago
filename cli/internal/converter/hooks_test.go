@@ -1585,6 +1585,8 @@ func TestOutputFieldsLostWarnings(t *testing.T) {
 		{"claude->gemini: 4 lost (decision+system_message kept)", "claude-code", "gemini-cli", 4},
 		{"claude->copilot: 5 lost (decision kept)", "claude-code", "copilot-cli", 5},
 		{"claude->cursor: 5 lost (decision kept)", "claude-code", "cursor", 5},
+		{"claude->crush: 3 lost (updated_input+decision+context kept)", "claude-code", "crush", 3},
+		{"crush->claude: none lost", "crush", "claude-code", 0},
 		{"claude->claude: none lost", "claude-code", "claude-code", 0},
 		{"gemini->claude: none lost", "gemini-cli", "claude-code", 0},
 		{"copilot->gemini: none lost", "copilot-cli", "gemini-cli", 0},
@@ -1600,6 +1602,22 @@ func TestOutputFieldsLostWarnings(t *testing.T) {
 			}
 		})
 	}
+
+	// Exact-field check for crush: a count alone would pass with the wrong
+	// three fields kept. updated_input must be among the kept fields
+	// (crush shallow-merges it; see charmbracelet/crush docs/hooks/README.md).
+	t.Run("claude->crush exact lost fields", func(t *testing.T) {
+		lost := OutputFieldsLostWarnings("claude-code", "crush")
+		want := []string{"suppress_output", "system_message", "continue"}
+		if len(lost) != len(want) {
+			t.Fatalf("lost = %v, want %v", lost, want)
+		}
+		for i, f := range want {
+			if lost[i] != f {
+				t.Errorf("lost[%d] = %q, want %q (full: %v)", i, lost[i], f, lost)
+			}
+		}
+	})
 }
 
 func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {

@@ -5,7 +5,7 @@ category: standalone-app
 # - required: true | false | null (null = source doesn't say)
 # - value_type: see allow-list in formatdoc_validate.go
 # - examples: [{title?, lang, code, note?}]
-last_fetched_at: "2026-05-06T12:57:00Z"
+last_fetched_at: "2026-07-14T01:49:10Z"
 last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
@@ -180,38 +180,153 @@ content_types:
     sources:
       - uri: "https://zed.dev/docs/ai/skills"
         type: documentation
-        fetch_method: web
-        fetched_at: "2026-07-14T00:00:00Z"
+        fetch_method: gh_raw
+        fetched_at: "2026-07-14T01:49:10Z"
+        content_hash: "sha256:bbbc98f66c3f213976f6fc7e7e16b2122e748793d2ad217a9175c951f2eacaab"
     canonical_mappings:
-      canonical_filename:
-        supported: true
-        mechanism: "SKILL.md (required, fixed name per the Agent Skills standard)"
-        confidence: confirmed
-      project_scope:
-        supported: true
-        mechanism: ".agents/skills/<name>/SKILL.md — the cross-provider convention is Zed's only skills location; there is no zed-native directory"
-        paths:
-          - ".agents/skills/<name>/SKILL.md"
-        confidence: confirmed
-      global_scope:
-        supported: true
-        mechanism: "~/.agents/skills/<name>/SKILL.md (cross-provider convention)"
-        paths:
-          - "~/.agents/skills/<name>/SKILL.md"
-        confidence: confirmed
       display_name:
         supported: true
         provider_field: "name"
-        mechanism: "yaml frontmatter key: name (required) per the Agent Skills standard"
+        mechanism: "yaml frontmatter key: name (required). Lowercase letters, numbers, and hyphens only; 1-64 characters; no leading/trailing or consecutive hyphens. Should match the skill's folder name and doubles as the skill identifier; skills with invalid names fail to load."
         confidence: confirmed
       description:
         supported: true
         provider_field: "description"
-        mechanism: "yaml frontmatter key: description (required) per the Agent Skills standard"
+        mechanism: "yaml frontmatter key: description (required). States what the skill does and when to use it; the agent uses it to decide when to auto-invoke. Keep under 1024 bytes — longer descriptions still load but surface a warning."
         confidence: confirmed
-    provider_extensions: []
-    loading_model: "A skill is a directory containing a SKILL.md file. Zed discovers skills exclusively through the cross-provider Agent Skills convention: .agents/skills/<name>/SKILL.md (project scope) and ~/.agents/skills/<name>/SKILL.md (user global scope). There is no zed-native skills directory."
-    notes: "Zed shipped Agent Skills support in 2026 (https://zed.dev/docs/ai/skills); Go support landed in PR #503. This entry reconciles the stale unsupported assertion; the full capmon formatdoc refresh (source content hashes, complete canonical mappings) is tracked separately."
+      disable_model_invocation:
+        supported: true
+        provider_field: "disable-model-invocation"
+        mechanism: "yaml frontmatter key: disable-model-invocation (optional bool, default false). When true the skill is hidden from the agent's autonomous catalog but stays invocable by the user via slash command or @-mention — useful for deploy/release procedures you do not want the agent triggering."
+        confidence: confirmed
+      auto_invocable:
+        supported: true
+        mechanism: "By default the agent picks up skills autonomously: it sees a catalog of every installed skill (name + description) in its system prompt and calls the skill tool when a task matches a skill's description. Semantic description matching, opt-out via disable-model-invocation — functionally the canonical auto_invocable capability."
+        confidence: confirmed
+      user_invocable:
+        supported: true
+        mechanism: "All installed skills are user-invocable: type / in the message editor and select a skill by name, or @skill to pick one from the completion menu. Both inject the skill's instructions as context (shown as a clickable crease button). disable-model-invocation: true removes only the model's autonomous invocation, leaving the skill user-invocable."
+        confidence: confirmed
+      project_scope:
+        supported: true
+        mechanism: "Project-local skills live in <worktree>/.agents/skills/<name>/SKILL.md and apply only to the current project. They load only from trusted worktrees — skills from a freshly cloned or untrusted project are excluded from the catalog and slash commands until trust is granted."
+        paths:
+          - "<worktree>/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      global_scope:
+        supported: true
+        mechanism: "Global skills live in ~/.agents/skills/<name>/SKILL.md and apply to every project. The agent can read global skill resources even though they are outside the current project."
+        paths:
+          - "~/.agents/skills/<name>/SKILL.md"
+        confidence: confirmed
+      shared_scope:
+        supported: false
+        mechanism: "Zed loads skills from exactly two locations (global ~/.agents/skills/ and project-local <worktree>/.agents/skills/); no organization/enterprise scope is documented, and 'No remote registry' — Zed does not discover or load skills from remote locations at runtime."
+        confidence: confirmed
+      canonical_filename:
+        supported: true
+        mechanism: "SKILL.md is the required fixed filename inside each skill folder (starts with YAML frontmatter, followed by Markdown instructions)."
+        confidence: confirmed
+      custom_filename:
+        supported: false
+        mechanism: "The skill file name is fixed as SKILL.md; only the containing folder name varies (and serves as the skill identifier). No custom filename is supported."
+        confidence: confirmed
+      skill_bundled_resources:
+        supported: true
+        mechanism: "A skill folder may co-locate scripts/ (scripts the agent can run), references/ (additional documentation), and assets/ (templates and static files) alongside SKILL.md. The agent loads them on demand via the read_file and list_directory tools; the SKILL.md body links to them (progressive disclosure)."
+        confidence: confirmed
+      license:
+        supported: false
+        mechanism: "Not currently a frontmatter field. The docs list only name, description, and disable-model-invocation, and state further Agent Skills spec fields are planned 'in the near future'."
+        confidence: confirmed
+      compatibility:
+        supported: false
+        mechanism: "Not currently a frontmatter field (only name, description, disable-model-invocation are recognized today; further Agent Skills spec fields are planned)."
+        confidence: confirmed
+      metadata_map:
+        supported: false
+        mechanism: "Not currently a frontmatter field (only name, description, disable-model-invocation are recognized today; further Agent Skills spec fields are planned)."
+        confidence: confirmed
+      version:
+        supported: false
+        mechanism: "Not currently a frontmatter field (only name, description, disable-model-invocation are recognized today; further Agent Skills spec fields are planned)."
+        confidence: confirmed
+    provider_extensions:
+      - id: skills_sh_registry
+        name: skills.sh community registry
+        summary: "Skills can be installed from skills.sh, a community registry of open-source skills (e.g. find-skills, frontend-design, pdf). Install by copying the skill's folder into ~/.agents/skills/ (global) or the project's .agents/skills/ (project-local). The built-in find-skills skill discovers and installs skills from the open ecosystem."
+        source_ref: "https://zed.dev/docs/ai/skills#from-the-skills.sh-registry"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: share_link
+        name: zed://skill share links
+        summary: "The Skills settings page can copy a self-contained zed://skill?data=... link that embeds the full SKILL.md contents (base64url-encoded). A recipient opening the link gets a pre-filled 'Create Skill' page; nothing is written to disk until they explicitly save, so a shared link can never silently install instructions."
+        source_ref: "https://zed.dev/docs/ai/skills#sharing-skills"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: skill_creator_ui
+        name: Built-in skill creator and URL import
+        summary: "Zed ships a built-in create-skill skill (invoke via /create-skill) that walks you through authoring, plus a Skills Manager (cmd-alt-l|ctrl-alt-l) and an 'agent: create skill from url' command that imports a skill from a supported GitHub Markdown URL. The creator saves to the scope of the selected settings tab (User = global, Project = project-local)."
+        source_ref: "https://zed.dev/docs/ai/skills#adding-skills"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: manual_invocation
+        name: Slash-command and @-mention invocation
+        summary: "Beyond autonomous invocation, a skill can be loaded manually: type / and select it by name, or type @skill and pick it from the completion menu. Both inject the skill's instructions as context; the loaded skill appears as a crease button in the thread that opens the skill file when clicked."
+        source_ref: "https://zed.dev/docs/ai/skills#manual-invocation"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: project_trust
+        name: Project-local trust gating
+        summary: "Project-local skills load only from trusted worktrees. Skills from a freshly cloned or untrusted project are excluded from the catalog and slash commands until you grant trust — preventing a malicious project from injecting instructions into the agent's system prompt before you have reviewed what it ships."
+        source_ref: "https://zed.dev/docs/ai/skills#project-local-skills-and-trust"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: override_precedence
+        name: Project-over-global name override
+        summary: "If a global and a project-local skill share the same name, the project-local skill takes precedence — letting a project customize or replace a global skill for its own context."
+        source_ref: "https://zed.dev/docs/ai/skills#override-behavior"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: agent_edit_protection
+        name: Agent edit protection for skill files
+        summary: "The agent cannot edit SKILL.md files or their bundled resources without explicit user authorization, even in a trusted project. This prevents a compromised conversation from modifying the skills that govern future conversations."
+        source_ref: "https://zed.dev/docs/ai/skills#editing-skill-files"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: permission_prompt
+        name: Per-skill tool-permission prompt
+        summary: "When the agent invokes a user-created or installed skill, Zed prompts allow/deny using the same permission flow as other tools; skills built into Zed do not prompt. Per-skill defaults can be set in Tool Permissions to avoid repeated prompts for trusted skills."
+        source_ref: "https://zed.dev/docs/ai/skills#using-skills"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: live_reload
+        name: Live reload of skill files
+        summary: "Adding, removing, or editing a SKILL.md takes effect immediately without restarting the session. Changing a skill's name or description invalidates the model's prompt cache for the current session."
+        source_ref: "https://zed.dev/docs/ai/skills#limitations"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: flat_layout
+        name: Flat skills layout (no nesting)
+        summary: "Each skill must be a direct child of the skills root. Nested folders like ~/.agents/skills/group/my-skill/ are not discovered — a stricter layout than providers that walk nested skill directories."
+        source_ref: "https://zed.dev/docs/ai/skills#where-skills-live"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: catalog_budget
+        name: 50KB catalog budget
+        summary: "The total size of all skill names and descriptions is capped at 50KB. Skills that do not fit are dropped from the catalog with a UI warning, so descriptions must stay concise (individual descriptions are also soft-capped at 1024 bytes)."
+        source_ref: "https://zed.dev/docs/ai/skills#limitations"
+        conversion: not-portable
+        graduation_candidate: false
+      - id: agent_path_boundaries
+        name: Zed Agent path boundary
+        summary: "Zed Skills apply to the Zed Agent only. External Agents (over the Agent Client Protocol) and Terminal Threads (native CLIs/TUIs) may have their own native skills, prompts, or instruction systems, configured in the external agent or CLI rather than here."
+        source_ref: "https://zed.dev/docs/ai/skills#agent-path-boundaries"
+        conversion: not-portable
+        graduation_candidate: false
+    loading_model: "Progressive disclosure: the agent sees only each skill's name and description (subject to the 50KB catalog budget) until it activates a skill, then loads the full SKILL.md body and any bundled resources on demand via read_file/list_directory. Skills load from ~/.agents/skills/<name>/SKILL.md (global, every project) and <worktree>/.agents/skills/<name>/SKILL.md (project-local, trusted worktrees only); a project-local skill overrides a global skill of the same name. Each skill is a direct child of the skills root — nested folders are not discovered. By default the agent auto-invokes skills whose description matches the task; disable-model-invocation: true limits a skill to explicit user invocation. Adding/removing/editing a SKILL.md takes effect live."
+    notes: "Zed onboarded Skills in the 2026-07 docs restructure that replaced the Rules Library: reusable, on-demand Library rules became Skills, always-on rules became AGENTS.md instructions. Zed implements a subset of the Agent Skills open standard — frontmatter is currently limited to name, description, and disable-model-invocation, with further spec fields (license, compatibility, metadata, version, etc.) planned 'in the near future'. Distinctive Zed concepts: self-contained zed://skill share links, a built-in create-skill skill plus GitHub-URL import, project-local trust gating, agent edit protection on skill files, and a strictly flat skills layout. No enterprise scope and no runtime remote registry (skills.sh installs are a one-time copy/import)."
+
 
   hooks:
     status: unsupported
