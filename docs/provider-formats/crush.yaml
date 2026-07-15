@@ -256,8 +256,8 @@ content_types:
         fetched_at: "2026-07-15T03:36:49Z"
     canonical_mappings:
       handler_types:
-        supported: true
-        mechanism: "Hooks are shell commands (command field in HookConfig), run through Crush's embedded POSIX shell (mvdan.cc/sh). Inline commands and shebang-less scripts execute in-process; scripts with a #! shebang dispatch to the named interpreter via os/exec, so hooks can be written in any language. The contract is identical on macOS, Linux, and Windows."
+        supported: false
+        mechanism: "Crush hooks are shell commands only (command field in HookConfig) — no HTTP, LLM prompt, or agent handler types. Commands run through Crush's embedded POSIX shell (mvdan.cc/sh): inline commands and shebang-less scripts execute in-process; scripts with a #! shebang dispatch to the named interpreter via os/exec, so hook scripts can be written in any language. The contract is identical on macOS, Linux, and Windows."
         confidence: confirmed
       matcher_patterns:
         supported: true

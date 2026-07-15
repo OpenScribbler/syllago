@@ -154,7 +154,7 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsMatchers:         true,
 		SupportsAsync:            false,
 		SupportsStatusMessage:    false,
-		SupportsStructuredOutput: true, // JSON response: decision + context
+		SupportsStructuredOutput: true, // JSON response: decision + context + updated_input
 		SupportsBlocking:         true,
 		TimeoutUnit:              "seconds",
 		SupportsPlatform:         false,

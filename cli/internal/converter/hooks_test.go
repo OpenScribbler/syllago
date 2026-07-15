@@ -1602,6 +1602,22 @@ func TestOutputFieldsLostWarnings(t *testing.T) {
 			}
 		})
 	}
+
+	// Exact-field check for crush: a count alone would pass with the wrong
+	// three fields kept. updated_input must be among the kept fields
+	// (crush shallow-merges it; see charmbracelet/crush docs/hooks/README.md).
+	t.Run("claude->crush exact lost fields", func(t *testing.T) {
+		lost := OutputFieldsLostWarnings("claude-code", "crush")
+		want := []string{"suppress_output", "system_message", "continue"}
+		if len(lost) != len(want) {
+			t.Fatalf("lost = %v, want %v", lost, want)
+		}
+		for i, f := range want {
+			if lost[i] != f {
+				t.Errorf("lost[%d] = %q, want %q (full: %v)", i, lost[i], f, lost)
+			}
+		}
+	})
 }
 
 func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {
