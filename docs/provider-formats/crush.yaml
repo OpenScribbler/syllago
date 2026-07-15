@@ -18,7 +18,7 @@ category: cli
 #   3. Analogy with the preceding OpenCode format (the archived ancestor and
 #      Crush's sibling successor sst/opencode).
 # Confirmed facts are backed by direct upstream source references.
-last_fetched_at: "2026-05-06T12:57:00Z"
+last_fetched_at: "2026-07-15T03:36:49Z"
 last_changed_at: "2026-05-06T00:00:00Z"
 generation_method: subagent
 
@@ -234,83 +234,121 @@ content_types:
   hooks:
     status: supported
     sources:
+      - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
+        type: documentation
+        fetch_method: gh_raw
+        content_hash: "sha256:0871ecba435c774b38650046a10341cccf07661c78a4bf803ce585c8740f4d38"
+        fetched_at: "2026-07-15T03:36:49Z"
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:1ed71c8a69ce5a9a87855fb2a6abc78af23b821e7a6597727590849c52b45b88"
-        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:003a7e66fb928e9df8de5316ba9381fde8668f92ac908fff45f7918f27c6fe2e"
+        fetched_at: "2026-07-15T03:36:49Z"
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:ed343888cadd36ea75edd18bdb0d53afd3ffec17eda3e1213fc9662fdff6cf58"
-        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:49d307d00f042927acb7d0803de4be39e624bab6c87027d028bd5d36e26b74f3"
+        fetched_at: "2026-07-15T03:36:49Z"
       - uri: "https://raw.githubusercontent.com/charmbracelet/crush/main/internal/skills/builtin/crush-config/SKILL.md"
         type: source_code
         fetch_method: gh_raw
-        content_hash: "sha256:877215de75b74d808cd69b666790aa3b8c852d2343b2d75ea9504f25e91d2fa0"
-        fetched_at: "2026-05-06T12:57:00Z"
+        content_hash: "sha256:37b7354933cf27eb4748e07844f677bda2ed5275a5c3af3043f70e7e4dd64f1d"
+        fetched_at: "2026-07-15T03:36:49Z"
     canonical_mappings:
       handler_types:
         supported: true
-        mechanism: "Hooks are shell commands (command field in HookConfig). Each hook fires a subprocess with the tool context passed on stdin."
+        mechanism: "Hooks are shell commands (command field in HookConfig), run through Crush's embedded POSIX shell (mvdan.cc/sh). Inline commands and shebang-less scripts execute in-process; scripts with a #! shebang dispatch to the named interpreter via os/exec, so hooks can be written in any language. The contract is identical on macOS, Linux, and Windows."
         confidence: confirmed
       matcher_patterns:
         supported: true
         provider_field: "matcher"
-        mechanism: "HookConfig has a matcher field: a regex pattern tested against the tool name. An empty matcher matches all tools."
+        mechanism: "HookConfig has an optional matcher field: a regex tested against the tool name (e.g. bash, edit, mcp_github_create_pull_request). Omitted or empty matcher matches all tools."
         confidence: confirmed
       decision_control:
         supported: true
-        mechanism: "Hook subprocess exit code controls tool execution: exit code 2 blocks the tool call (deny). Other exit codes allow it. The hook may also return a JSON decision field with values allow, deny, or none."
+        provider_field: "decision"
+        mechanism: "Exit code 2 blocks the tool call (stderr becomes the deny reason); exit 49 halts the whole turn; other non-zero exit codes are non-blocking errors and the tool call proceeds. On exit 0, stdout is parsed as a JSON envelope whose decision field may be allow, deny, or null. allow is affirmative pre-approval (skips the permission prompt); null/omitted means no opinion. Across multiple hooks, deny > allow > null, composed in config order."
         confidence: confirmed
       input_modification:
-        supported: false
-        mechanism: "Hooks receive tool context on stdin and can return context to the agent, but modifying tool input parameters is not documented."
-        confidence: inferred
+        supported: true
+        provider_field: "updated_input"
+        mechanism: "The exit-0 JSON envelope may include updated_input: a shallow-merge patch against tool_input. Included keys overwrite matching keys; omitted keys are preserved; nested objects are replaced wholesale. Patches from multiple hooks shallow-merge sequentially in config order (later hooks win on colliding keys) and are ignored if the final decision is deny or halt. Implemented as UpdatedInput in internal/hooks/hooks.go."
+        confidence: confirmed
       async_execution:
         supported: false
-        mechanism: "Hooks are synchronous; each fires before the tool executes and must complete within the configured timeout."
+        mechanism: "Matching hooks run in parallel with each other, but the tool call waits for all of them to finish (or time out) before proceeding — there is no fire-and-forget mode. A hook that exceeds its timeout is treated as a non-blocking error (\"no opinion\") and the tool call proceeds."
         confidence: confirmed
       hook_scopes:
         supported: true
-        mechanism: "Hooks are configured in crush.json under the hooks key, which applies at the project or user-global config level (same config file scope as MCP and other settings)."
+        mechanism: "Hooks can be configured in crush.json (or .crush.json) at both the user-global (~/.config/crush/crush.json) and project level, with project-level hooks taking precedence. Global-config commands must use absolute paths or inline commands; relative paths resolve against the working directory."
         confidence: confirmed
       json_io_protocol:
         supported: true
-        mechanism: "Hooks receive a JSON object on stdin containing tool name and parameters. The hook subprocess may return a JSON object with decision (allow/deny/none) and optional context fields."
+        mechanism: "Stdin provides a JSON payload: event, session_id, cwd, plus tool_name and tool_input (the raw JSON the model sent) for PreToolUse. On exit 0 stdout is parsed as a JSON output envelope: version (defaults to 1), decision, halt, reason, context, updated_input. Simple hooks can skip JSON entirely and use CRUSH_* environment variables plus exit codes."
         confidence: confirmed
       context_injection:
         supported: true
         provider_field: "context"
-        mechanism: "The hook JSON response may include an optional context field; this content is injected into the agent context for the current turn."
+        mechanism: "The output envelope's context field accepts a string or an array of strings, appended to what the model sees for the current turn. Across multiple hooks, context values concatenate in config order; empty entries are dropped."
         confidence: confirmed
       permission_control:
         supported: true
-        mechanism: "Hooks run before permission checks. Exit code 2 blocks the tool call entirely, taking effect before the built-in permission gate."
+        mechanism: "Hook results apply before permission checks. An aggregated deny blocks the tool call before any permission prompt; an aggregated allow is affirmative pre-approval that skips the prompt entirely; silence (no decision) falls through to the normal permission flow."
         confidence: confirmed
     provider_extensions:
       - id: event_keyed_map
         name: Event-keyed hook map
-        summary: The hooks config key is an object keyed by event name (e.g. PreToolUse), with each value being an array of HookConfig objects. This allows multiple hooks per event and per-tool matcher filtering.
-        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        summary: "The hooks config key is an object keyed by event name, with each value an array of HookConfig objects — multiple hooks per event with per-tool matcher filtering. Event names are case insensitive and snake-caseable: PreToolUse, pretooluse, and pre_tool_use all work."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
         graduation_candidate: false
         conversion: translated
         provider_field: hooks
+      - id: hook_name
+        name: Friendly hook display name
+        summary: "HookConfig has an optional name field: a friendly display name shown in the TUI, falling back to the command when omitted. Maps from the canonical hook manifest's name field on install."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        graduation_candidate: false
+        conversion: translated
+        provider_field: name
       - id: hook_timeout
         name: Per-hook timeout
-        summary: Each HookConfig entry has a timeout field (integer, seconds, default 30) that limits how long the hook subprocess may run before being killed.
-        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/schema.json"
+        summary: "Each HookConfig entry has a timeout field (integer, seconds, default 30). On timeout, Crush cancels the hook's context, waits a short grace period, then treats the result as a non-blocking error so the tool call proceeds — a timed-out hook cannot block."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
         graduation_candidate: false
         conversion: not-portable
         provider_field: timeout
       - id: pre_permission_execution
         name: Hooks fire before permission checks
-        summary: Crush's hookedTool decorator runs hook commands before the built-in permission gate, giving hooks full veto power over tool calls independent of configured permissions.
-        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/AGENTS.md"
+        summary: "Hooks run before Crush's built-in permission gate: deny blocks the tool call before any prompt appears, and allow is affirmative pre-approval that skips the prompt — hooks can both veto and auto-approve independent of configured permissions."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
         graduation_candidate: false
         conversion: not-portable
-    loading_model: "Hooks are configured in crush.json under the hooks key as an object keyed by event name (e.g. PreToolUse). Each key maps to an array of HookConfig objects. Each HookConfig specifies a command (required shell command), an optional matcher (regex against tool name; empty matches all tools), and an optional timeout (seconds, default 30). At tool execution time, Crush fires matching hooks in order, passing JSON on stdin (tool name and parameters). The hook may return JSON with a decision (allow/deny/none) and optional context. Exit code 2 blocks the tool call. Hooks run before Crush's built-in permission checks."
-    notes: "Hook event key naming follows provider-native conventions (e.g. PreToolUse) in the crush.json config. Canonical syllago event names (before_tool_execute) must be translated to provider-native keys during install/export. The hookedTool implementation is in internal/agent/hooked_tool.go."
+      - id: turn_halt
+        name: Turn halt (exit 49 / halt field)
+        summary: "A hook can end the whole turn, not just block one tool call: exit code 49 (stderr becomes the halt reason) or halt: true in the JSON envelope. The agent doesn't respond further; the user takes over. Halt is sticky across multiple hooks."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: parallel_config_order
+        name: Parallel execution, config-order composition
+        summary: "Matching hooks run in parallel for speed, deduplicated by identical command, and their results compose deterministically in config order: deny wins over allow, reasons and context concatenate in order, updated_input patches merge in order. Timing never determines the outcome."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: env_var_input
+        name: Environment-variable input
+        summary: "Alongside stdin JSON, every hook receives environment variables: CRUSH=1, AGENT=crush, AI_AGENT=crush, CRUSH_EVENT, CRUSH_TOOL_NAME, CRUSH_SESSION_ID, CRUSH_CWD, CRUSH_PROJECT_DIR, and per-tool shortcuts CRUSH_TOOL_INPUT_COMMAND (bash) and CRUSH_TOOL_INPUT_FILE_PATH (file tools) — simple hooks never need to parse JSON."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
+        graduation_candidate: false
+        conversion: not-portable
+      - id: subagent_exemption
+        name: Top-level-agent-only scope
+        summary: "PreToolUse fires only on the top-level agent's tool calls; sub-agents (the agent task tool, agentic_fetch) run without hook interception so one delegated turn doesn't fire a hook N times. The outer sub-agent tool call itself is hooked."
+        source_ref: "https://raw.githubusercontent.com/charmbracelet/crush/main/docs/hooks/README.md"
+        graduation_candidate: false
+        conversion: not-portable
+    loading_model: "Hooks are configured in crush.json (or .crush.json) under the hooks key as an object keyed by event name (case insensitive, snake-caseable; PreToolUse is currently the only event). Each key maps to an array of HookConfig objects: command (required shell command), plus optional name (TUI display name), matcher (regex against tool name; omit to match all), and timeout (seconds, default 30). Global and project configs both load, with project hooks taking precedence. At tool-call time Crush filters hooks by matcher, dedupes by command, runs them in parallel through its embedded POSIX shell, passing JSON on stdin (event, session_id, cwd, tool_name, tool_input) and CRUSH_* environment variables. Results compose in config order and apply before permission checks: exit 2 or decision: deny blocks the call, exit 49 or halt: true ends the turn, decision: allow pre-approves and skips the permission prompt, context strings append to model context, and updated_input shallow-merge patches rewrite the tool input."
+    notes: "Official hooks documentation now lives at docs/hooks/README.md in the crush repo (the earlier entry predated it and was inferred from schema.json). Crush states its hooks are broadly Claude Code-compatible — config shape, stdin payload, output envelope, and exit codes line up — with one intentional divergence: updated_input is a shallow-merge patch against tool_input rather than a full replacement. Hook event key naming follows provider-native conventions (e.g. PreToolUse); canonical syllago event names (before_tool_execute) must be translated to provider-native keys during install/export. Hook aggregation and UpdatedInput handling are implemented in internal/hooks/hooks.go."
 
   agents:
     status: unsupported

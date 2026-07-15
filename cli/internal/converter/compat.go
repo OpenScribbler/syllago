@@ -192,9 +192,12 @@ var HookOutputCapabilities = map[string]map[HookOutputField]bool{
 	"kiro":     {}, // No structured output support
 	"windsurf": {}, // No structured output support
 	"crush": {
-		// Crush hook responses support decision (allow/deny/none) and context
-		OutputDecision: true,
-		OutputContext:  true,
+		// Crush hook responses support decision (allow/deny/null), context,
+		// and updated_input (a shallow-merge patch against tool_input; see
+		// charmbracelet/crush docs/hooks/README.md "Output envelope").
+		OutputDecision:     true,
+		OutputContext:      true,
+		OutputUpdatedInput: true,
 	},
 }
 
