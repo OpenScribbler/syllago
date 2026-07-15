@@ -222,21 +222,28 @@ func writeExternalScanner(t *testing.T, name, body string, exitCode int) string 
 	// process and uses a shell-internal temp fd) and writes body directly
 	// to stdout. Body must not contain single quotes.
 	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' '%s'\nexit %d\n", body, exitCode)
+	writeScannerScript(t, path, script)
+	return path
+}
+
+// writeScannerScript writes an executable script at path, then warm-execs it
+// until one exec succeeds. These tests run parallel, so another test's fork
+// can inherit the write fd from os.WriteFile during the window before it
+// closes; exec'ing the script then fails with ETXTBSY until that child execs
+// or exits (golang/go#22315). Nothing reopens the file for writing after this
+// point, so one successful exec proves all later execs are safe. The warmed
+// process is killed immediately after Start, so slow scripts (e.g. sleep)
+// don't stall the helper and the extra run has no observable effect.
+func writeScannerScript(t *testing.T, path, script string) {
+	t.Helper()
 	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
-		t.Fatalf("write scanner: %v", err)
+		t.Fatalf("write scanner script: %v", err)
 	}
-	// These tests run parallel, so another test's fork can inherit the
-	// write fd from os.WriteFile during the window before it closes;
-	// exec'ing the script then fails with ETXTBSY until that child execs
-	// or exits (golang/go#22315). Nothing reopens the file for writing
-	// after this point, so one successful exec proves all later execs are
-	// safe — warm-exec with bounded retries before handing the path to
-	// the test. The script is a pure printf+exit, so the extra run is
-	// side-effect free.
 	for i := 0; ; i++ {
 		cmd := exec.Command(path)
 		err := cmd.Start()
 		if err == nil {
+			_ = cmd.Process.Kill()
 			_ = cmd.Wait()
 			break
 		}
@@ -245,7 +252,6 @@ func writeExternalScanner(t *testing.T, name, body string, exitCode int) string 
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	return path
 }
 
 // TestExternalScanner_ValidOutput — scanner prints valid ScanResult JSON,
@@ -316,10 +322,7 @@ func TestExternalScanner_ExitCode2(t *testing.T) {
 	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "broken")
-	script := "#!/bin/sh\necho 'boom' 1>&2\nexit 2\n"
-	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	writeScannerScript(t, path, "#!/bin/sh\necho 'boom' 1>&2\nexit 2\n")
 
 	res, err := (&ExternalScanner{Path: path}).Scan(dir)
 	if err != nil {
@@ -343,10 +346,7 @@ func TestExternalScanner_Timeout(t *testing.T) {
 	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "slow")
-	script := "#!/bin/sh\nsleep 5\n"
-	if err := os.WriteFile(path, []byte(script), 0755); err != nil {
-		t.Fatal(err)
-	}
+	writeScannerScript(t, path, "#!/bin/sh\nsleep 5\n")
 
 	s := &ExternalScanner{Path: path, Timeout: 100 * time.Millisecond}
 	start := time.Now()
