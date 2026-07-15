@@ -122,6 +122,22 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("filtering matcher group: %w", err)
 	}
 
+	// Translate canonical matcher tool names (e.g. "shell") to the
+	// provider-native names the provider tests its hook regexes against
+	// (e.g. "Bash" for claude-code). Library hook.json stores canonical
+	// matchers, so without this the merged regex silently never fires.
+	// Wildcards, MCP-style patterns, and already-native names pass
+	// through TranslateMatcher unchanged.
+	if matcher := gjson.GetBytes(matcherGroup, "matcher").String(); matcher != "" {
+		translated := converter.TranslateMatcher(matcher, prov.Slug)
+		if translated != matcher {
+			matcherGroup, err = sjson.SetBytes(matcherGroup, "matcher", translated)
+			if err != nil {
+				return "", fmt.Errorf("translating matcher: %w", err)
+			}
+		}
+	}
+
 	// M2: Run the pluggable scanner chain (builtin + any --hook-scanner paths)
 	// against the source hook directory. The builtin scanner examines hook.json
 	// and any recognized script files; external scanners run as subprocesses
@@ -510,8 +526,8 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 // into crush's flat HookConfig ({name, matcher, command, timeout}). Crush
 // hooks are shell commands only, its schema rejects unknown fields, and its
 // timeouts are seconds — the canonical unit, so the value passes through
-// unchanged. Canonical matcher tool names translate to crush's native names
-// (crush matchers are regexes tested against the tool name).
+// unchanged. The matcher arrives already translated to crush's native tool
+// names (installHook translates for every provider before this step).
 func flattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
 	entry := gjson.GetBytes(matcherGroup, "hooks.0")
 	if hType := entry.Get("type").String(); hType != "" && hType != "command" {
@@ -522,9 +538,6 @@ func flattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
 		return nil, fmt.Errorf("crush hooks require a command")
 	}
 	matcher := gjson.GetBytes(matcherGroup, "matcher").String()
-	if matcher != "" {
-		matcher = converter.TranslateMatcher(matcher, "crush")
-	}
 	flat := struct {
 		Name    string `json:"name,omitempty"`
 		Matcher string `json:"matcher,omitempty"`

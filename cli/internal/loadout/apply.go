@@ -255,12 +255,30 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 	hd := hds[0]
 	event := hd.Event
 
+	// Validate before using the event as an sjson key (mirrors installHook M3:
+	// prevents key injection via dots in crafted event names).
+	if !converter.IsValidHookEvent(event) {
+		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	}
+
+	// Translate canonical names to provider-native before the merge (mirrors
+	// installHook): the event becomes the settings key the provider actually
+	// reads, and matcher tool names become the names the provider tests its
+	// hook regexes against. Already-native names pass through unchanged.
+	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
+		event = nativeEvent
+	}
+	matcher := hd.Matcher
+	if matcher != "" {
+		matcher = converter.TranslateMatcher(matcher, prov.Slug)
+	}
+
 	// Build the provider-shape matcher group for merging into settings.json.
 	group := struct {
 		Matcher string                `json:"matcher,omitempty"`
 		Hooks   []converter.HookEntry `json:"hooks"`
 	}{
-		Matcher: hd.Matcher,
+		Matcher: matcher,
 		Hooks:   hd.Hooks,
 	}
 	matcherGroup, err := json.Marshal(group)

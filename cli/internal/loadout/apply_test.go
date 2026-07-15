@@ -202,6 +202,62 @@ func TestApply_KeepMode_MergesHooks(t *testing.T) {
 	}
 }
 
+// TestApply_KeepMode_TranslatesCanonicalHook verifies applyHook translates
+// canonical event names AND matcher tool names to provider-native before the
+// settings merge (syllago-9qgwt, loadout path). Library hook.json stores
+// canonical names ("before_tool_execute", "shell"); merging them verbatim
+// writes config the provider never reads (wrong key) or never matches
+// (wrong tool name regex).
+func TestApply_KeepMode_TranslatesCanonicalHook(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+
+	// Replace the fixture hook with a fully canonical one.
+	hookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "my-hook")
+	hookJSON := `{
+  "spec": "hooks/0.1",
+  "hooks": [
+    {
+      "event": "before_tool_execute",
+      "matcher": "shell",
+      "handler": {"type": "command", "command": "echo guard"}
+    }
+  ]
+}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	manifest.Rules = nil
+	cat.Items = cat.Items[1:] // only the hook
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	if _, err := Apply(manifest, cat, prov, opts); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("reading settings.json: %v", err)
+	}
+
+	entry := gjson.GetBytes(data, "hooks.PreToolUse.0")
+	if !entry.Exists() {
+		t.Fatalf("expected hook under native key hooks.PreToolUse, got: %s", data)
+	}
+	if got := entry.Get("matcher").String(); got != "Bash" {
+		t.Errorf("matcher: got %q, want %q (canonical shell -> claude-code Bash)", got, "Bash")
+	}
+	if gjson.GetBytes(data, "hooks.before_tool_execute").Exists() {
+		t.Errorf("canonical event key must not appear in settings, got: %s", data)
+	}
+}
+
 func TestApply_TryMode_InjectsSessionEndHook(t *testing.T) {
 	t.Parallel()
 	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
