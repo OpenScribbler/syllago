@@ -733,3 +733,38 @@ func TestApply_TryMode_CrushNoSessionEndCorruption(t *testing.T) {
 		t.Errorf("expected a no-auto-revert warning, got warnings: %v", result.Warnings)
 	}
 }
+
+// TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd is a regression
+// test for the codex-review finding on PR #512: try mode used to back up the
+// provider settings file unconditionally "for SessionEnd injection", but since
+// injectSessionEndHook now skips providers with no session_end event, backing
+// up their settings file means loadout remove would restore (clobber) a file
+// this apply never wrote to. For crush that file is the real crush.json.
+func TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+
+	crush := provider.Provider{Name: "Crush", Slug: "crush", ConfigDir: ".config/crush"}
+	cc := provider.Provider{Name: "Claude Code", Slug: "claude-code", ConfigDir: ".claude"}
+
+	// Rules-only loadout — no merge-hook actions, so nothing writes to the
+	// provider settings file except (potentially) session-end injection.
+	actions := []PlannedAction{{Type: catalog.Rules, Name: "r", Action: "create-symlink"}}
+	opts := ApplyOptions{Mode: "try", HomeDir: home, ProjectRoot: t.TempDir()}
+
+	for _, f := range collectBackupFiles(actions, crush, opts) {
+		if strings.HasSuffix(f, "crush.json") {
+			t.Errorf("crush has no session_end event; try-mode rules-only apply must not back up crush.json (remove would clobber user edits), got %v", f)
+		}
+	}
+
+	found := false
+	for _, f := range collectBackupFiles(actions, cc, opts) {
+		if strings.HasSuffix(f, "settings.json") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("claude-code supports session_end; try-mode must back up settings.json so auto-revert injection can be reverted")
+	}
+}

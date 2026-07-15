@@ -512,8 +512,13 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		}
 	}
 
-	// "try" mode always backs up settings.json (for SessionEnd hook injection)
-	if opts.Mode == "try" {
+	// "try" mode backs up the settings file only when a session-end auto-revert
+	// hook will actually be injected — i.e. the provider has a session_end
+	// event. Backing it up otherwise means loadout remove would restore (and
+	// so clobber) a file this apply never wrote to; for crush the settings
+	// file is the real crush.json (syllago-xqlc1). Hooks in the loadout have
+	// already set needsSettings via their merge-hook actions above.
+	if opts.Mode == "try" && converter.ProviderSupportsHookEvent("session_end", prov.Slug) {
 		needsSettings = true
 	}
 
