@@ -1831,6 +1831,14 @@
           "description": "Install method: symlink (default) or copy"
         },
         {
+          "name": "--skip-unsupported",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip hooks whose events the target provider does not support instead of failing"
+        },
+        {
           "name": "--to",
           "shorthand": null,
           "type": "string",

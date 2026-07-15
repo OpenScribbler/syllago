@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -27,6 +28,24 @@ type ApplyOptions struct {
 	HomeDir     string               // defaults to os.UserHomeDir() if empty
 	RepoRoot    string               // catalog repo root for symlink source resolution
 	Resolver    *config.PathResolver // optional path resolver for custom locations
+
+	// SkipUnsupported applies the loadout without the hooks whose events the
+	// target provider has no settings key for, instead of failing. Skipped
+	// hooks are reported in ApplyResult.Warnings.
+	SkipUnsupported bool
+}
+
+// UnsupportedHooksError rejects an apply because the loadout contains hooks
+// whose events the target provider cannot read (syllago-xqlc1). Callers can
+// detect it with errors.As to suggest --skip-unsupported.
+type UnsupportedHooksError struct {
+	Provider string
+	Problems []string // one "name — problem" line per rejected hook
+}
+
+func (e *UnsupportedHooksError) Error() string {
+	return fmt.Sprintf("%d hook(s) cannot be applied to %s:\n  %s",
+		len(e.Problems), e.Provider, strings.Join(e.Problems, "\n  "))
 }
 
 // ApplyResult describes what happened during apply.
@@ -34,6 +53,11 @@ type ApplyResult struct {
 	Actions     []PlannedAction // what was done (or planned, for preview)
 	SnapshotDir string          // set on success for try/keep modes
 	Warnings    []string
+
+	// AutoRevertArmed reports whether a session-end auto-revert hook was
+	// injected (try mode only). False when the provider has no session_end
+	// event — the CLI must not then promise auto-revert.
+	AutoRevertArmed bool
 }
 
 // Apply resolves, validates, and applies a loadout to the provider.
@@ -93,6 +117,18 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 	}
 
+	// Hooks the provider can't read fail the whole apply unless the caller
+	// opted into a partial one — no silent partial coverage (syllago-xqlc1).
+	var unsupported []string
+	for _, a := range actions {
+		if a.Action == "skip-unsupported" {
+			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	if len(unsupported) > 0 && !opts.SkipUnsupported {
+		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
+	}
+
 	// Step 4: Collect files to back up and create snapshot
 	filesToBackup := collectBackupFiles(actions, prov, opts)
 	var symlinkRecords []snapshot.SymlinkRecord
@@ -119,6 +155,11 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 
 	// Step 5: Apply each action. On failure, rollback.
 	var warnings []string
+	for _, a := range actions {
+		if a.Action == "skip-unsupported" {
+			warnings = append(warnings, fmt.Sprintf("skipped %s: %s", a.Name, a.Problem))
+		}
+	}
 	applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up
@@ -134,17 +175,23 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
 
-	// Step 6 (C7): For "try" mode, inject SessionEnd hook for auto-revert
+	// Step 6 (C7): For "try" mode, inject a session-end hook for auto-revert.
+	autoRevertArmed := false
 	if opts.Mode == "try" {
-		if err := injectSessionEndHook(prov, opts.HomeDir, opts.Resolver); err != nil {
-			warnings = append(warnings, fmt.Sprintf("failed to inject SessionEnd hook: %v", err))
+		injected, err := injectSessionEndHook(prov, opts.HomeDir, opts.Resolver)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("failed to inject session-end hook: %v", err))
+		} else if !injected {
+			warnings = append(warnings, fmt.Sprintf("%s has no session-end hook event, so this loadout cannot auto-revert; run 'syllago loadout remove' to undo it", prov.Name))
 		}
+		autoRevertArmed = injected
 	}
 
 	return &ApplyResult{
-		Actions:     actions,
-		SnapshotDir: snapshotDir,
-		Warnings:    warnings,
+		Actions:         actions,
+		SnapshotDir:     snapshotDir,
+		Warnings:        warnings,
+		AutoRevertArmed: autoRevertArmed,
 	}, nil
 }
 
@@ -158,7 +205,7 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 	source := "loadout:" + loadoutName
 
 	for _, a := range actions {
-		if a.Action == "skip-exists" {
+		if a.Action == "skip-exists" || a.Action == "skip-unsupported" {
 			continue
 		}
 
@@ -209,12 +256,20 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 // settingsPathFor computes the settings.json path for a provider, using the
 // resolver's base dir if configured, otherwise falling back to homeDir.
 func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) string {
+	base := homeDir
 	if resolver != nil {
 		if bd := resolver.BaseDir(prov.Slug); bd != "" {
-			return filepath.Join(bd, prov.ConfigDir, "settings.json")
+			base = bd
 		}
 	}
-	return filepath.Join(homeDir, prov.ConfigDir, "settings.json")
+	// Crush keeps hooks in its unified crush.json, not a settings.json
+	// (mirrors installer.hookSettingsPathImpl). Routing here also covers the
+	// snapshot backup list and remove, which build paths via this function.
+	filename := "settings.json"
+	if prov.Slug == "crush" {
+		filename = "crush.json"
+	}
+	return filepath.Join(base, prov.ConfigDir, filename)
 }
 
 // applyHook reads a hook JSON file and appends it to settings.json.
@@ -261,6 +316,14 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
 	}
 
+	// Reject events the provider has no settings key for (mirrors installHook,
+	// syllago-xqlc1). Apply already gates these via the skip-unsupported
+	// preview action; this is the defense-in-depth backstop at the actual
+	// merge point so dead config can never slip through if the two diverge.
+	if !converter.ProviderSupportsHookEvent(event, prov.Slug) {
+		return fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, event)
+	}
+
 	// Translate canonical names to provider-native before the merge (mirrors
 	// installHook): the event becomes the settings key the provider actually
 	// reads, and matcher tool names become the names the provider tests its
@@ -289,14 +352,26 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 	// Resolve relative command paths to absolute
 	matcherGroup = resolveHookCommands(matcherGroup, ref.Item.Path)
 
-	// Append to settings.json
+	// Crush stores flat hook entries ({name, matcher, command, timeout}) in
+	// crush.json rather than CC-shape matcher groups (mirrors installHook).
+	// Flatten last so command resolution above sees the standard shape.
+	commandPath := "hooks.0.command"
+	if prov.Slug == "crush" {
+		matcherGroup, err = installer.FlattenForCrush(matcherGroup, manifest.Hooks[0].Name)
+		if err != nil {
+			return fmt.Errorf("hook %q: %w", ref.Name, err)
+		}
+		commandPath = "command"
+	}
+
+	// Append to the provider's hook config file
 	settingsPath := settingsPathFor(prov, homeDir, resolver)
 	if err := appendHookEntry(settingsPath, event, matcherGroup); err != nil {
 		return err
 	}
 
-	// Extract command for tracking
-	command := gjson.GetBytes(matcherGroup, "hooks.0.command").String()
+	// Extract command for tracking (crush entries are flat)
+	command := gjson.GetBytes(matcherGroup, commandPath).String()
 
 	inst.Hooks = append(inst.Hooks, installer.InstalledHook{
 		Name:        ref.Name,
@@ -381,13 +456,26 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 	return nil
 }
 
-// injectSessionEndHook appends a SessionEnd hook that runs "syllago loadout remove --auto".
-// This hook is NOT tracked in installed.json -- it gets reverted when the snapshot restores
-// settings.json.
-func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *config.PathResolver) error {
+// injectSessionEndHook appends a session-end hook that runs
+// "syllago loadout remove --auto" for try-mode auto-revert. The hook is NOT
+// tracked in installed.json — it gets reverted when the snapshot restores the
+// settings file.
+//
+// Returns injected=false (no error) when the provider has no session_end
+// event: the key would be dead config the provider never reads, and for crush
+// it would corrupt the real crush.json (wrong key and CC-shape group). Callers
+// warn the user to revert manually in that case.
+func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *config.PathResolver) (injected bool, err error) {
+	// Translate to the provider-native event key; skip if unsupported so we
+	// never write a key the provider can't read (syllago-xqlc1).
+	event, ok := converter.TranslateHookEvent("session_end", prov.Slug)
+	if !ok {
+		return false, nil
+	}
+
 	settingsPath := settingsPathFor(prov, homeDir, resolver)
 
-	// Build the SessionEnd hook entry
+	// Build the session-end hook entry
 	hookEntry := map[string]interface{}{
 		"matcher": "",
 		"hooks": []map[string]interface{}{
@@ -400,10 +488,13 @@ func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *conf
 
 	hookJSON, err := json.Marshal(hookEntry)
 	if err != nil {
-		return fmt.Errorf("marshaling SessionEnd hook: %w", err)
+		return false, fmt.Errorf("marshaling session-end hook: %w", err)
 	}
 
-	return appendHookEntry(settingsPath, "SessionEnd", hookJSON)
+	if err := appendHookEntry(settingsPath, event, hookJSON); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // collectBackupFiles determines which files need backing up before apply.

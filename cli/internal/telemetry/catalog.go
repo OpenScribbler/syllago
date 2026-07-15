@@ -124,6 +124,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"loadout_apply", "add"},
 				},
 				{
+					Name:        "skip_unsupported",
+					Type:        "bool",
+					Description: "Whether --skip-unsupported was used to apply past provider-unsupported hooks",
+					Example:     false,
+					Commands:    []string{"loadout_apply"},
+				},
+				{
 					Name:        "discovery_candidate_count",
 					Type:        "int",
 					Description: "Number of monolithic rule files considered by add (D18)",

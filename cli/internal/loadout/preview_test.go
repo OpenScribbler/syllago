@@ -3,6 +3,7 @@ package loadout
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -323,5 +324,87 @@ func TestPreview_RegularFileConflict(t *testing.T) {
 	}
 	if actions[0].Action != "error-conflict" {
 		t.Errorf("expected error-conflict for regular file, got %s", actions[0].Action)
+	}
+}
+
+// TestPreview_HookUnsupportedEvent: a hook whose event the target provider
+// has no settings key for is planned as "skip-unsupported" instead of
+// "merge-hook", so Apply can gate on it (syllago-xqlc1). before_tool_execute
+// has no windsurf mapping — merging it would write dead config windsurf
+// never reads.
+func TestPreview_HookUnsupportedEvent(t *testing.T) {
+	t.Parallel()
+	repoRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(repoRoot, "hooks", "dead-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo hi"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	prov := provider.Provider{
+		Name: "Windsurf",
+		Slug: "windsurf",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return "__json_merge__"
+		},
+	}
+
+	refs := []ResolvedRef{
+		{Type: catalog.Hooks, Name: "dead-hook", Item: catalog.ContentItem{
+			Name: "dead-hook", Type: catalog.Hooks, Path: hookDir,
+		}},
+	}
+
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(actions) != 1 {
+		t.Fatalf("expected 1 action, got %d", len(actions))
+	}
+	if actions[0].Action != "skip-unsupported" {
+		t.Errorf("expected skip-unsupported, got %s", actions[0].Action)
+	}
+	if !strings.Contains(actions[0].Problem, "before_tool_execute") {
+		t.Errorf("problem should name the event, got %q", actions[0].Problem)
+	}
+}
+
+// TestPreview_HookInvalidEvent: a hook with an unknown/malformed event name is
+// NOT plannable as skip-unsupported — it must stay a merge-hook action so
+// applyHook raises the hard injection-guard error, which fires even under
+// --skip-unsupported. Only real-but-unmapped events are skippable
+// (syllago-xqlc1, codex review finding).
+func TestPreview_HookInvalidEvent(t *testing.T) {
+	t.Parallel()
+	repoRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(repoRoot, "hooks", "bad-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"not_a_real_event","handler":{"type":"command","command":"echo hi"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	prov := provider.Provider{
+		Name: "Windsurf",
+		Slug: "windsurf",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return "__json_merge__"
+		},
+	}
+
+	refs := []ResolvedRef{
+		{Type: catalog.Hooks, Name: "bad-hook", Item: catalog.ContentItem{
+			Name: "bad-hook", Type: catalog.Hooks, Path: hookDir,
+		}},
+	}
+
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if actions[0].Action != "merge-hook" {
+		t.Errorf("invalid event should stay merge-hook (so applyHook errors), got %s", actions[0].Action)
 	}
 }

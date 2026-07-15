@@ -41,7 +41,7 @@ func TestInstallHook_E2E_InlineCommand(t *testing.T) {
 
 	prov := provider.Provider{
 		Name:      "test-provider",
-		Slug:      "test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 
@@ -105,7 +105,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 
 	prov := provider.Provider{
 		Name:      "test-provider",
-		Slug:      "test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 
@@ -176,7 +176,7 @@ func TestInstallHook_E2E_Uninstall(t *testing.T) {
 
 	prov := provider.Provider{
 		Name:      "test-provider",
-		Slug:      "test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 

@@ -797,3 +797,37 @@ func TestTranslateTool_VSCodeCopilot(t *testing.T) {
 		})
 	}
 }
+
+// TestProviderSupportsHookEvent verifies the support predicate that merge
+// paths use to reject dead config (syllago-xqlc1). TranslateHookEvent's
+// ok=false conflates "already provider-native" with "known canonical event
+// this provider has no key for"; this predicate separates them: an event is
+// supported iff it is canonical with a mapping for the provider, or it is
+// the provider's OWN native name. Another provider's native name is dead
+// config just like an unmapped canonical.
+func TestProviderSupportsHookEvent(t *testing.T) {
+	tests := []struct {
+		name  string
+		event string
+		slug  string
+		want  bool
+	}{
+		{"canonical with mapping", "before_tool_execute", "claude-code", true},
+		{"canonical without mapping", "before_tool_execute", "windsurf", false},
+		{"canonical without mapping for crush", "session_end", "crush", false},
+		{"own native name", "PreToolUse", "claude-code", true},
+		{"own native name windsurf", "pre_user_prompt", "windsurf", true},
+		{"own native name crush", "PreToolUse", "crush", true},
+		{"another provider's native name", "PreToolUse", "windsurf", false},
+		{"another provider's native name gemini", "BeforeTool", "claude-code", false},
+		{"unknown event", "not_a_real_event", "claude-code", false},
+		{"unknown provider slug", "before_tool_execute", "no-such-provider", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ProviderSupportsHookEvent(tt.event, tt.slug); got != tt.want {
+				t.Errorf("ProviderSupportsHookEvent(%q, %q) = %v, want %v", tt.event, tt.slug, got, tt.want)
+			}
+		})
+	}
+}
