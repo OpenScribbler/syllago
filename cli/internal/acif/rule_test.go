@@ -133,6 +133,19 @@ func TestRuleMechanismDecode(t *testing.T) {
 		"content":  map[string]any{"source_sub_mode": "sometimes"},
 	})
 	assertReject(t, err, ErrRuleActivationModeUnmappable)
+
+	// [ACIF-RULE] §10 envelope faults: modeless configurations reject
+	// activation_mode_missing, never the totality net.
+	envelopeFaults := []map[string]any{
+		{"provider": "rule-activation-source"},
+		{"provider": "rule-activation-source", "content": "not an object"},
+		{"provider": "rule-activation-source", "content": map[string]any{"globs": []any{"*.md"}}},
+		{"provider": "rule-activation-source", "content": map[string]any{"source_sub_mode": 7}},
+	}
+	for _, cfg := range envelopeFaults {
+		_, err := CanonicalizeRuleProviderConfig(cfg)
+		assertReject(t, err, ErrRuleActivationModeMissing)
+	}
 }
 
 func TestRuleDerivedProjectionAndDegradedRender(t *testing.T) {

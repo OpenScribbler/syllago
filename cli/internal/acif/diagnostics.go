@@ -39,6 +39,7 @@ const (
 	ErrHookScriptFileMissing          = "acif.hook.script_file_missing"
 	ErrHookScriptPathInvalid          = "acif.hook.script_path_invalid"
 	ErrHookPlatformUnmappable         = "acif.hook.platform_unmappable"
+	ErrHookPlatformMechanismMalformed = "acif.hook.platform_mechanism_malformed"
 	ErrHookNoDefaultForDegradedRender = "acif.hook.no_default_for_degraded_render"
 
 	DiagHookPlatformOverrideDropped     = "acif.hook.platform_override_dropped"

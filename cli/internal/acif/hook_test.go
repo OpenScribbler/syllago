@@ -516,7 +516,32 @@ func TestHookMechanisms(t *testing.T) {
 			"path":"unused.json",
 			"content":{"shell":"bash"}
 		}`), HookOpts{})
+		expectHookReject(t, err, ErrHookPlatformMechanismMalformed)
+	})
+
+	t.Run("unknown mechanism token rejects the totality net", func(t *testing.T) {
+		_, err := CanonicalizeProviderConfig(hookBlock(t, `{
+			"provider":"unknown-per-os-table",
+			"path":"unused.json",
+			"content":{"platforms":{"win32":"hooks/w.cmd"}}
+		}`), HookOpts{})
 		expectHookReject(t, err, ErrHookPlatformUnmappable)
+	})
+
+	t.Run("malformed instances of recognized mechanisms reject malformed, never unmappable", func(t *testing.T) {
+		cases := []string{
+			`{"provider":"per-os-key-map","path":"u.json","content":{"windows":123,"command":"hooks/base.sh"}}`,
+			`{"provider":"dual-shell-fields","path":"u.json","content":{"bash":"hooks/run.sh","fish":"hooks/run.fish"}}`,
+			`{"provider":"dual-shell-fields","path":"u.json","content":{}}`,
+			`{"provider":"filename-extension-convention","path":"u.json","content":{"path":"hooks/x.sh"}}`,
+			`{"provider":"per-os-key-map","path":"u.json","content":"{not json"}`,
+		}
+		for _, cfg := range cases {
+			_, err := CanonicalizeProviderConfig(hookBlock(t, cfg), HookOpts{})
+			expectHookReject(t, err, ErrHookPlatformMechanismMalformed)
+		}
+		_, err := CanonicalizeProviderConfig(map[string]any{"provider": "per-os-key-map", "path": "u.json"}, HookOpts{})
+		expectHookReject(t, err, ErrHookPlatformMechanismMalformed)
 	})
 
 	t.Run("identity merge", func(t *testing.T) {
