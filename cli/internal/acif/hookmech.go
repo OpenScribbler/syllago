@@ -10,7 +10,7 @@ func CanonicalizeProviderConfig(config map[string]any, opts HookOpts) (*HookResu
 	provider, _ := config["provider"].(string)
 	content, ok := config["content"]
 	if !ok {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "provider_config carries no content field; supply the mechanism content")
 	}
 
 	decoded, err := decodeProviderContent(content)
@@ -41,7 +41,7 @@ func decodeProviderContent(content any) (any, error) {
 	if s, ok := content.(string); ok {
 		var decoded any
 		if err := decodeJSONUseNumberBytes([]byte(s), &decoded); err != nil {
-			return nil, hookReject(ErrHookPlatformUnmappable, err.Error())
+			return nil, hookReject(ErrHookPlatformMechanismMalformed, "content string does not decode as JSON; supply structured mechanism content: "+err.Error())
 		}
 		return decoded, nil
 	}
@@ -51,7 +51,7 @@ func decodeProviderContent(content any) (any, error) {
 func canonicalizePerOSKeyMap(content any, opts HookOpts) (*HookResult, error) {
 	obj, ok := content.(map[string]any)
 	if !ok {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "per-os-key-map content must be an object")
 	}
 
 	var scripts []map[string]any
@@ -62,13 +62,13 @@ func canonicalizePerOSKeyMap(content any, opts HookOpts) (*HookResult, error) {
 		case "command":
 			path, ok := raw.(string)
 			if !ok {
-				return nil, hookReject(ErrHookPlatformUnmappable, key)
+				return nil, hookReject(ErrHookPlatformMechanismMalformed, "value under \""+key+"\" must be a string entrypoint path")
 			}
 			defaultEntry = map[string]any{"type": "file", "path": path}
 		case "windows", "linux", "osx":
 			path, ok := raw.(string)
 			if !ok {
-				return nil, hookReject(ErrHookPlatformUnmappable, key)
+				return nil, hookReject(ErrHookPlatformMechanismMalformed, "value under \""+key+"\" must be a string entrypoint path")
 			}
 			osTag := key
 			if osTag == "osx" {
@@ -85,7 +85,7 @@ func canonicalizePerOSKeyMap(content any, opts HookOpts) (*HookResult, error) {
 	}
 
 	if len(passthrough) > 0 && defaultEntry == nil {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "passthrough keys require a base command entry to carry them; add a command key")
 	}
 	if defaultEntry != nil {
 		for k, v := range passthrough {
@@ -141,13 +141,13 @@ func mergeConstrainedScriptIdentities(scripts []map[string]any) []map[string]any
 func canonicalizeDualShellFields(content any, opts HookOpts) (*HookResult, error) {
 	obj, ok := content.(map[string]any)
 	if !ok {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "dual-shell-fields content must be an object")
 	}
 	var scripts []map[string]any
 	for key, raw := range obj {
 		path, ok := raw.(string)
 		if !ok {
-			return nil, hookReject(ErrHookPlatformUnmappable, key)
+			return nil, hookReject(ErrHookPlatformMechanismMalformed, "value under \""+key+"\" must be a string entrypoint path")
 		}
 		switch key {
 		case "bash":
@@ -163,11 +163,11 @@ func canonicalizeDualShellFields(content any, opts HookOpts) (*HookResult, error
 				"os":   []any{"windows"},
 			})
 		default:
-			return nil, hookReject(ErrHookPlatformUnmappable, key)
+			return nil, hookReject(ErrHookPlatformMechanismMalformed, "key \""+key+"\" is not in the closed dual-shell key set {bash, powershell}")
 		}
 	}
 	if len(scripts) == 0 {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "dual-shell-fields requires at least one of bash, powershell")
 	}
 	return canonicalizeSynthesizedScripts(scripts, "inferred-from-convention", []Diagnostic{{ID: DiagHookPlatformShellOSProxy}}, opts)
 }
@@ -175,11 +175,11 @@ func canonicalizeDualShellFields(content any, opts HookOpts) (*HookResult, error
 func canonicalizeFilenameExtensionConvention(content any, opts HookOpts) (*HookResult, error) {
 	obj, ok := content.(map[string]any)
 	if !ok {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "filename-extension-convention content must be an object")
 	}
 	path, ok := obj["file"].(string)
 	if !ok {
-		return nil, hookReject(ErrHookPlatformUnmappable, "")
+		return nil, hookReject(ErrHookPlatformMechanismMalformed, "filename-extension-convention requires a string file field")
 	}
 
 	script := map[string]any{"type": "file", "path": path}

@@ -70,8 +70,17 @@ func CanonicalizeRuleProviderConfig(config map[string]any) (*ItemResult, error) 
 	if provider, _ := config["provider"].(string); provider != "rule-activation-source" {
 		return nil, &RejectError{ID: ErrRuleActivationModeUnmappable}
 	}
-	content, _ := config["content"].(map[string]any)
-	mode, _ := content["source_sub_mode"].(string)
+	// [ACIF-RULE] §10 envelope rule: a modeless provider configuration is a
+	// present activation declaration without a mode claim — never the
+	// totality net.
+	content, ok := config["content"].(map[string]any)
+	if !ok {
+		return nil, &RejectError{ID: ErrRuleActivationModeMissing, Detail: "provider_config content must be an object carrying source_sub_mode"}
+	}
+	mode, ok := content["source_sub_mode"].(string)
+	if !ok || mode == "" {
+		return nil, &RejectError{ID: ErrRuleActivationModeMissing, Detail: "content carries no source_sub_mode string; declare the source-mechanism token"}
+	}
 	activation := map[string]any{}
 	switch mode {
 	case "always_on":
