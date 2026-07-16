@@ -52,6 +52,7 @@ func init() {
 	loadoutApplyCmd.Flags().String("base-dir", "", "Override base directory for content installation")
 	loadoutApplyCmd.Flags().String("to", "", "Target provider (overrides manifest provider; defaults to claude-code if unset)")
 	loadoutApplyCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
+	loadoutApplyCmd.Flags().Bool("skip-unsupported", false, "Skip hooks whose events the target provider does not support instead of failing")
 	loadoutCmd.AddCommand(loadoutApplyCmd)
 }
 
@@ -179,13 +180,15 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	if methodStr == "copy" {
 		method = installer.MethodCopy
 	}
+	skipUnsupported, _ := cmd.Flags().GetBool("skip-unsupported")
 
 	opts := loadout.ApplyOptions{
-		Mode:        mode,
-		Method:      method,
-		ProjectRoot: projectRoot,
-		RepoRoot:    root,
-		Resolver:    resolver,
+		Mode:            mode,
+		Method:          method,
+		ProjectRoot:     projectRoot,
+		RepoRoot:        root,
+		Resolver:        resolver,
+		SkipUnsupported: skipUnsupported,
 	}
 
 	// Multi-provider path: manifest declares providers[] and --to is not set.
@@ -193,46 +196,61 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	// Run 'syllago loadout remove' once per provider to undo.
 	effectiveProviders := manifest.EffectiveProviders()
 	if toSlug == "" && len(effectiveProviders) > 1 {
-		totalActions := 0
-		for _, slug := range effectiveProviders {
-			p := findProviderBySlug(slug)
-			if p == nil {
-				fmt.Fprintf(output.ErrWriter, "Warning: unknown provider %q in loadout manifest — skipping\n", slug)
-				continue
-			}
-			result, err := loadout.Apply(manifest, cat, *p, opts)
-			if err != nil {
-				return output.NewStructuredErrorDetail(output.ErrInstallConflict,
-					fmt.Sprintf("applying loadout to %s", slug),
-					"Check error details and resolve conflicts", err.Error())
-			}
-			if !output.JSON {
-				if mode == "preview" {
-					fmt.Fprintf(output.Writer, "[%s] Preview:\n", slug)
-				} else {
-					fmt.Fprintf(output.Writer, "[%s] Applied (%s mode):\n", slug, mode)
-				}
-				printLoadoutActions(result.Actions)
-				for _, w := range result.Warnings {
-					fmt.Fprintf(output.ErrWriter, "  Warning: %s\n", w)
-				}
-				fmt.Fprintln(output.Writer)
-			} else {
-				output.Print(result)
-			}
-			totalActions += len(result.Actions)
-		}
-		if mode == "try" {
-			fmt.Fprintln(output.Writer, "This loadout is temporary. It will auto-revert when the session ends.")
-			fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
-		}
-		telemetry.Enrich("provider", strings.Join(effectiveProviders, ","))
-		telemetry.Enrich("mode", mode)
-		telemetry.Enrich("action_count", totalActions)
-		return nil
+		return applyLoadoutMultiProvider(manifest, cat, opts, effectiveProviders, mode, skipUnsupported)
 	}
+	return applyLoadoutSingleProvider(manifest, cat, opts, toSlug, effectiveProviders, mode, skipUnsupported)
+}
 
-	// Single-provider path: --to flag > manifest.Providers[0] > manifest.Provider > default claude-code
+// applyLoadoutMultiProvider applies a loadout to each provider the manifest
+// lists, each with its own snapshot, and prints a per-provider summary.
+func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog, opts loadout.ApplyOptions, effectiveProviders []string, mode string, skipUnsupported bool) error {
+	totalActions := 0
+	allAutoRevertArmed := true
+	for _, slug := range effectiveProviders {
+		p := findProviderBySlug(slug)
+		if p == nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: unknown provider %q in loadout manifest — skipping\n", slug)
+			continue
+		}
+		result, err := loadout.Apply(manifest, cat, *p, opts)
+		if err != nil {
+			return output.NewStructuredErrorDetail(output.ErrInstallConflict,
+				fmt.Sprintf("applying loadout to %s", slug),
+				loadoutApplyHint(err), err.Error())
+		}
+		if mode == "try" && !result.AutoRevertArmed {
+			allAutoRevertArmed = false
+		}
+		if !output.JSON {
+			if mode == "preview" {
+				fmt.Fprintf(output.Writer, "[%s] Preview:\n", slug)
+			} else {
+				fmt.Fprintf(output.Writer, "[%s] Applied (%s mode):\n", slug, mode)
+			}
+			printLoadoutActions(result.Actions)
+			for _, w := range result.Warnings {
+				fmt.Fprintf(output.ErrWriter, "  Warning: %s\n", w)
+			}
+			fmt.Fprintln(output.Writer)
+		} else {
+			output.Print(result)
+		}
+		totalActions += len(result.Actions)
+	}
+	if mode == "try" {
+		printTryModeFooter(allAutoRevertArmed, "at least one provider")
+	}
+	telemetry.Enrich("provider", strings.Join(effectiveProviders, ","))
+	telemetry.Enrich("mode", mode)
+	telemetry.Enrich("action_count", totalActions)
+	telemetry.Enrich("skip_unsupported", skipUnsupported)
+	return nil
+}
+
+// applyLoadoutSingleProvider resolves the single target provider (--to flag >
+// manifest.Providers[0] > manifest.Provider > default claude-code) and applies
+// the loadout to it.
+func applyLoadoutSingleProvider(manifest *loadout.Manifest, cat *catalog.Catalog, opts loadout.ApplyOptions, toSlug string, effectiveProviders []string, mode string, skipUnsupported bool) error {
 	var prov provider.Provider
 	targetSlug := toSlug
 	if targetSlug == "" && len(effectiveProviders) == 1 {
@@ -252,7 +270,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 
 	result, err := loadout.Apply(manifest, cat, prov, opts)
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrInstallConflict, "applying loadout", "Check error details and resolve conflicts", err.Error())
+		return output.NewStructuredErrorDetail(output.ErrInstallConflict, "applying loadout", loadoutApplyHint(err), err.Error())
 	}
 
 	if output.JSON {
@@ -273,14 +291,38 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	}
 
 	if mode == "try" {
-		fmt.Fprintln(output.Writer, "\nThis loadout is temporary. It will auto-revert when the session ends.")
-		fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
+		fmt.Fprintln(output.Writer)
+		printTryModeFooter(result.AutoRevertArmed, prov.Name)
 	}
 
 	telemetry.Enrich("provider", prov.Slug)
 	telemetry.Enrich("mode", mode)
 	telemetry.Enrich("action_count", len(result.Actions))
+	telemetry.Enrich("skip_unsupported", skipUnsupported)
 	return nil
+}
+
+// printTryModeFooter prints the try-mode temporary-loadout notice, telling the
+// user whether auto-revert is armed. subject names what cannot auto-revert
+// when it isn't (a provider name, or "at least one provider").
+func printTryModeFooter(autoRevertArmed bool, subject string) {
+	if autoRevertArmed {
+		fmt.Fprintln(output.Writer, "This loadout is temporary. It will auto-revert when the session ends.")
+		fmt.Fprintln(output.Writer, "If auto-revert fails, run: syllago loadout remove")
+		return
+	}
+	fmt.Fprintf(output.Writer, "This loadout is temporary, but %s cannot auto-revert.\n", subject)
+	fmt.Fprintln(output.Writer, "Run 'syllago loadout remove' to undo it.")
+}
+
+// loadoutApplyHint picks the actionable hint for a failed apply: unsupported
+// hooks have a dedicated escape hatch, everything else is a conflict.
+func loadoutApplyHint(err error) string {
+	var uhErr *loadout.UnsupportedHooksError
+	if errors.As(err, &uhErr) {
+		return "Re-run with --skip-unsupported to apply the compatible items"
+	}
+	return "Check error details and resolve conflicts"
 }
 
 // printLoadoutActions prints a formatted list of planned actions.
@@ -292,7 +334,7 @@ func printLoadoutActions(actions []loadout.PlannedAction) {
 			symbol = "+ "
 		case "merge-hook", "merge-mcp":
 			symbol = "* "
-		case "skip-exists":
+		case "skip-exists", "skip-unsupported":
 			symbol = "= "
 		case "error-conflict":
 			symbol = "! "

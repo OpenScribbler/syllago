@@ -146,6 +146,15 @@
           ]
         },
         {
+          "name": "skip_unsupported",
+          "type": "bool",
+          "description": "Whether --skip-unsupported was used to apply past provider-unsupported hooks",
+          "example": false,
+          "commands": [
+            "loadout_apply"
+          ]
+        },
+        {
           "name": "discovery_candidate_count",
           "type": "int",
           "description": "Number of monolithic rule files considered by add (D18)",

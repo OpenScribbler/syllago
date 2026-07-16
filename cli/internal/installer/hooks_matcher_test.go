@@ -47,10 +47,9 @@ func TestInstallHook_TranslatesMatcher(t *testing.T) {
 		{provider.ClaudeCode, "PreToolUse", "Bash"},
 		{provider.GeminiCLI, "BeforeTool", "run_shell_command"},
 		{provider.Cursor, "PreToolUse", "run_terminal_cmd"},
-		// Windsurf has no native before_tool_execute mapping, so the event
-		// key stays canonical (event-support enforcement is out of scope
-		// here) — but the matcher must still translate for the slug.
-		{provider.Windsurf, "before_tool_execute", "run_command"},
+		// Windsurf is absent: it has no before_tool_execute mapping, so the
+		// install is rejected outright — see
+		// TestInstallHook_RejectsUnsupportedEvent (syllago-xqlc1).
 	}
 
 	for _, tt := range tests {

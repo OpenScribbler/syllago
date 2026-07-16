@@ -159,7 +159,7 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 
 	prov := provider.Provider{
 		Name:      "test-provider",
-		Slug:      "test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 
@@ -419,7 +419,7 @@ func TestInstallHook_RejectsDuplicate(t *testing.T) {
 
 	prov := provider.Provider{
 		Name:      "test-provider",
-		Slug:      "test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 
@@ -636,7 +636,7 @@ func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, pro
 
 	prov = provider.Provider{
 		Name:      "scan-test-provider",
-		Slug:      "scan-test",
+		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
 		ConfigDir: filepath.Base(configDir),
 	}
 

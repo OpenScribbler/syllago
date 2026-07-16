@@ -246,6 +246,28 @@ func TranslateHookEvent(event, targetSlug string) (string, bool) {
 	return translated, true
 }
 
+// ProviderSupportsHookEvent reports whether the target provider can actually
+// read a hook merged under this event: either a canonical event with a
+// mapping for the provider, or the provider's own native event name.
+// TranslateHookEvent's ok=false cannot distinguish "already native" from
+// "known canonical event with no key for this provider" — merge paths use
+// this predicate to reject the latter instead of writing dead config
+// (syllago-xqlc1). Another provider's native name is equally unreadable and
+// is likewise unsupported.
+func ProviderSupportsHookEvent(event, targetSlug string) bool {
+	if m, ok := HookEvents[event]; ok {
+		if _, mapped := m[targetSlug]; mapped {
+			return true
+		}
+	}
+	for _, m := range HookEvents {
+		if m[targetSlug] == event {
+			return true
+		}
+	}
+	return false
+}
+
 // IsValidHookEvent reports whether the event name is a known canonical or
 // provider-native hook event. This prevents sjson key injection via dots or
 // other special characters in crafted event names.

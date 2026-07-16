@@ -106,6 +106,14 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
 	}
 
+	// Reject events the provider has no settings key for (canonical events
+	// with no mapping for this provider, or another provider's native name).
+	// Merging those writes config under a key the provider never reads —
+	// silently dead, reported as success (syllago-xqlc1).
+	if !converter.ProviderSupportsHookEvent(event, prov.Slug) {
+		return "", fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, event)
+	}
+
 	// Translate canonical event names (e.g. "before_tool_execute") to the
 	// provider-native key (e.g. "PreToolUse") so the hook lands under the
 	// JSON path the provider actually reads. If the event is already
@@ -174,15 +182,13 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	}
 
 	// Crush stores flat hook entries ({name, command, matcher, timeout})
-	// rather than CC-shape matcher groups, and fires hooks only on
-	// PreToolUse — any other event key would be dead config crush never
-	// reads. Flatten last so the whitelist, scanner, and script-resolution
-	// steps above all see the standard shape.
+	// rather than CC-shape matcher groups. The event is necessarily
+	// PreToolUse here: crush's only HookEvents entry is before_tool_execute,
+	// so the support check above already rejected everything else. Flatten
+	// last so the whitelist, scanner, and script-resolution steps above all
+	// see the standard shape.
 	if prov.Slug == "crush" {
-		if event != "PreToolUse" {
-			return "", fmt.Errorf("hook %q: crush supports only the before_tool_execute (PreToolUse) hook event; got %q", item.Name, event)
-		}
-		matcherGroup, err = flattenForCrush(matcherGroup, hookName)
+		matcherGroup, err = FlattenForCrush(matcherGroup, hookName)
 		if err != nil {
 			return "", fmt.Errorf("hook %q: %w", item.Name, err)
 		}
@@ -522,13 +528,15 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	return result, nil
 }
 
-// flattenForCrush converts a CC-shape matcher group ({matcher, hooks:[entry]})
+// FlattenForCrush converts a CC-shape matcher group ({matcher, hooks:[entry]})
 // into crush's flat HookConfig ({name, matcher, command, timeout}). Crush
 // hooks are shell commands only, its schema rejects unknown fields, and its
 // timeouts are seconds — the canonical unit, so the value passes through
-// unchanged. The matcher arrives already translated to crush's native tool
-// names (installHook translates for every provider before this step).
-func flattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
+// unchanged. The matcher must arrive already translated to crush's native
+// tool names (both installHook and loadout applyHook translate for every
+// provider before this step). Exported so the loadout merge path can share
+// the same flattening.
+func FlattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
 	entry := gjson.GetBytes(matcherGroup, "hooks.0")
 	if hType := entry.Get("type").String(); hType != "" && hType != "command" {
 		return nil, fmt.Errorf("crush hooks only support command handlers (got type %q)", hType)

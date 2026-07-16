@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -273,9 +274,12 @@ func TestApply_TryMode_InjectsSessionEndHook(t *testing.T) {
 		RepoRoot:    projectRoot,
 	}
 
-	_, err := Apply(manifest, cat, prov, opts)
+	result, err := Apply(manifest, cat, prov, opts)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.AutoRevertArmed {
+		t.Error("claude-code supports session_end, so AutoRevertArmed should be true")
 	}
 
 	// Verify settings.json has the SessionEnd hook
@@ -422,4 +426,345 @@ func TestReadJSONFileOrEmpty(t *testing.T) {
 			t.Errorf("error should mention invalid JSON, got: %v", err)
 		}
 	})
+}
+
+// setupUnsupportedHookEnv builds a windsurf-targeted env with one rule that
+// works and one hook whose event (before_tool_execute) windsurf has no
+// settings key for.
+func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, manifest *Manifest, cat *catalog.Catalog, prov provider.Provider) {
+	t.Helper()
+	homeDir = t.TempDir()
+	projectRoot = t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+	os.MkdirAll(filepath.Join(homeDir, ".codeium", "rules"), 0755)
+
+	ruleDir := filepath.Join(projectRoot, "content", "rules", "windsurf", "my-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# My Rule"), 0644)
+
+	hookDir := filepath.Join(projectRoot, "content", "hooks", "windsurf", "dead-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo hi"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	manifest = &Manifest{
+		Kind:     "loadout",
+		Version:  1,
+		Provider: "windsurf",
+		Name:     "test-loadout",
+		Rules:    []ItemRef{{Name: "my-rule"}},
+		Hooks:    []ItemRef{{Name: "dead-hook"}},
+	}
+
+	cat = &catalog.Catalog{
+		RepoRoot: projectRoot,
+		Items: []catalog.ContentItem{
+			{Name: "my-rule", Type: catalog.Rules, Provider: "windsurf", Path: ruleDir},
+			{Name: "dead-hook", Type: catalog.Hooks, Provider: "windsurf", Path: hookDir},
+		},
+	}
+
+	prov = provider.Provider{
+		Name:      "Windsurf",
+		Slug:      "windsurf",
+		ConfigDir: ".codeium",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			switch ct {
+			case catalog.Rules:
+				return filepath.Join(home, ".codeium", "rules")
+			case catalog.Hooks:
+				return "__json_merge__"
+			}
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool {
+			return ct == catalog.Rules || ct == catalog.Hooks
+		},
+	}
+
+	return
+}
+
+// TestApply_UnsupportedHook_FailsWithoutSkipFlag: applying a loadout that
+// contains a hook the target provider cannot read fails outright (nothing
+// applied) unless SkipUnsupported is set — no silent partial coverage, no
+// dead config (syllago-xqlc1).
+func TestApply_UnsupportedHook_FailsWithoutSkipFlag(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupUnsupportedHookEnv(t)
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	_, err := Apply(manifest, cat, prov, opts)
+	if err == nil {
+		t.Fatal("expected error applying loadout with unsupported hook event")
+	}
+	if !strings.Contains(err.Error(), "dead-hook") || !strings.Contains(err.Error(), "before_tool_execute") {
+		t.Errorf("error should name the hook and event, got: %v", err)
+	}
+
+	// Nothing should have been applied.
+	if _, statErr := os.Stat(filepath.Join(homeDir, ".codeium", "rules", "my-rule")); statErr == nil {
+		t.Error("rule symlink should not exist after rejected apply")
+	}
+	if _, statErr := os.Stat(filepath.Join(homeDir, ".codeium", "settings.json")); statErr == nil {
+		t.Error("settings.json should not exist after rejected apply")
+	}
+}
+
+// TestApply_UnsupportedHook_SkippedWithFlag: with SkipUnsupported set, the
+// incompatible hook is skipped (and reported) while the rest of the loadout
+// applies normally.
+func TestApply_UnsupportedHook_SkippedWithFlag(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupUnsupportedHookEnv(t)
+
+	opts := ApplyOptions{
+		Mode:            "keep",
+		ProjectRoot:     projectRoot,
+		HomeDir:         homeDir,
+		RepoRoot:        projectRoot,
+		SkipUnsupported: true,
+	}
+
+	result, err := Apply(manifest, cat, prov, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The rule applied; the hook did not.
+	if _, statErr := os.Lstat(filepath.Join(homeDir, ".codeium", "rules", "my-rule")); statErr != nil {
+		t.Errorf("rule symlink should exist: %v", statErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(homeDir, ".codeium", "settings.json")); statErr == nil {
+		data, _ := os.ReadFile(filepath.Join(homeDir, ".codeium", "settings.json"))
+		if gjson.GetBytes(data, "hooks").Exists() {
+			t.Errorf("no hooks should have been merged, got: %s", data)
+		}
+	}
+
+	var skipped *PlannedAction
+	for i := range result.Actions {
+		if result.Actions[i].Action == "skip-unsupported" {
+			skipped = &result.Actions[i]
+		}
+	}
+	if skipped == nil {
+		t.Fatal("expected a skip-unsupported action in the result")
+	}
+	if skipped.Name != "dead-hook" {
+		t.Errorf("skip-unsupported action should be dead-hook, got %s", skipped.Name)
+	}
+}
+
+// TestApplyHook_CrushFlattensAndRoutes: a loadout hook applied to crush must
+// land as a FLAT entry ({name, matcher, command}) in crush.json — not as a
+// CC-shape matcher group in a settings.json crush never reads (syllago-xqlc1,
+// mirrors installer hookSettingsPathImpl + FlattenForCrush).
+func TestApplyHook_CrushFlattensAndRoutes(t *testing.T) {
+	t.Parallel()
+	homeDir := t.TempDir()
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	hookDir := filepath.Join(projectRoot, "content", "hooks", "crush", "guard-hook")
+	os.MkdirAll(hookDir, 0755)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"name":"guard","event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo guard"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
+
+	manifest := &Manifest{
+		Kind:     "loadout",
+		Version:  1,
+		Provider: "crush",
+		Name:     "crush-loadout",
+		Hooks:    []ItemRef{{Name: "guard-hook"}},
+	}
+
+	cat := &catalog.Catalog{
+		RepoRoot: projectRoot,
+		Items: []catalog.ContentItem{
+			{Name: "guard-hook", Type: catalog.Hooks, Provider: "crush", Path: hookDir},
+		},
+	}
+
+	prov := provider.Provider{
+		Name:      "Crush",
+		Slug:      "crush",
+		ConfigDir: ".config/crush",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			if ct == catalog.Hooks {
+				return "__json_merge__"
+			}
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool {
+			return ct == catalog.Hooks
+		},
+	}
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	if _, err := Apply(manifest, cat, prov, opts); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The hook must land in crush.json, not settings.json.
+	crushPath := filepath.Join(homeDir, ".config", "crush", "crush.json")
+	data, readErr := os.ReadFile(crushPath)
+	if readErr != nil {
+		t.Fatalf("crush.json should exist: %v", readErr)
+	}
+	if _, statErr := os.Stat(filepath.Join(homeDir, ".config", "crush", "settings.json")); statErr == nil {
+		t.Error("settings.json should not be written for crush")
+	}
+
+	entry := gjson.GetBytes(data, "hooks.PreToolUse.0")
+	if !entry.Exists() {
+		t.Fatalf("expected hooks.PreToolUse.0 in crush.json, got: %s", data)
+	}
+	if got := entry.Get("command").String(); got != "echo guard" {
+		t.Errorf("command: got %q, want 'echo guard'", got)
+	}
+	if got := entry.Get("matcher").String(); got != "bash" {
+		t.Errorf("matcher: got %q, want 'bash' (canonical shell -> crush native)", got)
+	}
+	if got := entry.Get("name").String(); got != "guard" {
+		t.Errorf("name: got %q, want 'guard'", got)
+	}
+	// Flat entry — no nested CC-shape hooks array.
+	if entry.Get("hooks").Exists() {
+		t.Errorf("crush entry must be flat, got nested hooks array: %s", entry.Raw)
+	}
+
+	// Tracking must record the command from the flat entry shape.
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("loading installed.json: %v", err)
+	}
+	if len(inst.Hooks) != 1 {
+		t.Fatalf("expected 1 tracked hook, got %d", len(inst.Hooks))
+	}
+	if inst.Hooks[0].Command != "echo guard" {
+		t.Errorf("tracked command: got %q, want 'echo guard'", inst.Hooks[0].Command)
+	}
+}
+
+// TestApply_TryMode_CrushNoSessionEndCorruption: crush has no session_end
+// event, so try-mode auto-revert injection must be skipped rather than writing
+// a dead CC-shape hooks.SessionEnd group into the real crush.json. A warning
+// tells the user to revert manually (syllago-xqlc1, codex review finding).
+func TestApply_TryMode_CrushNoSessionEndCorruption(t *testing.T) {
+	t.Parallel()
+	homeDir := t.TempDir()
+	projectRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
+
+	ruleDir := filepath.Join(projectRoot, "content", "rules", "crush", "my-rule")
+	os.MkdirAll(ruleDir, 0755)
+	os.WriteFile(filepath.Join(ruleDir, "AGENTS.md"), []byte("# Rule"), 0644)
+
+	manifest := &Manifest{
+		Kind:     "loadout",
+		Version:  1,
+		Provider: "crush",
+		Name:     "crush-try",
+		Rules:    []ItemRef{{Name: "my-rule"}},
+	}
+	cat := &catalog.Catalog{
+		RepoRoot: projectRoot,
+		Items: []catalog.ContentItem{
+			{Name: "my-rule", Type: catalog.Rules, Provider: "crush", Path: ruleDir},
+		},
+	}
+	prov := provider.Provider{
+		Name:      "Crush",
+		Slug:      "crush",
+		ConfigDir: ".config/crush",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			if ct == catalog.Rules {
+				return filepath.Join(home, ".config", "crush", "rules")
+			}
+			return ""
+		},
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Rules },
+	}
+
+	opts := ApplyOptions{
+		Mode:        "try",
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+
+	result, err := Apply(manifest, cat, prov, opts)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.AutoRevertArmed {
+		t.Error("crush has no session_end event, so AutoRevertArmed should be false")
+	}
+
+	// crush.json must not have been created/corrupted by SessionEnd injection.
+	crushPath := filepath.Join(homeDir, ".config", "crush", "crush.json")
+	if data, statErr := os.ReadFile(crushPath); statErr == nil {
+		if gjson.GetBytes(data, "hooks").Exists() {
+			t.Errorf("crush.json should have no injected hooks, got: %s", data)
+		}
+	}
+
+	// The user must be warned that auto-revert is unavailable.
+	var warned bool
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "auto-revert") || strings.Contains(w, "session-end") {
+			warned = true
+		}
+	}
+	if !warned {
+		t.Errorf("expected a no-auto-revert warning, got warnings: %v", result.Warnings)
+	}
+}
+
+// TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd is a regression
+// test for the codex-review finding on PR #512: try mode used to back up the
+// provider settings file unconditionally "for SessionEnd injection", but since
+// injectSessionEndHook now skips providers with no session_end event, backing
+// up their settings file means loadout remove would restore (clobber) a file
+// this apply never wrote to. For crush that file is the real crush.json.
+func TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd(t *testing.T) {
+	t.Parallel()
+	home := t.TempDir()
+
+	crush := provider.Provider{Name: "Crush", Slug: "crush", ConfigDir: ".config/crush"}
+	cc := provider.Provider{Name: "Claude Code", Slug: "claude-code", ConfigDir: ".claude"}
+
+	// Rules-only loadout — no merge-hook actions, so nothing writes to the
+	// provider settings file except (potentially) session-end injection.
+	actions := []PlannedAction{{Type: catalog.Rules, Name: "r", Action: "create-symlink"}}
+	opts := ApplyOptions{Mode: "try", HomeDir: home, ProjectRoot: t.TempDir()}
+
+	for _, f := range collectBackupFiles(actions, crush, opts) {
+		if strings.HasSuffix(f, "crush.json") {
+			t.Errorf("crush has no session_end event; try-mode rules-only apply must not back up crush.json (remove would clobber user edits), got %v", f)
+		}
+	}
+
+	found := false
+	for _, f := range collectBackupFiles(actions, cc, opts) {
+		if strings.HasSuffix(f, "settings.json") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("claude-code supports session_end; try-mode must back up settings.json so auto-revert injection can be reverted")
+	}
 }
