@@ -177,7 +177,10 @@ func TestFindHookFile_NonexistentDir(t *testing.T) {
 func TestSettingsPathFor_NoResolver(t *testing.T) {
 	t.Parallel()
 	prov := provider.Provider{Slug: "claude-code", ConfigDir: ".claude"}
-	got := settingsPathFor(prov, "/home/user", nil)
+	got, err := settingsPathFor(prov, "/home/user", nil)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/home/user/.claude/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)
@@ -188,7 +191,10 @@ func TestSettingsPathFor_WithResolver(t *testing.T) {
 	t.Parallel()
 	prov := provider.Provider{Slug: "claude-code", ConfigDir: ".claude"}
 	resolver := config.NewResolver(nil, "/custom/base")
-	got := settingsPathFor(prov, "/home/user", resolver)
+	got, err := settingsPathFor(prov, "/home/user", resolver)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/custom/base/.claude/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)
@@ -200,57 +206,13 @@ func TestSettingsPathFor_ResolverNoMatch(t *testing.T) {
 	prov := provider.Provider{Slug: "cursor", ConfigDir: ".cursor"}
 	// Resolver has no CLI base dir and no config for cursor
 	resolver := config.NewResolver(nil, "")
-	got := settingsPathFor(prov, "/home/user", resolver)
+	got, err := settingsPathFor(prov, "/home/user", resolver)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/home/user/.cursor/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)
-	}
-}
-
-// --- resolveHookCommands (64.3% coverage) ---
-
-func TestResolveHookCommands_RelativePath(t *testing.T) {
-	t.Parallel()
-	itemDir := "/content/hooks/claude-code/my-hook"
-	input := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"./run.sh"}]}`)
-
-	got := resolveHookCommands(input, itemDir)
-	// The relative ./run.sh should become an absolute path
-	want := filepath.Join(itemDir, "./run.sh")
-	if string(got) == string(input) {
-		t.Error("resolveHookCommands should have resolved relative path")
-	}
-	_ = want // The actual path check depends on ResolveHookCommand behavior
-}
-
-func TestResolveHookCommands_AbsolutePath(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"/usr/bin/echo test"}]}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	// Absolute paths should not be modified
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should not modify absolute paths, got %q", string(got))
-	}
-}
-
-func TestResolveHookCommands_NoHooksArray(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"matcher":".*"}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should return input unchanged when no hooks array")
-	}
-}
-
-func TestResolveHookCommands_EmptyCommand(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"hooks":[{"type":"command","command":""}]}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should not modify empty commands")
 	}
 }
 

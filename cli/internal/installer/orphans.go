@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -32,14 +33,13 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 		return nil, err
 	}
 
-	// Build lookup sets for fast matching
-	hookSet := make(map[string]map[string]bool) // groupHash -> true
+	// Build lookup sets for fast matching. Hooks are matched by their canonical
+	// identity (installed.json GroupHash is the post-round-trip
+	// sha256(event|matcher|command|name)), the same identity install computes.
+	trackedHooks := make(map[string]bool)
 	for _, h := range inst.Hooks {
 		if h.GroupHash != "" {
-			if hookSet[h.Event] == nil {
-				hookSet[h.Event] = make(map[string]bool)
-			}
-			hookSet[h.Event][h.GroupHash] = true
+			trackedHooks[h.GroupHash] = true
 		}
 	}
 	mcpSet := make(map[string]bool)
@@ -59,37 +59,36 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 			continue
 		}
 
+		// Hooks: decode the provider's real hook file via its adapter and match
+		// each decoded hook by canonical identity. Providers with no adapter or
+		// no supported hook path (Phase 1b) are skipped so they are never
+		// false-flagged.
+		if adapter := converter.AdapterFor(prov.Slug); adapter != nil {
+			if hookPath, pErr := HookConfigPath(prov, home); pErr == nil {
+				if data, readErr := os.ReadFile(hookPath); readErr == nil {
+					if decoded, dErr := adapter.Decode(data); dErr == nil {
+						for i, hk := range decoded.Hooks {
+							if trackedHooks[hookIdentity(hk)] {
+								continue // tracked by syllago
+							}
+							orphans = append(orphans, OrphanEntry{
+								Provider: prov.Slug,
+								Type:     "hook",
+								Key:      nativeEventFor(hk.Event, prov.Slug),
+								Index:    i,
+							})
+						}
+					}
+				}
+			}
+		}
+
+		// MCP: unchanged — mcpServers.<name> objects in <ConfigDir>/settings.json.
 		settingsPath := filepath.Join(home, prov.ConfigDir, "settings.json")
 		data, readErr := os.ReadFile(settingsPath)
 		if readErr != nil {
 			continue // no settings file for this provider
 		}
-
-		// Check hooks: settings.json has hooks.<event> arrays
-		hooksObj := gjson.GetBytes(data, "hooks")
-		if hooksObj.Exists() && hooksObj.IsObject() {
-			hooksObj.ForEach(func(event, eventArr gjson.Result) bool {
-				if !eventArr.IsArray() {
-					return true
-				}
-				eventName := event.String()
-				for i, entry := range eventArr.Array() {
-					entryHash := computeGroupHash([]byte(entry.Raw))
-					if hookSet[eventName] != nil && hookSet[eventName][entryHash] {
-						continue // tracked
-					}
-					orphans = append(orphans, OrphanEntry{
-						Provider: prov.Slug,
-						Type:     "hook",
-						Key:      eventName,
-						Index:    i,
-					})
-				}
-				return true
-			})
-		}
-
-		// Check MCP: settings.json has mcpServers.<name> objects
 		mcpObj := gjson.GetBytes(data, "mcpServers")
 		if mcpObj.Exists() && mcpObj.IsObject() {
 			mcpObj.ForEach(func(key, _ gjson.Result) bool {

@@ -16,7 +16,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
-	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
@@ -253,34 +252,25 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 	return nil
 }
 
-// settingsPathFor computes the settings.json path for a provider, using the
-// resolver's base dir if configured, otherwise falling back to homeDir.
-func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) string {
+// settingsPathFor computes a provider's hook config path via the shared
+// installer.HookConfigPath resolver (ADR-0020 path table), honoring the
+// resolver's base dir override when configured. Returns an error for providers
+// whose hooks syllago cannot manage in Phase 1 (directory-scoped/adapter-less).
+func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) (string, error) {
 	base := homeDir
 	if resolver != nil {
 		if bd := resolver.BaseDir(prov.Slug); bd != "" {
 			base = bd
 		}
 	}
-	// Crush keeps hooks in its unified crush.json, not a settings.json
-	// (mirrors installer.hookSettingsPathImpl). Routing here also covers the
-	// snapshot backup list and remove, which build paths via this function.
-	filename := "settings.json"
-	if prov.Slug == "crush" {
-		filename = "crush.json"
-	}
-	return filepath.Join(base, prov.ConfigDir, filename)
+	return installer.HookConfigPath(prov, base)
 }
 
-// applyHook reads a hook JSON file and appends it to settings.json.
-// This is the lower-level helper that works with raw hook data, avoiding the
-// catalog.ContentItem-dependent installHook in the installer package.
-//
-// Key trade-off: we duplicate some logic from installer.installHook here rather
-// than exporting it. The alternative would be to export appendHookEntry from the
-// installer package, but that creates a tighter coupling. Since the loadout engine
-// has different tracking needs (source is "loadout:<name>" vs "export"), it's cleaner
-// to keep this self-contained.
+// applyHook reads a hook JSON file and merges it into the provider's hook
+// config via the provider's converter.HookAdapter (ADR-0020 Phase 1). It
+// resolves relative command paths first, then delegates the
+// encode/merge/identity work to installer.ApplyCanonicalHook, recording the
+// result under the loadout's source tag.
 func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver *config.PathResolver, inst *installer.Installed, source string) error {
 	// Find the hook JSON file in the item directory
 	hookFile := findHookFile(ref.Item.Path)
@@ -303,104 +293,43 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 	if len(manifest.Hooks) != 1 {
 		return fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
 	}
-	hds, err := converter.HookDataFromManifest(manifest)
-	if err != nil {
-		return fmt.Errorf("converting manifest: %w", err)
-	}
-	hd := hds[0]
-	event := hd.Event
+	h := manifest.Hooks[0]
 
-	// Validate before using the event as an sjson key (mirrors installHook M3:
+	// Validate before using the event downstream (mirrors installHook M3:
 	// prevents key injection via dots in crafted event names).
-	if !converter.IsValidHookEvent(event) {
-		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	if !converter.IsValidHookEvent(h.Event) {
+		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
 	}
 
 	// Reject events the provider has no settings key for (mirrors installHook,
 	// syllago-xqlc1). Apply already gates these via the skip-unsupported
 	// preview action; this is the defense-in-depth backstop at the actual
 	// merge point so dead config can never slip through if the two diverge.
-	if !converter.ProviderSupportsHookEvent(event, prov.Slug) {
-		return fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, event)
+	if !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
+		return fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, h.Event)
 	}
 
-	// Translate canonical names to provider-native before the merge (mirrors
-	// installHook): the event becomes the settings key the provider actually
-	// reads, and matcher tool names become the names the provider tests its
-	// hook regexes against. Already-native names pass through unchanged.
-	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
-		event = nativeEvent
-	}
-	matcher := hd.Matcher
-	if matcher != "" {
-		matcher = converter.TranslateMatcher(matcher, prov.Slug)
-	}
+	// Resolve relative command paths to absolute before encoding.
+	resolvedCmd := ResolveHookCommand(ref.Item.Path, h.Handler.Command)
 
-	// Build the provider-shape matcher group for merging into settings.json.
-	group := struct {
-		Matcher string                `json:"matcher,omitempty"`
-		Hooks   []converter.HookEntry `json:"hooks"`
-	}{
-		Matcher: matcher,
-		Hooks:   hd.Hooks,
-	}
-	matcherGroup, err := json.Marshal(group)
+	// Merge into the provider's hook file through its adapter.
+	settingsPath, err := settingsPathFor(prov, homeDir, resolver)
 	if err != nil {
-		return fmt.Errorf("building matcher group: %w", err)
+		return fmt.Errorf("hook %q: %w", ref.Name, err)
 	}
-
-	// Resolve relative command paths to absolute
-	matcherGroup = resolveHookCommands(matcherGroup, ref.Item.Path)
-
-	// Crush stores flat hook entries ({name, matcher, command, timeout}) in
-	// crush.json rather than CC-shape matcher groups (mirrors installHook).
-	// Flatten last so command resolution above sees the standard shape.
-	commandPath := "hooks.0.command"
-	if prov.Slug == "crush" {
-		matcherGroup, err = installer.FlattenForCrush(matcherGroup, manifest.Hooks[0].Name)
-		if err != nil {
-			return fmt.Errorf("hook %q: %w", ref.Name, err)
-		}
-		commandPath = "command"
+	res, err := installer.ApplyCanonicalHook(prov, h, settingsPath, resolvedCmd)
+	if err != nil {
+		return fmt.Errorf("hook %q: %w", ref.Name, err)
 	}
-
-	// Append to the provider's hook config file
-	settingsPath := settingsPathFor(prov, homeDir, resolver)
-	if err := appendHookEntry(settingsPath, event, matcherGroup); err != nil {
-		return err
-	}
-
-	// Extract command for tracking (crush entries are flat)
-	command := gjson.GetBytes(matcherGroup, commandPath).String()
 
 	inst.Hooks = append(inst.Hooks, installer.InstalledHook{
 		Name:        ref.Name,
-		Event:       event,
-		Command:     command,
+		Event:       res.NativeEvent,
+		GroupHash:   res.GroupHash,
+		Command:     res.Command,
 		Source:      source,
 		InstalledAt: time.Now(),
 	})
-
-	return nil
-}
-
-// appendHookEntry appends a matcher group to hooks.<event> in settings.json.
-// This is the shared lower-level helper for merging hook JSON.
-func appendHookEntry(settingsPath string, event string, matcherGroup []byte) error {
-	fileData, err := readJSONFileOrEmpty(settingsPath)
-	if err != nil {
-		return fmt.Errorf("reading %s: %w", settingsPath, err)
-	}
-
-	key := "hooks." + event + ".-1"
-	fileData, err = sjson.SetRawBytes(fileData, key, matcherGroup)
-	if err != nil {
-		return fmt.Errorf("appending hook: %w", err)
-	}
-
-	if err := writeJSONFileAtomic(settingsPath, fileData); err != nil {
-		return fmt.Errorf("writing %s: %w", settingsPath, err)
-	}
 
 	return nil
 }
@@ -466,32 +395,27 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 // it would corrupt the real crush.json (wrong key and CC-shape group). Callers
 // warn the user to revert manually in that case.
 func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *config.PathResolver) (injected bool, err error) {
-	// Translate to the provider-native event key; skip if unsupported so we
-	// never write a key the provider can't read (syllago-xqlc1).
-	event, ok := converter.TranslateHookEvent("session_end", prov.Slug)
-	if !ok {
+	// Skip when the provider has no session_end event so we never write a key
+	// the provider can't read (syllago-xqlc1).
+	if _, ok := converter.TranslateHookEvent("session_end", prov.Slug); !ok {
 		return false, nil
 	}
 
-	settingsPath := settingsPathFor(prov, homeDir, resolver)
-
-	// Build the session-end hook entry
-	hookEntry := map[string]interface{}{
-		"matcher": "",
-		"hooks": []map[string]interface{}{
-			{
-				"type":    "command",
-				"command": "syllago loadout remove --auto",
-			},
-		},
-	}
-
-	hookJSON, err := json.Marshal(hookEntry)
+	settingsPath, err := settingsPathFor(prov, homeDir, resolver)
 	if err != nil {
-		return false, fmt.Errorf("marshaling session-end hook: %w", err)
+		return false, err
 	}
 
-	if err := appendHookEntry(settingsPath, event, hookJSON); err != nil {
+	// Encode the hook in the provider's native format via its adapter (mirrors
+	// applyHook). A naive CC-shape append would write the wrong format for
+	// non-CC providers (e.g. windsurf's split-event model). Not tracked in
+	// installed.json — it is reverted when the snapshot restores the file.
+	h := converter.Hook{
+		Name:    "syllago-auto-revert",
+		Event:   "session_end",
+		Handler: converter.Handler{Type: "command", Command: "syllago loadout remove --auto"},
+	}
+	if _, err := installer.ApplyCanonicalHook(prov, h, settingsPath, ""); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -523,7 +447,11 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 	}
 
 	if needsSettings {
-		files = append(files, settingsPathFor(prov, opts.HomeDir, opts.Resolver))
+		// Skip a provider whose hook path can't be resolved (Phase 1b /
+		// adapter-less): there is nothing this apply will write there to back up.
+		if path, err := settingsPathFor(prov, opts.HomeDir, opts.Resolver); err == nil {
+			files = append(files, path)
+		}
 	}
 	if needsMCPConfig {
 		mcpPath, err := installer.MCPConfigPathFor(prov, opts.ProjectRoot)
@@ -565,31 +493,6 @@ func findHookFile(itemDir string) string {
 		}
 	}
 	return ""
-}
-
-// resolveHookCommands resolves relative command paths in hook JSON to absolute paths.
-func resolveHookCommands(matcherGroup []byte, itemDir string) []byte {
-	// Walk through hooks array and resolve command paths
-	hooksArray := gjson.GetBytes(matcherGroup, "hooks")
-	if !hooksArray.Exists() || !hooksArray.IsArray() {
-		return matcherGroup
-	}
-
-	result := matcherGroup
-	for i, hook := range hooksArray.Array() {
-		cmd := hook.Get("command").String()
-		if cmd != "" {
-			resolved := ResolveHookCommand(itemDir, cmd)
-			if resolved != cmd {
-				key := fmt.Sprintf("hooks.%d.command", i)
-				updated, err := sjson.SetBytes(result, key, resolved)
-				if err == nil {
-					result = updated
-				}
-			}
-		}
-	}
-	return result
 }
 
 // readJSONFileOrEmpty reads a JSON file, returning {} if it doesn't exist.

@@ -205,7 +205,10 @@ func TestCheckStatusWithResolver_MergeTypeBypassesResolver(t *testing.T) {
 	repoRoot := filepath.Join(tmp, "repo")
 	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
-	prov := stubProviderForInstaller("test-prov")
+	// Use a real slug: checkHookStatus now routes through the provider's
+	// HookAdapter (ADR-0020), so a slug with no adapter would report
+	// NotAvailable rather than NotInstalled.
+	prov := stubProviderForInstaller("claude-code")
 
 	// Create a valid hook file so checkHookStatus can parse it
 	hookDir := filepath.Join(repoRoot, "content", "hooks", "test-prov", "my-hook")

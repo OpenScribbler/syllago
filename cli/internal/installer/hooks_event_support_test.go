@@ -42,8 +42,15 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 		event string
 		prov  provider.Provider
 	}{
-		{"canonical event unmapped for provider", "before_tool_execute", provider.Windsurf},
-		{"another provider's native name", "PreToolUse", provider.Windsurf},
+		// Both cases use routed (Phase 1) providers so the reject comes from the
+		// event-support gate, not the Phase-1b storage-model rejection. windsurf
+		// is not used here: it is deferred to Phase 1b, so it rejects before the
+		// event gate (see TestInstallHook_Windsurf_DeferredToPhase1b).
+		//
+		// "PostToolUse" is claude-code's native name for after_tool_execute —
+		// crush supports only before_tool_execute, so it's a foreign/unreadable
+		// event for crush.
+		{"another provider's native name", "PostToolUse", provider.Crush},
 		{"canonical event unmapped for crush", "session_end", provider.Crush},
 	}
 
@@ -71,20 +78,20 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 }
 
 // TestInstallHook_OwnNativeEventPassesThrough: a provider's OWN native event
-// name is not translated but must still install — the strict support check
-// only rejects events the provider cannot read.
+// name is not rejected — it canonicalizes back to a supported event and
+// installs. crush's native "PreToolUse" maps to canonical before_tool_execute.
 func TestInstallHook_OwnNativeEventPassesThrough(t *testing.T) {
-	item, projectRoot := writeEventHookItem(t, "pre_user_prompt")
+	item, projectRoot := writeEventHookItem(t, "PreToolUse")
 
-	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	settingsPath := filepath.Join(t.TempDir(), "crush.json")
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	if _, err := installHook(item, provider.Windsurf, projectRoot); err != nil {
+	if _, err := installHook(item, provider.Crush, projectRoot); err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
 	data, _ := os.ReadFile(settingsPath)
-	if !gjson.GetBytes(data, "hooks.pre_user_prompt.0").Exists() {
-		t.Errorf("expected hooks.pre_user_prompt.0 in settings, got: %s", data)
+	if !gjson.GetBytes(data, "hooks.PreToolUse.0").Exists() {
+		t.Errorf("expected hooks.PreToolUse.0 in crush.json, got: %s", data)
 	}
 }
