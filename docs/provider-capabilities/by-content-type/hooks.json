@@ -411,6 +411,110 @@
       },
       "supported": true
     },
+    "crush": {
+      "capabilities": {
+        "async_execution": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can run asynchronously without blocking the agent's execution loop. Fire-and-forget semantics.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.async_execution",
+          "mechanism": "Matching hooks run in parallel with each other, but the tool call waits for all of them to finish (or time out) before proceeding — there is no fire-and-forget mode. A hook that exceeds its timeout is treated as a non-blocking error (\"no opinion\") and the tool call proceeds.",
+          "supported": false
+        },
+        "context_injection": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can inject messages, system prompts, or conversation context into the agent's active session.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.context_injection",
+          "mechanism": "The output envelope's context field accepts a string or an array of strings, appended to what the model sees for the current turn. Across multiple hooks, context values concatenate in config order; empty entries are dropped.",
+          "supported": true
+        },
+        "decision_control": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "object"
+          },
+          "key_path": "hooks.decision_control",
+          "mechanism": "Exit code 2 blocks the tool call (stderr becomes the deny reason); exit 49 halts the whole turn; other non-zero exit codes are non-blocking errors and the tool call proceeds. On exit 0, stdout is parsed as a JSON envelope whose decision field may be allow, deny, or null. allow is affirmative pre-approval (skips the permission prompt); null/omitted means no opinion. Across multiple hooks, deny > allow > null, composed in config order.",
+          "supported": true
+        },
+        "handler_types": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What kinds of executors hooks support beyond shell commands. May include HTTP endpoints, LLM prompt evaluation, multi-turn agent handlers, or TypeScript extensions.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE); handler-type enum ACIF-HOOK Appendix B, §8.2",
+            "type": "object"
+          },
+          "key_path": "hooks.handler_types",
+          "mechanism": "Crush hooks are shell commands only (command field in HookConfig) — no HTTP, LLM prompt, or agent handler types. Commands run through Crush's embedded POSIX shell (mvdan.cc/sh): inline commands and shebang-less scripts execute in-process; scripts with a #! shebang dispatch to the named interpreter via os/exec, so hook scripts can be written in any language. The contract is identical on macOS, Linux, and Windows.",
+          "supported": false
+        },
+        "hook_scopes": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Where hooks can be configured and the precedence model when multiple scopes define hooks for the same event. Common scopes: global/user, project, workspace, managed/enterprise.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; install-location-determined)",
+            "type": "object"
+          },
+          "key_path": "hooks.hook_scopes",
+          "mechanism": "Hooks can be configured in crush.json (or .crush.json) at both the user-global (~/.config/crush/crush.json) and project level, with project-level hooks taking precedence. Global-config commands must use absolute paths or inline commands; relative paths resolve against the working directory.",
+          "supported": true
+        },
+        "input_modification": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can modify tool input arguments before the tool executes. Safety-critical capability — silent degradation creates false security. Minimum qualification: supported when the provider provides any mechanism to modify tool input arguments before execution (e.g., hookSpecificOutput.updatedInput, plugin-mutable args, or equivalent).\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.input_modification",
+          "mechanism": "The exit-0 JSON envelope may include updated_input: a shallow-merge patch against tool_input. Included keys overwrite matching keys; omitted keys are preserved; nested objects are replaced wholesale. Patches from multiple hooks shallow-merge sequentially in config order (later hooks win on colliding keys) and are ignored if the final decision is deny or halt. Implemented as UpdatedInput in internal/hooks/hooks.go.",
+          "supported": true
+        },
+        "json_io_protocol": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks communicate with the host via structured JSON on stdin/stdout rather than plain text or exit codes alone.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.json_io_protocol",
+          "mechanism": "Stdin provides a JSON payload: event, session_id, cwd, plus tool_name and tool_input (the raw JSON the model sent) for PreToolUse. On exit 0 stdout is parsed as a JSON output envelope: version (defaults to 1), decision, halt, reason, context, updated_input. Simple hooks can skip JSON entirely and use CRUSH_* environment variables plus exit codes.",
+          "supported": true
+        },
+        "matcher_patterns": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can filter which tools or events they respond to using name matching, regex patterns, or structured criteria.\n",
+            "spec_ref": "ACIF-HOOK §10.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "hooks.matcher_patterns",
+          "mechanism": "HookConfig has an optional matcher field: a regex tested against the tool name (e.g. bash, edit, mcp_github_create_pull_request). Omitted or empty matcher matches all tools.",
+          "supported": true
+        },
+        "permission_control": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether hooks can make or influence permission decisions determining whether a tool is available for invocation. Minimum qualification: supported when the provider allows hooks to return permission decisions of any kind (grant, deny, or ask). Boundary: permission_control governs whether a tool is available; see decision_control for invocation-flow control.\n",
+            "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
+            "type": "bool"
+          },
+          "key_path": "hooks.permission_control",
+          "mechanism": "Hook results apply before permission checks. An aggregated deny blocks the tool call before any permission prompt; an aggregated allow is affirmative pre-approval that skips the prompt entirely; silence (no decision) falls through to the normal permission flow.",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
     "cursor": {
       "capabilities": {
         "hook_scopes": {
@@ -452,14 +556,14 @@
     "factory-droid": {
       "capabilities": {
         "decision_control": {
-          "confidence": "inferred",
+          "confidence": "confirmed",
           "key": {
             "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
             "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
             "type": "object"
           },
           "key_path": "hooks.decision_control",
-          "mechanism": "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event 'Decision Control' headings",
+          "mechanism": "PreToolUse hooks return hookSpecificOutput.permissionDecision (allow/deny/ask) with permissionDecisionReason; the flat decision/reason fields are deprecated for PreToolUse. Exit code 2 blocks with stderr fed back to Droid; non-zero non-2 shows stderr to user as non-blocking error",
           "supported": true
         }
       },
@@ -540,6 +644,9 @@
         }
       },
       "supported": true
+    },
+    "opencode": {
+      "supported": false
     },
     "pi": {
       "capabilities": {

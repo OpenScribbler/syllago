@@ -57,14 +57,14 @@
     "hooks": {
       "capabilities": {
         "decision_control": {
-          "confidence": "inferred",
+          "confidence": "confirmed",
           "key": {
             "description": "Which decision actions hooks can take on the triggering action. Contents: {block: bool, allow: bool, modify: bool}. Mechanisms include exit code contracts, JSON decision fields, or cancel flags. Boundary: decision_control governs whether a tool invocation proceeds; see permission_control for whether a tool is available at all.\n",
             "spec_ref": "ACIF-HOOK §10.2 (OUT-OF-SCOPE-AT-L1; script-body-opaque)",
             "type": "object"
           },
           "key_path": "hooks.decision_control",
-          "mechanism": "hook_exit_code_behavior: Factory Droid hooks use exit codes to signal block (non-zero) or allow (zero) decisions on the triggering action; documented under per-event 'Decision Control' headings",
+          "mechanism": "PreToolUse hooks return hookSpecificOutput.permissionDecision (allow/deny/ask) with permissionDecisionReason; the flat decision/reason fields are deprecated for PreToolUse. Exit code 2 blocks with stderr fed back to Droid; non-zero non-2 shows stderr to user as non-blocking error",
           "supported": true
         }
       },

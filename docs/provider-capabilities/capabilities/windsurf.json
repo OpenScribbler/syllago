@@ -158,14 +158,14 @@
             "type": "bool"
           },
           "key_path": "rules.hierarchical_loading",
-          "mechanism": ".windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
+          "mechanism": ".devin/rules/ (preferred; .windsurf/rules/ legacy fallback) scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
           "supported": true
         }
       },
       "supported": true
     }
   },
-  "display_name": "Windsurf",
+  "display_name": "Devin Desktop",
   "provider_status": "active",
   "schema_version": "2",
   "slug": "windsurf",

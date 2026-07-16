@@ -49,6 +49,33 @@
       },
       "supported": true
     },
+    "opencode": {
+      "capabilities": {
+        "argument_substitution": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "How user-provided arguments are injected into command templates. Mechanisms vary: $ARGUMENTS, {{args}}, positional $1/$2/${@:N}, and other interpolation syntaxes.\n",
+            "spec_ref": "ACIF-COMMAND §9.1 (OUT-OF-SCOPE-AT-L1; placeholder vocabulary ACIF-COMMAND Appendix A, §7)",
+            "type": "object"
+          },
+          "key_path": "commands.argument_substitution",
+          "mechanism": "$ARGUMENTS carries all arguments as a single string; positional $1/$2/$3 carry individual arguments — substituted from user input at invocation time (documented under 'Arguments')",
+          "supported": true
+        },
+        "builtin_commands": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the provider ships default/built-in commands alongside user-defined custom commands.\n",
+            "spec_ref": "ACIF-COMMAND §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage row)",
+            "type": "bool"
+          },
+          "key_path": "commands.builtin_commands",
+          "mechanism": "built-in /init, /undo, /redo, /share, /help; custom commands override built-ins when given the same name (documented under 'Built-in')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
     "pi": {
       "capabilities": {
         "argument_substitution": {
