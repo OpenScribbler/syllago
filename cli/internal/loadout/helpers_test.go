@@ -177,7 +177,10 @@ func TestFindHookFile_NonexistentDir(t *testing.T) {
 func TestSettingsPathFor_NoResolver(t *testing.T) {
 	t.Parallel()
 	prov := provider.Provider{Slug: "claude-code", ConfigDir: ".claude"}
-	got := settingsPathFor(prov, "/home/user", nil)
+	got, err := settingsPathFor(prov, "/home/user", nil)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/home/user/.claude/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)
@@ -188,7 +191,10 @@ func TestSettingsPathFor_WithResolver(t *testing.T) {
 	t.Parallel()
 	prov := provider.Provider{Slug: "claude-code", ConfigDir: ".claude"}
 	resolver := config.NewResolver(nil, "/custom/base")
-	got := settingsPathFor(prov, "/home/user", resolver)
+	got, err := settingsPathFor(prov, "/home/user", resolver)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/custom/base/.claude/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)
@@ -200,7 +206,10 @@ func TestSettingsPathFor_ResolverNoMatch(t *testing.T) {
 	prov := provider.Provider{Slug: "cursor", ConfigDir: ".cursor"}
 	// Resolver has no CLI base dir and no config for cursor
 	resolver := config.NewResolver(nil, "")
-	got := settingsPathFor(prov, "/home/user", resolver)
+	got, err := settingsPathFor(prov, "/home/user", resolver)
+	if err != nil {
+		t.Fatalf("settingsPathFor: %v", err)
+	}
 	want := "/home/user/.cursor/settings.json"
 	if got != want {
 		t.Errorf("settingsPathFor() = %q, want %q", got, want)

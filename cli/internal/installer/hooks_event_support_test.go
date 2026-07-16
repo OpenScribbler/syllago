@@ -42,7 +42,10 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 		event string
 		prov  provider.Provider
 	}{
-		{"canonical event unmapped for provider", "before_tool_execute", provider.Windsurf},
+		// NOTE: windsurf + before_tool_execute is NOT here — under ADR-0020 the
+		// windsurf adapter DOES support it (fanned out to split events like
+		// pre_run_command), so that install now succeeds
+		// (see TestInstallHook_Windsurf_DedicatedFile).
 		{"another provider's native name", "PreToolUse", provider.Windsurf},
 		{"canonical event unmapped for crush", "session_end", provider.Crush},
 	}

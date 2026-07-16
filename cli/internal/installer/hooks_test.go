@@ -1,9 +1,6 @@
 package installer
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,146 +118,91 @@ func TestUninstallHook_RemovesFromInstalledJSON(t *testing.T) {
 }
 
 func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
-	t.Parallel()
+	// Not parallel — overrideHookSettingsPath mutates a package global.
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
-	// Create hook file for parsing
 	hookDir := filepath.Join(projectRoot, "hooks", "status-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{
-  "spec": "hooks/0.1",
-  "hooks": [
-    {
-      "event": "PostToolUse",
-      "matcher": ".*",
-      "handler": {"type": "command", "command": "echo status"}
-    }
-  ]
-}`
-	hookFile := filepath.Join(hookDir, "hook.json")
-	os.WriteFile(hookFile, []byte(hookJSON), 0644)
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":".*","handler":{"type":"command","command":"echo status"}}]}`
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
-	item := catalog.ContentItem{
-		Name: "status-hook",
-		Type: catalog.Hooks,
-		Path: hookFile,
-	}
+	item := catalog.ContentItem{Name: "status-hook", Type: catalog.Hooks, Path: hookDir}
 
-	// Create a settings.json at the provider's config path
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-	configDir := filepath.Join(home, ".syllago-test-hookstatus-"+filepath.Base(projectRoot))
-	os.MkdirAll(configDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(configDir) })
-	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+	overrideHookSettingsPath(t, settingsPath)
 
-	prov := provider.Provider{
-		Name:      "test-provider",
-		Slug:      "claude-code", // real slug: unknown slugs now fail the event-support check
-		ConfigDir: filepath.Base(configDir),
-	}
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code", ConfigDir: ".claude"}
 
-	// Without installed.json entry: should be NotInstalled
-	status := checkHookStatus(item, prov, projectRoot)
-	if status != StatusNotInstalled {
+	// Without installed.json entry: should be NotInstalled.
+	if status := checkHookStatus(item, prov, projectRoot); status != StatusNotInstalled {
 		t.Errorf("expected NotInstalled without installed.json entry, got %v", status)
 	}
 
-	// Add to installed.json
-	matcherGroup := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"echo status"}]}`)
-	groupHash := sha256.Sum256(matcherGroup)
-	inst := &Installed{
-		Hooks: []InstalledHook{
-			{Name: "status-hook", Event: "PostToolUse", Command: "echo status", Source: "export", GroupHash: hex.EncodeToString(groupHash[:])},
-		},
+	// After a real adapter-routed install, status resolves via the stored
+	// canonical identity.
+	if _, err := installHook(item, prov, projectRoot); err != nil {
+		t.Fatalf("installHook: %v", err)
 	}
-	SaveInstalled(projectRoot, inst)
-
-	// Also add the hook to the provider's settings.json so the hash matches.
-	settingsJSON := fmt.Sprintf(`{"hooks":{"PostToolUse":[%s]}}`, matcherGroup)
-	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
-
-	// With installed.json entry + matching settings: should be Installed
-	status = checkHookStatus(item, prov, projectRoot)
-	if status != StatusInstalled {
-		t.Errorf("expected Installed with installed.json entry + matching settings, got %v", status)
+	if status := checkHookStatus(item, prov, projectRoot); status != StatusInstalled {
+		t.Errorf("expected Installed after install, got %v", status)
 	}
 }
 
-func TestParseHookFile_Valid(t *testing.T) {
+func TestReadSingleManifestHook_Valid(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 
-	hookJSON := `{
-  "spec": "hooks/0.1",
-  "hooks": [
-    {
-      "event": "PostToolUse",
-      "matcher": "*.go",
-      "handler": {"type": "command", "command": "go test"}
-    }
-  ]
-}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":"*.go","handler":{"type":"command","command":"go test"}}]}`
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	event, _, matcherGroup, err := parseHookFile(hookFile)
+	h, err := readSingleManifestHook(hookFile)
 	if err != nil {
-		t.Fatalf("parseHookFile: %v", err)
+		t.Fatalf("readSingleManifestHook: %v", err)
 	}
-	if event != "PostToolUse" {
-		t.Errorf("event: got %q, want PostToolUse", event)
+	if h.Event != "PostToolUse" {
+		t.Errorf("event: got %q, want PostToolUse", h.Event)
 	}
-
-	// parseHookFile returns the provider-shape matcher group, which does NOT
-	// include the event field (that lives on the parent hooks.<event> key).
-	if gjson.GetBytes(matcherGroup, "event").Exists() {
-		t.Error("event field should not appear in matcher group")
+	if h.Matcher != "*.go" {
+		t.Errorf("matcher: got %q, want *.go", h.Matcher)
 	}
-	if gjson.GetBytes(matcherGroup, "matcher").String() != "*.go" {
-		t.Error("matcher field should be preserved")
-	}
-	if !gjson.GetBytes(matcherGroup, "hooks").IsArray() {
-		t.Error("hooks array should be preserved")
+	if h.Handler.Command != "go test" {
+		t.Errorf("command: got %q, want 'go test'", h.Handler.Command)
 	}
 }
 
-func TestParseHookFile_DirectoryFormat(t *testing.T) {
+func TestReadSingleManifestHook_DirectoryFormat(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
 	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
 
-	event, _, matcherGroup, err := parseHookFile(dir)
+	h, err := readSingleManifestHook(dir)
 	if err != nil {
-		t.Fatalf("parseHookFile with directory: %v", err)
+		t.Fatalf("readSingleManifestHook with directory: %v", err)
 	}
-	if event != "PreToolUse" {
-		t.Errorf("event: got %q, want PreToolUse", event)
+	if h.Event != "PreToolUse" {
+		t.Errorf("event: got %q, want PreToolUse", h.Event)
 	}
-	if gjson.GetBytes(matcherGroup, "event").Exists() {
-		t.Error("event field should not appear in matcher group")
-	}
-	if gjson.GetBytes(matcherGroup, "matcher").String() != "Bash" {
-		t.Error("matcher field should be preserved")
+	if h.Matcher != "Bash" {
+		t.Errorf("matcher: got %q, want Bash", h.Matcher)
 	}
 }
 
-func TestParseHookFile_MissingEvent(t *testing.T) {
+func TestReadSingleManifestHook_MissingSpec(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
 
+	// Legacy flat shape (no spec field) is rejected by ParseManifest.
 	hookJSON := `{"matcher": ".*", "hooks": [{"type": "command", "command": "echo"}]}`
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	_, _, _, err := parseHookFile(hookFile)
-	if err == nil {
-		t.Fatal("expected error for missing event field")
+	if _, err := readSingleManifestHook(hookFile); err == nil {
+		t.Fatal("expected error for manifest missing spec field")
 	}
 }
 
@@ -291,16 +233,7 @@ func TestInstallHook_HashComputation(t *testing.T) {
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
-	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hash-test"}}]}`
-
-	// Simulate what installHook does: parse, compute hash, record
-	hookFile := filepath.Join(projectRoot, "hook.json")
-	os.WriteFile(hookFile, []byte(hookJSON), 0644)
-
-	_, _, matcherGroup, err := parseHookFile(hookFile)
-	if err != nil {
-		t.Fatalf("parseHookFile: %v", err)
-	}
+	matcherGroup := []byte(`{"matcher":"Bash","hooks":[{"type":"command","command":"echo hash-test"}]}`)
 
 	groupHash := computeGroupHash(matcherGroup)
 	if len(groupHash) != 64 {

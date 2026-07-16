@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -36,7 +37,8 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 		t.Fatalf("getting home dir: %v", err)
 	}
 
-	// Create a provider config directory with hooks in settings.json
+	// Create a claude-code config directory with two hooks in its native
+	// settings.json — orphan detection now decodes via the provider's adapter.
 	configDir := filepath.Join(home, ".syllago-test-orphan-"+filepath.Base(projectRoot))
 	os.MkdirAll(configDir, 0755)
 	t.Cleanup(func() { os.RemoveAll(configDir) })
@@ -51,9 +53,29 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 }`
 	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
 
-	// Only the first hook is tracked in installed.json
-	trackedEntry := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo tracked"}]}`
-	trackedHash := computeGroupHash([]byte(trackedEntry))
+	prov := provider.Provider{
+		Name:      "Claude Code",
+		Slug:      "claude-code",
+		ConfigDir: filepath.Base(configDir),
+		Detected:  true,
+	}
+
+	// Track only the "echo tracked" hook, using the SAME canonical identity
+	// (decode via the adapter, then hookIdentity) that install records.
+	adapter := converter.AdapterFor("claude-code")
+	decoded, err := adapter.Decode([]byte(settingsJSON))
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	var trackedHash string
+	for _, hk := range decoded.Hooks {
+		if hk.Handler.Command == "echo tracked" {
+			trackedHash = hookIdentity(hk)
+		}
+	}
+	if trackedHash == "" {
+		t.Fatal("could not compute identity for tracked hook")
+	}
 
 	inst := &Installed{
 		Hooks: []InstalledHook{
@@ -62,30 +84,20 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 	}
 	SaveInstalled(projectRoot, inst)
 
-	prov := provider.Provider{
-		Name:      "Test",
-		Slug:      "test",
-		ConfigDir: filepath.Base(configDir),
-		Detected:  true,
-	}
-
 	orphans, err := CheckOrphanedMerges(projectRoot, []provider.Provider{prov})
 	if err != nil {
 		t.Fatalf("CheckOrphanedMerges: %v", err)
 	}
 
-	// Should find one orphan (the "echo orphan" entry)
+	// Should find exactly one orphan: the untracked "echo orphan" entry.
 	if len(orphans) != 1 {
-		t.Fatalf("expected 1 orphan, got %d", len(orphans))
+		t.Fatalf("expected 1 orphan, got %d: %+v", len(orphans), orphans)
 	}
 	if orphans[0].Type != "hook" {
 		t.Errorf("orphan type = %q, want hook", orphans[0].Type)
 	}
 	if orphans[0].Key != "PreToolUse" {
 		t.Errorf("orphan key = %q, want PreToolUse", orphans[0].Key)
-	}
-	if orphans[0].Index != 1 {
-		t.Errorf("orphan index = %d, want 1", orphans[0].Index)
 	}
 }
 

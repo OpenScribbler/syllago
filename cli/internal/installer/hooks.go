@@ -3,7 +3,6 @@ package installer
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 )
 
 // computeGroupHash computes the SHA256 hex hash of a matcher group JSON blob.
+// Retained for orphan detection (orphans.go), which hashes raw settings entries.
 func computeGroupHash(matcherGroup []byte) string {
 	hash := sha256.Sum256(matcherGroup)
 	return hex.EncodeToString(hash[:])
@@ -29,132 +29,61 @@ func computeGroupHash(matcherGroup []byte) string {
 // Declared as a var so tests can override it (same pattern as mcpConfigPath).
 var hookSettingsPath = hookSettingsPathImpl
 
+// hookSettingsPathImpl resolves a provider's hook file rooted at the user's
+// home directory, via the shared HookConfigPath resolver (ADR-0020 path table).
 func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	if prov.Slug == "crush" {
-		// Crush keeps hooks in its unified crush.json (global scope), not a
-		// settings.json.
-		return filepath.Join(home, ".config", "crush", "crush.json"), nil
-	}
-	return filepath.Join(home, prov.ConfigDir, "settings.json"), nil
-}
-
-// parseHookFile reads a canonical hook.json (hooks/0.1 Manifest) and returns
-// the event, the manifest's optional hook name, and a provider-settings
-// matcher group JSON built from the single hook's handler. If path is a
-// directory, resolves hook.json inside it.
-//
-// The returned matcher group has shape {matcher, hooks:[entry]} — the same
-// shape provider settings.json expects. Syllago-written hook.json always
-// contains exactly one hook per Manifest (see converter.SplitSettingsHooks).
-func parseHookFile(path string) (event string, hookName string, matcherGroup []byte, err error) {
-	fi, err := os.Stat(path)
-	if err != nil {
-		return "", "", nil, err
-	}
-	if fi.IsDir() {
-		path = filepath.Join(path, "hook.json")
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", "", nil, err
-	}
-
-	manifest, err := converter.ParseManifest(data)
-	if err != nil {
-		return "", "", nil, err
-	}
-	if len(manifest.Hooks) != 1 {
-		return "", "", nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
-	}
-
-	hds, err := converter.HookDataFromManifest(manifest)
-	if err != nil {
-		return "", "", nil, fmt.Errorf("converting manifest: %w", err)
-	}
-	hd := hds[0]
-
-	// Build the provider-shape matcher group: {matcher, hooks:[entry]}.
-	group := struct {
-		Matcher string                `json:"matcher,omitempty"`
-		Hooks   []converter.HookEntry `json:"hooks"`
-	}{
-		Matcher: hd.Matcher,
-		Hooks:   hd.Hooks,
-	}
-	matcherGroup, err = json.Marshal(group)
-	if err != nil {
-		return "", "", nil, fmt.Errorf("building matcher group: %w", err)
-	}
-
-	return hd.Event, manifest.Hooks[0].Name, matcherGroup, nil
+	return HookConfigPath(prov, home)
 }
 
 func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
-	// item.Path is already absolute (set by scanner)
-	event, hookName, matcherGroup, err := parseHookFile(item.Path)
+	// item.Path is already absolute (set by scanner).
+	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
 
-	// M3: Validate event name to prevent sjson key injection via dots
-	if !converter.IsValidHookEvent(event) {
-		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", event)
+	// M3: validate the event name (rejects garbage and prevents key injection).
+	if !converter.IsValidHookEvent(h.Event) {
+		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
 	}
 
-	// Reject events the provider has no settings key for (canonical events
-	// with no mapping for this provider, or another provider's native name).
-	// Merging those writes config under a key the provider never reads —
-	// silently dead, reported as success (syllago-xqlc1).
-	if !converter.ProviderSupportsHookEvent(event, prov.Slug) {
-		return "", fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, event)
+	// ADR-0020: install through the provider's HookAdapter. No adapter (amp,
+	// codex) means the hook cannot be serialized — reject rather than write
+	// config the provider never reads.
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		return "", fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
 	}
 
-	// Translate canonical event names (e.g. "before_tool_execute") to the
-	// provider-native key (e.g. "PreToolUse") so the hook lands under the
-	// JSON path the provider actually reads. If the event is already
-	// native for this provider, TranslateHookEvent returns ok=false and
-	// we keep the event as-is.
-	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
-		event = nativeEvent
-	}
-
-	// M4: Whitelist-filter the matcher group through a typed struct to strip
-	// unknown JSON fields before merging into settings.json.
-	matcherGroup, err = whitelistMatcherGroup(matcherGroup)
+	// Classify storage. Directory-scoped providers (copilot-cli, kiro, pi) are
+	// rejected pending Phase 1b.
+	model, err := hookStorageModelFor(prov.Slug)
 	if err != nil {
-		return "", fmt.Errorf("filtering matcher group: %w", err)
+		return "", err
 	}
 
-	// Translate canonical matcher tool names (e.g. "shell") to the
-	// provider-native names the provider tests its hook regexes against
-	// (e.g. "Bash" for claude-code). Library hook.json stores canonical
-	// matchers, so without this the merged regex silently never fires.
-	// Wildcards, MCP-style patterns, and already-native names pass
-	// through TranslateMatcher unchanged.
-	if matcher := gjson.GetBytes(matcherGroup, "matcher").String(); matcher != "" {
-		translated := converter.TranslateMatcher(matcher, prov.Slug)
-		if translated != matcher {
-			matcherGroup, err = sjson.SetBytes(matcherGroup, "matcher", translated)
-			if err != nil {
-				return "", fmt.Errorf("translating matcher: %w", err)
-			}
-		}
+	canonHook, err := manifestHookToCanonical(h)
+	if err != nil {
+		return "", fmt.Errorf("building canonical hook: %w", err)
+	}
+	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	canonHook.Event = canonEvent
+
+	// Event-support gate: reject events the adapter cannot represent. Adapter
+	// capabilities are ADR-0020's source of truth (they see windsurf's
+	// split-event support, which ProviderSupportsHookEvent misses).
+	if !adapterSupportsEvent(adapter, canonEvent) {
+		return "", fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
 	}
 
-	// M2: Run the pluggable scanner chain (builtin + any --hook-scanner paths)
-	// against the source hook directory. The builtin scanner examines hook.json
-	// and any recognized script files; external scanners run as subprocesses
-	// per the protocol in docs/plans/implementation/pluggable-scanner.md.
-	//
-	// High-severity findings block the install unless --force was supplied.
-	// Lower severities print warnings and proceed.
+	// SECURITY (M2): run the pluggable scanner chain against the source hook
+	// directory. High-severity findings block the install unless --force.
 	itemDir := item.Path
-	if fi, err := os.Stat(item.Path); err == nil && !fi.IsDir() {
+	if fi, statErr := os.Stat(item.Path); statErr == nil && !fi.IsDir() {
 		itemDir = filepath.Dir(item.Path)
 	}
 	scanResult, _ := converter.RunScanChain(itemDir, scannerChainPaths)
@@ -173,34 +102,31 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
 	}
 
-	// Copy script files referenced by hook commands to a stable location.
-	// Without this, hooks from registries would point into the registry
-	// clone dir which can change on sync or vanish on remove.
-	matcherGroup, err = resolveHookScripts(matcherGroup, item, repoRoot)
+	// SECURITY: copy referenced scripts to a stable location and rewrite the
+	// command path (operates on the hook before encode).
+	resolvedCmd, err := resolveHookCommandScript(canonHook.Handler.Command, item, repoRoot)
 	if err != nil {
 		return "", err
 	}
+	canonHook.Handler.Command = resolvedCmd
 
-	// Crush stores flat hook entries ({name, command, matcher, timeout})
-	// rather than CC-shape matcher groups. The event is necessarily
-	// PreToolUse here: crush's only HookEvents entry is before_tool_execute,
-	// so the support check above already rejected everything else. Flatten
-	// last so the whitelist, scanner, and script-resolution steps above all
-	// see the standard shape.
-	if prov.Slug == "crush" {
-		matcherGroup, err = FlattenForCrush(matcherGroup, hookName)
-		if err != nil {
-			return "", fmt.Errorf("hook %q: %w", item.Name, err)
-		}
+	// Stable identity from the post-round-trip canonical form. Also rejects
+	// hooks the adapter drops (e.g. non-command handler on crush) before any
+	// file is touched.
+	groupHash, err := roundTripIdentity(adapter, canonHook)
+	if err != nil {
+		return "", fmt.Errorf("hook %q: %w", item.Name, err)
 	}
 
-	// Check installed.json for duplicate
+	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
+
+	// Dedup against installed.json (name + event).
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return "", fmt.Errorf("loading installed.json: %w", err)
 	}
-	if inst.FindHook(item.Name, event) >= 0 {
-		return "", fmt.Errorf("hook %s already installed for %s event", item.Name, event)
+	if inst.FindHook(item.Name, nativeEvent) >= 0 {
+		return "", fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
 
 	settingsPath, err := hookSettingsPath(prov)
@@ -213,43 +139,31 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("creating snapshot: %w", err)
 	}
 
-	fileData, err := readJSONFile(settingsPath)
+	existing, err := decodeExistingHooks(adapter, settingsPath)
 	if err != nil {
-		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
+		return "", err
 	}
+	all := make([]converter.CanonicalHook, 0, len(existing)+1)
+	all = append(all, existing...)
+	all = append(all, canonHook)
 
-	// Compute hash of the matcher group before appending
-	hash := sha256.Sum256(matcherGroup)
-	groupHash := hex.EncodeToString(hash[:])
-
-	// Append to hooks.<event> array using sjson's -1 (append) syntax
-	key := "hooks." + event + ".-1"
-	fileData, err = sjson.SetRawBytes(fileData, key, matcherGroup)
+	encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: all})
 	if err != nil {
-		return "", fmt.Errorf("appending hook: %w", err)
+		return "", fmt.Errorf("encoding hooks: %w", err)
 	}
-
-	if err := writeJSONFile(settingsPath, fileData); err != nil {
-		// Auto-rollback using the snapshot we just created
+	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
+		// Auto-rollback using the snapshot we just created.
 		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 			_ = snapshot.Restore(snapshotDir, manifest)
 		}
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
-	// Extract command from the hook for tracking (crush entries are flat)
-	commandPath := "hooks.0.command"
-	if prov.Slug == "crush" {
-		commandPath = "command"
-	}
-	command := gjson.GetBytes(matcherGroup, commandPath).String()
-
-	// Record in installed.json
 	inst.Hooks = append(inst.Hooks, InstalledHook{
 		Name:        item.Name,
-		Event:       event,
+		Event:       nativeEvent,
 		GroupHash:   groupHash,
-		Command:     command,
+		Command:     canonHook.Handler.Command,
 		Source:      "export",
 		Scope:       "global",
 		InstalledAt: time.Now(),
@@ -258,74 +172,57 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("hooks.%s in %s", event, settingsPath), nil
+	return fmt.Sprintf("hooks.%s in %s", nativeEvent, settingsPath), nil
 }
 
 func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
-	// item.Path is already absolute (set by scanner)
-	event, _, _, err := parseHookFile(item.Path)
+	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
 		return "", fmt.Errorf("parsing hook file: %w", err)
 	}
 
-	// Translate canonical event names to provider-native (matches install).
-	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
-		event = nativeEvent
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		return "", fmt.Errorf("hook uninstall not supported for %s (no encoder)", prov.Name)
 	}
+	model, err := hookStorageModelFor(prov.Slug)
+	if err != nil {
+		return "", err
+	}
+
+	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
 		return "", err
 	}
 
-	fileData, err := readJSONFile(settingsPath)
-	if err != nil {
-		return "", fmt.Errorf("reading %s: %w", settingsPath, err)
-	}
-
-	// Find entry by installed.json lookup
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return "", fmt.Errorf("loading installed.json: %w", err)
 	}
-
-	instIdx := inst.FindHook(item.Name, event)
-
-	// Find the hook entry in settings.json
-	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
-	if !hooksArray.Exists() || !hooksArray.IsArray() {
-		return "", fmt.Errorf("no hooks.%s array in %s", event, settingsPath)
+	instIdx := inst.FindHook(item.Name, nativeEvent)
+	if instIdx < 0 {
+		return "", fmt.Errorf("hook %s not tracked for %s event (not installed by syllago)", item.Name, nativeEvent)
 	}
+	storedHash := inst.Hooks[instIdx].GroupHash
 
+	// Identity-based match: decode the file, find the hook whose canonical
+	// identity matches the stored hash, drop it, and re-encode.
+	existing, err := decodeExistingHooks(adapter, settingsPath)
+	if err != nil {
+		return "", err
+	}
 	found := -1
-	if instIdx >= 0 {
-		storedHash := inst.Hooks[instIdx].GroupHash
-		if storedHash != "" {
-			// Hash-based matching: compare stored hash against hash of each entry
-			for i, entry := range hooksArray.Array() {
-				entryBytes := []byte(entry.Raw)
-				h := sha256.Sum256(entryBytes)
-				if hex.EncodeToString(h[:]) == storedHash {
-					found = i
-					break
-				}
-			}
-			if found == -1 {
-				return "", fmt.Errorf("hook %s was modified since installation; use 'syllago restore' to revert", item.Name)
-			}
-		} else {
-			// Fallback: command-string matching for pre-hash installed hooks
-			cmd := inst.Hooks[instIdx].Command
-			for i, entry := range hooksArray.Array() {
-				if entry.Get("hooks.0.command").String() == cmd {
-					found = i
-					break
-				}
-			}
+	for i, eh := range existing {
+		if hookIdentity(eh) == storedHash {
+			found = i
+			break
 		}
 	}
 	if found == -1 {
-		return "", fmt.Errorf("hook %s not found in hooks.%s (not installed by syllago)", item.Name, event)
+		return "", fmt.Errorf("hook %s not found in %s (modified since installation; use 'syllago restore' to revert)", item.Name, settingsPath)
 	}
 
 	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-uninstall:"+item.Name, []string{settingsPath})
@@ -333,89 +230,69 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 		return "", fmt.Errorf("creating snapshot: %w", err)
 	}
 
-	// Delete by index
-	key := fmt.Sprintf("hooks.%s.%d", event, found)
-	fileData, err = sjson.DeleteBytes(fileData, key)
-	if err != nil {
-		return "", fmt.Errorf("deleting hook: %w", err)
-	}
+	remaining := make([]converter.CanonicalHook, 0, len(existing)-1)
+	remaining = append(remaining, existing[:found]...)
+	remaining = append(remaining, existing[found+1:]...)
 
-	if err := writeJSONFile(settingsPath, fileData); err != nil {
-		// Auto-rollback using the snapshot we just created
+	encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: remaining})
+	if err != nil {
+		return "", fmt.Errorf("encoding hooks: %w", err)
+	}
+	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
 		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 			_ = snapshot.Restore(snapshotDir, manifest)
 		}
 		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
-	// Remove from installed.json only after successful write
-	if instIdx >= 0 {
-		inst.RemoveHook(instIdx)
-		if err := SaveInstalled(repoRoot, inst); err != nil {
-			return "", fmt.Errorf("saving installed.json: %w", err)
-		}
+	inst.RemoveHook(instIdx)
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return "", fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("hooks.%s from %s", event, settingsPath), nil
+	return fmt.Sprintf("hooks.%s from %s", nativeEvent, settingsPath), nil
 }
 
 func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
-	// item.Path is already absolute (set by scanner)
-	event, _, _, err := parseHookFile(item.Path)
+	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
 		return StatusNotAvailable
 	}
 
-	// Translate canonical event names to provider-native (matches install).
-	if nativeEvent, ok := converter.TranslateHookEvent(event, prov.Slug); ok {
-		event = nativeEvent
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		return StatusNotAvailable
+	}
+	if _, err := hookStorageModelFor(prov.Slug); err != nil {
+		return StatusNotAvailable
 	}
 
-	// Check installed.json for this hook
+	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
+
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return StatusNotAvailable
 	}
-	instIdx := inst.FindHook(item.Name, event)
+	instIdx := inst.FindHook(item.Name, nativeEvent)
 	if instIdx < 0 {
 		return StatusNotInstalled
 	}
+	storedHash := inst.Hooks[instIdx].GroupHash
 
-	// installed.json doesn't track which provider the hook was installed to,
-	// so verify the hook actually exists in THIS provider's settings file.
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
 		return StatusNotInstalled
 	}
-
-	fileData, err := readJSONFile(settingsPath)
+	existing, err := decodeExistingHooks(adapter, settingsPath)
 	if err != nil {
 		return StatusNotInstalled
 	}
-
-	hooksArray := gjson.GetBytes(fileData, "hooks."+event)
-	if !hooksArray.Exists() || !hooksArray.IsArray() {
-		return StatusNotInstalled
-	}
-
-	// Match by hash or command to confirm presence in this provider's settings
-	storedHash := inst.Hooks[instIdx].GroupHash
-	if storedHash != "" {
-		for _, entry := range hooksArray.Array() {
-			h := sha256.Sum256([]byte(entry.Raw))
-			if hex.EncodeToString(h[:]) == storedHash {
-				return StatusInstalled
-			}
-		}
-	} else {
-		cmd := inst.Hooks[instIdx].Command
-		for _, entry := range hooksArray.Array() {
-			if entry.Get("hooks.0.command").String() == cmd {
-				return StatusInstalled
-			}
+	for _, eh := range existing {
+		if hookIdentity(eh) == storedHash {
+			return StatusInstalled
 		}
 	}
-
 	return StatusNotInstalled
 }
 
@@ -426,6 +303,25 @@ func hookScriptsDir(name string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, ".syllago", "hooks", name), nil
+}
+
+// resolveHookCommandScript resolves a single hook command through the
+// script-copying security logic (resolveHookScripts operates on a matcher
+// group, so we wrap the command in a minimal group and read the rewritten
+// command back). An empty command (e.g. a non-command handler) is a no-op.
+func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot string) (string, error) {
+	if cmd == "" {
+		return "", nil
+	}
+	mg, err := sjson.SetBytes([]byte(`{}`), "hooks.0.command", cmd)
+	if err != nil {
+		return "", err
+	}
+	mg, err = resolveHookScripts(mg, item, repoRoot)
+	if err != nil {
+		return "", err
+	}
+	return gjson.GetBytes(mg, "hooks.0.command").String(), nil
 }
 
 // resolveHookScripts finds script file references in a hook's matcher group,
@@ -526,55 +422,4 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	}
 
 	return result, nil
-}
-
-// FlattenForCrush converts a CC-shape matcher group ({matcher, hooks:[entry]})
-// into crush's flat HookConfig ({name, matcher, command, timeout}). Crush
-// hooks are shell commands only, its schema rejects unknown fields, and its
-// timeouts are seconds — the canonical unit, so the value passes through
-// unchanged. The matcher must arrive already translated to crush's native
-// tool names (both installHook and loadout applyHook translate for every
-// provider before this step). Exported so the loadout merge path can share
-// the same flattening.
-func FlattenForCrush(matcherGroup []byte, hookName string) ([]byte, error) {
-	entry := gjson.GetBytes(matcherGroup, "hooks.0")
-	if hType := entry.Get("type").String(); hType != "" && hType != "command" {
-		return nil, fmt.Errorf("crush hooks only support command handlers (got type %q)", hType)
-	}
-	cmd := entry.Get("command").String()
-	if cmd == "" {
-		return nil, fmt.Errorf("crush hooks require a command")
-	}
-	matcher := gjson.GetBytes(matcherGroup, "matcher").String()
-	flat := struct {
-		Name    string `json:"name,omitempty"`
-		Matcher string `json:"matcher,omitempty"`
-		Command string `json:"command"`
-		Timeout int    `json:"timeout,omitempty"`
-	}{
-		Name:    hookName,
-		Matcher: matcher,
-		Command: cmd,
-		Timeout: int(entry.Get("timeout").Int()),
-	}
-	return json.Marshal(flat)
-}
-
-// hookMatcherGroup is a typed struct for whitelist-filtering hook matcher groups.
-// Only known fields are preserved when merging into settings.json, matching
-// the approach used by ExtractServerEntries for MCP configs.
-type hookMatcherGroup struct {
-	Matcher string          `json:"matcher,omitempty"`
-	Hooks   json.RawMessage `json:"hooks,omitempty"`
-	Timeout int             `json:"timeout,omitempty"`
-}
-
-// whitelistMatcherGroup parses a raw matcher group through a typed struct to
-// strip unknown JSON fields before merging into provider settings.
-func whitelistMatcherGroup(raw []byte) ([]byte, error) {
-	var mg hookMatcherGroup
-	if err := json.Unmarshal(raw, &mg); err != nil {
-		return nil, fmt.Errorf("parsing matcher group: %w", err)
-	}
-	return json.Marshal(mg)
 }

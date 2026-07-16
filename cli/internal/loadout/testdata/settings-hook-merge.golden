@@ -1,6 +1,17 @@
 {
   "userPref": "dark-mode",
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo golden-test"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "*.go",
@@ -12,5 +23,5 @@
         ]
       }
     ]
-  ,"PostToolUse":[{"matcher":".*","hooks":[{"type":"command","command":"echo golden-test"}]}]}
+  }
 }
