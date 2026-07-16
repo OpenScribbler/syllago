@@ -13,8 +13,11 @@ import (
 // beyond trustedRootMaxAge, which is how we avoid silently passing sigstore
 // tests against stale Fulcio / Rekor root material.
 //
-// Source: sigstore-go v1.1.4 examples/trusted-root.json.
-var trustedRootCapturedAt = time.Date(2026, 4, 17, 0, 0, 0, 0, time.UTC)
+// Source: sigstore-go v1.2.0 examples/trusted-root-public-good.json
+// (byte-identical to the prior v1.1.4 capture — the public-good Fulcio/Rekor
+// material did not rotate; re-verified against the pinned sigstore-go version
+// on the date below, so no fixture bytes or downstream bundle fixtures changed).
+var trustedRootCapturedAt = time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
 
 // trustedRootMaxAge is the upper bound beyond which the fixture is
 // considered stale enough to fail tests. 90 days is long enough to avoid
