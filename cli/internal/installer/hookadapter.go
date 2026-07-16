@@ -43,7 +43,13 @@ func hookStorageModelFor(slug string) (hookStorageModel, error) {
 	case "claude-code", "crush", "cursor", "gemini-cli", "factory-droid":
 		return hookStorageSharedJSON, nil
 	case "windsurf":
-		return hookStorageDedicatedFile, nil
+		// Deferred: windsurf's adapter fans one before_tool_execute hook out to
+		// four split-events and only merges them back on decode when each has
+		// exactly one entry. A second windsurf hook breaks that precondition, so
+		// a hook's post-round-trip identity is not stable across installs —
+		// uninstall/status/orphans can't reliably match it. Needs a stable
+		// per-entry identity (a syllago marker), which is Phase 1b work.
+		return 0, fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
 	case "copilot-cli", "kiro", "pi":
 		return 0, fmt.Errorf("hook install for %s is not yet supported (pending ADR-0020 Phase 1b: directory-scoped hook layout)", slug)
 	default:
@@ -65,11 +71,12 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 	case "crush":
 		// Crush keeps hooks in its unified crush.json (XDG global config).
 		return filepath.Join(base, ".config", "crush", "crush.json"), nil
-	case "windsurf":
-		// Windsurf keeps hooks in a dedicated home-scoped hooks.json.
-		return filepath.Join(base, ".windsurf", "hooks.json"), nil
 	case "claude-code", "cursor", "gemini-cli", "factory-droid":
 		return filepath.Join(base, prov.ConfigDir, "settings.json"), nil
+	case "windsurf":
+		// Deferred to Phase 1b — see hookStorageModelFor for why. The Phase 1b
+		// path will be base/.windsurf/hooks.json (dedicated file).
+		return "", fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
 	case "copilot-cli", "kiro", "pi":
 		return "", fmt.Errorf("hook install for %s is not yet supported (pending ADR-0020 Phase 1b: directory-scoped hook layout)", prov.Slug)
 	default:
@@ -213,10 +220,24 @@ func decodeExistingHooks(adapter converter.HookAdapter, path string) ([]converte
 	return ch.Hooks, nil
 }
 
+// KNOWN PHASE-2 CONCERN (decode → encode-all): install/uninstall re-serialize
+// the ENTIRE hooks set on every mutation, not just the changed entry. Two
+// consequences, both tracked for Phase 2:
+//   (a) Fidelity — any provider-native field an adapter does not model is
+//       dropped from previously-installed hooks when they are re-encoded.
+//   (b) Determinism — adapters iterate Go maps (event → groups), so event-key
+//       ordering is non-deterministic across writes, churning users' config
+//       diffs even when nothing semantically changed.
+// Phase 2 makes adapter encoding deterministic and promotes adapter.Verify to a
+// production-load-bearing fidelity check. Until then this is acceptable because
+// the routed providers (claude-code, crush, cursor, gemini-cli, factory-droid)
+// model the fields syllago writes.
+
 // writeHookFile persists an adapter's encoded hooks according to the storage
 // model. Dedicated-file providers get the whole encoded file; shared-JSON
 // providers get only the encoded `hooks` object merged into the real file,
-// preserving every non-hook key.
+// preserving every non-hook key. The dedicated-file branch is Phase 1b infra —
+// no Phase 1 provider routes to it (see hookStorageModelFor).
 func writeHookFile(model hookStorageModel, path string, encoded []byte) error {
 	if model == hookStorageDedicatedFile {
 		return writeJSONFile(path, encoded)

@@ -146,40 +146,51 @@ func TestInstallHook_Adapter_PreservesSiblings(t *testing.T) {
 	}
 }
 
-// TestInstallHook_Windsurf_DedicatedFile installs a non-blocking before-tool
-// hook into windsurf's dedicated hooks.json. Windsurf uses a split-event model
-// and wraps non-blocking pre-hooks with `|| true`; the identity-based
-// status/uninstall must survive that lossy transform.
-func TestInstallHook_Windsurf_DedicatedFile(t *testing.T) {
+// TestInstallHook_Windsurf_DeferredToPhase1b: windsurf is deferred to Phase 1b.
+// Its adapter fans one before_tool_execute hook out to four split-events and
+// only merges them back when each has exactly one entry, so a hook's
+// post-round-trip identity is not stable once a second windsurf hook exists —
+// uninstall/status/orphans can't reliably match it. Until Phase 1b adds a
+// stable per-entry identity, installing a windsurf hook must reject and write
+// nothing.
+func TestInstallHook_Windsurf_DeferredToPhase1b(t *testing.T) {
 	item, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "shell", "echo hi")
 
-	hooksPath := filepath.Join(t.TempDir(), "hooks.json")
-	overrideHookSettingsPath(t, hooksPath)
+	settingsPath := filepath.Join(t.TempDir(), "config.json")
+	os.WriteFile(settingsPath, []byte(`{}`), 0644)
+	overrideHookSettingsPath(t, settingsPath)
 
-	if _, err := installHook(item, provider.Windsurf, projectRoot); err != nil {
-		t.Fatalf("installHook: %v", err)
+	_, err := installHook(item, provider.Windsurf, projectRoot)
+	if err == nil {
+		t.Fatal("expected error installing hook to windsurf (Phase 1b)")
 	}
+	if !strings.Contains(err.Error(), "Phase 1b") {
+		t.Errorf("error should reference Phase 1b, got: %v", err)
+	}
+	data, _ := os.ReadFile(settingsPath)
+	if gjson.GetBytes(data, "hooks").Exists() {
+		t.Errorf("no hook should have been written, got: %s", data)
+	}
+}
 
-	data, _ := os.ReadFile(hooksPath)
-	// Windsurf split-event: canonical "shell" fans out to pre_run_command.
-	entry := gjson.GetBytes(data, "hooks.pre_run_command.0.command").String()
-	if entry == "" {
-		t.Fatalf("expected hooks.pre_run_command.0.command in windsurf hooks.json, got: %s", data)
-	}
-	if !strings.Contains(entry, "|| true") {
-		t.Errorf("non-blocking pre-hook should be wrapped with || true, got: %q", entry)
-	}
+// TestWriteHookFile_DedicatedMode covers the dedicated-file write branch
+// directly. That branch is Phase 1b infrastructure (no Phase 1 provider routes
+// to it), so this keeps it exercised without a routed provider: it must write
+// the encoded content verbatim as the whole file.
+func TestWriteHookFile_DedicatedMode(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "hooks.json")
+	encoded := []byte(`{"hooks":{"pre_run_command":[{"command":"echo hi"}]}}`)
 
-	if status := checkHookStatus(item, provider.Windsurf, projectRoot); status != StatusInstalled {
-		t.Errorf("status after install: got %v, want Installed", status)
+	if err := writeHookFile(hookStorageDedicatedFile, path, encoded); err != nil {
+		t.Fatalf("writeHookFile: %v", err)
 	}
-
-	if _, err := uninstallHook(item, provider.Windsurf, projectRoot); err != nil {
-		t.Fatalf("uninstallHook: %v", err)
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading written file: %v", err)
 	}
-	data, _ = os.ReadFile(hooksPath)
-	if gjson.GetBytes(data, "hooks.pre_run_command.0").Exists() {
-		t.Errorf("hook should be removed after uninstall, got: %s", data)
+	if string(got) != string(encoded) {
+		t.Errorf("dedicated write should be verbatim:\n got  %s\n want %s", got, encoded)
 	}
 }
 

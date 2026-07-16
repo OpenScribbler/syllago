@@ -16,7 +16,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
-	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
@@ -494,31 +493,6 @@ func findHookFile(itemDir string) string {
 		}
 	}
 	return ""
-}
-
-// resolveHookCommands resolves relative command paths in hook JSON to absolute paths.
-func resolveHookCommands(matcherGroup []byte, itemDir string) []byte {
-	// Walk through hooks array and resolve command paths
-	hooksArray := gjson.GetBytes(matcherGroup, "hooks")
-	if !hooksArray.Exists() || !hooksArray.IsArray() {
-		return matcherGroup
-	}
-
-	result := matcherGroup
-	for i, hook := range hooksArray.Array() {
-		cmd := hook.Get("command").String()
-		if cmd != "" {
-			resolved := ResolveHookCommand(itemDir, cmd)
-			if resolved != cmd {
-				key := fmt.Sprintf("hooks.%d.command", i)
-				updated, err := sjson.SetBytes(result, key, resolved)
-				if err == nil {
-					result = updated
-				}
-			}
-		}
-	}
-	return result
 }
 
 // readJSONFileOrEmpty reads a JSON file, returning {} if it doesn't exist.

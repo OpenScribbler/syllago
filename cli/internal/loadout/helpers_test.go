@@ -216,53 +216,6 @@ func TestSettingsPathFor_ResolverNoMatch(t *testing.T) {
 	}
 }
 
-// --- resolveHookCommands (64.3% coverage) ---
-
-func TestResolveHookCommands_RelativePath(t *testing.T) {
-	t.Parallel()
-	itemDir := "/content/hooks/claude-code/my-hook"
-	input := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"./run.sh"}]}`)
-
-	got := resolveHookCommands(input, itemDir)
-	// The relative ./run.sh should become an absolute path
-	want := filepath.Join(itemDir, "./run.sh")
-	if string(got) == string(input) {
-		t.Error("resolveHookCommands should have resolved relative path")
-	}
-	_ = want // The actual path check depends on ResolveHookCommand behavior
-}
-
-func TestResolveHookCommands_AbsolutePath(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"matcher":".*","hooks":[{"type":"command","command":"/usr/bin/echo test"}]}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	// Absolute paths should not be modified
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should not modify absolute paths, got %q", string(got))
-	}
-}
-
-func TestResolveHookCommands_NoHooksArray(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"matcher":".*"}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should return input unchanged when no hooks array")
-	}
-}
-
-func TestResolveHookCommands_EmptyCommand(t *testing.T) {
-	t.Parallel()
-	input := []byte(`{"hooks":[{"type":"command","command":""}]}`)
-
-	got := resolveHookCommands(input, "/some/dir")
-	if string(got) != string(input) {
-		t.Errorf("resolveHookCommands should not modify empty commands")
-	}
-}
-
 // --- symlinkSource (66.7% coverage — agents case untested) ---
 
 func TestSymlinkSource_Agents(t *testing.T) {
