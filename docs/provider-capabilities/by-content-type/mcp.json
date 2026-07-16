@@ -399,6 +399,66 @@
       },
       "supported": true
     },
+    "opencode": {
+      "capabilities": {
+        "enterprise_management": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the provider supports organization-level MCP configuration management, including managed server lists, allowlists, and enterprise registries.\n",
+            "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "bool"
+          },
+          "key_path": "mcp.enterprise_management",
+          "mechanism": "organizations publish default MCP server configs via a .well-known/opencode endpoint; local opencode.json values override remote defaults (documented under 'Enable' / 'Overriding remote defaults')",
+          "supported": true
+        },
+        "env_var_expansion": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether MCP server configuration supports environment variable expansion. Reduces the need for hardcoded secrets in config files.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE; pinned closed field set)",
+            "type": "bool"
+          },
+          "key_path": "mcp.env_var_expansion",
+          "mechanism": "{env:VAR_NAME} interpolation in remote server headers and oauth fields; local servers take an environment object of key-value pairs",
+          "supported": true
+        },
+        "oauth_support": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "bool"
+          },
+          "key_path": "mcp.oauth_support",
+          "mechanism": "OAuth 2.0 with Dynamic Client Registration (RFC 7591): 401 auto-detected, tokens stored in ~/.local/share/opencode/mcp-auth.json; oauth object for pre-registered credentials or oauth: false to disable (documented under 'OAuth' / 'Authenticating' / 'OAuth Options')",
+          "supported": true
+        },
+        "tool_filtering": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Which per-server tool filtering mechanisms the provider supports. Contents: {allowlist: bool, blocklist: bool, disable_flag: bool}. Controls which server tools are exposed to the agent. Boundary: tool_filtering governs tool visibility (what appears in the agent's available tool set); see auto_approve for execution gating of visible tools.\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
+            "type": "object"
+          },
+          "key_path": "mcp.tool_filtering",
+          "mechanism": "global tools map keyed by server-name prefix with glob patterns (e.g. mymcp_*); per-agent access via the agent permission map (documented under 'Manage' / 'Global' / 'Per agent' / 'Glob patterns')",
+          "supported": true
+        },
+        "transport_types": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Which MCP transport protocols the provider supports. Common transports: stdio (local process), SSE (Server-Sent Events), HTTP/streamable-HTTP (stateless or streaming).\n",
+            "spec_ref": "ACIF-MCP §9.1 (DERIVABLE); transport enum ACIF-MCP §6.2, §7",
+            "type": "object"
+          },
+          "key_path": "mcp.transport_types",
+          "mechanism": "two types under the mcp key in opencode.json: local (stdio, launched via command array) and remote (HTTP/SSE streamable, connected via url) (documented under 'Local' / 'Remote' headings)",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
     "windsurf": {
       "capabilities": {
         "enterprise_management": {

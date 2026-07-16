@@ -427,7 +427,7 @@
             },
             "glob": {
               "confidence": "inferred",
-              "mechanism": "glob-based path matching activates steering files (documented under 'Conditional inclusion' inclusion mode)",
+              "mechanism": "glob-based path matching via inclusion: fileMatch with a fileMatchPattern glob field (single pattern or array) activates steering files (documented under 'Conditional inclusion' inclusion mode)",
               "supported": true
             },
             "manual": {
@@ -473,7 +473,7 @@
             "type": "bool"
           },
           "key_path": "rules.file_imports",
-          "mechanism": "steering files can reference other files (documented under 'File references' heading)",
+          "mechanism": "steering files can reference other files via '#[[file:<relative>]]' syntax (documented under 'File references' heading)",
           "supported": true
         },
         "hierarchical_loading": {
@@ -485,6 +485,76 @@
           },
           "key_path": "rules.hierarchical_loading",
           "mechanism": "three-tier scope: workspace + global + team steering (documented under 'Workspace steering' / 'Global steering' / 'Team steering')",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
+    "opencode": {
+      "capabilities": {
+        "activation_mode": {
+          "confidence": "inferred",
+          "key": {
+            "description": "How rules decide when to load into context. Providers implement varying modes: always-on, conditional/glob-based, model-decision, and manual activation. Tracks which modes the provider supports and how they are configured.\n",
+            "spec_ref": "ACIF-RULE §9.1 (DERIVABLE); activation-mode vocabulary ACIF-RULE Appendix A, §10",
+            "type": "object"
+          },
+          "key_path": "rules.activation_mode",
+          "mechanism": "rule files load unconditionally as context; no conditional activation syntax documented",
+          "supported": false
+        },
+        "auto_memory": {
+          "confidence": "inferred",
+          "key": {
+            "description": "Whether the provider auto-generates persistent rules from conversation context. Distinct from user-authored rules — these are AI-created and stored separately.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.auto_memory",
+          "mechanism": "no runtime command documented for persisting notes into rule files",
+          "supported": false
+        },
+        "cross_provider_recognition": {
+          "capabilities": {
+            "agents_md": {
+              "confidence": "confirmed",
+              "mechanism": "AGENTS.md read from project root and parent directories; global at ~/.config/opencode/AGENTS.md (documented under 'Types' / 'Project' / 'Global' headings)",
+              "supported": true
+            },
+            "claude_md": {
+              "confidence": "confirmed",
+              "mechanism": "CLAUDE.md fallback at project root and ~/.claude/CLAUDE.md globally when no AGENTS.md exists; disable via OPENCODE_DISABLE_CLAUDE_CODE=1 (documented under 'Claude Code Compatibility')",
+              "supported": true
+            }
+          },
+          "key": {
+            "description": "Which rule file formats from other providers this provider recognizes. Contents: recognized_formats (list of filenames like AGENTS.md, .cursorrules, .windsurfrules). Minimum qualification: supported when the provider reads at least one rule-file format defined by a different provider.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "object"
+          },
+          "key_path": "rules.cross_provider_recognition",
+          "supported": true
+        },
+        "file_imports": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether rules can reference or include content from other files. Mechanisms vary: @-import syntax, @file.md directives, @path/to/file references.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; strongest requires candidate — see ACIF ROADMAP, body-content reference grammar)",
+            "type": "bool"
+          },
+          "key_path": "rules.file_imports",
+          "mechanism": "instructions array in opencode.json (or the global ~/.config/opencode/opencode.json) lists additional rule files by relative path, glob pattern, or remote URL — all combined with AGENTS.md into context (documented under 'Referencing External Files' / 'Using opencode.json')",
+          "supported": true
+        },
+        "hierarchical_loading": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
+            "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
+            "type": "bool"
+          },
+          "key_path": "rules.hierarchical_loading",
+          "mechanism": "AGENTS.md (CLAUDE.md fallback) collected walking up from cwd; global ~/.config/opencode/AGENTS.md and ~/.claude/CLAUDE.md appended; all matching files combined (documented under 'Types' / 'Precedence')",
           "supported": true
         }
       },
@@ -558,7 +628,7 @@
             "type": "bool"
           },
           "key_path": "rules.hierarchical_loading",
-          "mechanism": ".windsurf/rules scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
+          "mechanism": ".devin/rules/ (preferred; .windsurf/rules/ legacy fallback) scanned in current workspace, sub-directories, and parent dirs up to git root (documented under 'Rules Discovery' / 'Rules Storage Locations')",
           "supported": true
         }
       },

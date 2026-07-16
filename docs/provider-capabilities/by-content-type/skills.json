@@ -442,6 +442,99 @@
       },
       "supported": true
     },
+    "opencode": {
+      "capabilities": {
+        "canonical_filename": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "The required or conventional filename for this skill type. For example, \"SKILL.md\" for Claude Code skills.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; discovery ACIF-SKILL §9)",
+            "type": "string"
+          },
+          "key_path": "skills.canonical_filename",
+          "mechanism": "fixed filename SKILL.md inside the skill directory (Agent Skills spec)",
+          "supported": true
+        },
+        "compatibility": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Provider compatibility constraints — which AI tool versions or providers this skill is compatible with.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.compatibility",
+          "mechanism": "yaml frontmatter key: compatibility (optional)",
+          "supported": true
+        },
+        "description": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "What the skill does. Used by the AI to decide when to auto-invoke it. Also shown in skill listings and help text.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.description",
+          "mechanism": "yaml frontmatter key: description (required)",
+          "supported": true
+        },
+        "display_name": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Human-readable display name for the skill. If omitted, the directory name is used. Shown in skill listings and menus.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.display_name",
+          "mechanism": "yaml frontmatter key: name (required)",
+          "supported": true
+        },
+        "global_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at global/personal scope (applies across all projects for the current user).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.global_scope",
+          "mechanism": "cross-provider convention at ~/.config/opencode/skills/<name>/SKILL.md",
+          "supported": true
+        },
+        "license": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "SPDX license identifier for the skill content. Typically \"MIT\", \"Apache-2.0\", etc.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "string"
+          },
+          "key_path": "skills.license",
+          "mechanism": "yaml frontmatter key: license (optional)",
+          "supported": true
+        },
+        "metadata_map": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Arbitrary key-value metadata attached to the skill. Provider-specific semantics; often used for tooling or automation metadata.\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1)",
+            "type": "object"
+          },
+          "key_path": "skills.metadata_map",
+          "mechanism": "yaml frontmatter key: metadata (optional map)",
+          "supported": true
+        },
+        "project_scope": {
+          "confidence": "confirmed",
+          "key": {
+            "description": "Whether the skill can be installed at project scope (applies to current project only, typically committed to version control).\n",
+            "spec_ref": "ACIF-SKILL §10.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY)",
+            "type": "bool"
+          },
+          "key_path": "skills.project_scope",
+          "mechanism": "cross-provider SKILL.md convention at .opencode/skill/<name>/SKILL.md",
+          "supported": true
+        }
+      },
+      "supported": true
+    },
     "pi": {
       "capabilities": {
         "canonical_filename": {
