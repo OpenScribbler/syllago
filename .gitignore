@@ -50,6 +50,11 @@ docs/provider-formats/*.quality.json
 !docs/runbooks/
 !docs/vhs/
 !docs/workflows/
+# docs/plans is ignored except committed design contracts (GUI v1)
+!docs/plans/
+docs/plans/*
+!docs/plans/2026-07-11-syllago-gui-architecture-design.md
+!docs/plans/syllago-gui-mockups.html
 tmp/
 
 # Development workflow state
