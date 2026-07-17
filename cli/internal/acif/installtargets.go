@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
@@ -154,6 +155,8 @@ func ResolveInstallTargets(in InstallResolveInput) ([]InstallTarget, []Diagnosti
 			}
 		}
 		if len(filtered) == 0 {
+			// PROTOCOL Appendix A pins available_scopes as sorted.
+			sort.Strings(available)
 			return nil, nil, &RejectError{
 				ID: "acif.install.scope_unavailable",
 				Diagnostics: []Diagnostic{{

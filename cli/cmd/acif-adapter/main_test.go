@@ -600,3 +600,50 @@ func TestIngestAgentProviderConfigOrphanRequires(t *testing.T) {
 		t.Fatalf("params = %#v, want key=tool_restrictions", result["params"])
 	}
 }
+
+func TestResolveInstallTargetsOp(t *testing.T) {
+	t.Parallel()
+	requests := `{"op":"resolve_install_targets","input":{"provider":"claude-code","content_type":"agent","content_name":"helper","home_dir":"/h","project_root":"/p","scope":"user"}}` + "\n" +
+		`{"op":"resolve_install_targets","input":{"provider":"kiro","content_type":"rule","content_name":"style","home_dir":"/h","project_root":"/p","scope":"user"}}` + "\n" +
+		`{"op":"resolve_install_targets","input":[1,2]}` + "\n"
+	responses := runLines(t, requests)
+	if len(responses) != 3 {
+		t.Fatalf("responses = %d, want 3", len(responses))
+	}
+
+	wantOK := map[string]any{
+		"ok": true,
+		"result": map[string]any{
+			"targets": []any{map[string]any{
+				"scope":        "user",
+				"path":         "/h/.claude/agents/helper.md",
+				"layout":       "single_file",
+				"status":       "current",
+				"write_target": true,
+			}},
+		},
+	}
+	if !reflect.DeepEqual(responses[0], wantOK) {
+		t.Errorf("ok response = %#v, want %#v", responses[0], wantOK)
+	}
+
+	wantReject := map[string]any{
+		"ok":    false,
+		"error": "acif.install.scope_unavailable",
+		"diagnostics": []any{map[string]any{
+			"id":     "acif.install.scope_unavailable",
+			"params": map[string]any{"available_scopes": []any{"project"}},
+		}},
+	}
+	if !reflect.DeepEqual(responses[1], wantReject) {
+		t.Errorf("reject response = %#v, want %#v", responses[1], wantReject)
+	}
+
+	if responses[2]["ok"] != false {
+		t.Errorf("malformed-input response ok = %v, want false", responses[2]["ok"])
+	}
+	errText, _ := responses[2]["error"].(string)
+	if !strings.HasPrefix(errText, "adapter: ") {
+		t.Errorf("malformed-input error = %q, want adapter: prefix", errText)
+	}
+}

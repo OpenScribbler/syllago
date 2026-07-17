@@ -156,6 +156,23 @@ func TestResolveInstallTargets_DispositionLanes(t *testing.T) {
 		}
 	})
 
+	t.Run("scope_unavailable_sorts_available_scopes", func(t *testing.T) {
+		t.Parallel()
+		// copilot-cli agent rows are ordered user, project, project; the
+		// PROTOCOL Appendix A param contract pins available_scopes sorted.
+		reject := resolveReject(t, InstallResolveInput{
+			Provider: "copilot-cli", ContentType: "agent", ContentName: "reviewer",
+			HomeDir: "/h", ProjectRoot: "/p", Scope: "managed",
+		})
+		if reject.ID != "acif.install.scope_unavailable" {
+			t.Fatalf("got %s, want acif.install.scope_unavailable", reject.ID)
+		}
+		want := map[string]any{"available_scopes": []string{"project", "user"}}
+		if !reflect.DeepEqual(reject.Diagnostics[0].Params, want) {
+			t.Errorf("params = %+v, want %+v", reject.Diagnostics[0].Params, want)
+		}
+	})
+
 	t.Run("superseded_warns_and_proceeds", func(t *testing.T) {
 		t.Parallel()
 		targets, diags := resolveOK(t, InstallResolveInput{
