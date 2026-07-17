@@ -1,10 +1,10 @@
 {
   "feature": "capmon-fetch-subcommand",
   "started": "2026-05-07T07:30:49.000Z",
-  "updated": "2026-05-07T15:10:00.000Z",
+  "updated": "2026-07-17T12:45:00.000Z",
   "ticketBeadId": "syllago-2st4d",
   "autonomy": "pragmatic",
-  "currentStage": "pr",
+  "currentStage": "complete",
   "completed": [
     "lexicon-gate",
     "align",
@@ -14,7 +14,8 @@
     "plan",
     "create-beads",
     "execute",
-    "final-validate"
+    "final-validate",
+    "pr"
   ],
   "lexicon": {
     "path": "lexicon.md",
@@ -22,7 +23,7 @@
     "builtThisSession": false
   },
   "designConcept": {
-    "summary": "## Design Concept — capmon-fetch-subcommand\n\n**Goal:** Implement `syllago capmon fetch` as a first-class subcommand that populates `.capmon-cache/` slot directories from live source URLs, so the capmon process-issues workflow no longer falls back to manual curl.\n\n**Scope:**\n- `syllago capmon fetch` with optional `--provider <slug>`; no flag = fetch all providers\n- Validate `--provider` against known/supported providers; hard error + recovery hint on unknown slug\n- Retry: up to 3 attempts per source with brief backoff. A source is only marked **failed** after all 3 attempts are exhausted. All sources are attempted regardless of individual failures.\n- Output: per-provider summary (`<slug>: N fetched, N errors`); `--verbose` adds `[changed]`/`[cached]` per source; `--json` returns structured object; `--dry-run` reports without writing\n- Exit non-zero if any source is ultimately failed (after exhausting retries)\n- Telemetry: provider slug, source count, success/failure counts\n\n**Out of scope:** scheduling, diff/changelog, authenticated sources, any capmon stage beyond Stage 1 fetch\n\n**Key decisions:** `--provider` flag not positional; fetch-all as default; retry hardcoded at 3 (not configurable); unknown slug = hard error (not silent); retry backoff strategy deferred to Design phase",
+    "summary": "## Design Concept \u2014 capmon-fetch-subcommand\n\n**Goal:** Implement `syllago capmon fetch` as a first-class subcommand that populates `.capmon-cache/` slot directories from live source URLs, so the capmon process-issues workflow no longer falls back to manual curl.\n\n**Scope:**\n- `syllago capmon fetch` with optional `--provider <slug>`; no flag = fetch all providers\n- Validate `--provider` against known/supported providers; hard error + recovery hint on unknown slug\n- Retry: up to 3 attempts per source with brief backoff. A source is only marked **failed** after all 3 attempts are exhausted. All sources are attempted regardless of individual failures.\n- Output: per-provider summary (`<slug>: N fetched, N errors`); `--verbose` adds `[changed]`/`[cached]` per source; `--json` returns structured object; `--dry-run` reports without writing\n- Exit non-zero if any source is ultimately failed (after exhausting retries)\n- Telemetry: provider slug, source count, success/failure counts\n\n**Out of scope:** scheduling, diff/changelog, authenticated sources, any capmon stage beyond Stage 1 fetch\n\n**Key decisions:** `--provider` flag not positional; fetch-all as default; retry hardcoded at 3 (not configurable); unknown slug = hard error (not silent); retry backoff strategy deferred to Design phase",
     "signedOffAt": "2026-05-07T14:45:00.000Z"
   },
   "artifacts": {
@@ -54,13 +55,13 @@
     ]
   },
   "researchQuestions": [
-    "What does the existing capmonFetchCmd stub do — what file and line is it defined, what flags/parameters does it declare, and what error does it return?",
-    "How is runStage1Fetch invoked — what parameters does it accept, what struct(s) does it return, and what fields on those structs track per-source success, failure, and cache-hit status?",
-    "What is the .capmon-cache/ slot directory layout — what paths does Stage 1 fetch write to, and what files appear in a populated slot directory?",
+    "What does the existing capmonFetchCmd stub do \u2014 what file and line is it defined, what flags/parameters does it declare, and what error does it return?",
+    "How is runStage1Fetch invoked \u2014 what parameters does it accept, what struct(s) does it return, and what fields on those structs track per-source success, failure, and cache-hit status?",
+    "What is the .capmon-cache/ slot directory layout \u2014 what paths does Stage 1 fetch write to, and what files appear in a populated slot directory?",
     "Where is the cache-hit / Meta.Cached field defined and what type carries it through the Stage 1 pipeline?",
-    "Where does the capmon system maintain the list of known/supported providers — static slice, config file, or derived from discovered manifests?",
-    "What pattern do existing capmon subcommands (capmon run, capmon extract, etc.) use for outputting results — how are human-readable vs. --json outputs structured?",
-    "Does any part of the CLI codebase implement retry logic for HTTP requests — if so, what package and function, and what is the retry approach?",
+    "Where does the capmon system maintain the list of known/supported providers \u2014 static slice, config file, or derived from discovered manifests?",
+    "What pattern do existing capmon subcommands (capmon run, capmon extract, etc.) use for outputting results \u2014 how are human-readable vs. --json outputs structured?",
+    "Does any part of the CLI codebase implement retry logic for HTTP requests \u2014 if so, what package and function, and what is the retry approach?",
     "What telemetry property keys are registered in cli/internal/telemetry/catalog.go for capmon-related commands?"
   ],
   "adrs": {
