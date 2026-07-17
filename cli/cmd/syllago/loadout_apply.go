@@ -57,6 +57,8 @@ func init() {
 }
 
 func runLoadoutApply(cmd *cobra.Command, args []string) error {
+	refreshInstallEntryPointsForInstall()
+
 	projectRoot, _ := findProjectRoot()
 	checkAndWarnStaleSnapshot(projectRoot)
 

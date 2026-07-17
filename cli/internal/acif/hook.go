@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 )
 
 type HookOpts struct {
@@ -266,7 +266,7 @@ func canonicalizeHookScript(script map[string]any) (map[string]any, error) {
 		if !ok {
 			return nil, hookReject(ErrHookScriptPathInvalid, "")
 		}
-		out["content"] = string(moat.CanonicalText([]byte(content)))
+		out["content"] = string(moathash.CanonicalText([]byte(content)))
 	default:
 		return nil, hookReject(ErrHookScriptPathInvalid, scriptType)
 	}

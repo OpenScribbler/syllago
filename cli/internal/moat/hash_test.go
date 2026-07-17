@@ -19,6 +19,8 @@ import (
 	"testing"
 )
 
+var testUTF8BOM = []byte{0xEF, 0xBB, 0xBF}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -108,73 +110,6 @@ func assertContentHashErrorContains(t *testing.T, dir, substr string) {
 }
 
 // ---------------------------------------------------------------------------
-// Small unit tests — primitives the TV tests rely on.
-// ---------------------------------------------------------------------------
-
-func TestFinalExtension(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name, want string
-	}{
-		{"SKILL.md", ".md"},
-		{"foo.tar.gz", ".gz"},
-		{"README", ""},
-		{"Makefile", ""},
-		{".gitignore", ""}, // dotfile, no other dot
-		{".env.example", ".example"},
-		{"a-b", ""},
-		{"a.b", ".b"},
-		{"UPPER.MD", ".md"}, // extension comparison is case-insensitive
-		{"", ""},
-	}
-	for _, c := range cases {
-		if got := finalExtension(c.name); got != c.want {
-			t.Errorf("finalExtension(%q) = %q, want %q", c.name, got, c.want)
-		}
-	}
-}
-
-func TestIsText(t *testing.T) {
-	t.Parallel()
-
-	dir := t.TempDir()
-	mustWrite := func(name string, data []byte) string {
-		t.Helper()
-		p := filepath.Join(dir, name)
-		if err := os.WriteFile(p, data, 0o644); err != nil {
-			t.Fatalf("write %s: %v", p, err)
-		}
-		return p
-	}
-
-	cases := []struct {
-		name string
-		data []byte
-		want bool
-	}{
-		{"plain.md", []byte("# hello\n"), true},
-		{"config.yaml", []byte("x: 1\n"), true},
-		{"script.sh", []byte("echo hi\n"), true},
-		{"readme", []byte("no extension\n"), false},
-		{".gitignore", []byte("*.log\n"), false},
-		{"data.bin", []byte("binary"), false},
-		{"icon.png", []byte("\x89PNG\r\n\x1a\n"), false},
-		// NUL probe: .json would be text, but a NUL in the first 8 KiB forces binary.
-		{"nul.json", []byte("{\"k\":\"v\x00\"}\n"), false},
-	}
-	for _, c := range cases {
-		p := mustWrite(c.name, c.data)
-		got, err := isText(p)
-		if err != nil {
-			t.Fatalf("isText(%s): %v", c.name, err)
-		}
-		if got != c.want {
-			t.Errorf("isText(%s) = %v, want %v", c.name, got, c.want)
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
 // TV-01 / TV-02 — per-file hash (§7.2) exercised through a binary-file dir.
 // ContentHash only supports directory hashes; these TVs verify the
 // underlying SHA-256 of raw bytes that feeds the manifest.
@@ -198,7 +133,7 @@ func TestContentHash_TV01_PerFileASCII_InDir(t *testing.T) {
 func TestContentHash_TV02_PerFileBOM_InDir(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	content := append(append([]byte{}, utf8BOM...), []byte("résumé\n")...)
+	content := append(append([]byte{}, testUTF8BOM...), []byte("résumé\n")...)
 	writeFixture(t, dir, map[string][]byte{"file.bin": content})
 
 	wantFile := "c08423edeb854b637067004a3f998a7ce42cd0c71828ba9ce7f655bf409f2a3a"
@@ -514,7 +449,7 @@ func TestContentHash_TV18_BOMStripping(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	body := []byte("def hello():\n    pass\n")
-	withBOM := append(append([]byte{}, utf8BOM...), body...)
+	withBOM := append(append([]byte{}, testUTF8BOM...), body...)
 	writeFixture(t, dir, map[string][]byte{"module.py": withBOM})
 
 	want := manifestHashFromEntries([][2]string{{"module.py", sha256HexOf(body)}})

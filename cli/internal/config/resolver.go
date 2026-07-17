@@ -47,7 +47,14 @@ func (r *PathResolver) InstallDir(prov provider.Provider, ct catalog.ContentType
 			return prov.InstallDir(filepath.Clean(baseDir), ct)
 		}
 	}
-	return prov.InstallDir(homeDir, ct)
+	legacy := prov.InstallDir(homeDir, ct)
+	if legacy == provider.ProjectScopeSentinel {
+		return legacy
+	}
+	if dir, ok := matrixInstallDir(prov.Slug, ct, homeDir); ok {
+		return dir
+	}
+	return legacy
 }
 
 // DiscoveryPaths resolves discovery paths for a content type.

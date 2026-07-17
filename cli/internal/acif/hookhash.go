@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -99,7 +99,7 @@ func hookReferencedFileManifest(paths []string, bodyRoot string) ([]byte, error)
 			return nil, fmt.Errorf("hook path collision: %q and %q normalize to %q", prior, path, key)
 		}
 		seenKeys[key] = path
-		fileHash, err := moat.FileHash(abs)
+		fileHash, err := moathash.FileHash(abs)
 		if err != nil {
 			return nil, err
 		}

@@ -167,6 +167,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	scannerPaths, _ := cmd.Flags().GetStringSlice("hook-scanner")
 	force, _ := cmd.Flags().GetBool("force")
 	installer.SetScannerChain(scannerPaths, force)
+	refreshInstallEntryPointsForInstall()
 
 	// --to-all and --to are mutually exclusive.
 	if toAll && toSlug != "" {

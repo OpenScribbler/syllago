@@ -56,32 +56,80 @@ type InstallResolveInput struct {
 type installMatrix map[string]map[string][]InstallEntry
 
 var (
-	installMatrixOnce sync.Once
-	installMatrixVal  installMatrix
-	installMatrixErr  error
+	installMatrixMu     sync.RWMutex
+	installMatrixLoaded bool
+	installMatrixVal    installMatrix
+	installMatrixErr    error
 )
 
+func parseInstallMatrix(data []byte) (installMatrix, error) {
+	var doc struct {
+		InstallEntryPoints installMatrix `yaml:"install_entry_points"`
+	}
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil, fmt.Errorf("parse install-entry-points export: %w", err)
+	}
+	if doc.InstallEntryPoints == nil {
+		return nil, fmt.Errorf("parse install-entry-points export: missing install_entry_points")
+	}
+	return doc.InstallEntryPoints, nil
+}
+
+func loadVendoredInstallMatrix() (installMatrix, error) {
+	installMatrixMu.RLock()
+	if installMatrixLoaded {
+		matrix, err := installMatrixVal, installMatrixErr
+		installMatrixMu.RUnlock()
+		return matrix, err
+	}
+	installMatrixMu.RUnlock()
+
+	matrix, err := parseInstallMatrix(vendoredInstallEntryPoints)
+
+	installMatrixMu.Lock()
+	if !installMatrixLoaded {
+		installMatrixVal = matrix
+		installMatrixErr = err
+		installMatrixLoaded = true
+	}
+	matrix, err = installMatrixVal, installMatrixErr
+	installMatrixMu.Unlock()
+
+	return matrix, err
+}
+
+func swapInstallMatrix(matrix installMatrix) {
+	installMatrixMu.Lock()
+	installMatrixVal = matrix
+	installMatrixErr = nil
+	installMatrixLoaded = true
+	installMatrixMu.Unlock()
+}
+
 func loadInstallMatrix() (installMatrix, error) {
-	installMatrixOnce.Do(func() {
-		data := vendoredInstallEntryPoints
-		if path := os.Getenv(InstallEntryPointsPathEnv); path != "" {
-			refreshed, err := os.ReadFile(path)
-			if err != nil {
-				installMatrixErr = fmt.Errorf("read %s: %w", path, err)
-				return
-			}
-			data = refreshed
+	if path := os.Getenv(InstallEntryPointsPathEnv); path != "" {
+		refreshed, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", path, err)
 		}
-		var doc struct {
-			InstallEntryPoints installMatrix `yaml:"install_entry_points"`
-		}
-		if err := yaml.Unmarshal(data, &doc); err != nil {
-			installMatrixErr = fmt.Errorf("parse install-entry-points export: %w", err)
-			return
-		}
-		installMatrixVal = doc.InstallEntryPoints
-	})
-	return installMatrixVal, installMatrixErr
+		return parseInstallMatrix(refreshed)
+	}
+	return loadVendoredInstallMatrix()
+}
+
+// InstallEntryRows returns the matrix rows for a provider/content-type pair.
+// The ACIF_INSTALL_ENTRY_POINTS override has the same precedence here as it
+// does in ResolveInstallTargets.
+func InstallEntryRows(provider, contentType string) ([]InstallEntry, error) {
+	matrix, err := loadInstallMatrix()
+	if err != nil {
+		return nil, err
+	}
+	rows := matrix[provider][contentType]
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return append([]InstallEntry(nil), rows...), nil
 }
 
 // installPlaceholderRe matches placeholder tokens in a path template. The

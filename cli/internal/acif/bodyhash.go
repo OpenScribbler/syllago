@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -132,7 +132,7 @@ func hashEntryFile(path string, override []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("reading entry file: %w", err)
 	}
-	return sha256Hex(stripFrontmatter(moat.CanonicalText(data))), nil
+	return sha256Hex(stripFrontmatter(moathash.CanonicalText(data))), nil
 }
 
 func multiFileBodyHash(files []bodyFile, entryRel string, entryOverride []byte) (string, error) {
@@ -158,7 +158,7 @@ func multiFileBodyHash(files []bodyFile, entryRel string, entryOverride []byte) 
 		if f.rel == entryRel {
 			fileHash, err = hashEntryFile(f.abs, entryOverride)
 		} else {
-			fileHash, err = moat.FileHash(f.abs)
+			fileHash, err = moathash.FileHash(f.abs)
 		}
 		if err != nil {
 			return "", fmt.Errorf("hashing %s: %w", f.rel, err)
