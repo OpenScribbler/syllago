@@ -140,3 +140,8 @@ The Wails v3 environment spike (throwaway project at `.develop/wails-spike/`) **
 ## Next Steps
 
 Ready for implementation planning with the `Plan` skill (or `/ship` for tracked feature work): slice v1 into vertical slices — suggested first slice is the walking skeleton (Wails shell + one `guiapi` service + Library page rendering real catalog data + fsnotify push), which retires every architectural risk in one pass.
+
+## Sequencing and Follow-on Work Items (added 2026-07-17)
+
+- **Prerequisites before GUI implementation starts** (decided 2026-07-17): `syllago-l44f3` (ADR-0020 Phase 1b hook-adapter routing) and `syllago-5us6u` (Install Modal) must land first; `syllago-cxrc1` (installer → ACIF install-entry-points matrix migration) blocks `syllago-5us6u`, so the effective chain is cxrc1 → 5us6u → GUI, with l44f3 in parallel. Dependency edges recorded in bd on `syllago-mol-1qm`.
+- **GUI/TUI parity process** (`syllago-mol-poa.1`, follows GUI v1): once the GUI exists, syllago has two interactive surfaces exposing overlapping operations (library management, install/add wizards, trust flows, loadouts). A defined process must keep relevant/applicable functions in parity — candidate shape: a parity matrix of operations × surfaces with intentional gaps marked, a definition-of-done rule that shared-behavior changes update all applicable surfaces or file a parity bead, and an enforcement mechanism (advisory hook / PR checklist / drift test). Business logic lives in the shared service layer, so parity pressure is at the UI/interaction level.
