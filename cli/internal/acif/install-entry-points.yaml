@@ -1,0 +1,230 @@
+# ACIF install-entry-points export (machine-readable).
+#
+# The published, machine-readable projection of the install-target matrix
+# ([ACIF-INSTALL] Appendix A.2): for each (provider, content type) a
+# provider supports on disk, the ordered entry-point rows an install tool
+# resolves. The normative source is the Appendix A.2 table; this file is a
+# derived artifact whose currency is selftest-enforced (the
+# install-entry-points sync check fails if it drifts from that table).
+# Downstream conforming consumers — install tools, capmon's path-drift
+# probe, any registry re-serving the matrix — diff against THIS file,
+# never against spec prose (CHANGE-PROCESS.md, source-of-truth rule).
+#
+# Row model ([ACIF-INSTALL] §6): scope ∈ {user, project, managed};
+# path_template in the closed §8 grammar (`<content-name>` is the only
+# placeholder; `~/` = user home; otherwise project-root-relative);
+# layout ∈ {single_file, directory_of_files, merged_into_shared_file};
+# status ∈ {current, superseded} — superseded rows are retained, never
+# deleted. List order within a (provider, content type) is normative
+# precedence: the first current row for a scope is the write target.
+# The informative as_of names the survey basis a row was verified against.
+#
+# This export is a deterministic projection of the Appendix A.2 table: it
+# carries NO crawl date and NO observational provenance — determinism is
+# what downstream drift checks diff against. Correcting a row because a
+# provider moved a location is a row-data amendment (CHANGE-PROCESS.md,
+# "Row-data amendments"): land on observation, supersede, never delete.
+# Grammar/enum changes are Class C. Providers are keyed by the slugs the
+# normative appendices already use ([ACIF-HOOK] Appendix A/B columns).
+
+install_entry_points:
+  amp:
+    hook:
+      - {scope: project, path_template: ".amp/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: project, path_template: ".amp/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.config/amp/AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.config/agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  claude-code:
+    agent:
+      - {scope: user, path_template: "~/.claude/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".claude/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    command:
+      - {scope: user, path_template: "~/.claude/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".claude/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: user, path_template: "~/.claude/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey; installer path table (ADR-0020)"}
+      - {scope: project, path_template: ".claude/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: project, path_template: ".mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.claude/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".claude/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "CLAUDE.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.claude/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".claude/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  cline:
+    command:
+      - {scope: user, path_template: "~/Documents/Cline/Workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".clinerules/workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/Documents/Cline/Rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".clinerules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".clinerules", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.cline/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".cline/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  codex:
+    command:
+      - {scope: project, path_template: ".codex/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: project, path_template: ".codex/hooks.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.codex/config.toml", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.codex/AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  copilot-cli:
+    agent:
+      - {scope: user, path_template: "~/.github/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".copilot/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".github/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    command:
+      - {scope: user, path_template: "~/.copilot/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".copilot/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: project, path_template: ".github/hooks/<content-name>.json", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.copilot/mcp-config.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".copilot/mcp-config.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: ".github/copilot-instructions.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.github/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".github/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  crush:
+    hook:
+      - {scope: user, path_template: "~/.config/crush/crush.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey; installer path table (ADR-0020)"}
+      - {scope: project, path_template: "crush.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.config/crush/crush.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "crush.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.config/crush/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".crush/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  cursor:
+    agent:
+      - {scope: user, path_template: "~/.cursor/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".cursor/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: user, path_template: "~/.cursor/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey; installer path table (ADR-0020)"}
+      - {scope: project, path_template: ".cursor/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.cursor/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".cursor/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: ".cursor/rules/<content-name>.mdc", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".cursorrules", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.cursor/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".cursor/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  factory-droid:
+    agent:
+      - {scope: user, path_template: "~/.factory/droids/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".factory/droids/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    command:
+      - {scope: user, path_template: "~/.factory/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".factory/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: user, path_template: "~/.factory/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey; installer path table (ADR-0020)"}
+      - {scope: project, path_template: ".factory/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.factory/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".factory/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.factory/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".factory/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  gemini-cli:
+    agent:
+      - {scope: user, path_template: "~/.gemini/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".gemini/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: user, path_template: "~/.gemini/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey; installer path table (ADR-0020)"}
+      - {scope: project, path_template: ".gemini/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: user, path_template: "~/.gemini/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".gemini/settings.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.gemini/GEMINI.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "GEMINI.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.gemini/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".gemini/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  kiro:
+    mcp_config:
+      - {scope: user, path_template: "~/.kiro/settings/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".kiro/settings/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: ".kiro/steering/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+  opencode:
+    agent:
+      - {scope: user, path_template: "~/.config/opencode/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".opencode/agents/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    command:
+      - {scope: user, path_template: "~/.config/opencode/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".opencode/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: project, path_template: "opencode.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "opencode.jsonc", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.config/opencode/AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.config/opencode/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".opencode/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  pi:
+    command:
+      - {scope: user, path_template: "~/.pi/agent/prompts/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".pi/prompts/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    hook:
+      - {scope: user, path_template: "~/.pi/agent/extensions/<content-name>.ts", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".pi/extensions/<content-name>.ts", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.pi/agent/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".pi/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  roo-code:
+    command:
+      - {scope: user, path_template: "~/.roo/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".roo/commands/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    mcp_config:
+      - {scope: project, path_template: ".roo/mcp.json", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: user, path_template: "~/.roo/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".roo/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".roorules", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.roo/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".roo/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  windsurf:
+    command:
+      - {scope: user, path_template: "~/.codeium/windsurf/global_workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+    rule:
+      - {scope: project, path_template: ".windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".windsurfrules", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
+    skill:
+      - {scope: user, path_template: "~/.codeium/windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
