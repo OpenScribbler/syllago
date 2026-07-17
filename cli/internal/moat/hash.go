@@ -16,46 +16,17 @@ package moat
 //      return "sha256:<hex>" of its SHA-256.
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 	"golang.org/x/text/unicode/norm"
 )
-
-const (
-	chunkSize   = 65536 // 64 KiB text streaming buffer — boundary behavior is normative (TV-21).
-	nulScanSize = 8192  // 8 KiB NUL-probe window — matches git's binary heuristic (TV-20).
-)
-
-// utf8BOM is the UTF-8 byte-order mark (EF BB BF). Stripped from the first
-// chunk of any text file before hashing (TV-18).
-var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
-
-// textExtensions is the normative allowlist of extensions that receive text
-// normalization. Lowercased, dot-prefixed. Any other extension — or no
-// extension — is treated as binary.
-var textExtensions = map[string]bool{
-	".md": true, ".txt": true, ".rst": true,
-	".yaml": true, ".yml": true, ".json": true, ".toml": true,
-	".ini": true, ".cfg": true, ".conf": true,
-	".html": true, ".htm": true, ".xml": true, ".svg": true,
-	".css": true, ".scss": true, ".less": true,
-	".js": true, ".ts": true, ".jsx": true, ".tsx": true,
-	".mjs": true, ".cjs": true,
-	".py": true, ".rb": true, ".lua": true, ".rs": true, ".go": true,
-	".sh": true, ".bash": true, ".zsh": true, ".fish": true,
-	".csv": true, ".tsv": true, ".sql": true,
-	".lock": true, ".sum": true, ".mod": true,
-}
 
 // vcsDirs are directory names whose contents are excluded at any depth.
 // A local working copy may carry these; a registry using `git archive`
@@ -71,153 +42,6 @@ var vcsDirs = map[string]bool{
 // attackers could hide content outside the attested hash.
 var excludedFiles = map[string]bool{
 	"moat-attestation.json": true,
-}
-
-// finalExtension returns the lowercased final extension of name.
-//
-//	"foo.tar.gz"  → ".gz"
-//	".gitignore"  → ""    (dotfile: starts with "." and has exactly one dot)
-//	"Makefile"    → ""    (no dot at all)
-//	"SKILL.md"    → ".md"
-func finalExtension(name string) string {
-	if strings.HasPrefix(name, ".") && strings.Count(name, ".") == 1 {
-		return ""
-	}
-	return strings.ToLower(filepath.Ext(name))
-}
-
-// isText reports whether path should be hashed as text. True iff (a) the
-// final extension is in textExtensions AND (b) the first 8 KiB contain no
-// NUL byte. The NUL probe guards against binary files with text-looking
-// extensions (TV-20).
-func isText(path string) (bool, error) {
-	if !textExtensions[finalExtension(filepath.Base(path))] {
-		return false, nil
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer func() { _ = f.Close() }()
-
-	buf := make([]byte, nulScanSize)
-	n, err := io.ReadFull(f, buf)
-	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return false, err
-	}
-	return !bytes.Contains(buf[:n], []byte{0x00}), nil
-}
-
-// hashBinary returns the SHA-256 of the raw file bytes (no normalization).
-// Streaming; O(chunkSize) peak memory.
-func hashBinary(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = f.Close() }()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-// hashText returns the SHA-256 of path's canonical text form: UTF-8 BOM
-// stripped, line endings normalized to LF. The normalization is a single
-// streaming left-to-right pass with greedy CRLF matching and pending-CR
-// handling across chunk boundaries. Peak memory is O(chunkSize).
-//
-// Normalization rules:
-//
-//	CR LF → LF  (including when CR ends one chunk and LF begins the next)
-//	CR    → LF  (lone CR, anywhere including EOF)
-//	LF    → LF  (unchanged)
-//
-// io.ReadFull is used so each non-final chunk is exactly chunkSize bytes,
-// making the boundary behavior in TV-21 deterministic regardless of the
-// filesystem's short-read behavior.
-func hashText(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = f.Close() }()
-
-	h := sha256.New()
-	first := true
-	pendingCR := false
-	buf := make([]byte, chunkSize)
-
-	for {
-		n, readErr := io.ReadFull(f, buf)
-		if n > 0 {
-			chunk := buf[:n]
-			if first {
-				chunk = bytes.TrimPrefix(chunk, utf8BOM)
-				first = false
-			}
-			if len(chunk) > 0 {
-				normalizeChunk(h, chunk, &pendingCR)
-			}
-		}
-		if readErr == io.EOF || readErr == io.ErrUnexpectedEOF {
-			break
-		}
-		if readErr != nil {
-			return "", fmt.Errorf("reading %s: %w", path, readErr)
-		}
-	}
-
-	if pendingCR {
-		// Lone CR at EOF: flush as LF (TV-22).
-		_, _ = h.Write([]byte{0x0A})
-	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-// normalizeChunk writes the CRLF-normalized form of chunk into h, updating
-// *pendingCR for the chunk-boundary case. The output buffer is at most
-// len(chunk)+1 bytes.
-func normalizeChunk(h io.Writer, chunk []byte, pendingCR *bool) {
-	out := make([]byte, 0, len(chunk)+1)
-	i := 0
-
-	// Resolve CR carried over from the end of the previous chunk.
-	if *pendingCR {
-		*pendingCR = false
-		if chunk[0] == 0x0A {
-			out = append(out, 0x0A) // previous CR + this LF = CRLF → LF
-			i = 1
-		} else {
-			out = append(out, 0x0A) // previous CR was a lone CR
-		}
-	}
-
-	for i < len(chunk) {
-		b := chunk[i]
-		if b != 0x0D {
-			out = append(out, b)
-			i++
-			continue
-		}
-		// CR: emit LF now if we can see the next byte; otherwise defer.
-		if i+1 < len(chunk) {
-			out = append(out, 0x0A)
-			if chunk[i+1] == 0x0A {
-				i += 2 // CRLF consumed
-			} else {
-				i++ // lone CR
-			}
-		} else {
-			*pendingCR = true
-			i++
-		}
-	}
-
-	_, _ = h.Write(out)
 }
 
 // ContentHash returns the MOAT directory-tree content hash for dir, formatted
@@ -279,17 +103,7 @@ func ContentHash(dir string) (string, error) {
 			return nil
 		}
 
-		isText, err := isText(path)
-		if err != nil {
-			return fmt.Errorf("classifying %s: %w", posixRel, err)
-		}
-
-		var fileHash string
-		if isText {
-			fileHash, err = hashText(path)
-		} else {
-			fileHash, err = hashBinary(path)
-		}
+		fileHash, err := moathash.FileHash(path)
 		if err != nil {
 			return fmt.Errorf("hashing %s: %w", posixRel, err)
 		}

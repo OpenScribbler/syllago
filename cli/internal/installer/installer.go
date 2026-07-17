@@ -76,7 +76,8 @@ func (s Status) String() string {
 
 // IsJSONMerge returns true if the provider uses JSON merge for the given content type.
 func IsJSONMerge(prov provider.Provider, itemType catalog.ContentType) bool {
-	return prov.InstallDir("", itemType) == provider.JSONMergeSentinel
+	var resolver *config.PathResolver
+	return resolver.InstallDir(prov, itemType, "") == provider.JSONMergeSentinel
 }
 
 // resolveTargetWithBase computes the target path using a specific base directory.
@@ -369,7 +370,8 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		if homeErr != nil {
 			return "", fmt.Errorf("getting home directory: %w", homeErr)
 		}
-		installDir := prov.InstallDir(home, item.Type)
+		var resolver *config.PathResolver
+		installDir := resolver.InstallDir(prov, item.Type, home)
 		rel, relErr := filepath.Rel(installDir, targetPath)
 		if relErr != nil || strings.HasPrefix(rel, "..") {
 			return "", fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)

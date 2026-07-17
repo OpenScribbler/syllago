@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 )
 
 func ScriptSelection(block map[string]any, targets []string) (map[string]string, []Diagnostic, error) {
@@ -166,7 +166,7 @@ func executableIdentity(script map[string]any) string {
 		return typ + "\x00" + path
 	case "inline":
 		content, _ := script["content"].(string)
-		sum := sha256.Sum256(moat.CanonicalText([]byte(content)))
+		sum := sha256.Sum256(moathash.CanonicalText([]byte(content)))
 		return typ + "\x00" + hex.EncodeToString(sum[:])
 	default:
 		return typ

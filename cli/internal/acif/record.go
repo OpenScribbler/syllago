@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moathash"
 	"gopkg.in/yaml.v3"
 )
 
@@ -154,7 +154,7 @@ func IngestExtensionBlock(kind string, sidecar map[string]any) (*RecordResult, e
 }
 
 func parseFrontmatterDocument(data []byte) (frontmatterDocument, error) {
-	text := moat.CanonicalText(data)
+	text := moathash.CanonicalText(data)
 	yamlText, body, present := splitFrontmatter(text)
 	doc := frontmatterDocument{Body: string(body), Present: present}
 	if !present || len(bytes.TrimSpace(yamlText)) == 0 {

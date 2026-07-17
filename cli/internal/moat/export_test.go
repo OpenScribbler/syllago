@@ -16,7 +16,7 @@ func TestCanonicalText(t *testing.T) {
 	}{
 		{
 			name: "strips bom",
-			in:   append(append([]byte{}, utf8BOM...), []byte("hello\n")...),
+			in:   append(append([]byte{}, testUTF8BOM...), []byte("hello\n")...),
 			want: "hello\n",
 		},
 		{
@@ -45,7 +45,7 @@ func TestFileHashClassifiesTextAndBinary(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	raw := append(append([]byte{}, utf8BOM...), []byte("a\r\nb\r")...)
+	raw := append(append([]byte{}, testUTF8BOM...), []byte("a\r\nb\r")...)
 
 	textPath := filepath.Join(dir, "note.md")
 	if err := os.WriteFile(textPath, raw, 0o644); err != nil {

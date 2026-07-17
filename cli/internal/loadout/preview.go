@@ -66,7 +66,8 @@ func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, res
 	if resolver != nil {
 		installDir = resolver.InstallDir(prov, ref.Type, homeDir)
 	} else {
-		installDir = prov.InstallDir(homeDir, ref.Type)
+		var defaultResolver *config.PathResolver
+		installDir = defaultResolver.InstallDir(prov, ref.Type, homeDir)
 	}
 	if installDir == "" || installDir == provider.JSONMergeSentinel || installDir == provider.ProjectScopeSentinel {
 		return PlannedAction{
