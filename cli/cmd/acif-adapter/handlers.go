@@ -48,7 +48,7 @@ func dispatch(req request) any {
 			"implementation":   "syllago",
 			"version":          adapterVersion,
 			"adapter_protocol": 2,
-			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render"},
+			"scopes":           []string{"core", "hook", "skill", "rule", "command", "agent", "mcp", "publisher", "registry", "render", "install"},
 		})
 	case "ingest":
 		return handleIngest(req.Input)
@@ -76,6 +76,8 @@ func dispatch(req request) any {
 		return handleResolvePack(req.Input)
 	case "resolve_reference":
 		return handleResolveReference(req.Input)
+	case "resolve_install_targets":
+		return handleResolveInstallTargets(req.Input)
 	default:
 		return unsupportedResponse()
 	}
