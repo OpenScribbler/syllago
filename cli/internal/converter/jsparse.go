@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -89,7 +90,7 @@ func parseByMarkers(tsCode []byte) (*JSParseResult, error) {
 			if idx := strings.Index(kv, "="); idx > 0 {
 				key := kv[:idx]
 				value := kv[idx+1:]
-				current[key] = value
+				current[key] = decodeMarkerValue(value)
 			}
 			continue
 		}
@@ -204,7 +205,8 @@ func extractChildProcessCommands(tsCode []byte) []string {
 	return commands
 }
 
-// parseByHeuristic attempts heuristic decode via esbuild TS stripping + AST walk.
+// parseByHeuristic attempts heuristic decode after esbuild validates that the
+// TypeScript is parseable.
 func parseByHeuristic(tsCode []byte) (*JSParseResult, error) {
 	result := &JSParseResult{DecodeMethod: "heuristic"}
 
@@ -220,7 +222,6 @@ func parseByHeuristic(tsCode []byte) (*JSParseResult, error) {
 		return result, nil
 	}
 
-	// Heuristic AST decode is not yet implemented — return info warning
 	hooks, warnings := walkHooksAST(tsCode)
 	result.Hooks = hooks
 	result.Warnings = append(result.Warnings, warnings...)
@@ -228,13 +229,35 @@ func parseByHeuristic(tsCode []byte) (*JSParseResult, error) {
 	return result, nil
 }
 
-// walkHooksAST is a stub for heuristic AST-based hook extraction.
-// Full implementation deferred — requires go-fAST or similar ES6+ parser.
-func walkHooksAST(_ []byte) ([]JSHookDef, []ConversionWarning) {
-	return nil, []ConversionWarning{{
-		Severity:    "info",
-		Description: "heuristic AST decode is not yet implemented; Pi extension requires marker comments for lossless decode",
-	}}
+// walkHooksAST heuristically extracts simple pi.on(...) hook registrations.
+// It intentionally recognizes a narrow, generated-compatible subset rather
+// than trying to be a full TypeScript interpreter.
+func walkHooksAST(tsCode []byte) ([]JSHookDef, []ConversionWarning) {
+	blocks := extractPiOnBlocks(string(tsCode))
+	if len(blocks) == 0 {
+		return nil, []ConversionWarning{{
+			Severity:    "info",
+			Description: "heuristic decode found no pi.on hook registrations; Pi extension requires marker comments for lossless decode",
+		}}
+	}
+
+	hooks := make([]JSHookDef, 0, len(blocks))
+	for _, block := range blocks {
+		commands := extractChildProcessCommands([]byte(block.body))
+		hook := JSHookDef{
+			PiEvent:        block.event,
+			ToolMatcher:    extractToolNameGuard(block.body),
+			Timeout:        extractTimeoutMs(block.body),
+			Blocking:       strings.Contains(block.body, "block: true"),
+			ConfidenceHigh: block.event != "" && len(commands) > 0,
+		}
+		if len(commands) > 0 {
+			hook.Command = commands[0]
+		}
+		hooks = append(hooks, hook)
+	}
+
+	return hooks, nil
 }
 
 // parseIntOrZero parses a string as int, returning 0 on failure.
@@ -247,4 +270,121 @@ func parseIntOrZero(s string) int {
 		n = n*10 + int(ch-'0')
 	}
 	return n
+}
+
+func decodeMarkerValue(value string) string {
+	var s string
+	if err := json.Unmarshal([]byte(value), &s); err == nil {
+		return s
+	}
+	return value
+}
+
+type piOnBlock struct {
+	event string
+	body  string
+}
+
+func extractPiOnBlocks(code string) []piOnBlock {
+	var blocks []piOnBlock
+	lines := strings.Split(code, "\n")
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
+		idx := strings.Index(line, "pi.on(")
+		if idx < 0 {
+			continue
+		}
+		event, _ := firstStringLiteral(line[idx+len("pi.on("):])
+
+		var body strings.Builder
+		braceDepth := 0
+		started := false
+		for ; i < len(lines); i++ {
+			current := lines[i]
+			body.WriteString(current)
+			body.WriteByte('\n')
+			for _, ch := range current {
+				switch ch {
+				case '{':
+					braceDepth++
+					started = true
+				case '}':
+					braceDepth--
+				}
+			}
+			if started && braceDepth <= 0 && strings.Contains(current, "});") {
+				break
+			}
+		}
+
+		blocks = append(blocks, piOnBlock{event: event, body: body.String()})
+	}
+	return blocks
+}
+
+func extractToolNameGuard(block string) string {
+	idx := strings.Index(block, "event.toolName")
+	if idx < 0 {
+		return ""
+	}
+	matcher, _ := firstStringLiteral(block[idx:])
+	return matcher
+}
+
+func extractTimeoutMs(block string) int {
+	search := block
+	for {
+		idx := strings.Index(search, "timeout")
+		if idx < 0 {
+			return 0
+		}
+		after := search[idx+len("timeout"):]
+		colon := strings.Index(after, ":")
+		if colon < 0 {
+			return 0
+		}
+		value := strings.TrimLeft(after[colon+1:], " \t")
+		n := 0
+		seenDigit := false
+		for _, ch := range value {
+			if ch < '0' || ch > '9' {
+				break
+			}
+			seenDigit = true
+			n = n*10 + int(ch-'0')
+		}
+		if seenDigit {
+			return n
+		}
+		search = after[colon+1:]
+	}
+}
+
+func firstStringLiteral(s string) (string, bool) {
+	for start := 0; start < len(s); start++ {
+		quote := s[start]
+		if quote != '\'' && quote != '"' {
+			continue
+		}
+		var out strings.Builder
+		escaped := false
+		for i := start + 1; i < len(s); i++ {
+			ch := s[i]
+			if escaped {
+				out.WriteByte(ch)
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == quote {
+				return out.String(), true
+			}
+			out.WriteByte(ch)
+		}
+		return "", false
+	}
+	return "", false
 }

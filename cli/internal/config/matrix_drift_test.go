@@ -18,13 +18,20 @@ var knownMismatches = map[string]struct{}{
 	"opencode/rules":   {}, // tracked in syllago-t63g5
 	"cline/rules":      {}, // tracked in syllago-t63g5
 	"roo-code/rules":   {}, // tracked in syllago-t63g5
+	// pi/hooks: the matrix row records pi's native contract (one
+	// <content-name>.ts extension per hook); ADR-0020 Phase 1b routes pi hook
+	// installs through the adapter into a single syllago-owned
+	// syllago-hooks.ts, so the provider table returns the merge sentinel.
+	// Expressing a tool-owned consolidated file needs an ACIF layout-enum
+	// addition (Class C) — tracked in syllago-t63g5.
+	"pi/hooks": {}, // tracked in syllago-t63g5
 }
 
 func TestInstallMatrixMatchesLegacyProviderTables(t *testing.T) {
 	unsetACIFInstallEntryPointsEnv(t)
 
-	if len(knownMismatches) != 6 {
-		t.Fatalf("knownMismatches must contain exactly six tracked entries, got %d", len(knownMismatches))
+	if len(knownMismatches) != 7 {
+		t.Fatalf("knownMismatches must contain exactly seven tracked entries, got %d", len(knownMismatches))
 	}
 
 	contentTypes := []catalog.ContentType{

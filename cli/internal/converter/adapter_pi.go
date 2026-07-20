@@ -9,8 +9,8 @@ func init() {
 	RegisterAdapter(&PiAdapter{})
 }
 
-// PiAdapter handles hooks for Pi (badlogic/pi).
-// Pi extensions are TypeScript files that register event handlers via ctx.hooks.on().
+// PiAdapter handles hooks for Pi.
+// Pi extensions are TypeScript files that register event handlers via pi.on().
 // Encode generates TypeScript with structured marker comments for lossless round-trip.
 // Decode parses markers (preferred) or falls back to heuristic extraction.
 type PiAdapter struct{}
@@ -81,14 +81,22 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		if hook.Handler.Timeout > 0 {
 			timeoutMs = hook.Handler.Timeout * 1000
 		}
+		effectiveBlocking := hook.Blocking && piEvent == "tool_call"
+		if hook.Blocking && !effectiveBlocking {
+			warnings = append(warnings, ConversionWarning{
+				Severity:    "info",
+				Description: "pi blocking hooks are only honored on before_tool_execute; rendered as non-blocking",
+			})
+		}
 
 		templateHooks = append(templateHooks, piHookTemplateData{
 			Name:        hook.Name,
 			PiEvent:     piEvent,
 			Command:     hook.Handler.Command,
 			ToolMatcher: toolMatcher,
+			HasToolName: piEvent == "tool_call" || piEvent == "tool_result",
 			TimeoutMs:   timeoutMs,
-			Blocking:    hook.Blocking,
+			Blocking:    effectiveBlocking,
 		})
 	}
 

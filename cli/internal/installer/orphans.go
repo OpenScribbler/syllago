@@ -61,13 +61,12 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 
 		// Hooks: decode the provider's real hook file via its adapter and match
 		// each decoded hook by canonical identity. Providers with no adapter or
-		// no supported hook path (Phase 1b) are skipped so they are never
-		// false-flagged.
+		// no supported hook path are skipped so they are never false-flagged.
 		if adapter := converter.AdapterFor(prov.Slug); adapter != nil {
-			if hookPath, pErr := HookConfigPath(prov, home); pErr == nil {
-				if data, readErr := os.ReadFile(hookPath); readErr == nil {
-					if decoded, dErr := adapter.Decode(data); dErr == nil {
-						for i, hk := range decoded.Hooks {
+			if model, mErr := hookStorageModelFor(prov.Slug); mErr == nil {
+				if hookPath, pErr := HookConfigPath(prov, home); pErr == nil {
+					if hooks, dErr := decodeExistingHooks(model, adapter, hookPath); dErr == nil {
+						for i, hk := range hooks {
 							if trackedHooks[hookIdentity(hk)] {
 								continue // tracked by syllago
 							}

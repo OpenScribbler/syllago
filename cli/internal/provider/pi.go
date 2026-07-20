@@ -8,8 +8,8 @@ import (
 
 // Pi is the badlogic/pi-mono coding agent.
 // Pi's global config layout is ~/.pi/agent/<type>/, project-scope is .pi/<type>/.
-// Pi hooks are programmatic TypeScript files installed to the extensions
-// directory (filesystem install, not JSON merge). No native MCP or agent format.
+// Pi hooks are programmatic TypeScript extensions adapter-routed into a
+// syllago-owned file. No native MCP or agent format.
 var Pi = Provider{
 	Name:      "Pi",
 	Slug:      "pi",
@@ -22,7 +22,7 @@ var Pi = Provider{
 		case catalog.Skills:
 			return filepath.Join(base, "skills")
 		case catalog.Hooks:
-			return filepath.Join(base, "extensions") // TypeScript extension files
+			return JSONMergeSentinel
 		case catalog.Commands:
 			return filepath.Join(base, "prompts") // Prompt templates
 		}
@@ -68,7 +68,7 @@ var Pi = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Skills:   true,
-		catalog.Hooks:    true, // TypeScript file drop (not JSON merge)
+		catalog.Hooks:    false, // adapter-encoded TypeScript, not file drops
 		catalog.Commands: true,
 	},
 	ConfigLocations: map[catalog.ContentType]string{
