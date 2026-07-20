@@ -19,6 +19,11 @@ func writeCanonicalHookItem(t *testing.T, name, event, matcher, command string) 
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
+	return writeCanonicalHookItemInProject(t, projectRoot, name, event, matcher, command), projectRoot
+}
+
+func writeCanonicalHookItemInProject(t *testing.T, projectRoot, name, event, matcher, command string) catalog.ContentItem {
+	t.Helper()
 	hookDir := filepath.Join(projectRoot, "hooks", name)
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{"spec":"hooks/0.1","hooks":[{"name":"` + name +
@@ -26,7 +31,7 @@ func writeCanonicalHookItem(t *testing.T, name, event, matcher, command string) 
 		`","handler":{"type":"command","command":"` + command + `"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
-	return catalog.ContentItem{Name: name, Type: catalog.Hooks, Path: hookDir}, projectRoot
+	return catalog.ContentItem{Name: name, Type: catalog.Hooks, Path: hookDir}
 }
 
 // TestInstallHook_Adapter_SharedJSON_RoundTrip installs a canonical hook into
@@ -216,25 +221,101 @@ func TestInstallHook_Adapter_RejectsNoEncoder(t *testing.T) {
 	}
 }
 
-// TestInstallHook_Adapter_RejectsDirectoryProvider: directory-scoped hook
-// providers (copilot-cli, kiro, pi) are rejected pending ADR-0020 Phase 1b.
-func TestInstallHook_Adapter_RejectsDirectoryProvider(t *testing.T) {
-	item, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "shell", "echo hi")
-
-	settingsPath := filepath.Join(t.TempDir(), "config.json")
-	os.WriteFile(settingsPath, []byte(`{}`), 0644)
-	overrideHookSettingsPath(t, settingsPath)
-
-	_, err := installHook(item, provider.CopilotCLI, projectRoot)
-	if err == nil {
-		t.Fatal("expected error installing hook to copilot-cli (Phase 1b)")
+func TestInstallHook_Adapter_DirectoryProviderLifecycle(t *testing.T) {
+	tests := []struct {
+		prov        provider.Provider
+		wantRelPath string
+		wantSnippet string
+	}{
+		{
+			prov:        provider.CopilotCLI,
+			wantRelPath: filepath.Join(".copilot", "hooks", "syllago-hooks.json"),
+			wantSnippet: `"version": 1`,
+		},
+		{
+			prov:        provider.Kiro,
+			wantRelPath: filepath.Join(".kiro", "agents", "syllago-hooks.json"),
+			wantSnippet: `"name": "syllago-hooks"`,
+		},
+		{
+			prov:        provider.Pi,
+			wantRelPath: filepath.Join(".pi", "agent", "extensions", "syllago-hooks.ts"),
+			wantSnippet: `pi.on("tool_call"`,
+		},
 	}
-	if !strings.Contains(err.Error(), "Phase 1b") {
-		t.Errorf("error should reference Phase 1b, got: %v", err)
-	}
-	data, _ := os.ReadFile(settingsPath)
-	if gjson.GetBytes(data, "hooks").Exists() {
-		t.Errorf("no hook should have been written, got: %s", data)
+
+	for _, tt := range tests {
+		t.Run(tt.prov.Slug, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			resetHookSettingsPath(t)
+
+			projectRoot := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+				t.Fatalf("MkdirAll .syllago: %v", err)
+			}
+			first := writeCanonicalHookItemInProject(t, projectRoot, "guard-one", "before_tool_execute", "shell", "echo one")
+			second := writeCanonicalHookItemInProject(t, projectRoot, "guard-two", "before_tool_execute", "shell", "echo two")
+
+			settingsPath := filepath.Join(home, tt.wantRelPath)
+			if _, err := os.Stat(filepath.Dir(settingsPath)); !os.IsNotExist(err) {
+				t.Fatalf("parent dir should not exist before install, stat err: %v", err)
+			}
+
+			if _, err := installHook(first, tt.prov, projectRoot); err != nil {
+				t.Fatalf("install first hook: %v", err)
+			}
+			if _, err := os.Stat(filepath.Dir(settingsPath)); err != nil {
+				t.Fatalf("parent dir was not created: %v", err)
+			}
+			assertDecodedCommands(t, tt.prov, settingsPath, []string{"echo one"})
+			if data, err := os.ReadFile(settingsPath); err != nil {
+				t.Fatalf("read settings: %v", err)
+			} else if !strings.Contains(string(data), tt.wantSnippet) {
+				t.Fatalf("written file does not look adapter-encoded for %s:\n%s", tt.prov.Slug, data)
+			}
+			if status := checkHookStatus(first, tt.prov, projectRoot); status != StatusInstalled {
+				t.Fatalf("first status after install: got %v, want Installed", status)
+			}
+
+			siblingPath := filepath.Join(filepath.Dir(settingsPath), "user-owned.txt")
+			const siblingContent = "do not touch"
+			if err := os.WriteFile(siblingPath, []byte(siblingContent), 0644); err != nil {
+				t.Fatalf("write sibling: %v", err)
+			}
+
+			if _, err := installHook(second, tt.prov, projectRoot); err != nil {
+				t.Fatalf("install second hook: %v", err)
+			}
+			assertDecodedCommands(t, tt.prov, settingsPath, []string{"echo one", "echo two"})
+			assertFileContent(t, siblingPath, siblingContent)
+			if status := checkHookStatus(second, tt.prov, projectRoot); status != StatusInstalled {
+				t.Fatalf("second status after install: got %v, want Installed", status)
+			}
+
+			if _, err := uninstallHook(first, tt.prov, projectRoot); err != nil {
+				t.Fatalf("uninstall first hook: %v", err)
+			}
+			assertDecodedCommands(t, tt.prov, settingsPath, []string{"echo two"})
+			assertFileContent(t, siblingPath, siblingContent)
+			if status := checkHookStatus(first, tt.prov, projectRoot); status != StatusNotInstalled {
+				t.Fatalf("first status after uninstall: got %v, want NotInstalled", status)
+			}
+			if status := checkHookStatus(second, tt.prov, projectRoot); status != StatusInstalled {
+				t.Fatalf("second status after first uninstall: got %v, want Installed", status)
+			}
+
+			if _, err := uninstallHook(second, tt.prov, projectRoot); err != nil {
+				t.Fatalf("uninstall last hook: %v", err)
+			}
+			if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
+				t.Fatalf("owned file should be deleted after last uninstall, stat err: %v", err)
+			}
+			assertFileContent(t, siblingPath, siblingContent)
+			if status := checkHookStatus(second, tt.prov, projectRoot); status != StatusNotInstalled {
+				t.Fatalf("second status after last uninstall: got %v, want NotInstalled", status)
+			}
+		})
 	}
 }
 
@@ -249,4 +330,46 @@ func hasCommand(ch *converter.CanonicalHooks, cmd string) bool {
 		}
 	}
 	return false
+}
+
+func resetHookSettingsPath(t *testing.T) {
+	t.Helper()
+	orig := hookSettingsPath
+	hookSettingsPath = hookSettingsPathImpl
+	t.Cleanup(func() { hookSettingsPath = orig })
+}
+
+func assertDecodedCommands(t *testing.T, prov provider.Provider, path string, want []string) {
+	t.Helper()
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		t.Fatalf("no adapter for %s", prov.Slug)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	decoded, err := adapter.Decode(data)
+	if err != nil {
+		t.Fatalf("decode %s: %v", path, err)
+	}
+	for _, cmd := range want {
+		if !hasCommand(decoded, cmd) {
+			t.Fatalf("decoded hooks missing command %q, got: %s", cmd, data)
+		}
+	}
+	if len(decoded.Hooks) != len(want) {
+		t.Fatalf("decoded %d hook(s), want %d: %s", len(decoded.Hooks), len(want), data)
+	}
+}
+
+func assertFileContent(t *testing.T, path, want string) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read sibling: %v", err)
+	}
+	if string(got) != want {
+		t.Fatalf("sibling changed: got %q, want %q", got, want)
+	}
 }

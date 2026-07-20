@@ -84,7 +84,7 @@ var Kiro = Provider{
 		catalog.Rules:  true,
 		catalog.Agents: true,
 		catalog.Skills: true,
-		catalog.Hooks:  false, // JSON merge
+		catalog.Hooks:  false, // adapter-routed into a syllago-owned file
 		catalog.MCP:    false, // JSON merge
 	},
 	ConfigLocations: map[catalog.ContentType]string{

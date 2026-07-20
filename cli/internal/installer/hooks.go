@@ -59,8 +59,6 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
 	}
 
-	// Classify storage. Directory-scoped providers (copilot-cli, kiro, pi) are
-	// rejected pending Phase 1b.
 	model, err := hookStorageModelFor(prov.Slug)
 	if err != nil {
 		return "", err
@@ -139,7 +137,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return "", fmt.Errorf("creating snapshot: %w", err)
 	}
 
-	existing, err := decodeExistingHooks(adapter, settingsPath)
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
 		return "", err
 	}
@@ -210,7 +208,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 
 	// Identity-based match: decode the file, find the hook whose canonical
 	// identity matches the stored hash, drop it, and re-encode.
-	existing, err := decodeExistingHooks(adapter, settingsPath)
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
 		return "", err
 	}
@@ -234,15 +232,24 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 	remaining = append(remaining, existing[:found]...)
 	remaining = append(remaining, existing[found+1:]...)
 
-	encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: remaining})
-	if err != nil {
-		return "", fmt.Errorf("encoding hooks: %w", err)
-	}
-	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
-		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
-			_ = snapshot.Restore(snapshotDir, manifest)
+	if model == hookStorageDirectory && len(remaining) == 0 {
+		if err := os.Remove(settingsPath); err != nil && !os.IsNotExist(err) {
+			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
+				_ = snapshot.Restore(snapshotDir, manifest)
+			}
+			return "", fmt.Errorf("removing %s: %w", settingsPath, err)
 		}
-		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
+	} else {
+		encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: remaining})
+		if err != nil {
+			return "", fmt.Errorf("encoding hooks: %w", err)
+		}
+		if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
+			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
+				_ = snapshot.Restore(snapshotDir, manifest)
+			}
+			return "", fmt.Errorf("writing %s: %w", settingsPath, err)
+		}
 	}
 
 	inst.RemoveHook(instIdx)
@@ -263,7 +270,8 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	if adapter == nil {
 		return StatusNotAvailable
 	}
-	if _, err := hookStorageModelFor(prov.Slug); err != nil {
+	model, err := hookStorageModelFor(prov.Slug)
+	if err != nil {
 		return StatusNotAvailable
 	}
 
@@ -284,7 +292,7 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	if err != nil {
 		return StatusNotInstalled
 	}
-	existing, err := decodeExistingHooks(adapter, settingsPath)
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
 		return StatusNotInstalled
 	}

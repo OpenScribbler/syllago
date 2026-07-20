@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -32,16 +33,15 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	// Create a claude-code config directory with two hooks in its native
 	// settings.json — orphan detection now decodes via the provider's adapter.
 	configDir := filepath.Join(home, ".syllago-test-orphan-"+filepath.Base(projectRoot))
-	os.MkdirAll(configDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(configDir) })
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("MkdirAll config dir: %v", err)
+	}
 
 	settingsJSON := `{
   "hooks": {
@@ -51,7 +51,9 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
     ]
   }
 }`
-	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644); err != nil {
+		t.Fatalf("write settings: %v", err)
+	}
 
 	prov := provider.Provider{
 		Name:      "Claude Code",
@@ -82,7 +84,9 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 			{Name: "tracked-hook", Event: "PreToolUse", GroupHash: trackedHash, Command: "echo tracked"},
 		},
 	}
-	SaveInstalled(projectRoot, inst)
+	if err := SaveInstalled(projectRoot, inst); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
 
 	orphans, err := CheckOrphanedMerges(projectRoot, []provider.Provider{prov})
 	if err != nil {
@@ -101,18 +105,112 @@ func TestCheckOrphanedMerges_DetectsOrphanedHook(t *testing.T) {
 	}
 }
 
+func TestCheckOrphanedMerges_DirectoryProviderReadsOwnedFileOnly(t *testing.T) {
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatalf("MkdirAll .syllago: %v", err)
+	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	prov := provider.Pi
+	prov.Detected = true
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		t.Fatalf("no adapter for %s", prov.Slug)
+	}
+
+	matcher, _ := json.Marshal("shell")
+	encoded, err := adapter.Encode(&converter.CanonicalHooks{
+		Spec: converter.SpecVersion,
+		Hooks: []converter.CanonicalHook{
+			{
+				Name:     "tracked",
+				Event:    "before_tool_execute",
+				Matcher:  matcher,
+				Blocking: true,
+				Handler:  converter.HookHandler{Type: "command", Command: "echo tracked"},
+			},
+			{
+				Name:     "orphan",
+				Event:    "before_tool_execute",
+				Matcher:  matcher,
+				Blocking: true,
+				Handler:  converter.HookHandler{Type: "command", Command: "echo orphan"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+
+	hookPath, err := HookConfigPath(prov, home)
+	if err != nil {
+		t.Fatalf("HookConfigPath: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+		t.Fatalf("MkdirAll hook dir: %v", err)
+	}
+	if err := os.WriteFile(hookPath, encoded.Content, 0644); err != nil {
+		t.Fatalf("write hook file: %v", err)
+	}
+	siblingPath := filepath.Join(filepath.Dir(hookPath), "user-extension.ts")
+	const siblingContent = "not managed by syllago"
+	if err := os.WriteFile(siblingPath, []byte(siblingContent), 0644); err != nil {
+		t.Fatalf("write sibling: %v", err)
+	}
+
+	decoded, err := adapter.Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	var trackedHash string
+	for _, hk := range decoded.Hooks {
+		if hk.Handler.Command == "echo tracked" {
+			trackedHash = hookIdentity(hk)
+		}
+	}
+	if trackedHash == "" {
+		t.Fatal("could not compute identity for tracked hook")
+	}
+	if err := SaveInstalled(projectRoot, &Installed{
+		Hooks: []InstalledHook{
+			{Name: "tracked", Event: "tool_call", GroupHash: trackedHash, Command: "echo tracked"},
+		},
+	}); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	orphans, err := CheckOrphanedMerges(projectRoot, []provider.Provider{prov})
+	if err != nil {
+		t.Fatalf("CheckOrphanedMerges: %v", err)
+	}
+	if len(orphans) != 1 {
+		t.Fatalf("expected 1 orphan, got %d: %+v", len(orphans), orphans)
+	}
+	if orphans[0].Provider != "pi" || orphans[0].Type != "hook" || orphans[0].Key != "tool_call" {
+		t.Fatalf("unexpected orphan: %+v", orphans[0])
+	}
+	gotSibling, err := os.ReadFile(siblingPath)
+	if err != nil {
+		t.Fatalf("read sibling: %v", err)
+	}
+	if string(gotSibling) != siblingContent {
+		t.Fatalf("sibling changed: got %q, want %q", gotSibling, siblingContent)
+	}
+}
+
 func TestCheckOrphanedMerges_DetectsOrphanedMCP(t *testing.T) {
 	projectRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	configDir := filepath.Join(home, ".syllago-test-orphan-mcp-"+filepath.Base(projectRoot))
-	os.MkdirAll(configDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(configDir) })
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("MkdirAll config dir: %v", err)
+	}
 
 	settingsJSON := `{
   "mcpServers": {
@@ -120,14 +218,18 @@ func TestCheckOrphanedMerges_DetectsOrphanedMCP(t *testing.T) {
     "orphan-server": {"command": "node", "args": ["evil.js"]}
   }
 }`
-	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644)
+	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), []byte(settingsJSON), 0644); err != nil {
+		t.Fatalf("write settings: %v", err)
+	}
 
 	inst := &Installed{
 		MCP: []InstalledMCP{
 			{Name: "tracked", ServerKey: "tracked-server"},
 		},
 	}
-	SaveInstalled(projectRoot, inst)
+	if err := SaveInstalled(projectRoot, inst); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
 
 	prov := provider.Provider{
 		Name:      "Test",

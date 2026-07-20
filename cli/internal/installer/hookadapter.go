@@ -15,8 +15,7 @@ import (
 )
 
 // hookStorageModel classifies how a provider persists its hooks on disk.
-// ADR-0020 identifies three models; Phase 1 implements the two home-scoped,
-// unambiguous ones. Directory-scoped hooks are deferred to Phase 1b.
+// ADR-0020 identifies three models.
 type hookStorageModel int
 
 const (
@@ -28,20 +27,23 @@ const (
 	// hookStorageDedicatedFile is a whole file that holds only hooks and can
 	// be written verbatim. windsurf.
 	hookStorageDedicatedFile
+	// hookStorageDirectory is a syllago-owned file inside a provider directory.
+	// The parent directory may contain user files, so only the owned file is
+	// read or written, and content is adapter output that may be non-JSON.
+	hookStorageDirectory
 )
 
 // hookStorageModelFor classifies a provider's hook storage and reports whether
 // syllago can install its hooks in ADR-0020 Phase 1.
 //
-// Directory-scoped providers (copilot-cli → .github/hooks/, kiro →
-// .kiro/agents/, pi → .pi/extensions/) have adapters but an unresolved
-// project-vs-home layout question, so they are rejected pending Phase 1b rather
-// than half-implemented. amp/codex have no adapter and are rejected by the
-// caller before reaching here.
+// amp/codex have no adapter and are rejected by the caller before reaching
+// here.
 func hookStorageModelFor(slug string) (hookStorageModel, error) {
 	switch slug {
 	case "claude-code", "crush", "cursor", "gemini-cli", "factory-droid":
 		return hookStorageSharedJSON, nil
+	case "copilot-cli", "kiro", "pi":
+		return hookStorageDirectory, nil
 	case "windsurf":
 		// Deferred: windsurf's adapter fans one before_tool_execute hook out to
 		// four split-events and only merges them back on decode when each has
@@ -50,8 +52,6 @@ func hookStorageModelFor(slug string) (hookStorageModel, error) {
 		// uninstall/status/orphans can't reliably match it. Needs a stable
 		// per-entry identity (a syllago marker), which is Phase 1b work.
 		return 0, fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
-	case "copilot-cli", "kiro", "pi":
-		return 0, fmt.Errorf("hook install for %s is not yet supported (pending ADR-0020 Phase 1b: directory-scoped hook layout)", slug)
 	default:
 		return 0, fmt.Errorf("hook install not supported for %s", slug)
 	}
@@ -62,7 +62,7 @@ func hookStorageModelFor(slug string) (hookStorageModel, error) {
 // single source of truth for hook file locations — installer.hookSettingsPathImpl,
 // the loadout apply path, and orphan detection all route through it so no flow
 // can diverge onto a wrong path. Returns an error for providers whose hooks
-// syllago cannot manage in Phase 1 (directory-scoped and adapter-less).
+// syllago cannot manage.
 //
 // ConfigLocations is intentionally NOT consulted — it is inconsistent across
 // providers, which is the root of the "dead config" bug this work fixes.
@@ -77,8 +77,12 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 		// Deferred to Phase 1b — see hookStorageModelFor for why. The Phase 1b
 		// path will be base/.windsurf/hooks.json (dedicated file).
 		return "", fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
-	case "copilot-cli", "kiro", "pi":
-		return "", fmt.Errorf("hook install for %s is not yet supported (pending ADR-0020 Phase 1b: directory-scoped hook layout)", prov.Slug)
+	case "copilot-cli":
+		return filepath.Join(base, ".copilot", "hooks", "syllago-hooks.json"), nil
+	case "kiro":
+		return filepath.Join(base, ".kiro", "agents", "syllago-hooks.json"), nil
+	case "pi":
+		return filepath.Join(base, ".pi", "agent", "extensions", "syllago-hooks.ts"), nil
 	default:
 		return "", fmt.Errorf("hook install not supported for %s", prov.Slug)
 	}
@@ -202,15 +206,28 @@ func roundTripIdentity(adapter converter.HookAdapter, canonHook converter.Canoni
 	return hookIdentity(rt.Hooks[0]), nil
 }
 
-// decodeExistingHooks reads the provider's hook file and decodes it through the
-// adapter. For shared-JSON providers the adapter reads only the `hooks` key,
-// ignoring sibling config. A missing or empty file yields no hooks.
-func decodeExistingHooks(adapter converter.HookAdapter, path string) ([]converter.CanonicalHook, error) {
-	data, err := readJSONFile(path) // returns {} when the file is absent
+// decodeExistingHooks reads the provider's hook file and decodes it through
+// the adapter. For shared-JSON providers the adapter reads only the `hooks`
+// key, ignoring sibling config. For directory-scoped providers, only the
+// syllago-owned file is read and its raw bytes are passed to the adapter.
+func decodeExistingHooks(model hookStorageModel, adapter converter.HookAdapter, path string) ([]converter.CanonicalHook, error) {
+	var data []byte
+	var err error
+	if model == hookStorageDirectory {
+		data, err = os.ReadFile(path)
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+	} else {
+		data, err = readJSONFile(path) // returns {} when the file is absent
+	}
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
 	if len(data) == 0 {
+		// Absent shared-JSON files decode to {} (len 2); an existing empty file
+		// means no hooks for every storage model — JSON adapters would error on
+		// zero bytes.
 		return nil, nil
 	}
 	ch, err := adapter.Decode(data)
@@ -230,16 +247,21 @@ func decodeExistingHooks(adapter converter.HookAdapter, path string) ([]converte
 //       diffs even when nothing semantically changed.
 // Phase 2 makes adapter encoding deterministic and promotes adapter.Verify to a
 // production-load-bearing fidelity check. Until then this is acceptable because
-// the routed providers (claude-code, crush, cursor, gemini-cli, factory-droid)
-// model the fields syllago writes.
+// the routed providers model the fields syllago writes.
 
 // writeHookFile persists an adapter's encoded hooks according to the storage
-// model. Dedicated-file providers get the whole encoded file; shared-JSON
-// providers get only the encoded `hooks` object merged into the real file,
-// preserving every non-hook key. The dedicated-file branch is Phase 1b infra —
-// no Phase 1 provider routes to it (see hookStorageModelFor).
+// model. Dedicated-file and directory providers get the whole encoded file;
+// shared-JSON providers get only the encoded `hooks` object merged into the
+// real file, preserving every non-hook key.
 func writeHookFile(model hookStorageModel, path string, encoded []byte) error {
 	if model == hookStorageDedicatedFile {
+		return writeJSONFile(path, encoded)
+	}
+	if model == hookStorageDirectory {
+		// writeJSONFile is content-agnostic despite its name: it creates the
+		// parent directory, picks home-aware permissions, and writes atomically
+		// (temp-then-rename) — exactly what the syllago-owned file needs, and
+		// pi's TypeScript passes through it untouched.
 		return writeJSONFile(path, encoded)
 	}
 
@@ -306,7 +328,7 @@ func ApplyCanonicalHook(prov provider.Provider, h converter.Hook, path, resolved
 		return ApplyHookResult{}, err
 	}
 
-	existing, err := decodeExistingHooks(adapter, path)
+	existing, err := decodeExistingHooks(model, adapter, path)
 	if err != nil {
 		return ApplyHookResult{}, err
 	}
