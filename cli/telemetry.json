@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-07-09T00:52:23Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-08-21T21:26:09Z",
+  "syllagoVersion": "0.14.0",
   "events": [
     {
       "name": "command_executed",
@@ -193,10 +193,11 @@
         {
           "name": "action_count",
           "type": "int",
-          "description": "Number of actions performed by loadout",
+          "description": "Number of actions performed by loadout or doctor repair",
           "example": 5,
           "commands": [
-            "loadout_apply"
+            "loadout_apply",
+            "doctor"
           ]
         },
         {

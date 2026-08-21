@@ -161,9 +161,9 @@ func EventCatalog() []EventDef {
 				{
 					Name:        "action_count",
 					Type:        "int",
-					Description: "Number of actions performed by loadout",
+					Description: "Number of actions performed by loadout or doctor repair",
 					Example:     5,
-					Commands:    []string{"loadout_apply"},
+					Commands:    []string{"loadout_apply", "doctor"},
 				},
 				{
 					Name:        "registry_count",

@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 func TestDoctorCheckLibrary(t *testing.T) {
@@ -425,5 +426,170 @@ func TestCheckNamingQuality_AllNamed(t *testing.T) {
 	c := checkNamingQuality(dir)
 	if c.Status != checkOK {
 		t.Errorf("Status = %s, want ok when no hooks/MCP items; message: %s", c.Status, c.Message)
+	}
+}
+
+func TestRunDoctorFixForce_RelinksDeadProviderLink(t *testing.T) {
+	resetDoctorFlags(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	contentDir := filepath.Join(home, ".syllago", "content")
+	skillDir := filepath.Join(contentDir, "skills", "repair-me")
+	writeDoctorCmdFile(t, filepath.Join(skillDir, "SKILL.md"), "# Repair Me\n")
+
+	installDir := filepath.Join(home, ".claude", "skills")
+	linkPath := filepath.Join(installDir, "repair-me")
+	oldTarget := filepath.Join(home, ".syllago", "content", "skills", "gone")
+	symlinkDoctorCmd(t, oldTarget, linkPath)
+
+	withDoctorCmdGlobals(t, home, contentDir, []provider.Provider{
+		doctorCmdProvider("claude-code", map[catalog.ContentType]string{catalog.Skills: installDir}),
+	})
+
+	stdout, _ := output.SetForTest(t)
+	captureOsExit(t)
+	mustSetDoctorFlag(t, "fix", "true")
+	mustSetDoctorFlag(t, "force", "true")
+
+	if err := doctorCmd.RunE(doctorCmd, nil); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	target, err := os.Readlink(linkPath)
+	if err != nil {
+		t.Fatalf("Readlink: %v", err)
+	}
+	if target != skillDir {
+		t.Fatalf("target = %q, want %q", target, skillDir)
+	}
+	if !strings.Contains(stdout.String(), "relink: "+linkPath+" -> "+skillDir) {
+		t.Fatalf("output missing relink plan:\n%s", stdout.String())
+	}
+}
+
+func TestRunDoctorFixForce_PrunesDeadProviderLinkWithoutLibraryMatch(t *testing.T) {
+	resetDoctorFlags(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	contentDir := filepath.Join(home, ".syllago", "content")
+	if err := os.MkdirAll(contentDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	installDir := filepath.Join(home, ".claude", "skills")
+	linkPath := filepath.Join(installDir, "gone")
+	oldTarget := filepath.Join(home, ".syllago", "content", "skills", "gone")
+	symlinkDoctorCmd(t, oldTarget, linkPath)
+
+	withDoctorCmdGlobals(t, home, contentDir, []provider.Provider{
+		doctorCmdProvider("claude-code", map[catalog.ContentType]string{catalog.Skills: installDir}),
+	})
+
+	stdout, _ := output.SetForTest(t)
+	captureOsExit(t)
+	mustSetDoctorFlag(t, "fix", "true")
+	mustSetDoctorFlag(t, "force", "true")
+
+	if err := doctorCmd.RunE(doctorCmd, nil); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
+		t.Fatalf("Lstat err = %v, want link removed", err)
+	}
+	if !strings.Contains(stdout.String(), "prune:  "+linkPath+" (target gone: "+oldTarget+")") {
+		t.Fatalf("output missing prune plan:\n%s", stdout.String())
+	}
+}
+
+func TestRunDoctorFix_NothingBroken(t *testing.T) {
+	resetDoctorFlags(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	contentDir := filepath.Join(home, ".syllago", "content")
+	if err := os.MkdirAll(contentDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	installDir := filepath.Join(home, ".claude", "skills")
+	withDoctorCmdGlobals(t, home, contentDir, []provider.Provider{
+		doctorCmdProvider("claude-code", map[catalog.ContentType]string{catalog.Skills: installDir}),
+	})
+
+	stdout, _ := output.SetForTest(t)
+	captureOsExit(t)
+	mustSetDoctorFlag(t, "fix", "true")
+
+	if err := doctorCmd.RunE(doctorCmd, nil); err != nil {
+		t.Fatalf("RunE: %v", err)
+	}
+
+	if !strings.Contains(stdout.String(), "Nothing to fix.") {
+		t.Fatalf("output missing nothing-to-fix message:\n%s", stdout.String())
+	}
+}
+
+func resetDoctorFlags(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		_ = doctorCmd.Flags().Set("fix", "false")
+		_ = doctorCmd.Flags().Set("force", "false")
+	})
+}
+
+func mustSetDoctorFlag(t *testing.T, name, value string) {
+	t.Helper()
+	if err := doctorCmd.Flags().Set(name, value); err != nil {
+		t.Fatalf("setting --%s: %v", name, err)
+	}
+}
+
+func withDoctorCmdGlobals(t *testing.T, projectRoot, contentDir string, providers []provider.Provider) {
+	t.Helper()
+
+	origContentDir := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = contentDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origContentDir })
+
+	origProviders := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = providers
+	t.Cleanup(func() { provider.AllProviders = origProviders })
+
+	origRoot := findProjectRoot
+	findProjectRoot = func() (string, error) { return projectRoot, nil }
+	t.Cleanup(func() { findProjectRoot = origRoot })
+}
+
+func doctorCmdProvider(slug string, dirs map[catalog.ContentType]string) provider.Provider {
+	return provider.Provider{
+		Name:   slug,
+		Slug:   slug,
+		Detect: func(string) bool { return true },
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return dirs[ct]
+		},
+	}
+}
+
+func writeDoctorCmdFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+}
+
+func symlinkDoctorCmd(t *testing.T, target, linkPath string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(linkPath), 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.Symlink(target, linkPath); err != nil {
+		t.Fatalf("Symlink: %v", err)
 	}
 }

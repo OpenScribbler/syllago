@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -45,6 +46,7 @@ func Run(projectRoot string) Result {
 	checks = append(checks, CheckLibrary())
 	checks = append(checks, CheckConfigWith(projectRoot))
 	checks = append(checks, CheckProviders())
+	checks = append(checks, CheckProviderLinks())
 	if projectRoot != "" {
 		checks = append(checks, CheckSymlinks(projectRoot))
 		checks = append(checks, CheckContentDrift(projectRoot))
@@ -150,6 +152,72 @@ func CheckProviders() CheckResult {
 		msg += fmt.Sprintf(", %d not found", notFound)
 	}
 	return CheckResult{Name: "providers", Status: CheckOK, Message: msg}
+}
+
+// CheckProviderLinks scans real provider install directories for syllago-owned
+// symlinks and reports dead ones. This is the reality-based complement to
+// CheckSymlinks, which audits recorded state.
+func CheckProviderLinks() CheckResult {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return CheckResult{Name: "provider-links", Status: CheckErr, Message: "Provider links: cannot determine home directory"}
+	}
+	return checkProviderLinksAt(home, provider.AllProviders, SyllagoOwnedRoots(home))
+}
+
+// SyllagoOwnedRoots returns the roots a syllago-created symlink may target:
+// the syllago home (library + registry checkouts) and the MOAT source cache.
+func SyllagoOwnedRoots(home string) []string {
+	roots := []string{filepath.Join(home, ".syllago")}
+	if cacheDir, err := moatinstall.SourceCacheDir(); err == nil && cacheDir != "" {
+		roots = append(roots, cacheDir)
+	}
+	return roots
+}
+
+// BrokenProviderLinks scans provider install directories and returns only
+// broken syllago-owned symlinks.
+func BrokenProviderLinks() ([]installer.ScannedLink, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	links := installer.ScanProviderLinks(provider.AllProviders, home, SyllagoOwnedRoots(home))
+	return brokenProviderLinks(links), nil
+}
+
+func checkProviderLinksAt(home string, providers []provider.Provider, roots []string) CheckResult {
+	links := installer.ScanProviderLinks(providers, home, roots)
+	if len(links) == 0 {
+		return CheckResult{Name: "provider-links", Status: CheckOK, Message: "Provider links: none found"}
+	}
+
+	broken := brokenProviderLinks(links)
+	if len(broken) == 0 {
+		return CheckResult{Name: "provider-links", Status: CheckOK, Message: fmt.Sprintf("Provider links: %d healthy", len(links))}
+	}
+
+	details := make([]string, 0, len(broken)+1)
+	for _, link := range broken {
+		details = append(details, fmt.Sprintf("broken: %s -> %s", link.Path, link.Target))
+	}
+	details = append(details, "Run 'syllago doctor --fix' to repair")
+	return CheckResult{
+		Name:    "provider-links",
+		Status:  CheckErr,
+		Message: fmt.Sprintf("Provider links: %d broken of %d total", len(broken), len(links)),
+		Details: details,
+	}
+}
+
+func brokenProviderLinks(links []installer.ScannedLink) []installer.ScannedLink {
+	var broken []installer.ScannedLink
+	for _, link := range links {
+		if link.Class == installer.LinkBroken {
+			broken = append(broken, link)
+		}
+	}
+	return broken
 }
 
 // CheckSymlinks verifies installed symlinks are not broken.

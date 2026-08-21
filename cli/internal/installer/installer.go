@@ -244,11 +244,7 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		return "", err
 	}
 
-	// Agents install the AGENT.md file, not the whole directory
-	sourcePath := item.Path
-	if item.Type == catalog.Agents {
-		sourcePath = filepath.Join(item.Path, "AGENT.md")
-	}
+	sourcePath := SourcePathFor(item)
 
 	switch method {
 	case MethodCopy:
@@ -313,11 +309,7 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 		}
 	}
 
-	// Agents install the AGENT.md file, not the whole directory
-	sourcePath := item.Path
-	if item.Type == catalog.Agents {
-		sourcePath = filepath.Join(item.Path, "AGENT.md")
-	}
+	sourcePath := SourcePathFor(item)
 
 	switch method {
 	case MethodCopy:
