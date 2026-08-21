@@ -131,5 +131,12 @@ func syncMOATRegistry(
 			reg.Name, res.RevocationsAdded, res.PrivateContentCount)
 	}
 
+	for _, w := range outcome.ContentCacheReport.Warnings {
+		fmt.Fprintf(errW, "Warning: %s\n", w)
+	}
+	if outcome.ContentCacheErr != nil {
+		fmt.Fprintf(errW, "Warning: content cache: %s\n", outcome.ContentCacheErr)
+	}
+
 	return 0, nil
 }

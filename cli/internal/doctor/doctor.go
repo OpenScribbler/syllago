@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -13,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 // CheckStatus is the outcome of a single health check.
@@ -54,6 +56,7 @@ func Run(projectRoot string) Result {
 	}
 	checks = append(checks, CheckRegistriesWith(projectRoot))
 	checks = append(checks, CheckNamingQuality(projectRoot))
+	checks = append(checks, CheckTrust(projectRoot))
 
 	warns, errs := 0, 0
 	for _, c := range checks {
@@ -356,10 +359,17 @@ func CheckRegistriesWith(projectRoot string) CheckResult {
 		parts = append(parts, fmt.Sprintf("%d unknown", unknown))
 	}
 
+	details := findSimilarRegistryPairs(merged.Registries)
+	status := CheckOK
+	if len(details) > 0 {
+		status = CheckWarn
+	}
+
 	return CheckResult{
 		Name:    "registries",
-		Status:  CheckOK,
+		Status:  status,
 		Message: fmt.Sprintf("Registries: %d configured (%s)", len(merged.Registries), JoinWords(parts)),
+		Details: details,
 	}
 }
 
@@ -392,6 +402,122 @@ func CheckNamingQuality(projectRoot string) CheckResult {
 		}
 	}
 	return CheckResult{Name: "naming", Status: CheckOK, Message: "Naming: all hooks/MCP items have display names"}
+}
+
+// CheckTrust reports MOAT trust health: bundled trusted-root staleness and
+// per-registry manifest-cache staleness. Today this state is only visible in
+// `syllago list` warnings; doctor is the diagnostic surface and must show it.
+func CheckTrust(projectRoot string) CheckResult {
+	now := time.Now()
+	status := CheckOK
+	var details []string
+
+	info := moat.BundledTrustedRoot(now)
+	switch info.Status {
+	case moat.TrustedRootStatusFresh:
+	case moat.TrustedRootStatusWarn, moat.TrustedRootStatusEscalated:
+		status = worseStatus(status, CheckWarn)
+		if msg := moat.StalenessMessage(info); msg != "" {
+			details = append(details, msg)
+		}
+	case moat.TrustedRootStatusExpired, moat.TrustedRootStatusMissing, moat.TrustedRootStatusCorrupt:
+		status = worseStatus(status, CheckErr)
+		if msg := moat.StalenessMessage(info); msg != "" {
+			details = append(details, msg)
+		}
+	}
+
+	freshRegistries := 0
+	scan, err := moat.LoadAndScan(projectRoot, projectRoot, now)
+	if err != nil {
+		status = worseStatus(status, CheckWarn)
+		details = append(details, fmt.Sprintf("Trust: could not scan registries: %v", err))
+	} else if scan.Catalog != nil {
+		names := make([]string, 0, len(scan.Catalog.RegistryTrusts))
+		for name := range scan.Catalog.RegistryTrusts {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			rt := scan.Catalog.RegistryTrusts[name]
+			if rt == nil {
+				continue
+			}
+			switch rt.Staleness {
+			case "Fresh":
+				freshRegistries++
+			case "Stale", "Missing":
+				status = worseStatus(status, CheckWarn)
+				details = append(details, fmt.Sprintf("registry %s: manifest cache %s — run 'syllago registry sync %s'",
+					name, registryStalenessLabel(rt.Staleness), name))
+			case "Expired":
+				status = worseStatus(status, CheckErr)
+				details = append(details, fmt.Sprintf("registry %s: manifest cache expired — trust decisions disabled until 'syllago registry sync %s'", name, name))
+			}
+		}
+	}
+
+	if status == CheckOK {
+		if freshRegistries == 0 {
+			return CheckResult{Name: "trust", Status: CheckOK, Message: "Trust: root fresh, no MOAT registries"}
+		}
+		return CheckResult{Name: "trust", Status: CheckOK, Message: fmt.Sprintf("Trust: root fresh, %d registries fresh", freshRegistries)}
+	}
+
+	return CheckResult{
+		Name:    "trust",
+		Status:  status,
+		Message: fmt.Sprintf("Trust: %d problems", len(details)),
+		Details: details,
+	}
+}
+
+func findSimilarRegistryPairs(registries []config.Registry) []string {
+	var details []string
+	for i := 0; i < len(registries); i++ {
+		for j := i + 1; j < len(registries); j++ {
+			a := registries[i]
+			b := registries[j]
+			if a.Name == b.Name {
+				continue
+			}
+			sameName := registryops.NormalizeRegistryIdentity(a.Name) == registryops.NormalizeRegistryIdentity(b.Name)
+			sameURL := a.URL != "" && b.URL != "" && registryops.NormalizeRegistryURL(a.URL) == registryops.NormalizeRegistryURL(b.URL)
+			if sameName || sameURL {
+				details = append(details, fmt.Sprintf("possible duplicate: %s and %s", a.Name, b.Name))
+			}
+		}
+	}
+	return details
+}
+
+func worseStatus(a, b CheckStatus) CheckStatus {
+	if checkStatusRank(b) > checkStatusRank(a) {
+		return b
+	}
+	return a
+}
+
+func checkStatusRank(status CheckStatus) int {
+	switch status {
+	case CheckErr:
+		return 2
+	case CheckWarn:
+		return 1
+	default:
+		return 0
+	}
+}
+
+func registryStalenessLabel(staleness string) string {
+	switch staleness {
+	case "Stale":
+		return "stale"
+	case "Missing":
+		return "missing"
+	default:
+		return staleness
+	}
 }
 
 // JoinWords joins a list of words with ", " separators.

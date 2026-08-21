@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -77,6 +78,46 @@ func TestCheckProviderLinksAt_ReportsBroken(t *testing.T) {
 	}
 }
 
+func TestCheckTrustRunsWithoutMOATRegistries(t *testing.T) {
+	projectRoot := t.TempDir()
+	withDoctorGlobalConfigDir(t, t.TempDir())
+	if err := config.SaveGlobal(&config.Config{}); err != nil {
+		t.Fatalf("SaveGlobal: %v", err)
+	}
+
+	result := CheckTrust(projectRoot)
+
+	if result.Name != "trust" {
+		t.Fatalf("Name = %q, want trust", result.Name)
+	}
+	if result.Message == "" {
+		t.Fatal("Message is empty")
+	}
+}
+
+func TestCheckRegistriesWithWarnsOnNearDuplicates(t *testing.T) {
+	projectRoot := t.TempDir()
+	withDoctorGlobalConfigDir(t, t.TempDir())
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "Syllago_Community", URL: "https://github.com/example/one.git"},
+			{Name: "syllago-community", URL: "https://github.com/example/two.git"},
+		},
+	}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("SaveGlobal: %v", err)
+	}
+
+	result := CheckRegistriesWith(projectRoot)
+
+	if result.Status != CheckWarn {
+		t.Fatalf("Status = %s, want %s: %#v", result.Status, CheckWarn, result)
+	}
+	if len(result.Details) != 1 || !strings.Contains(result.Details[0], "possible duplicate: Syllago_Community and syllago-community") {
+		t.Fatalf("Details = %#v, want possible duplicate detail", result.Details)
+	}
+}
+
 func writeDoctorFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -95,4 +136,11 @@ func symlinkDoctor(t *testing.T, target, linkPath string) {
 	if err := os.Symlink(target, linkPath); err != nil {
 		t.Fatalf("Symlink: %v", err)
 	}
+}
+
+func withDoctorGlobalConfigDir(t *testing.T, dir string) {
+	t.Helper()
+	orig := config.GlobalDirOverride
+	config.GlobalDirOverride = dir
+	t.Cleanup(func() { config.GlobalDirOverride = orig })
 }

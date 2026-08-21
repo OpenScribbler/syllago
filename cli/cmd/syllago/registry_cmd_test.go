@@ -153,6 +153,32 @@ func TestRegistryAddExpandsAlias(t *testing.T) {
 	}
 }
 
+func TestRegistryAddWarnsOnNearDuplicate(t *testing.T) {
+	tmp := t.TempDir()
+	withGlobalConfigDir(t, tmp)
+	cfg := &config.Config{
+		Providers: []string{"claude-code"},
+		Registries: []config.Registry{
+			{Name: "syllago-community", URL: "https://github.com/example/existing.git"},
+		},
+	}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("config.SaveGlobal: %v", err)
+	}
+
+	registryAddCmd.Flags().Set("name", "Syllago_Community")
+	t.Cleanup(func() { registryAddCmd.Flags().Set("name", "") })
+	_, stderr := output.SetForTest(t)
+
+	if err := registryAddCmd.RunE(registryAddCmd, []string{"local-repo"}); err != nil {
+		t.Fatalf("registryAddCmd.RunE: %v", err)
+	}
+
+	if got := stderr.String(); !strings.Contains(got, `looks like a duplicate of existing registry "syllago-community"`) {
+		t.Fatalf("stderr = %q, want near-duplicate warning", got)
+	}
+}
+
 // withGlobalConfigDir redirects config.LoadGlobal/SaveGlobal at `dir` for the
 // duration of t. Use this in registry CRUD tests that previously relied on
 // `os.Chdir(tmp)` + project-local `.syllago/config.json`.

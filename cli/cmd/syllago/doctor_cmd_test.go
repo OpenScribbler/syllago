@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -249,6 +250,10 @@ func TestCheckContentDrift_SkipsEntriesWithoutHash(t *testing.T) {
 }
 
 func TestDoctorCheckRegistriesNone(t *testing.T) {
+	orig := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = orig })
+
 	c := checkRegistriesWith("")
 	if c.Status != checkOK {
 		t.Errorf("expected ok with no registries, got %s", c.Status)

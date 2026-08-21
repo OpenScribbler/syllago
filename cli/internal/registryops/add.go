@@ -121,6 +121,12 @@ type AddOutcome struct {
 	// caller can render a "Warning: no recognized content" line.
 	NoContentFound bool
 
+	// SimilarRegistries lists configured registries whose normalized name or
+	// URL near-duplicates this add (case/underscore-hyphen folding, same URL
+	// modulo .git suffix). The add still proceeds — the caller renders a
+	// warning so the user can spot an accidental double-add.
+	SimilarRegistries []string
+
 	// SelfDeclaredMOAT is true when the orchestrator upgraded the registry
 	// to MOAT via registry.yaml's manifest_uri field (no incoming
 	// SigningProfile from the caller). Callers print "Run sync --yes to pin"
@@ -160,6 +166,7 @@ func AddRegistry(ctx context.Context, opts AddOpts) (AddOutcome, error) {
 			return out, fmt.Errorf("%w: %q", ErrAddDuplicate, name)
 		}
 	}
+	out.SimilarRegistries = FindSimilarRegistries(cfg.Registries, name, opts.URL)
 
 	if !cfg.IsRegistryAllowed(opts.URL) {
 		return out, fmt.Errorf("%w: %q", ErrAddNotAllowed, opts.URL)
