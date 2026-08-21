@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -100,16 +101,29 @@ func runRemove(cmd *cobra.Command, args []string) error {
 
 	item := matches[0]
 
+	providerNames := providerNamesBySlug(provider.AllProviders)
+	installedByProvider := make(map[string]bool)
 	var installedIn []string
 	for _, prov := range provider.AllProviders {
 		if installer.CheckStatus(item, prov, globalDir) == installer.StatusInstalled {
 			installedIn = append(installedIn, prov.Name)
+			installedByProvider[prov.Slug] = true
 		}
+	}
+
+	home, _ := os.UserHomeDir()
+	providerLinks := installer.ScanProviderLinks(provider.AllProviders, home, []string{item.Path})
+	extraProviderLinks := extraRemoveProviderLinks(item, providerLinks, installedByProvider)
+	for _, link := range extraProviderLinks {
+		installedIn = append(installedIn, providerLinkLabel(link, providerNames))
 	}
 
 	if dryRun {
 		if len(installedIn) > 0 {
 			fmt.Fprintf(output.Writer, "[dry-run] Would uninstall from: %s\n", strings.Join(installedIn, ", "))
+		}
+		for _, link := range extraProviderLinks {
+			fmt.Fprintf(output.Writer, "[dry-run] Would remove provider link: %s\n", link.Path)
 		}
 		fmt.Fprintf(output.Writer, "[dry-run] Would remove from library: %s (%s)\n", name, item.Type.Label())
 		return nil
@@ -148,6 +162,22 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	home, _ = os.UserHomeDir()
+	remainingLinks := installer.ScanProviderLinks(provider.AllProviders, home, []string{item.Path})
+	var linkRemoveErrs []string
+	for _, link := range remainingLinks {
+		if err := os.Remove(link.Path); err != nil {
+			msg := fmt.Sprintf("failed to remove provider link %s: %s", link.Path, err)
+			fmt.Fprintf(output.ErrWriter, "  warning: %s\n", msg)
+			linkRemoveErrs = append(linkRemoveErrs, msg)
+			continue
+		}
+		uninstalledFrom = append(uninstalledFrom, providerLinkLabel(link, providerNames))
+	}
+	if len(linkRemoveErrs) > 0 {
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, fmt.Sprintf("%q is still installed and was not removed", name), "Remove the provider link(s) manually, then retry 'syllago remove'", strings.Join(linkRemoveErrs, "; "))
+	}
+
 	removedPath := item.Path
 	if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing from library failed", "Check filesystem permissions", err.Error())
@@ -174,4 +204,45 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("content_type", typeFilter)
 	telemetry.Enrich("dry_run", dryRun)
 	return nil
+}
+
+func providerNamesBySlug(providers []provider.Provider) map[string]string {
+	names := make(map[string]string, len(providers))
+	for _, prov := range providers {
+		if prov.Slug == "" {
+			continue
+		}
+		names[prov.Slug] = prov.Name
+	}
+	return names
+}
+
+func providerLinkLabel(link installer.ScannedLink, names map[string]string) string {
+	name := names[link.Provider]
+	if name == "" {
+		name = link.Provider
+	}
+	return fmt.Sprintf("%s (%s)", name, filepath.Base(link.Path))
+}
+
+func extraRemoveProviderLinks(item catalog.ContentItem, links []installer.ScannedLink, installedByProvider map[string]bool) []installer.ScannedLink {
+	expectedLeaf := expectedRemoveInstallLeaf(item)
+	extra := make([]installer.ScannedLink, 0, len(links))
+	for _, link := range links {
+		if installedByProvider[link.Provider] && link.ContentType == item.Type && filepath.Base(link.Path) == expectedLeaf {
+			continue
+		}
+		extra = append(extra, link)
+	}
+	return extra
+}
+
+func expectedRemoveInstallLeaf(item catalog.ContentItem) string {
+	if item.Type == catalog.Agents {
+		return item.Name + ".md"
+	}
+	if item.Type.IsUniversal() {
+		return item.Name
+	}
+	return filepath.Base(item.Path)
 }

@@ -3,6 +3,7 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -425,6 +426,82 @@ func TestUninstall_RemovesSymlink(t *testing.T) {
 	// Verify symlink is gone
 	if _, err := os.Lstat(targetPath); !os.IsNotExist(err) {
 		t.Error("symlink should be removed")
+	}
+}
+
+func TestUninstall_RefusesForeignSymlinkCollision(t *testing.T) {
+	tmp := t.TempDir()
+	repoRoot := filepath.Join(tmp, "repo")
+	os.MkdirAll(repoRoot, 0755)
+	t.Setenv("HOME", tmp)
+
+	prov := testProvider("test")
+
+	sourcePath := filepath.Join(repoRoot, "rules", "test", "remove-rule")
+	foreignPath := filepath.Join(tmp, "foreign", "remove-rule")
+	os.MkdirAll(sourcePath, 0755)
+	os.MkdirAll(foreignPath, 0755)
+
+	item := catalog.ContentItem{
+		Name: "remove-rule",
+		Type: catalog.Rules,
+		Path: sourcePath,
+	}
+
+	targetPath := filepath.Join(tmp, ".testprovider", "rules", "remove-rule")
+	os.MkdirAll(filepath.Dir(targetPath), 0755)
+	os.Symlink(foreignPath, targetPath)
+
+	_, err := Uninstall(item, prov, repoRoot)
+	if err == nil {
+		t.Fatal("expected refusing-to-remove error, got nil")
+	}
+	if !strings.Contains(err.Error(), "refusing to remove") {
+		t.Fatalf("expected refusing-to-remove error, got: %v", err)
+	}
+
+	info, statErr := os.Lstat(targetPath)
+	if statErr != nil {
+		t.Fatalf("foreign symlink should survive: %v", statErr)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected target to remain a symlink, mode=%s", info.Mode())
+	}
+}
+
+func TestUninstall_RemovesAgentSymlinkToSourceFile(t *testing.T) {
+	tmp := t.TempDir()
+	repoRoot := filepath.Join(tmp, "repo")
+	os.MkdirAll(repoRoot, 0755)
+	t.Setenv("HOME", tmp)
+
+	prov := testProvider("test")
+
+	sourcePath := filepath.Join(repoRoot, "agents", "test", "remove-agent")
+	os.MkdirAll(sourcePath, 0755)
+	agentFile := filepath.Join(sourcePath, "AGENT.md")
+	os.WriteFile(agentFile, []byte("# Agent"), 0644)
+
+	item := catalog.ContentItem{
+		Name: "remove-agent",
+		Type: catalog.Agents,
+		Path: sourcePath,
+	}
+
+	targetPath := filepath.Join(tmp, ".testprovider", "agents", "remove-agent.md")
+	os.MkdirAll(filepath.Dir(targetPath), 0755)
+	os.Symlink(agentFile, targetPath)
+
+	desc, err := Uninstall(item, prov, repoRoot)
+	if err != nil {
+		t.Fatalf("Uninstall agent: %v", err)
+	}
+	if desc != targetPath {
+		t.Errorf("expected desc %s, got %s", targetPath, desc)
+	}
+
+	if _, err := os.Lstat(targetPath); !os.IsNotExist(err) {
+		t.Error("agent symlink should be removed")
 	}
 }
 
