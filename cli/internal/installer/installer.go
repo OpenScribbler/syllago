@@ -244,11 +244,7 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		return "", err
 	}
 
-	// Agents install the AGENT.md file, not the whole directory
-	sourcePath := item.Path
-	if item.Type == catalog.Agents {
-		sourcePath = filepath.Join(item.Path, "AGENT.md")
-	}
+	sourcePath := SourcePathFor(item)
 
 	switch method {
 	case MethodCopy:
@@ -313,11 +309,7 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 		}
 	}
 
-	// Agents install the AGENT.md file, not the whole directory
-	sourcePath := item.Path
-	if item.Type == catalog.Agents {
-		sourcePath = filepath.Join(item.Path, "AGENT.md")
-	}
+	sourcePath := SourcePathFor(item)
 
 	switch method {
 	case MethodCopy:
@@ -357,8 +349,20 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		return "", fmt.Errorf("not installed: %s", targetPath)
 	}
 
-	// Remove symlinks or regular files (copies)
-	if info.Mode()&os.ModeSymlink != 0 || info.Mode().IsRegular() {
+	// Remove symlinks only when they still point at this library item.
+	if info.Mode()&os.ModeSymlink != 0 {
+		actualTarget, err := resolveSymlinkTarget(targetPath)
+		if err != nil {
+			return "", fmt.Errorf("reading symlink %s: %w", targetPath, err)
+		}
+		if !symlinkTargetBelongsToItem(actualTarget, item) {
+			return "", fmt.Errorf("refusing to remove %s: symlink points to %s, not to %s", targetPath, actualTarget, item.Path)
+		}
+		return targetPath, os.Remove(targetPath)
+	}
+
+	// Remove regular files (copies)
+	if info.Mode().IsRegular() {
 		return targetPath, os.Remove(targetPath)
 	}
 
@@ -380,6 +384,13 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	}
 
 	return "", fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
+}
+
+func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {
+	target = filepath.Clean(target)
+	sourcePath := filepath.Clean(SourcePathFor(item))
+	itemPath := filepath.Clean(item.Path)
+	return target == sourcePath || target == itemPath || pathWithinRoot(target, itemPath)
 }
 
 // installWithRenderTo reads canonical content, renders it for the target provider,

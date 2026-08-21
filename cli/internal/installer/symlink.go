@@ -57,18 +57,11 @@ func IsWindowsMount(path string) bool {
 
 // IsSymlinkedTo checks if the given path is a symlink pointing into the repoRoot.
 func IsSymlinkedTo(path, repoRoot string) bool {
-	target, err := os.Readlink(path)
+	target, err := resolveSymlinkTarget(path)
 	if err != nil {
 		return false
 	}
-	// Resolve to absolute if relative
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(filepath.Dir(path), target)
-	}
-	// Clean both paths for comparison
-	target = filepath.Clean(target)
-	repoRoot = filepath.Clean(repoRoot)
-	return strings.HasPrefix(target, repoRoot+string(filepath.Separator)) || target == repoRoot
+	return pathWithinRoot(target, repoRoot)
 }
 
 // IsSymlinkedToAny checks if path is a symlink pointing into any of the given roots.
@@ -79,4 +72,21 @@ func IsSymlinkedToAny(path string, roots []string) bool {
 		}
 	}
 	return false
+}
+
+func resolveSymlinkTarget(path string) (string, error) {
+	target, err := os.Readlink(path)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return filepath.Clean(target), nil
+}
+
+func pathWithinRoot(path, root string) bool {
+	path = filepath.Clean(path)
+	root = filepath.Clean(root)
+	return strings.HasPrefix(path, root+string(filepath.Separator)) || path == root
 }

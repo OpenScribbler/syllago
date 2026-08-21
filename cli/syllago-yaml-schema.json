@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generated_at": "2026-05-07T17:06:08Z",
-  "syllago_version": "0.12.0",
+  "generated_at": "2026-08-21T21:26:09Z",
+  "syllago_version": "0.14.0",
   "schema": {
     "struct_name": "Meta",
     "format_version": 1,

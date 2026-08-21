@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/doctor"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -23,12 +28,20 @@ pass, 1 if there are warnings, 2 if there are errors.`,
 }
 
 func init() {
+	doctorCmd.Flags().Bool("fix", false, "Repair broken provider links: re-link to library content or prune dead links")
+	doctorCmd.Flags().BoolP("force", "f", false, "Skip confirmation prompt")
 	rootCmd.AddCommand(doctorCmd)
 }
 
 var osExit = os.Exit
 
 func runDoctor(cmd *cobra.Command, args []string) error {
+	fix, _ := cmd.Flags().GetBool("fix")
+	force, _ := cmd.Flags().GetBool("force")
+	if fix && output.JSON {
+		return output.NewStructuredError(output.ErrInputConflict, "--fix cannot be used with --json", "Run 'syllago doctor --fix' for repair, or omit --fix for JSON diagnostics")
+	}
+
 	projectRoot, _ := findProjectRoot()
 	result := doctor.Run(projectRoot)
 
@@ -40,6 +53,10 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 		fmt.Fprintln(output.Writer)
 		fmt.Fprintf(output.Writer, "  %s\n", result.Summary)
+	}
+
+	if fix {
+		return runDoctorFix(force)
 	}
 
 	errs, warns := 0, 0
@@ -60,6 +77,96 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	return nil
+}
+
+func runDoctorFix(force bool) error {
+	broken, err := doctor.BrokenProviderLinks()
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment", err.Error())
+	}
+
+	libraryItems, err := doctorFixLibraryItems()
+	if err != nil {
+		return err
+	}
+
+	actions := installer.PlanLinkFixes(broken, libraryItems)
+	if len(actions) == 0 {
+		fmt.Fprintln(output.Writer, "Nothing to fix.")
+		return nil
+	}
+
+	for _, action := range actions {
+		switch action.Kind {
+		case installer.FixRelink:
+			fmt.Fprintf(output.Writer, "relink: %s -> %s\n", action.Link.Path, action.NewSource)
+		case installer.FixPrune:
+			fmt.Fprintf(output.Writer, "prune:  %s (target gone: %s)\n", action.Link.Path, action.Link.Target)
+		}
+	}
+
+	if !force {
+		if !isInteractive() {
+			return output.NewStructuredError(output.ErrInputTerminal, "doctor --fix requires confirmation", "Run 'syllago doctor --fix --force' to apply repairs non-interactively")
+		}
+		fmt.Fprint(output.Writer, "Continue? [y/N] ")
+		scanner := bufio.NewScanner(os.Stdin)
+		if !scanner.Scan() {
+			return output.NewStructuredError(output.ErrInputTerminal, "no input received", "Run with --force to skip confirmation")
+		}
+		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+		if answer != "y" && answer != "yes" {
+			fmt.Fprintln(output.Writer, "Cancelled.")
+			return nil
+		}
+	}
+
+	errs := installer.ApplyLinkFixes(actions)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Fprintln(output.ErrWriter, err)
+		}
+		osExit(1)
+		return nil
+	}
+
+	relinked, pruned := countLinkFixKinds(actions)
+	fmt.Fprintf(output.Writer, "Fixed: %d relinked, %d pruned\n", relinked, pruned)
+	telemetry.Enrich("action_count", len(actions))
+	return nil
+}
+
+func doctorFixLibraryItems() ([]catalog.ContentItem, error) {
+	emptyProjectRoot, err := os.MkdirTemp("", "syllago-doctor-fix-*")
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrSystemIO, "creating temp dir failed", "Check filesystem permissions and disk space", err.Error())
+	}
+	defer func() { _ = os.RemoveAll(emptyProjectRoot) }()
+
+	cat, err := catalog.ScanWithGlobalAndRegistries(emptyProjectRoot, emptyProjectRoot, nil)
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library failed", "Check that ~/.syllago/content/ exists and is readable", err.Error())
+	}
+
+	var items []catalog.ContentItem
+	for _, item := range cat.Items {
+		if item.Source == "global" {
+			items = append(items, item)
+		}
+	}
+	return items, nil
+}
+
+func countLinkFixKinds(actions []installer.FixAction) (relinked, pruned int) {
+	for _, action := range actions {
+		switch action.Kind {
+		case installer.FixRelink:
+			relinked++
+		case installer.FixPrune:
+			pruned++
+		}
+	}
+	return relinked, pruned
 }
 
 const (

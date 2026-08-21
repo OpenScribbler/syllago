@@ -103,6 +103,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	cat := scan.Catalog
+	cat.PrintWarnings()
 
 	item, err := findItemByPath(cat, args[0])
 	if err != nil {

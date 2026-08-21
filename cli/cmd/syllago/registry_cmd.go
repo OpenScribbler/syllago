@@ -160,6 +160,9 @@ Use --sync to clone immediately (original behaviour).`,
 		if outcome.NoContentFound {
 			fmt.Fprintf(output.ErrWriter, "Warning: registry %q doesn't appear to contain any recognized content. Added anyway.\n", outcome.Registry.Name)
 		}
+		for _, similar := range outcome.SimilarRegistries {
+			fmt.Fprintf(output.ErrWriter, "Warning: registry %q looks like a duplicate of existing registry %q (same name or URL after normalization). Remove one with 'syllago registry remove'.\n", outcome.Registry.Name, similar)
+		}
 
 		if outcome.Cloned {
 			if registry.IsPrivate(outcome.Visibility) {

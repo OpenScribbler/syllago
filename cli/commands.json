@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-07-09T21:45:03Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-08-21T21:26:09Z",
+  "syllagoVersion": "0.14.0",
   "commands": [
     {
       "name": "add",
@@ -1099,11 +1099,28 @@
       "displayName": "Doctor",
       "slug": "doctor",
       "parent": null,
-      "synopsis": "syllago doctor",
+      "synopsis": "syllago doctor [flags]",
       "description": "Check your syllago setup for problems",
       "longDescription": "Validates your syllago installation: library, config, providers,\ninstalled content integrity, and registry configuration.\n\nEach check reports [ok], [warn], or [err]. Exit code is 0 if all checks\npass, 1 if there are warnings, 2 if there are errors.",
       "aliases": [],
-      "flags": [],
+      "flags": [
+        {
+          "name": "--fix",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Repair broken provider links: re-link to library content or prune dead links"
+        },
+        {
+          "name": "--force",
+          "shorthand": "-f",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Skip confirmation prompt"
+        }
+      ],
       "inheritedFlags": [
         {
           "name": "--json",

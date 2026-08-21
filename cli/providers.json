@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-05-07T17:06:07Z",
-  "syllagoVersion": "0.12.0",
+  "generatedAt": "2026-08-21T21:26:09Z",
+  "syllagoVersion": "0.14.0",
   "providers": [
     {
       "name": "Claude Code",
@@ -992,8 +992,19 @@
           ]
         },
         "skills": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.agents/skills",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.agents/skills"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "disable-model-invocation"
+          ]
         }
       }
     },
@@ -1667,9 +1678,8 @@
         "hooks": {
           "supported": true,
           "fileFormat": "ts",
-          "installMethod": "filesystem",
-          "installPath": "{home}/.pi/agent/extensions",
-          "symlinkSupport": true,
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.pi/extensions"
           ],
@@ -1808,8 +1818,24 @@
           "symlinkSupport": false
         },
         "hooks": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "json",
+          "installMethod": "json-merge",
+          "symlinkSupport": false,
+          "discoveryPaths": [
+            "{project}/crush.json"
+          ],
+          "hookEvents": [
+            {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            }
+          ],
+          "hookTypes": [
+            "command"
+          ],
+          "configLocation": "crush.json"
         },
         "loadouts": {
           "supported": false,

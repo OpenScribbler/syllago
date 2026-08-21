@@ -135,6 +135,59 @@ func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
 	}
 }
 
+func TestSyncMOAT_PrintsContentCacheWarnings(t *testing.T) {
+	root := tempProjectRoot(t)
+	pinned := incomingProfile()
+	reg := moatRegFixture("https://registry.example.com/manifest.json")
+	reg.SigningProfile = &pinned
+	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
+
+	origClone := moat.CloneRepoFn
+	moat.CloneRepoFn = func(context.Context, string, string) error {
+		return errors.New("fixture clone failed")
+	}
+	t.Cleanup(func() { moat.CloneRepoFn = origClone })
+
+	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		fetchedAt := time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC)
+		return moat.SyncResult{
+			ManifestURL:      "https://registry.example.com/manifest.json",
+			ETag:             `"v42"`,
+			FetchedAt:        fetchedAt,
+			IncomingProfile:  incomingProfile(),
+			Staleness:        moat.StalenessFresh,
+			ManifestBytes:    []byte(`{"schema_version":1}`),
+			BundleBytes:      []byte(`{"bundle":true}`),
+			RevocationsAdded: 1,
+			Manifest: &moat.Manifest{
+				Content: []moat.ContentEntry{
+					{
+						Name:        "cache-me",
+						Type:        "skill",
+						ContentHash: "sha256:unused",
+						SourceURI:   "https://github.com/example/source.git",
+					},
+				},
+			},
+		}, nil
+	})
+
+	var out, errW bytes.Buffer
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, "", time.Now(), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if code != 0 {
+		t.Fatalf("exit code = %d; want 0", code)
+	}
+	if got := errW.String(); !strings.Contains(got, "Warning: MOAT cache: clone failed for https://github.com/example/source.git: fixture clone failed") {
+		t.Fatalf("stderr = %q, want content-cache warning", got)
+	}
+}
+
 func TestSyncMOAT_NotModified(t *testing.T) {
 	root := tempProjectRoot(t)
 	pinned := incomingProfile()

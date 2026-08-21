@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // setupGlobalLibraryWithSkill creates a temp global content dir with one skill.
@@ -38,6 +39,28 @@ func withNonInteractive(t *testing.T) {
 	orig := isInteractive
 	isInteractive = func() bool { return false }
 	t.Cleanup(func() { isInteractive = orig })
+}
+
+func withRemoveProvider(t *testing.T, installBase string) {
+	t.Helper()
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Remove Test Provider",
+			Slug: "remove-test-provider",
+			InstallDir: func(home string, ct catalog.ContentType) string {
+				if ct == catalog.Skills {
+					return filepath.Join(installBase, string(ct))
+				}
+				return ""
+			},
+			SupportsType: func(ct catalog.ContentType) bool {
+				return ct == catalog.Skills
+			},
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
 }
 
 func TestRemoveRequiresName(t *testing.T) {
@@ -161,6 +184,149 @@ func TestRemoveForceSkipsConfirmation(t *testing.T) {
 	out := stdout.String()
 	if !strings.Contains(out, "my-skill") {
 		t.Errorf("expected item name in output, got: %s", out)
+	}
+}
+
+func TestRemoveForceRemovesProviderSymlinkWithDifferentLeafName(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "linked-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	linkPath := filepath.Join(installBase, "skills", "renamed-link")
+	os.MkdirAll(filepath.Dir(linkPath), 0755)
+	os.Symlink(skillDir, linkPath)
+
+	output.SetForTest(t)
+
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	removeCmd.Flags().Set("force", "true")
+
+	err := removeCmd.RunE(removeCmd, []string{"linked-skill"})
+	if err != nil {
+		t.Fatalf("force remove failed: %v", err)
+	}
+
+	if _, statErr := os.Lstat(linkPath); !os.IsNotExist(statErr) {
+		t.Fatalf("provider symlink still exists after remove: %v", statErr)
+	}
+	if _, statErr := os.Stat(skillDir); !os.IsNotExist(statErr) {
+		t.Fatal("skill directory still exists after remove")
+	}
+}
+
+func TestRemoveForceRemovesBrokenProviderSymlinkIntoItem(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "broken-linked-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	linkPath := filepath.Join(installBase, "skills", "dead-link")
+	os.MkdirAll(filepath.Dir(linkPath), 0755)
+	os.Symlink(filepath.Join(skillDir, "missing.md"), linkPath)
+
+	output.SetForTest(t)
+
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	removeCmd.Flags().Set("force", "true")
+
+	err := removeCmd.RunE(removeCmd, []string{"broken-linked-skill"})
+	if err != nil {
+		t.Fatalf("force remove failed: %v", err)
+	}
+
+	if _, statErr := os.Lstat(linkPath); !os.IsNotExist(statErr) {
+		t.Fatalf("broken provider symlink still exists after remove: %v", statErr)
+	}
+	if _, statErr := os.Stat(skillDir); !os.IsNotExist(statErr) {
+		t.Fatal("skill directory still exists after remove")
+	}
+}
+
+func TestRemoveDryRunListsProviderSymlinkAndLeavesDisk(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "dry-linked-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	linkPath := filepath.Join(installBase, "skills", "preview-link")
+	os.MkdirAll(filepath.Dir(linkPath), 0755)
+	os.Symlink(skillDir, linkPath)
+
+	stdout, _ := output.SetForTest(t)
+
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	removeCmd.Flags().Set("dry-run", "true")
+
+	err := removeCmd.RunE(removeCmd, []string{"dry-linked-skill"})
+	if err != nil {
+		t.Fatalf("dry-run remove failed: %v", err)
+	}
+
+	out := stdout.String()
+	want := "[dry-run] Would remove provider link: " + linkPath
+	if !strings.Contains(out, want) {
+		t.Fatalf("expected dry-run output to include %q, got:\n%s", want, out)
+	}
+	if _, statErr := os.Lstat(linkPath); statErr != nil {
+		t.Fatalf("provider symlink should remain after dry-run: %v", statErr)
+	}
+	if _, statErr := os.Stat(skillDir); statErr != nil {
+		t.Fatalf("skill directory should remain after dry-run: %v", statErr)
+	}
+}
+
+func TestRemoveLeavesForeignProviderSymlinkUntouched(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "foreign-linked-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	foreignTarget := filepath.Join(t.TempDir(), "foreign-skill")
+	os.MkdirAll(foreignTarget, 0755)
+	linkPath := filepath.Join(installBase, "skills", "foreign-link")
+	os.MkdirAll(filepath.Dir(linkPath), 0755)
+	os.Symlink(foreignTarget, linkPath)
+
+	output.SetForTest(t)
+
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	removeCmd.Flags().Set("force", "true")
+
+	err := removeCmd.RunE(removeCmd, []string{"foreign-linked-skill"})
+	if err != nil {
+		t.Fatalf("force remove failed: %v", err)
+	}
+
+	info, statErr := os.Lstat(linkPath)
+	if statErr != nil {
+		t.Fatalf("foreign symlink should survive remove: %v", statErr)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("expected foreign link to remain a symlink, mode=%s", info.Mode())
+	}
+	if _, statErr := os.Stat(skillDir); !os.IsNotExist(statErr) {
+		t.Fatal("skill directory still exists after remove")
 	}
 }
 
