@@ -56,12 +56,16 @@ var moatSyncFn = moat.Sync
 //
 // All persistence happens inside registryops.SyncOne — see that function's
 // doc for the side-effect list.
+// lockfileRoot is the bare project root (spec §Lockfile pins the MOAT
+// lockfile at <project root>/.syllago/moat-lockfile.json — the same path
+// doctor's CheckTrust reads). Callers must pass findProjectRoot(), never
+// findContentRepoRoot(), which content_root would redirect elsewhere.
 func syncMOATRegistry(
 	ctx context.Context,
 	out, errW io.Writer,
 	cfg *config.Config,
 	reg *config.Registry,
-	cfgRoot, cacheDir string,
+	lockfileRoot, cacheDir string,
 	now time.Time,
 	yes bool,
 ) (int, error) {
@@ -74,7 +78,7 @@ func syncMOATRegistry(
 
 	outcome, err := registryops.SyncOne(ctx, reg.Name, registryops.SyncOpts{
 		AcceptTOFU:   yes,
-		LockfileRoot: cfgRoot,
+		LockfileRoot: lockfileRoot,
 		CacheDir:     cacheDir,
 		Now:          now,
 	})
