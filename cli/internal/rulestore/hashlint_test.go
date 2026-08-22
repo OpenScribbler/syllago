@@ -33,6 +33,11 @@ func TestNoRawHashFormatting(t *testing.T) {
 		// which never touch .history/ filenames.
 		filepath.Join(root, "internal/moatinstall/fetch.go"): true,
 		filepath.Join(root, "internal/moat/hash.go"):         true,
+		// installstore builds the install-record content hash in the same
+		// canonical MOAT form (moathash.FileHash + "sha256:" prefix) so
+		// record hashes stay comparable to registry content_hash values —
+		// MOAT domain, never .history/ filenames.
+		filepath.Join(root, "internal/installstore/hash.go"): true,
 		// capfeed builds the GitHub attestations API URL path segment
 		// ("sha256:<digest>", GitHub's REST format) — Capability Feed
 		// verification, not library-rule storage.
