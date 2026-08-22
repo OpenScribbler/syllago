@@ -71,8 +71,9 @@ func (a App) doMOATSyncCmd(name string, acceptTOFU bool) tea.Cmd {
 }
 
 // runMOATSync calls the shared orchestrator and shapes the outcome into a
-// moatSyncDoneMsg. projectRoot is the lockfile root (matches the CLI
-// dispatcher's cfgRoot from findContentRepoRoot); the manifest cache lives
+// moatSyncDoneMsg. projectRoot is the lockfile root — the bare project root
+// (App.projectRoot, from findProjectRoot), matching the CLI dispatcher and
+// doctor's CheckTrust read path per spec §Lockfile; the manifest cache lives
 // under config.GlobalDirPath() and the orchestrator resolves it itself.
 func runMOATSync(ctx context.Context, name, projectRoot string, acceptTOFU bool) tea.Msg {
 	outcome, err := registryops.SyncOne(ctx, name, registryops.SyncOpts{

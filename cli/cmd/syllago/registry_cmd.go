@@ -190,7 +190,12 @@ Use --sync to clone immediately (original behaviour).`,
 			if !pinned && !yes {
 				fmt.Fprintf(output.Writer, "Run `syllago registry sync --yes %s` to verify and pin the signing identity.\n", outcome.Registry.Name)
 			} else {
-				root, rootErr := findContentRepoRoot()
+				// Lockfile root is the bare project root (spec §Lockfile:
+				// <project root>/.syllago/moat-lockfile.json) — NOT
+				// findContentRepoRoot(), which appends the project config's
+				// content_root and would relocate the lockfile where doctor
+				// (moat.LoadAndScan(projectRoot, ...)) never looks.
+				lockfileRoot, rootErr := findProjectRoot()
 				if rootErr != nil {
 					return rootErr
 				}
@@ -204,7 +209,7 @@ Use --sync to clone immediately (original behaviour).`,
 				}
 				cacheDir, _ := config.GlobalDirPath()
 				fmt.Fprintf(output.Writer, "Verifying signing identity for %s...\n", outcome.Registry.Name)
-				code, syncErr := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, freshCfg, reg, root, cacheDir, time.Now(), yes)
+				code, syncErr := syncMOATRegistry(cmd.Context(), output.Writer, output.ErrWriter, freshCfg, reg, lockfileRoot, cacheDir, time.Now(), yes)
 				if syncErr != nil {
 					return syncErr
 				}
@@ -441,7 +446,13 @@ and "syllago install" to activate updated content.`,
   syllago registry sync my-rules`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		root, err := findContentRepoRoot()
+		// Lockfile root is the bare project root (spec §Lockfile:
+		// <project root>/.syllago/moat-lockfile.json) — NOT
+		// findContentRepoRoot(), which appends the project config's
+		// content_root and would relocate the lockfile where doctor
+		// (moat.LoadAndScan(projectRoot, ...)) never looks, leaving the
+		// "manifest cache stale" warning stuck after a successful sync.
+		lockfileRoot, err := findProjectRoot()
 		if err != nil {
 			return err
 		}
@@ -467,7 +478,7 @@ and "syllago install" to activate updated content.`,
 			if reg == nil {
 				return output.NewStructuredError(output.ErrRegistryNotFound, fmt.Sprintf("registry %q not found in config", name), "Run 'syllago registry list' to see configured registries")
 			}
-			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, reg, root, cacheDir, yes)
+			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, reg, lockfileRoot, cacheDir, yes)
 			if err != nil {
 				return err
 			}
@@ -487,7 +498,7 @@ and "syllago install" to activate updated content.`,
 		hasErrors := false
 		for i := range cfg.Registries {
 			r := &cfg.Registries[i]
-			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, r, root, cacheDir, yes)
+			code, err := syncGitOrMOATRegistry(cmd.Context(), cfg, r, lockfileRoot, cacheDir, yes)
 			if err != nil {
 				if r.IsMOAT() {
 					return err
@@ -537,8 +548,10 @@ func ensureRegistryCloned(r *config.Registry, out io.Writer) (bool, error) {
 // clone lands for the first time it runs the content-discovery steps that
 // `registry add` skips for register-only registries (manifest stub + no-content
 // warning). Returns a non-zero MOAT gate exit code when a verification gate
-// trips.
-func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Registry, root, cacheDir string, yes bool) (int, error) {
+// trips. lockfileRoot is the bare project root whose
+// .syllago/moat-lockfile.json records MOAT trust state — never the
+// content_root-adjusted content directory.
+func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Registry, lockfileRoot, cacheDir string, yes bool) (int, error) {
 	justCloned := false
 	if r.IsGit() {
 		cloned, err := ensureRegistryCloned(r, output.Writer)
@@ -553,7 +566,7 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 
 	if r.IsMOAT() {
 		fmt.Fprintf(output.Writer, "Syncing %s (moat)...\n", r.Name)
-		return syncMOATRegistry(ctx, output.Writer, output.ErrWriter, cfg, r, root, cacheDir, time.Now(), yes)
+		return syncMOATRegistry(ctx, output.Writer, output.ErrWriter, cfg, r, lockfileRoot, cacheDir, time.Now(), yes)
 	}
 
 	// Plain git registry.
