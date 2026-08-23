@@ -49,6 +49,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -145,6 +146,7 @@ func runInstallFromRegistry(
 	out, errW io.Writer,
 	cfg *config.Config,
 	cfgRoot string,
+	globalDir string,
 	registryName, itemName string,
 	targetProv *provider.Provider,
 	method installer.InstallMethod,
@@ -323,11 +325,6 @@ func runInstallFromRegistry(
 		return fetchErr
 	}
 
-	// Provider-side install: stage the cached source tree into the
-	// provider's content directory (~/.claude/skills/foo, ~/.codex/agents,
-	// etc.). Until this lands, fetchAndRecord pinned the lockfile + cached
-	// the bytes but the operator's chosen provider directory was empty —
-	// install was effectively a no-op from the user's perspective.
 	if targetProv == nil {
 		return output.NewStructuredError(
 			output.ErrInputMissing,
@@ -335,9 +332,38 @@ func runInstallFromRegistry(
 			"Pass --to <provider> to choose where the registry item is installed.",
 		)
 	}
-	installPath, installErr := installer.InstallCachedMOATToProvider(
-		cacheDir, entry, *targetProv, cfgRoot, method, baseDir,
-	)
+	ct, ok := moat.FromMOATType(entry.Type)
+	if !ok {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
+			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
+			fmt.Sprintf("unknown MOAT type %q", entry.Type),
+		)
+	}
+	if targetProv.SupportsType != nil && !targetProv.SupportsType(ct) {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
+			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
+			fmt.Sprintf("provider %q does not support %s", targetProv.Name, ct.Label()),
+		)
+	}
+
+	// Provider-side install: stage the verified source tree into the
+	// library first, then place it from the library with the regular
+	// installer so symlinks and install records share the normal path model.
+	item, stageErr := moatinstall.StageIntoLibrary(cacheDir, entry, reg.Name, globalDir, now)
+	if stageErr != nil {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			fmt.Sprintf("could not stage %s/%s into the global library", reg.Name, entry.Name),
+			"The source artifact was fetched and verified but could not be added to the global library. Check filesystem permissions in ~/.syllago/content/ and ensure the registry owns any existing item at that path.",
+			stageErr.Error(),
+		)
+	}
+
+	placement, installErr := installer.Install(item, *targetProv, cfgRoot, method, baseDir)
 	if installErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,
@@ -346,7 +372,13 @@ func runInstallFromRegistry(
 			installErr.Error(),
 		)
 	}
-	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), installPath)
+	recordMOATInstallBookkeeping(item, targetProv.Slug, placement, &installstore.MOATProvenance{
+		ManifestURI: reg.ManifestURI,
+		SourceURI:   entry.SourceURI,
+		TrustTier:   entry.TrustTier().String(),
+		AttestedAt:  now,
+	})
+	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), placement.String())
 	return nil
 }
 

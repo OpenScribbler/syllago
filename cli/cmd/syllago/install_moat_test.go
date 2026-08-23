@@ -15,8 +15,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -92,6 +90,7 @@ func TestRunInstallFromRegistry_RegistryNotFound(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		t.TempDir(),
+		t.TempDir(),
 		"ghost",
 		"item",
 		nil,
@@ -114,6 +113,7 @@ func TestRunInstallFromRegistry_NotMOATRegistry(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"git-only",
 		"item",
@@ -177,6 +177,7 @@ func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"item",
 		nil,
@@ -201,6 +202,7 @@ func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"item",
@@ -235,6 +237,7 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"missing",
 		nil,
@@ -266,6 +269,7 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"item",
@@ -310,6 +314,7 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 		&out,
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",
@@ -358,6 +363,7 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",
@@ -414,15 +420,11 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 	}
 	t.Cleanup(func() { moatSyncFn = orig })
 
-	// Redirect Rekor at a 404 server so the install fails AT the Rekor
-	// fetch step — proves the SIGNED path reached fetchAndRecord rather
-	// than the old upfront refusal.
-	rekorSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "not found", http.StatusNotFound)
-	}))
-	t.Cleanup(rekorSrv.Close)
+	// Redirect Rekor to an invalid URL so the install fails AT the Rekor
+	// fetch step without creating an httptest listener. This proves the
+	// SIGNED path reached fetchAndRecord rather than the old upfront refusal.
 	origRekor := moat.RekorBaseURLForTest()
-	moat.SetRekorBaseURLForTest(rekorSrv.URL)
+	moat.SetRekorBaseURLForTest("://invalid-rekor-url")
 	t.Cleanup(func() { moat.SetRekorBaseURLForTest(origRekor) })
 
 	cfg := cfgWithPinnedMOATRegistry()
@@ -431,6 +433,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",
@@ -477,6 +480,7 @@ func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectEr
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfg,
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"item",
@@ -601,6 +605,7 @@ func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -632,6 +637,7 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",
@@ -671,6 +677,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -706,6 +713,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) 
 		&bytes.Buffer{},
 		&errBuf,
 		cfgWithPinnedMOATRegistry(),
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",
@@ -745,6 +753,7 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -779,6 +788,7 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -812,6 +822,7 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
 		t.TempDir(),
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -840,6 +851,7 @@ func TestRunInstallFromRegistry_DryRunPreviewsGateDecision(t *testing.T) {
 		&bytes.Buffer{},
 		&bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(),
+		t.TempDir(),
 		t.TempDir(),
 		"example",
 		"my-skill",

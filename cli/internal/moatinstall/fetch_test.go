@@ -19,8 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -231,39 +229,27 @@ func withVerifyItemStub(t *testing.T, result moat.VerificationResult, retErr err
 
 func withRekorStub(t *testing.T, body []byte) {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(body)
-	}))
-	t.Cleanup(srv.Close)
-	orig := moat.RekorBaseURLForTest()
-	moat.SetRekorBaseURLForTest(srv.URL)
-	t.Cleanup(func() { moat.SetRekorBaseURLForTest(orig) })
+	orig := FetchRekorEntryFn
+	FetchRekorEntryFn = func(context.Context, int64) ([]byte, error) {
+		return append([]byte(nil), body...), nil
+	}
+	t.Cleanup(func() { FetchRekorEntryFn = orig })
 }
 
-// withRekorPerIndexStub serves a different body per Rekor logIndex.
+// withRekorPerIndexStub returns a different body per Rekor logIndex.
 // Dual-Attested tests need this because the registry leg and the publisher
-// leg fetch different Rekor entries against the same package-level base URL.
+// leg fetch different Rekor entries.
 func withRekorPerIndexStub(t *testing.T, bodies map[int64][]byte) {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		idx := r.URL.Query().Get("logIndex")
-		var match []byte
-		for k, v := range bodies {
-			if fmt.Sprintf("%d", k) == idx {
-				match = v
-				break
-			}
+	orig := FetchRekorEntryFn
+	FetchRekorEntryFn = func(_ context.Context, logIndex int64) ([]byte, error) {
+		body, ok := bodies[logIndex]
+		if !ok {
+			return nil, fmt.Errorf("no Rekor fixture for logIndex %d", logIndex)
 		}
-		if match == nil {
-			http.Error(w, "no fixture", http.StatusNotFound)
-			return
-		}
-		_, _ = w.Write(match)
-	}))
-	t.Cleanup(srv.Close)
-	orig := moat.RekorBaseURLForTest()
-	moat.SetRekorBaseURLForTest(srv.URL)
-	t.Cleanup(func() { moat.SetRekorBaseURLForTest(orig) })
+		return append([]byte(nil), body...), nil
+	}
+	t.Cleanup(func() { FetchRekorEntryFn = orig })
 }
 
 // withPublisherAttestationStub overrides FetchPublisherAttestationFn to
@@ -449,13 +435,11 @@ func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
 		"SKILL.md": "# hi\n",
 	})
 
-	rekorSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "not found", http.StatusNotFound)
-	}))
-	t.Cleanup(rekorSrv.Close)
-	orig := moat.RekorBaseURLForTest()
-	moat.SetRekorBaseURLForTest(rekorSrv.URL)
-	t.Cleanup(func() { moat.SetRekorBaseURLForTest(orig) })
+	origFetch := FetchRekorEntryFn
+	FetchRekorEntryFn = func(context.Context, int64) ([]byte, error) {
+		return nil, errors.New("not found")
+	}
+	t.Cleanup(func() { FetchRekorEntryFn = origFetch })
 
 	verifyCalled := 0
 	origVerify := VerifyItem

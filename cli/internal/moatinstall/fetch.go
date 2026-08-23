@@ -65,6 +65,11 @@ var CloneScratchDir = func() (string, error) {
 // internal/moat/item_verify_test.go.
 var VerifyItem = moat.VerifyAttestationItem
 
+// FetchRekorEntryFn is the Rekor fetch seam. Production points at
+// moat.FetchRekorEntry; tests stub it so signed-tier coverage does not need
+// local HTTP listeners.
+var FetchRekorEntryFn = moat.FetchRekorEntry
+
 // FetchPublisherAttestationFn is the seam for fetching the publisher's
 // moat-attestation.json (Dual-Attested second leg). Production points at
 // moat.FetchPublisherAttestation. Wiring tests override to inject offline
@@ -125,7 +130,7 @@ func FetchAndRecord(
 			)
 		}
 
-		raw, fetchErr := moat.FetchRekorEntry(ctx, *entry.RekorLogIndex)
+		raw, fetchErr := FetchRekorEntryFn(ctx, *entry.RekorLogIndex)
 		if fetchErr != nil {
 			return "", output.NewStructuredErrorDetail(
 				output.ErrMoatInvalid,
@@ -185,7 +190,7 @@ func FetchAndRecord(
 				)
 			}
 
-			pubRaw, pubFetchErr := moat.FetchRekorEntry(ctx, pubLogIndex)
+			pubRaw, pubFetchErr := FetchRekorEntryFn(ctx, pubLogIndex)
 			if pubFetchErr != nil {
 				return "", output.NewStructuredErrorDetail(
 					output.ErrMoatInvalid,

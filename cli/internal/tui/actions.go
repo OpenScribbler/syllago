@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -960,10 +961,8 @@ func (a App) doInstallAppendCmd(msg installResultMsg) tea.Cmd {
 // doMOATInstallCmd is the install path for unstaged MOAT items — items
 // synthesized from a MOAT manifest that have no on-disk content tree yet
 // (item.Path == "" / item.Source == registry name). It performs the network
-// fetch + sigstore verification via moatinstall.FetchAndRecord, then stages
-// the cached source tree into the chosen provider via
-// installer.InstallCachedMOATToProvider, mirroring the CLI install path in
-// runInstallFromRegistry.
+// fetch + sigstore verification via moatinstall.FetchAndRecord, stages the
+// cached source tree into the global library, then installs from the library.
 //
 // Inputs are captured before returning the tea.Cmd so the closure does not
 // race with rescans that mutate a.cfg / a.moatGate. The lockfile is reloaded
@@ -1049,14 +1048,40 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 
-		installPath, installErr := installer.InstallCachedMOATToProvider(
-			cacheDir, entry, prov, projectRoot, method, baseDir,
-		)
+		ct, ok := moat.FromMOATType(entry.Type)
+		if !ok {
+			done.err = fmt.Errorf("unknown MOAT type %q", entry.Type)
+			return done
+		}
+		if prov.SupportsType != nil && !prov.SupportsType(ct) {
+			done.err = fmt.Errorf("provider %q does not support %s", prov.Name, ct.Label())
+			return done
+		}
+
+		globalDir := catalog.GlobalContentDir()
+		if globalDir == "" {
+			done.err = fmt.Errorf("cannot determine global library directory")
+			return done
+		}
+		now := time.Now()
+		staged, stageErr := moatinstall.StageIntoLibrary(cacheDir, entry, reg.Name, globalDir, now)
+		if stageErr != nil {
+			done.err = stageErr
+			return done
+		}
+
+		placement, installErr := installer.Install(staged, prov, projectRoot, method, baseDir)
 		if installErr != nil {
 			done.err = installErr
 			return done
 		}
-		done.targetPath = installPath
+		recordTUIMOATInstallBookkeeping(staged, prov.Slug, placement, &installstore.MOATProvenance{
+			ManifestURI: reg.ManifestURI,
+			SourceURI:   entry.SourceURI,
+			TrustTier:   entry.TrustTier().String(),
+			AttestedAt:  now,
+		})
+		done.targetPath = placement.String()
 		return done
 	}
 }

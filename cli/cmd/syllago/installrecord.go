@@ -23,6 +23,19 @@ func recordInstallBookkeeping(item catalog.ContentItem, provSlug string, pl inst
 	}
 }
 
+// recordMOATInstallBookkeeping best-effort-records a successful MOAT install
+// with provenance. Never fails the install: any error is reported as a warning.
+func recordMOATInstallBookkeeping(item catalog.ContentItem, provSlug string, pl installer.Placement, moatProv *installstore.MOATProvenance) {
+	storePath, err := installstore.DefaultPath()
+	if err != nil {
+		warnInstallRecord(err)
+		return
+	}
+	if err := installstore.RecordInstallMOAT(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), moatProv, time.Now()); err != nil {
+		warnInstallRecord(err)
+	}
+}
+
 // recordUninstallBookkeeping mirrors recordInstallBookkeeping for uninstalls.
 func recordUninstallBookkeeping(item catalog.ContentItem, provSlug string, pl installer.Placement) {
 	storePath, err := installstore.DefaultPath()

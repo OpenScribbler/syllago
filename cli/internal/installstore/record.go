@@ -22,6 +22,12 @@ type PlacementInput struct {
 // is computed from libraryPath via HashContent; a hash failure is returned
 // as an error without writing. now stamps InstalledAt/UpdatedAt.
 func RecordInstall(storePath string, c Coord, libraryPath string, p PlacementInput, now time.Time) error {
+	return RecordInstallMOAT(storePath, c, libraryPath, p, nil, now)
+}
+
+// RecordInstallMOAT is RecordInstall plus MOAT provenance. A non-nil moatProv
+// replaces the record's MOAT field; nil preserves any existing provenance.
+func RecordInstallMOAT(storePath string, c Coord, libraryPath string, p PlacementInput, moatProv *MOATProvenance, now time.Time) error {
 	contentHash, err := HashContent(libraryPath)
 	if err != nil {
 		return fmt.Errorf("hashing install content: %w", err)
@@ -43,6 +49,9 @@ func RecordInstall(storePath string, c Coord, libraryPath string, p PlacementInp
 		rec.MOAT = cloneMOAT(existing.MOAT)
 	} else {
 		rec.InstalledAt = now
+	}
+	if moatProv != nil {
+		rec.MOAT = cloneMOAT(moatProv)
 	}
 	s.Upsert(rec)
 
