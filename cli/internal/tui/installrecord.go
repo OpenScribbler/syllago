@@ -49,8 +49,12 @@ func forgetTUIInstallRecord(item catalog.ContentItem) {
 }
 
 func tuiInstallRecordCoord(item catalog.ContentItem) installstore.Coord {
+	registry := item.Registry
+	if registry == "" && item.Meta != nil && item.Meta.SourceType == "registry" && item.Meta.SourceRegistry != "" {
+		registry = item.Meta.SourceRegistry
+	}
 	return installstore.Coord{
-		Registry: item.Registry,
+		Registry: registry,
 		Type:     string(item.Type),
 		Name:     item.Name,
 	}
