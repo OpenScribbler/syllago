@@ -55,6 +55,8 @@ type moatSyncDoneMsg struct {
 	// diff is best-effort item-level upstream change information. Nil means
 	// no changes or no comparable baseline.
 	diff *regdiff.Diff
+
+	installedDrift int
 }
 
 // moatSyncFnTUI is the indirection point so tests can stub the end-to-end
@@ -111,8 +113,9 @@ func runMOATSync(ctx context.Context, name, projectRoot string, acceptTOFU bool)
 	}
 
 	return moatSyncDoneMsg{
-		name:  name,
-		stale: outcome.MoatResult.Staleness == moat.StalenessExpired,
-		diff:  outcome.Diff,
+		name:           name,
+		stale:          outcome.MoatResult.Staleness == moat.StalenessExpired,
+		diff:           outcome.Diff,
+		installedDrift: len(registryops.InstalledMOATDrift(name, outcome.Diff)),
 	}
 }

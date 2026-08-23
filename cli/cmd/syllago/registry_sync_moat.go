@@ -30,6 +30,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
+	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
 // moatSyncFn is the low-level test seam used by install_moat.go (which runs
@@ -135,6 +136,11 @@ func syncMOATRegistry(
 			reg.Name, res.RevocationsAdded, res.PrivateContentCount)
 	}
 	printRegistryDiff(out, outcome.Diff)
+	drifts := registryops.InstalledMOATDrift(reg.Name, outcome.Diff)
+	if len(drifts) > 0 {
+		printInstalledDrift(out, drifts, moatDriftHints)
+	}
+	telemetry.Enrich("drift_count", len(drifts))
 
 	for _, w := range outcome.ContentCacheReport.Warnings {
 		fmt.Fprintf(errW, "Warning: %s\n", w)

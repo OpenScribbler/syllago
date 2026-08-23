@@ -600,7 +600,7 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 	}
 	drifts := registryops.InstalledGitDrift(r.Name)
 	if len(drifts) > 0 {
-		printInstalledDrift(output.Writer, drifts)
+		printInstalledDrift(output.Writer, drifts, gitDriftHints)
 	}
 	telemetry.Enrich("drift_count", len(drifts))
 	return 0, nil

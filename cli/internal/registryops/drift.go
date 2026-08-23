@@ -7,6 +7,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
@@ -88,6 +89,68 @@ func InstalledGitDrift(regName string) []InstalledDrift {
 				Type:      rec.Type,
 				Name:      rec.Name,
 				Kind:      DriftChanged,
+				Providers: installedDriftProviders(rec),
+			})
+		}
+	}
+
+	sort.Slice(drifts, func(i, j int) bool {
+		if drifts[i].Type != drifts[j].Type {
+			return drifts[i].Type < drifts[j].Type
+		}
+		return drifts[i].Name < drifts[j].Name
+	})
+	return drifts
+}
+
+// InstalledMOATDrift reports drift for installed items from the MOAT
+// registry regName, derived from this sync's manifest diff. Unlike the git
+// path this is diff-based: only items whose manifest entry changed in THIS
+// sync are reported (library-copy hashes are not comparable to manifest
+// content hashes, so there is no baseline for pre-existing staleness).
+// Best-effort: nil diff, no changes, or any store error returns nil.
+func InstalledMOATDrift(regName string, diff *regdiff.Diff) []InstalledDrift {
+	if diff == nil || len(diff.Changes) == 0 {
+		return nil
+	}
+
+	path, err := installstore.DefaultPath()
+	if err != nil {
+		return nil
+	}
+	store, err := installstore.Load(path)
+	if err != nil {
+		return nil
+	}
+	records := store.ByRegistry(regName)
+	if len(records) == 0 {
+		return nil
+	}
+
+	changes := make(map[installedDriftKey]regdiff.Kind, len(diff.Changes))
+	for _, change := range diff.Changes {
+		key := installedDriftKey{contentType: change.Type, name: change.Name}
+		changes[key] = change.Kind
+	}
+
+	drifts := make([]InstalledDrift, 0)
+	for _, rec := range records {
+		key := installedDriftKey{contentType: rec.Type, name: rec.Name}
+		switch changes[key] {
+		case regdiff.KindModified:
+			drifts = append(drifts, InstalledDrift{
+				Registry:  regName,
+				Type:      rec.Type,
+				Name:      rec.Name,
+				Kind:      DriftChanged,
+				Providers: installedDriftProviders(rec),
+			})
+		case regdiff.KindRemoved:
+			drifts = append(drifts, InstalledDrift{
+				Registry:  regName,
+				Type:      rec.Type,
+				Name:      rec.Name,
+				Kind:      DriftMissing,
 				Providers: installedDriftProviders(rec),
 			})
 		}

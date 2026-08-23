@@ -12,6 +12,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
@@ -74,6 +76,44 @@ func incomingProfile() config.SigningProfile {
 		ProfileVersion:    1,
 		RepositoryID:      "100",
 		RepositoryOwnerID: "200",
+	}
+}
+
+func syncMOATDriftManifest(t *testing.T, updatedAt string, entries []moat.ContentEntry) *moat.Manifest {
+	t.Helper()
+	ts, err := time.Parse(time.RFC3339, updatedAt)
+	if err != nil {
+		t.Fatalf("parse updated_at: %v", err)
+	}
+	return &moat.Manifest{
+		SchemaVersion:          moat.ManifestSchemaVersion,
+		ManifestURI:            "https://registry.example.com/manifest.json",
+		Name:                   "Example Registry",
+		Operator:               "Example Operator",
+		UpdatedAt:              ts,
+		RegistrySigningProfile: moat.SigningProfile{Issuer: incomingProfile().Issuer, Subject: incomingProfile().Subject},
+		Content:                entries,
+		Revocations:            []moat.Revocation{},
+	}
+}
+
+func syncMOATDriftManifestBytes(t *testing.T, manifest *moat.Manifest) []byte {
+	t.Helper()
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("marshal manifest: %v", err)
+	}
+	return data
+}
+
+func syncMOATDriftEntry(name, digit string) moat.ContentEntry {
+	return moat.ContentEntry{
+		Name:        name,
+		DisplayName: name,
+		Type:        "skill",
+		ContentHash: "sha256:" + strings.Repeat(digit, 64),
+		SourceURI:   "https://registry.example.com/source.git",
+		AttestedAt:  time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC),
 	}
 }
 
@@ -132,6 +172,72 @@ func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
 	// Lockfile should exist on disk.
 	if _, err := os.Stat(filepath.Join(root, ".syllago", "moat-lockfile.json")); err != nil {
 		t.Errorf("lockfile not saved: %v", err)
+	}
+}
+
+func TestSyncMOAT_PrintsInstalledDrift(t *testing.T) {
+	output.SetForTest(t)
+	root := tempProjectRoot(t)
+	cacheDir := filepath.Join(root, "cache")
+	pinned := incomingProfile()
+	reg := moatRegFixture("https://registry.example.com/manifest.json")
+	reg.SigningProfile = &pinned
+	cfg := &config.Config{Registries: []config.Registry{reg}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save initial cfg: %v", err)
+	}
+
+	oldManifest := syncMOATDriftManifest(t, "2026-04-20T00:00:00Z", []moat.ContentEntry{
+		syncMOATDriftEntry("foo", "1"),
+	})
+	if err := moat.WriteManifestCache(cacheDir, "example", syncMOATDriftManifestBytes(t, oldManifest), []byte(`{"bundle":true}`)); err != nil {
+		t.Fatalf("WriteManifestCache: %v", err)
+	}
+
+	newManifest := syncMOATDriftManifest(t, "2026-04-21T00:00:00Z", []moat.ContentEntry{
+		syncMOATDriftEntry("foo", "2"),
+	})
+	withStubbedMoatSync(t, func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL:      "https://registry.example.com/manifest.json",
+			BundleURL:        "https://registry.example.com/manifest.json.sigstore",
+			ETag:             `"v42"`,
+			FetchedAt:        time.Date(2026, 4, 20, 12, 0, 0, 0, time.UTC),
+			IncomingProfile:  incomingProfile(),
+			Staleness:        moat.StalenessFresh,
+			RevocationsAdded: 1,
+			Manifest:         newManifest,
+			ManifestBytes:    syncMOATDriftManifestBytes(t, newManifest),
+			BundleBytes:      []byte(`{"bundle":true}`),
+		}, nil
+	})
+
+	origClone := moat.CloneRepoFn
+	moat.CloneRepoFn = func(context.Context, string, string) error {
+		return nil
+	}
+	t.Cleanup(func() { moat.CloneRepoFn = origClone })
+
+	saveRegistrySyncDriftStore(t,
+		registrySyncDriftRecord("example", "skill", "foo", filepath.Join(root, "library", "foo"), "claude-code"),
+	)
+
+	var out, errW bytes.Buffer
+	code, err := syncMOATRegistry(context.Background(), &out, &errW, cfg, &cfg.Registries[0], root, cacheDir, time.Now(), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if code != 0 {
+		t.Fatalf("exit code = %d; want 0", code)
+	}
+	gotOut := out.String()
+	for _, want := range []string{
+		"Installed items drifted from upstream:\n",
+		"  ~ skill/foo changed upstream — refresh: syllago install example/foo\n",
+	} {
+		if !strings.Contains(gotOut, want) {
+			t.Fatalf("sync output = %q; want to contain %q", gotOut, want)
+		}
 	}
 }
 
