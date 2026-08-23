@@ -117,6 +117,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"list", "registry_items"},
 				},
 				{
+					Name:        "plugin_count",
+					Type:        "int",
+					Description: "Number of enabled Claude Code plugins shown in list output",
+					Example:     2,
+					Commands:    []string{"list"},
+				},
+				{
 					Name:        "mode",
 					Type:        "string",
 					Description: "Operational mode (loadout 'try', add 'monolithic')",
