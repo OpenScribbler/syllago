@@ -3,6 +3,7 @@ package registryops
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -102,6 +103,130 @@ func TestSyncOneNotModifiedHasNoDiff(t *testing.T) {
 	}
 }
 
+func TestStatusOneNotModifiedIsUpToDateAndReadOnly(t *testing.T) {
+	root, cacheDir := setupSyncOneDiffTest(t)
+	stubSyncOneDiff(t, syncOneDiffResult(t, nil, true))
+
+	outcome, err := StatusOne(context.Background(), "example", SyncOpts{
+		LockfileRoot: root,
+		CacheDir:     cacheDir,
+		Now:          syncOneDiffNow(),
+	})
+	if err != nil {
+		t.Fatalf("StatusOne: %v", err)
+	}
+	if !outcome.UpToDate {
+		t.Fatalf("UpToDate = false; want true")
+	}
+	if outcome.Diff != nil {
+		t.Fatalf("Diff = %#v; want nil", outcome.Diff)
+	}
+	assertStatusOneNoPersistence(t, root, `"old"`)
+}
+
+func TestStatusOneFreshManifestDiffsCachedBaselineWithoutPersisting(t *testing.T) {
+	root, cacheDir := setupSyncOneDiffTest(t)
+	oldManifest := syncOneDiffManifest(t, "2026-04-20T00:00:00Z", []moat.ContentEntry{
+		syncOneDiffEntry("kept", "1"),
+		syncOneDiffEntry("removed", "2"),
+	})
+	oldBytes := syncOneDiffManifestBytes(t, oldManifest)
+	if err := moat.WriteManifestCache(cacheDir, "example", oldBytes, []byte(`{"bundle":true}`)); err != nil {
+		t.Fatalf("WriteManifestCache: %v", err)
+	}
+
+	newManifest := syncOneDiffManifest(t, "2026-04-21T00:00:00Z", []moat.ContentEntry{
+		syncOneDiffEntry("added", "3"),
+		syncOneDiffEntry("kept", "4"),
+	})
+	stubSyncOneDiff(t, syncOneDiffResult(t, newManifest, false))
+
+	outcome, err := StatusOne(context.Background(), "example", SyncOpts{
+		LockfileRoot: root,
+		CacheDir:     cacheDir,
+		Now:          syncOneDiffNow(),
+	})
+	if err != nil {
+		t.Fatalf("StatusOne: %v", err)
+	}
+	if outcome.NotSynced || outcome.UpToDate || outcome.ProfileChanged {
+		t.Fatalf("unexpected gate flags: %+v", outcome)
+	}
+	if outcome.Diff == nil {
+		t.Fatal("Diff = nil; want cached-baseline diff")
+	}
+	want := []regdiff.ItemChange{
+		{Type: "skill", Name: "added", Kind: regdiff.KindAdded},
+		{Type: "skill", Name: "kept", Kind: regdiff.KindModified},
+		{Type: "skill", Name: "removed", Kind: regdiff.KindRemoved},
+	}
+	if !reflect.DeepEqual(outcome.Diff.Changes, want) {
+		t.Fatalf("Diff.Changes = %#v; want %#v", outcome.Diff.Changes, want)
+	}
+	assertStatusOneNoPersistence(t, root, `"old"`)
+	manifestPath, err := moat.ManifestCachePath(cacheDir, "example")
+	if err != nil {
+		t.Fatalf("ManifestCachePath: %v", err)
+	}
+	gotBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("ReadFile cached manifest: %v", err)
+	}
+	if string(gotBytes) != string(oldBytes) {
+		t.Fatalf("cached manifest was overwritten:\n got %s\nwant %s", gotBytes, oldBytes)
+	}
+}
+
+func TestStatusOneProfileChangedWithholdsDiff(t *testing.T) {
+	root, cacheDir := setupSyncOneDiffTest(t)
+	res := syncOneDiffResult(t, syncOneDiffManifest(t, "2026-04-21T00:00:00Z", []moat.ContentEntry{
+		syncOneDiffEntry("added", "3"),
+	}), false)
+	res.ProfileChanged = true
+	stubSyncOneDiff(t, res)
+
+	outcome, err := StatusOne(context.Background(), "example", SyncOpts{
+		LockfileRoot: root,
+		CacheDir:     cacheDir,
+		Now:          syncOneDiffNow(),
+	})
+	if err != nil {
+		t.Fatalf("StatusOne: %v", err)
+	}
+	if !outcome.ProfileChanged {
+		t.Fatalf("ProfileChanged = false; want true")
+	}
+	if outcome.Diff != nil {
+		t.Fatalf("Diff = %#v; want nil", outcome.Diff)
+	}
+	assertStatusOneNoPersistence(t, root, `"old"`)
+}
+
+func TestStatusOneTOFUIsNotSynced(t *testing.T) {
+	root, cacheDir := setupSyncOneDiffTest(t)
+	res := syncOneDiffResult(t, syncOneDiffManifest(t, "2026-04-21T00:00:00Z", []moat.ContentEntry{
+		syncOneDiffEntry("first", "1"),
+	}), false)
+	res.IsTOFU = true
+	stubSyncOneDiff(t, res)
+
+	outcome, err := StatusOne(context.Background(), "example", SyncOpts{
+		LockfileRoot: root,
+		CacheDir:     cacheDir,
+		Now:          syncOneDiffNow(),
+	})
+	if err != nil {
+		t.Fatalf("StatusOne: %v", err)
+	}
+	if !outcome.NotSynced {
+		t.Fatalf("NotSynced = false; want true")
+	}
+	if outcome.Diff != nil {
+		t.Fatalf("Diff = %#v; want nil", outcome.Diff)
+	}
+	assertStatusOneNoPersistence(t, root, `"old"`)
+}
+
 func setupSyncOneDiffTest(t *testing.T) (root, cacheDir string) {
 	t.Helper()
 	root = t.TempDir()
@@ -120,6 +245,7 @@ func setupSyncOneDiffTest(t *testing.T) (root, cacheDir string) {
 				Type:           config.RegistryTypeMOAT,
 				ManifestURI:    "https://registry.example.com/manifest.json",
 				SigningProfile: &profile,
+				ManifestETag:   `"old"`,
 			},
 		},
 	}
@@ -127,6 +253,23 @@ func setupSyncOneDiffTest(t *testing.T) (root, cacheDir string) {
 		t.Fatalf("SaveGlobal: %v", err)
 	}
 	return root, cacheDir
+}
+
+func assertStatusOneNoPersistence(t *testing.T, root, wantETag string) {
+	t.Helper()
+	reloaded, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal: %v", err)
+	}
+	if len(reloaded.Registries) != 1 {
+		t.Fatalf("loaded %d registries; want 1", len(reloaded.Registries))
+	}
+	if reloaded.Registries[0].ManifestETag != wantETag {
+		t.Fatalf("ManifestETag = %q; want unchanged %q", reloaded.Registries[0].ManifestETag, wantETag)
+	}
+	if _, err := os.Stat(moat.LockfilePath(root)); !os.IsNotExist(err) {
+		t.Fatalf("lockfile exists after StatusOne: %v", err)
+	}
 }
 
 func stubSyncOneDiff(t *testing.T, result moat.SyncResult) {

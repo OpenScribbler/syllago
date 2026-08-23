@@ -949,6 +949,6 @@ func init() {
 	registryCreateCmd.Flags().String("description", "", "Short description of the registry (used with --new)")
 	registryCreateCmd.Flags().Bool("no-git", false, "Skip git init and initial commit (used with --new)")
 
-	registryCmd.AddCommand(registryAddCmd, registryRemoveCmd, registryListCmd, registrySyncCmd, registryItemsCmd, registryCreateCmd)
+	registryCmd.AddCommand(registryAddCmd, registryRemoveCmd, registryListCmd, registrySyncCmd, registryStatusCmd, registryItemsCmd, registryCreateCmd)
 	rootCmd.AddCommand(registryCmd)
 }

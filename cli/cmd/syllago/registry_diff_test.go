@@ -74,6 +74,28 @@ func TestPrintRegistryDiff_MixedChanges(t *testing.T) {
 	}
 }
 
+func TestPrintRegistryDiffLines_RendersBodyWithoutHeaderOrGuards(t *testing.T) {
+	output.SetForTest(t)
+	d := &regdiff.Diff{
+		Changes: []regdiff.ItemChange{
+			{Type: "skills", Name: "new-thing.md", Kind: regdiff.KindAdded},
+			{Type: "rules", Name: "updated-rule", Kind: regdiff.KindModified},
+			{Type: "agents", Name: "old-agent", Kind: regdiff.KindRemoved},
+		},
+		OtherPaths: []string{"README.md"},
+	}
+
+	var buf bytes.Buffer
+	printRegistryDiffLines(&buf, d)
+	want := "  + skills/new-thing\n" +
+		"  ~ rules/updated-rule\n" +
+		"  - agents/old-agent\n" +
+		"  (plus 1 other changed files)\n"
+	if got := buf.String(); got != want {
+		t.Fatalf("printRegistryDiffLines() = %q; want %q", got, want)
+	}
+}
+
 func TestPrintRegistryDiff_TrimsKnownExtensionsForDisplay(t *testing.T) {
 	output.SetForTest(t)
 	d := &regdiff.Diff{

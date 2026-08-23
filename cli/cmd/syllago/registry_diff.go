@@ -25,6 +25,13 @@ func printRegistryDiff(w io.Writer, d *regdiff.Diff) {
 	}
 
 	fmt.Fprintln(w, "Changes since last sync:")
+	printRegistryDiffLines(w, d)
+}
+
+func printRegistryDiffLines(w io.Writer, d *regdiff.Diff) {
+	if d == nil {
+		return
+	}
 	limit := len(d.Changes)
 	if limit > registryDiffChangeLimit {
 		limit = registryDiffChangeLimit
