@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -162,30 +161,24 @@ func registryStatusGit(reg *config.Registry) (registryStatusJSON, error) {
 		return row, nil
 	}
 
+	d := registryops.GitSyncDiff(reg.Name, outcome.Head, outcome.RemoteHead)
+	if d == nil {
+		row.State = "error"
+		row.Error = "could not compare"
+		registryStatusPrintLine("%s (git): could not compare — run 'syllago registry sync %s'\n", reg.Name, reg.Name)
+		return row, nil
+	}
 	cloneDir, err := registry.CloneDir(reg.Name)
 	if err != nil {
 		row.State = "error"
-		row.Error = err.Error()
+		row.Error = "could not compare"
 		registryStatusPrintLine("%s (git): could not compare — run 'syllago registry sync %s'\n", reg.Name, reg.Name)
 		return row, nil
 	}
-	items := gitItemRefs(reg.Name, cloneDir)
-	types := catalog.AllContentTypes()
-	knownTypeDirs := make([]string, 0, len(types))
-	for _, ct := range types {
-		knownTypeDirs = append(knownTypeDirs, string(ct))
-	}
-	d, err := regdiff.GitDiff(reg.Name, cloneDir, outcome.Head, outcome.RemoteHead, items, knownTypeDirs)
-	if err != nil {
-		row.State = "error"
-		row.Error = err.Error()
-		registryStatusPrintLine("%s (git): could not compare — run 'syllago registry sync %s'\n", reg.Name, reg.Name)
-		return row, nil
-	}
-	refineRegistryStatusGitKinds(cloneDir, outcome.Head, outcome.RemoteHead, &d)
-	if registryStatusHasChanges(&d) {
-		registryStatusSetChangeCounts(&row, &d)
-		registryStatusPrintDiff(reg.Name, "git", &d)
+	refineRegistryStatusGitKinds(cloneDir, outcome.Head, outcome.RemoteHead, d)
+	if registryStatusHasChanges(d) {
+		registryStatusSetChangeCounts(&row, d)
+		registryStatusPrintDiff(reg.Name, "git", d)
 		return row, nil
 	}
 
