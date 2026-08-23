@@ -303,6 +303,119 @@ func TestRecordInstallPreservesMOAT(t *testing.T) {
 	}
 }
 
+func TestRecordInstallMOATSetsProvenanceOnFreshRecord(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	storePath := filepath.Join(dir, "installs.json")
+	libraryPath := writeContentFixture(t, dir, "writer.md")
+	coord := testCoord("core", "skills", "writer")
+	moat := &MOATProvenance{
+		ManifestURI: "https://example.com/moat.json",
+		SourceURI:   "https://example.com/writer.tgz",
+		TrustTier:   "DUAL-ATTESTED",
+		AttestedAt:  fixedTime(19),
+	}
+
+	if err := RecordInstallMOAT(storePath, coord, libraryPath, PlacementInput{
+		Provider:  "codex",
+		Mechanism: MechanismSymlink,
+		Path:      "/tmp/codex/writer",
+	}, moat, fixedTime(20)); err != nil {
+		t.Fatalf("RecordInstallMOAT: %v", err)
+	}
+
+	got := mustLoadStore(t, storePath).Find(coord)
+	if got == nil {
+		t.Fatal("record missing")
+	}
+	if !reflect.DeepEqual(got.MOAT, moat) {
+		t.Fatalf("MOAT = %#v, want %#v", got.MOAT, moat)
+	}
+}
+
+func TestRecordInstallMOATNilPreservesExistingProvenance(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	storePath := filepath.Join(dir, "installs.json")
+	libraryPath := writeContentFixture(t, dir, "writer.md")
+	coord := testCoord("core", "skills", "writer")
+	moat := &MOATProvenance{
+		ManifestURI: "https://example.com/moat.json",
+		SourceURI:   "https://example.com/writer.tgz",
+		TrustTier:   "SIGNED",
+		AttestedAt:  fixedTime(21),
+	}
+
+	if err := RecordInstallMOAT(storePath, coord, libraryPath, PlacementInput{
+		Provider:  "codex",
+		Mechanism: MechanismSymlink,
+		Path:      "/tmp/codex/writer",
+	}, moat, fixedTime(22)); err != nil {
+		t.Fatalf("seed RecordInstallMOAT: %v", err)
+	}
+	if err := RecordInstallMOAT(storePath, coord, libraryPath, PlacementInput{
+		Provider:  "claude-code",
+		Mechanism: MechanismSymlink,
+		Path:      "/tmp/claude/writer",
+	}, nil, fixedTime(23)); err != nil {
+		t.Fatalf("RecordInstallMOAT nil provenance: %v", err)
+	}
+
+	got := mustLoadStore(t, storePath).Find(coord)
+	if got == nil {
+		t.Fatal("record missing")
+	}
+	if !reflect.DeepEqual(got.MOAT, moat) {
+		t.Fatalf("MOAT = %#v, want preserved %#v", got.MOAT, moat)
+	}
+}
+
+func TestRecordInstallMOATReplacesExistingProvenance(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	storePath := filepath.Join(dir, "installs.json")
+	libraryPath := writeContentFixture(t, dir, "writer.md")
+	coord := testCoord("core", "skills", "writer")
+	oldMOAT := &MOATProvenance{
+		ManifestURI: "https://example.com/old.json",
+		SourceURI:   "https://example.com/old.tgz",
+		TrustTier:   "SIGNED",
+		AttestedAt:  fixedTime(24),
+	}
+	newMOAT := &MOATProvenance{
+		ManifestURI: "https://example.com/new.json",
+		SourceURI:   "https://example.com/new.tgz",
+		TrustTier:   "UNSIGNED",
+		AttestedAt:  fixedTime(25),
+	}
+
+	if err := RecordInstallMOAT(storePath, coord, libraryPath, PlacementInput{
+		Provider:  "codex",
+		Mechanism: MechanismSymlink,
+		Path:      "/tmp/codex/writer",
+	}, oldMOAT, fixedTime(26)); err != nil {
+		t.Fatalf("seed RecordInstallMOAT: %v", err)
+	}
+	if err := RecordInstallMOAT(storePath, coord, libraryPath, PlacementInput{
+		Provider:  "codex",
+		Mechanism: MechanismSymlink,
+		Path:      "/tmp/codex/writer",
+	}, newMOAT, fixedTime(27)); err != nil {
+		t.Fatalf("RecordInstallMOAT replace: %v", err)
+	}
+
+	got := mustLoadStore(t, storePath).Find(coord)
+	if got == nil {
+		t.Fatal("record missing")
+	}
+	if !reflect.DeepEqual(got.MOAT, newMOAT) {
+		t.Fatalf("MOAT = %#v, want replacement %#v", got.MOAT, newMOAT)
+	}
+}
+
 func providersOf(placements []Placement) []string {
 	out := make([]string, 0, len(placements))
 	for _, placement := range placements {

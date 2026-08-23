@@ -41,6 +41,8 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -116,6 +118,10 @@ func setupIntegrationEnv(t *testing.T) *integrationEnv {
 
 func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	env := setupIntegrationEnv(t)
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+	configDir := withInstallRecordConfigDir(t)
+	output.SetForTest(t)
 
 	// Pin HOME to projectRoot so the test provider's InstallDir resolves
 	// under the temp tree — keeps the symlink target predictable and lets
@@ -130,6 +136,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 		"SKILL.md": "# from registry\n",
 	})
 	stubCloneFromFixture(t, fixtureRoot)
+	now := time.Date(2026, 8, 22, 14, 0, 0, 0, time.UTC)
 
 	env.syncResultFn = func() (moat.SyncResult, error) {
 		return moat.SyncResult{
@@ -139,7 +146,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 				Type:        "skill",
 				ContentHash: contentHash,
 				SourceURI:   "https://github.com/example/repo",
-				AttestedAt:  time.Now().UTC(),
+				AttestedAt:  now,
 			}}},
 			IncomingProfile: incomingProfile(),
 			Staleness:       moat.StalenessFresh,
@@ -155,13 +162,14 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		env.projectRoot,
+		globalDir,
 		"example",
 		"my-skill",
 		&prov,
 		installer.MethodSymlink,
 		"",
 		false,
-		time.Now(),
+		now,
 	)
 	if err != nil {
 		t.Fatalf("clean install returned error: %v", err)
@@ -193,8 +201,35 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 		t.Errorf("expected exactly 1 SKILL.md in cache, got %d (root=%s)", len(matches), env.cacheRoot)
 	}
 
+	// Library: registry installs must stage verified content into the
+	// global library before touching the provider.
+	libraryPath := filepath.Join(globalDir, "skills", "my-skill")
+	if _, err := os.Stat(filepath.Join(libraryPath, "SKILL.md")); err != nil {
+		t.Fatalf("library SKILL.md missing: %v", err)
+	}
+	meta, err := metadata.Load(libraryPath)
+	if err != nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if meta == nil {
+		t.Fatal("library metadata missing")
+	}
+	if meta.Name != "my-skill" ||
+		meta.Type != string(catalog.Skills) ||
+		meta.SourceType != "registry" ||
+		meta.SourceRegistry != "example" ||
+		meta.SourceURL != "https://github.com/example/repo" ||
+		meta.SourceHash != contentHash ||
+		meta.AddedBy != "syllago moat install" {
+		t.Fatalf("library metadata = %#v", meta)
+	}
+	if meta.AddedAt == nil || !meta.AddedAt.Equal(now) {
+		t.Fatalf("library AddedAt = %v, want %v", meta.AddedAt, now)
+	}
+
 	// Provider-side install: the symlink should land at the provider's
-	// skills dir under the pinned HOME.
+	// skills dir under the pinned HOME, and point at the staged library
+	// item rather than the source cache.
 	want := filepath.Join(env.projectRoot, ".testprovider", "skills", "my-skill")
 	info, err := os.Lstat(want)
 	if err != nil {
@@ -202,6 +237,42 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	}
 	if info.Mode()&os.ModeSymlink == 0 {
 		t.Errorf("expected symlink at %q, got mode %v", want, info.Mode())
+	}
+	linkTarget, err := os.Readlink(want)
+	if err != nil {
+		t.Fatalf("Readlink(%s): %v", want, err)
+	}
+	if linkTarget != libraryPath {
+		t.Fatalf("provider symlink target = %s, want library path %s", linkTarget, libraryPath)
+	}
+
+	store, err := installstore.Load(filepath.Join(configDir, "installs.json"))
+	if err != nil {
+		t.Fatalf("installstore.Load: %v", err)
+	}
+	rec := store.Find(installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"})
+	if rec == nil {
+		t.Fatal("install record missing")
+	}
+	if rec.LibraryPath != libraryPath {
+		t.Fatalf("install record LibraryPath = %s, want %s", rec.LibraryPath, libraryPath)
+	}
+	if rec.MOAT == nil {
+		t.Fatal("install record MOAT provenance missing")
+	}
+	if rec.MOAT.ManifestURI != "https://example.com/m" ||
+		rec.MOAT.SourceURI != "https://github.com/example/repo" ||
+		rec.MOAT.TrustTier != "UNSIGNED" ||
+		!rec.MOAT.AttestedAt.Equal(now) {
+		t.Fatalf("install record MOAT = %#v", rec.MOAT)
+	}
+	if len(rec.Placements) != 1 {
+		t.Fatalf("install record placements length = %d, want 1", len(rec.Placements))
+	}
+	if rec.Placements[0].Provider != "testprovider" ||
+		rec.Placements[0].Mechanism != installstore.MechanismSymlink ||
+		rec.Placements[0].Path != want {
+		t.Fatalf("install record placement = %#v", rec.Placements[0])
 	}
 }
 
@@ -235,6 +306,7 @@ func TestInstallIntegration_RegistryRevocationRefuses(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		env.projectRoot,
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -286,6 +358,7 @@ func TestInstallIntegration_PublisherWarnHeadlessExits12(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		env.projectRoot,
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -329,6 +402,7 @@ func TestInstallIntegration_PrivatePromptHeadlessExits10(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		env.projectRoot,
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
@@ -374,6 +448,7 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 		&bytes.Buffer{},
 		cfg,
 		env.projectRoot,
+		t.TempDir(),
 		"example",
 		"my-skill",
 		nil,
