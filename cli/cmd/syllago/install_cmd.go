@@ -374,7 +374,7 @@ func installToProvider(
 			continue
 		}
 
-		desc, err := installer.InstallWithResolver(item, prov, globalDir, method, resolver)
+		placement, err := installer.InstallWithResolver(item, prov, globalDir, method, resolver)
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {
@@ -382,6 +382,7 @@ func installToProvider(
 			}
 			continue
 		}
+		desc := placement.String()
 
 		// Check for portability warnings by running the converter.
 		var warnings []string

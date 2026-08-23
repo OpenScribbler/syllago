@@ -39,16 +39,16 @@ func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	return HookConfigPath(prov, home)
 }
 
-func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	// item.Path is already absolute (set by scanner).
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
-		return "", fmt.Errorf("parsing hook file: %w", err)
+		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
 	}
 
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
-		return "", fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
+		return Placement{}, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
 	}
 
 	// ADR-0020: install through the provider's HookAdapter. No adapter (amp,
@@ -56,17 +56,17 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// config the provider never reads.
 	adapter := converter.AdapterFor(prov.Slug)
 	if adapter == nil {
-		return "", fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
+		return Placement{}, fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
 	}
 
 	model, err := hookStorageModelFor(prov.Slug)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	canonHook, err := manifestHookToCanonical(h)
 	if err != nil {
-		return "", fmt.Errorf("building canonical hook: %w", err)
+		return Placement{}, fmt.Errorf("building canonical hook: %w", err)
 	}
 	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
 	canonHook.Event = canonEvent
@@ -75,7 +75,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// capabilities are ADR-0020's source of truth (they see windsurf's
 	// split-event support, which ProviderSupportsHookEvent misses).
 	if !adapterSupportsEvent(adapter, canonEvent) {
-		return "", fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
+		return Placement{}, fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
 	}
 
 	// SECURITY (M2): run the pluggable scanner chain against the source hook
@@ -97,14 +97,14 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		fmt.Fprintf(output.ErrWriter, "  scanner error: %s\n", e)
 	}
 	if !scannerForceBypass && converter.HighestSeverity(scanResult.Findings) == "high" {
-		return "", fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
+		return Placement{}, fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
 	}
 
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
 	// command path (operates on the hook before encode).
 	resolvedCmd, err := resolveHookCommandScript(canonHook.Handler.Command, item, repoRoot)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 	canonHook.Handler.Command = resolvedCmd
 
@@ -113,7 +113,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// file is touched.
 	groupHash, err := roundTripIdentity(adapter, canonHook)
 	if err != nil {
-		return "", fmt.Errorf("hook %q: %w", item.Name, err)
+		return Placement{}, fmt.Errorf("hook %q: %w", item.Name, err)
 	}
 
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
@@ -121,25 +121,25 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// Dedup against installed.json (name + event).
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return "", fmt.Errorf("loading installed.json: %w", err)
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
 	if inst.FindHook(item.Name, nativeEvent) >= 0 {
-		return "", fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+		return Placement{}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-install:"+item.Name, []string{settingsPath})
 	if err != nil {
-		return "", fmt.Errorf("creating snapshot: %w", err)
+		return Placement{}, fmt.Errorf("creating snapshot: %w", err)
 	}
 
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 	all := make([]converter.CanonicalHook, 0, len(existing)+1)
 	all = append(all, existing...)
@@ -147,14 +147,14 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: all})
 	if err != nil {
-		return "", fmt.Errorf("encoding hooks: %w", err)
+		return Placement{}, fmt.Errorf("encoding hooks: %w", err)
 	}
 	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
 		// Auto-rollback using the snapshot we just created.
 		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 			_ = snapshot.Restore(snapshotDir, manifest)
 		}
-		return "", fmt.Errorf("writing %s: %w", settingsPath, err)
+		return Placement{}, fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
 	inst.Hooks = append(inst.Hooks, InstalledHook{
@@ -167,25 +167,31 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		InstalledAt: time.Now(),
 	})
 	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return "", fmt.Errorf("saving installed.json: %w", err)
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("hooks.%s in %s", nativeEvent, settingsPath), nil
+	desc := fmt.Sprintf("hooks.%s in %s", nativeEvent, settingsPath)
+	return Placement{
+		Mechanism: MechanismHookMerge,
+		Path:      settingsPath,
+		Keys:      []string{"hooks." + nativeEvent},
+		desc:      desc,
+	}, nil
 }
 
-func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
-		return "", fmt.Errorf("parsing hook file: %w", err)
+		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
 	}
 
 	adapter := converter.AdapterFor(prov.Slug)
 	if adapter == nil {
-		return "", fmt.Errorf("hook uninstall not supported for %s (no encoder)", prov.Name)
+		return Placement{}, fmt.Errorf("hook uninstall not supported for %s (no encoder)", prov.Name)
 	}
 	model, err := hookStorageModelFor(prov.Slug)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
@@ -193,16 +199,16 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return "", fmt.Errorf("loading installed.json: %w", err)
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
 	instIdx := inst.FindHook(item.Name, nativeEvent)
 	if instIdx < 0 {
-		return "", fmt.Errorf("hook %s not tracked for %s event (not installed by syllago)", item.Name, nativeEvent)
+		return Placement{}, fmt.Errorf("hook %s not tracked for %s event (not installed by syllago)", item.Name, nativeEvent)
 	}
 	storedHash := inst.Hooks[instIdx].GroupHash
 
@@ -210,7 +216,7 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 	// identity matches the stored hash, drop it, and re-encode.
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 	found := -1
 	for i, eh := range existing {
@@ -220,12 +226,12 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 		}
 	}
 	if found == -1 {
-		return "", fmt.Errorf("hook %s not found in %s (modified since installation; use 'syllago restore' to revert)", item.Name, settingsPath)
+		return Placement{}, fmt.Errorf("hook %s not found in %s (modified since installation; use 'syllago restore' to revert)", item.Name, settingsPath)
 	}
 
 	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-uninstall:"+item.Name, []string{settingsPath})
 	if err != nil {
-		return "", fmt.Errorf("creating snapshot: %w", err)
+		return Placement{}, fmt.Errorf("creating snapshot: %w", err)
 	}
 
 	remaining := make([]converter.CanonicalHook, 0, len(existing)-1)
@@ -237,27 +243,33 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 				_ = snapshot.Restore(snapshotDir, manifest)
 			}
-			return "", fmt.Errorf("removing %s: %w", settingsPath, err)
+			return Placement{}, fmt.Errorf("removing %s: %w", settingsPath, err)
 		}
 	} else {
 		encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: remaining})
 		if err != nil {
-			return "", fmt.Errorf("encoding hooks: %w", err)
+			return Placement{}, fmt.Errorf("encoding hooks: %w", err)
 		}
 		if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
 			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 				_ = snapshot.Restore(snapshotDir, manifest)
 			}
-			return "", fmt.Errorf("writing %s: %w", settingsPath, err)
+			return Placement{}, fmt.Errorf("writing %s: %w", settingsPath, err)
 		}
 	}
 
 	inst.RemoveHook(instIdx)
 	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return "", fmt.Errorf("saving installed.json: %w", err)
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("hooks.%s from %s", nativeEvent, settingsPath), nil
+	desc := fmt.Sprintf("hooks.%s from %s", nativeEvent, settingsPath)
+	return Placement{
+		Mechanism: MechanismHookMerge,
+		Path:      settingsPath,
+		Keys:      []string{"hooks." + nativeEvent},
+		desc:      desc,
+	}, nil
 }
 
 func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {

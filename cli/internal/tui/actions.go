@@ -899,7 +899,7 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		desc, err := installer.Install(item, prov, projectRoot, method, baseDir)
+		placement, err := installer.Install(item, prov, projectRoot, method, baseDir)
 		if err != nil {
 			return installDoneMsg{
 				itemName:     item.DisplayName,
@@ -910,7 +910,7 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 		return installDoneMsg{
 			itemName:     item.DisplayName,
 			providerName: prov.Name,
-			targetPath:   desc,
+			targetPath:   placement.String(),
 		}
 	}
 }

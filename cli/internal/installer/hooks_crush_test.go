@@ -55,10 +55,11 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 	os.WriteFile(configPath, []byte(`{"mcp":{"existing":{"command":"keep-me"}}}`), 0644)
 	overrideHookSettingsPath(t, configPath)
 
-	result, err := installHook(item, provider.Crush, projectRoot)
+	placement, err := installHook(item, provider.Crush, projectRoot)
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
+	result := placement.String()
 	if !strings.Contains(result, "hooks.PreToolUse") {
 		t.Errorf("result should mention the native event, got %q", result)
 	}

@@ -270,10 +270,11 @@ func TestInstallWithResolver_PerTypePath(t *testing.T) {
 	resolver := config.NewResolver(cfg, "")
 
 	// Install with per-type path override
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
+	desc := placement.String()
 
 	// Should install to the custom per-type path, not the provider default
 	expectedTarget := filepath.Join(customDir, "my-rule")
@@ -318,10 +319,11 @@ func TestInstallWithResolver_BaseDir(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
+	desc := placement.String()
 
 	// BaseDir goes through prov.InstallDir, so target is customBase/.provider/rules/my-rule
 	expectedTarget := filepath.Join(customBase, ".provider", "rules", "my-rule")
@@ -358,10 +360,11 @@ func TestInstallWithResolver_CLIOverridesConfig(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, cliBase)
 
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
+	desc := placement.String()
 
 	// CLI base should win over config base
 	expectedTarget := filepath.Join(cliBase, ".provider", "rules", "my-rule")
@@ -399,10 +402,11 @@ func TestInstallWithResolver_PerTypeOverridesCLI(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, cliBase)
 
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
+	desc := placement.String()
 
 	// Per-type path should win over CLI base
 	expectedTarget := filepath.Join(customDir, "my-rule")
@@ -482,10 +486,11 @@ func TestInstallWithResolver_CopyMethod(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodCopy, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodCopy, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver with copy: %v", err)
 	}
+	desc := placement.String()
 
 	expectedTarget := filepath.Join(customDir, "my-rule")
 	if desc != expectedTarget {

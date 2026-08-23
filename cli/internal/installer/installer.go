@@ -53,6 +53,26 @@ const (
 	MethodAppend InstallMethod = "append"
 )
 
+const (
+	MechanismSymlink   = "symlink"
+	MechanismCopy      = "copy"
+	MechanismHookMerge = "hook_merge"
+	MechanismMCPMerge  = "mcp_merge"
+)
+
+// Placement describes where an install (or uninstall) acted: the mechanism
+// used, the filesystem destination, and — for JSON merges — the keys touched.
+// String() renders the same human-readable description these functions used
+// to return, so display call sites keep their exact output.
+type Placement struct {
+	Mechanism string   // "symlink", "copy", "hook_merge", or "mcp_merge"
+	Path      string   // destination path (symlink/copy) or settings file (merges)
+	Keys      []string // full JSON keys for merges (e.g. "hooks.PreToolUse", "mcpServers.github"); nil otherwise
+	desc      string   // exact legacy display string
+}
+
+func (p Placement) String() string { return p.desc }
+
 // Status represents the install status of an item for a provider.
 type Status int
 
@@ -194,8 +214,8 @@ func CheckStatusWithResolver(item catalog.ContentItem, prov provider.Provider, r
 // For JSON merge types (MCP, hooks), it merges into the provider's config file.
 // For filesystem types, it creates a symlink or copy depending on the method.
 // baseDir overrides the home directory as the install root. If empty, uses home dir.
-// Returns a description of what was installed on success.
-func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, baseDir string) (string, error) {
+// Returns placement metadata; Placement.String renders the legacy description.
+func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, baseDir string) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -204,7 +224,7 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		case catalog.Hooks:
 			return installHook(item, prov, repoRoot)
 		}
-		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
 
 	// Resolve target path using baseDir or home dir
@@ -225,43 +245,45 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		if item.Provider != "" && item.Provider != prov.Slug {
 			targetPath, err := resolveTarget()
 			if err != nil {
-				return "", err
+				return Placement{}, err
 			}
-			return installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			installedPath, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
 		}
 		// Same provider + has .source/ → use original for lossless install
 		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
 			targetPath, err := resolveTarget()
 			if err != nil {
-				return "", err
+				return Placement{}, err
 			}
-			return installFromSourceTo(item, prov, filepath.Dir(targetPath))
+			installedPath, err := installFromSourceTo(item, prov, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
 		}
 	}
 
 	targetPath, err := resolveTarget()
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	sourcePath := SourcePathFor(item)
 
 	switch method {
 	case MethodCopy:
-		return targetPath, CopyContent(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
 			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
-			return targetPath, CopyContent(sourcePath, targetPath)
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
-		return targetPath, CreateSymlink(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
 }
 
 // InstallWithResolver places the given item under the provider's install directory,
 // using the resolver for path resolution instead of a flat baseDir string.
 // This respects the full priority chain: per-type path > CLI --base-dir > config baseDir > default.
-func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, resolver *config.PathResolver) (string, error) {
+func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, resolver *config.PathResolver) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -270,23 +292,23 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 		case catalog.Hooks:
 			return installHook(item, prov, repoRoot)
 		}
-		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("getting home directory: %w", err)
+		return Placement{}, fmt.Errorf("getting home directory: %w", err)
 	}
 
 	installDir := resolver.InstallDir(prov, item.Type, home)
 	if installDir == "" {
-		return "", fmt.Errorf("%s does not support %s", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s does not support %s", prov.Name, item.Type.Label())
 	}
 	if installDir == provider.JSONMergeSentinel {
-		return "", fmt.Errorf("%s uses JSON merge for %s (not filesystem install)", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s uses JSON merge for %s (not filesystem install)", prov.Name, item.Type.Label())
 	}
 	if installDir == provider.ProjectScopeSentinel {
-		return "", fmt.Errorf("%s %s is project-scoped (use export with --to from within a project directory)", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s %s is project-scoped (use export with --to from within a project directory)", prov.Name, item.Type.Label())
 	}
 
 	// Compute target path from resolved install dir (same logic as CheckStatusWithResolver).
@@ -302,10 +324,12 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 	// Check for cross-provider rendering via converter
 	if conv := converter.For(item.Type); conv != nil {
 		if item.Provider != "" && item.Provider != prov.Slug {
-			return installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			installedPath, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
 		}
 		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
-			return installFromSourceTo(item, prov, filepath.Dir(targetPath))
+			installedPath, err := installFromSourceTo(item, prov, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
 		}
 	}
 
@@ -313,21 +337,21 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 
 	switch method {
 	case MethodCopy:
-		return targetPath, CopyContent(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
 			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
-			return targetPath, CopyContent(sourcePath, targetPath)
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
-		return targetPath, CreateSymlink(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
 }
 
 // Uninstall removes the given item from the provider's install directory.
 // For JSON merge types, it removes the entry from the provider's config file.
 // For filesystem types, it removes the symlink.
-// Returns a description of what was removed on success.
-func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+// Returns placement metadata; Placement.String renders the legacy description.
+func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -336,34 +360,34 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		case catalog.Hooks:
 			return uninstallHook(item, prov, repoRoot)
 		}
-		return "", fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
+		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
 
 	targetPath, err := resolveTarget(item, prov)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	info, err := os.Lstat(targetPath)
 	if err != nil {
-		return "", fmt.Errorf("not installed: %s", targetPath)
+		return Placement{}, fmt.Errorf("not installed: %s", targetPath)
 	}
 
 	// Remove symlinks only when they still point at this library item.
 	if info.Mode()&os.ModeSymlink != 0 {
 		actualTarget, err := resolveSymlinkTarget(targetPath)
 		if err != nil {
-			return "", fmt.Errorf("reading symlink %s: %w", targetPath, err)
+			return Placement{}, fmt.Errorf("reading symlink %s: %w", targetPath, err)
 		}
 		if !symlinkTargetBelongsToItem(actualTarget, item) {
-			return "", fmt.Errorf("refusing to remove %s: symlink points to %s, not to %s", targetPath, actualTarget, item.Path)
+			return Placement{}, fmt.Errorf("refusing to remove %s: symlink points to %s, not to %s", targetPath, actualTarget, item.Path)
 		}
-		return targetPath, os.Remove(targetPath)
+		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, os.Remove(targetPath)
 	}
 
 	// Remove regular files (copies)
 	if info.Mode().IsRegular() {
-		return targetPath, os.Remove(targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, os.Remove(targetPath)
 	}
 
 	// Remove directories (copy-installed content)
@@ -372,18 +396,18 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		// path traversal attacks from removing arbitrary directories.
 		home, homeErr := os.UserHomeDir()
 		if homeErr != nil {
-			return "", fmt.Errorf("getting home directory: %w", homeErr)
+			return Placement{}, fmt.Errorf("getting home directory: %w", homeErr)
 		}
 		var resolver *config.PathResolver
 		installDir := resolver.InstallDir(prov, item.Type, home)
 		rel, relErr := filepath.Rel(installDir, targetPath)
 		if relErr != nil || strings.HasPrefix(rel, "..") {
-			return "", fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)
+			return Placement{}, fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)
 		}
-		return targetPath, os.RemoveAll(targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, os.RemoveAll(targetPath)
 	}
 
-	return "", fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
+	return Placement{}, fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
 }
 
 func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {
