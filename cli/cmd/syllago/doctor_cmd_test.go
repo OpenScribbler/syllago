@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -534,6 +535,70 @@ func TestRunDoctorFix_NothingBroken(t *testing.T) {
 
 	if !strings.Contains(stdout.String(), "Nothing to fix.") {
 		t.Fatalf("output missing nothing-to-fix message:\n%s", stdout.String())
+	}
+}
+
+func TestRunDoctorFixForce_BackfillsInstallRecords(t *testing.T) {
+	resetDoctorFlags(t)
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	contentDir := filepath.Join(home, ".syllago", "content")
+	configDir := withInstallRecordConfigDir(t)
+	withFakeRepoRoot(t, home)
+
+	skillDir := filepath.Join(contentDir, "skills", "registry-skill")
+	writeDoctorCmdFile(t, filepath.Join(skillDir, "SKILL.md"), "# Registry Skill\n")
+	writeDoctorCmdFile(t, filepath.Join(skillDir, ".syllago.yaml"), "format_version: 1\nid: registry-skill\nname: Registry Skill\nsource_type: registry\nsource_registry: acme/tools\n")
+
+	installDir := filepath.Join(home, ".claude", "skills")
+	linkPath := filepath.Join(installDir, "registry-skill")
+	symlinkDoctorCmd(t, skillDir, linkPath)
+
+	withDoctorCmdGlobals(t, home, contentDir, []provider.Provider{
+		doctorCmdProvider("claude-code", map[catalog.ContentType]string{catalog.Skills: installDir}),
+	})
+
+	stdout, _ := output.SetForTest(t)
+	captureOsExit(t)
+	mustSetDoctorFlag(t, "fix", "true")
+	mustSetDoctorFlag(t, "force", "true")
+
+	if err := doctorCmd.RunE(doctorCmd, nil); err != nil {
+		t.Fatalf("RunE first: %v", err)
+	}
+
+	firstOutput := stdout.String()
+	if !strings.Contains(firstOutput, "record: claude-code skills/registry-skill") {
+		t.Fatalf("output missing record plan:\n%s", firstOutput)
+	}
+	if !strings.Contains(firstOutput, "Fixed: 0 relinked, 0 pruned, 1 recorded") {
+		t.Fatalf("output missing recorded summary:\n%s", firstOutput)
+	}
+
+	store := mustLoadInstallRecordStore(t, configDir)
+	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "registry-skill"}
+	rec := store.Find(coord)
+	if rec == nil {
+		t.Fatal("install record missing")
+	}
+	if rec.LibraryPath != skillDir {
+		t.Fatalf("LibraryPath = %s, want %s", rec.LibraryPath, skillDir)
+	}
+	if len(rec.Placements) != 1 {
+		t.Fatalf("Placements length = %d, want 1", len(rec.Placements))
+	}
+	placement := rec.Placements[0]
+	if placement.Provider != "claude-code" || placement.Mechanism != installstore.MechanismSymlink || placement.Path != linkPath {
+		t.Fatalf("placement = %#v, want claude-code symlink %s", placement, linkPath)
+	}
+
+	stdout.Reset()
+	if err := doctorCmd.RunE(doctorCmd, nil); err != nil {
+		t.Fatalf("RunE second: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "Nothing to fix.") {
+		t.Fatalf("second output missing nothing-to-fix message:\n%s", stdout.String())
 	}
 }
 

@@ -49,6 +49,7 @@ func Run(projectRoot string) Result {
 	checks = append(checks, CheckConfigWith(projectRoot))
 	checks = append(checks, CheckProviders())
 	checks = append(checks, CheckProviderLinks())
+	checks = append(checks, CheckInstallRecords())
 	if projectRoot != "" {
 		checks = append(checks, CheckSymlinks(projectRoot))
 		checks = append(checks, CheckContentDrift(projectRoot))
@@ -176,17 +177,6 @@ func SyllagoOwnedRoots(home string) []string {
 		roots = append(roots, cacheDir)
 	}
 	return roots
-}
-
-// BrokenProviderLinks scans provider install directories and returns only
-// broken syllago-owned symlinks.
-func BrokenProviderLinks() ([]installer.ScannedLink, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	links := installer.ScanProviderLinks(provider.AllProviders, home, SyllagoOwnedRoots(home))
-	return brokenProviderLinks(links), nil
 }
 
 func checkProviderLinksAt(home string, providers []provider.Provider, roots []string) CheckResult {
