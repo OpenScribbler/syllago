@@ -1110,7 +1110,7 @@
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Repair broken provider links: re-link to library content or prune dead links"
+          "description": "Repair broken provider links and backfill missing install records"
         },
         {
           "name": "--force",
