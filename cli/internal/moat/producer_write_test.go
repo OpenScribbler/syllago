@@ -57,6 +57,36 @@ func TestWriteManifestCache_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestManifestCachePath(t *testing.T) {
+	t.Parallel()
+	cacheDir := t.TempDir()
+	name := "example-reg"
+
+	got, err := ManifestCachePath(cacheDir, name)
+	if err != nil {
+		t.Fatalf("ManifestCachePath: %v", err)
+	}
+	absCache, err := filepath.Abs(cacheDir)
+	if err != nil {
+		t.Fatalf("Abs: %v", err)
+	}
+	want := filepath.Join(absCache, manifestCacheDirName, manifestCacheSubDir, name, manifestFileName)
+	if got != want {
+		t.Fatalf("ManifestCachePath() = %q; want %q", got, want)
+	}
+}
+
+func TestManifestCachePath_InvalidName(t *testing.T) {
+	t.Parallel()
+	_, err := ManifestCachePath(t.TempDir(), "../evil")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "not valid") {
+		t.Fatalf("error %q does not contain not valid", err.Error())
+	}
+}
+
 func TestWriteManifestCache_OverwriteAtomic(t *testing.T) {
 	t.Parallel()
 	cacheDir := t.TempDir()

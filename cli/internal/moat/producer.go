@@ -348,6 +348,32 @@ func manifestCachePathsFor(absCacheDir, name string) (string, string, error) {
 		nil
 }
 
+// ManifestCachePath returns the on-disk path of the cached manifest for a
+// registry: <cacheDir>/moat/registries/<name>/manifest.json. Same
+// validation and traversal guard as WriteManifestCache.
+func ManifestCachePath(cacheDir, name string) (string, error) {
+	if cacheDir == "" {
+		return "", fmt.Errorf("ManifestCachePath: cacheDir is empty")
+	}
+	if name == "" {
+		return "", fmt.Errorf("ManifestCachePath: registry name is empty")
+	}
+	if !catalog.IsValidRegistryName(name) {
+		return "", fmt.Errorf("ManifestCachePath: registry name %q is not valid", name)
+	}
+
+	absCache, err := filepath.Abs(cacheDir)
+	if err != nil {
+		return "", fmt.Errorf("resolve cacheDir: %w", err)
+	}
+
+	manifestPath, _, err := manifestCachePathsFor(absCache, name)
+	if err != nil {
+		return "", err
+	}
+	return manifestPath, nil
+}
+
 // WriteManifestCache persists a verified manifest+bundle pair into the
 // per-registry cache layout that EnrichFromMOATManifests reads. Without
 // this call, a successful Sync leaves no observable trust state — the
