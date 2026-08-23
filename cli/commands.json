@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-23T00:25:37Z",
+  "generatedAt": "2026-08-23T01:52:59Z",
   "syllagoVersion": "0.14.0",
   "commands": [
     {
@@ -2647,6 +2647,7 @@
         "items",
         "list",
         "remove",
+        "status",
         "sync"
       ],
       "seeAlso": [],
@@ -2777,6 +2778,7 @@
         "registry items",
         "registry list",
         "registry remove",
+        "registry status",
         "registry sync"
       ],
       "examples": "  # Register a registry (no clone — run 'registry sync' to fetch content)\n  syllago registry add https://github.com/team/rules.git\n\n  # Register and clone immediately\n  syllago registry add https://github.com/team/rules.git --sync\n\n  # Register with a custom name\n  syllago registry add https://github.com/team/rules.git --name team-rules\n\n  # Pin to a specific branch\n  syllago registry add https://github.com/team/rules.git --ref main",
@@ -2866,6 +2868,7 @@
         "registry items",
         "registry list",
         "registry remove",
+        "registry status",
         "registry sync"
       ],
       "examples": "  # Scaffold an empty registry\n  syllago registry create --new my-rules\n\n  # Scaffold with a description\n  syllago registry create --new my-rules --description \"Team coding standards\"\n\n  # Index existing provider-native content\n  syllago registry create --from-native",
@@ -2931,6 +2934,7 @@
         "registry create",
         "registry list",
         "registry remove",
+        "registry status",
         "registry sync"
       ],
       "examples": "  # List all items from all registries\n  syllago registry items\n\n  # List items from a specific registry\n  syllago registry items my-rules\n\n  # Filter by content type\n  syllago registry items --type skills",
@@ -2987,6 +2991,7 @@
         "registry create",
         "registry items",
         "registry remove",
+        "registry status",
         "registry sync"
       ],
       "examples": "  # List all configured registries\n  syllago registry list\n\n  # JSON output\n  syllago registry list --json",
@@ -3043,9 +3048,67 @@
         "registry create",
         "registry items",
         "registry list",
+        "registry status",
         "registry sync"
       ],
       "examples": "  syllago registry remove team-rules",
+      "source": "cli/cmd/syllago/registry_cmd.go"
+    },
+    {
+      "name": "registry status",
+      "displayName": "Registry Status",
+      "slug": "registry-status",
+      "parent": "registry",
+      "synopsis": "syllago registry status [name]",
+      "description": "Show upstream registry changes without syncing",
+      "longDescription": "Fetches registry metadata and reports what \"registry sync\" would pull\nwithout moving git checkouts or persisting MOAT trust/cache state.",
+      "aliases": [],
+      "flags": [],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [
+        "registry",
+        "registry add",
+        "registry create",
+        "registry items",
+        "registry list",
+        "registry remove",
+        "registry sync"
+      ],
+      "examples": "  # Check all registries\n  syllago registry status\n\n  # Check a specific registry\n  syllago registry status my-rules",
       "source": "cli/cmd/syllago/registry_cmd.go"
     },
     {
@@ -3108,7 +3171,8 @@
         "registry create",
         "registry items",
         "registry list",
-        "registry remove"
+        "registry remove",
+        "registry status"
       ],
       "examples": "  # Sync all registries\n  syllago registry sync\n\n  # Sync a specific registry\n  syllago registry sync my-rules",
       "source": "cli/cmd/syllago/registry_cmd.go"

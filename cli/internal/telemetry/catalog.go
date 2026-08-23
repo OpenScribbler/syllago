@@ -177,7 +177,7 @@ func EventCatalog() []EventDef {
 					Type:        "int",
 					Description: "Number of registries involved",
 					Example:     2,
-					Commands:    []string{"registry_sync"},
+					Commands:    []string{"registry_sync", "registry_status"},
 				},
 				{
 					Name:        "moat_tier",

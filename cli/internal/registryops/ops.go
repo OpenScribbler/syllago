@@ -100,6 +100,15 @@ type SyncOutcome struct {
 	Diff *regdiff.Diff
 }
 
+// StatusOutcome reports what a MOAT sync would change, with no persistence.
+type StatusOutcome struct {
+	MoatResult     moat.SyncResult
+	UpToDate       bool          // 304 — upstream manifest unchanged
+	ProfileChanged bool          // upstream signing profile differs from the pinned one; diff withheld
+	NotSynced      bool          // no pinned profile (TOFU would be needed) or no cached manifest baseline
+	Diff           *regdiff.Diff // populated only when none of the above; may still be nil if the cache read fails
+}
+
 // trustedRootStaleError is returned when the bundled Sigstore trusted root is
 // expired/missing/corrupt. Callers errors.As() this to surface a structured
 // "run syllago update" error with the appropriate code.
@@ -139,55 +148,7 @@ var SyncOneFn = moat.Sync
 // Surface-neutral by design: the function returns a typed outcome; callers
 // translate it into their own error/message shape.
 func SyncOne(ctx context.Context, name string, opts SyncOpts) (SyncOutcome, error) {
-	now := opts.Now
-	if now.IsZero() {
-		now = time.Now()
-	}
-
-	// Trusted-root is environmental state — checking it before LoadGlobal
-	// means a stale bundle surfaces with the right "run syllago update" error
-	// even on first run before any registries are configured.
-	rootInfo := moat.BundledTrustedRoot(now)
-	switch rootInfo.Status {
-	case moat.TrustedRootStatusExpired,
-		moat.TrustedRootStatusMissing,
-		moat.TrustedRootStatusCorrupt:
-		return SyncOutcome{}, &trustedRootStaleError{Status: rootInfo.Status}
-	}
-
-	cfg, err := config.LoadGlobal()
-	if err != nil {
-		return SyncOutcome{}, fmt.Errorf("load global config: %w", err)
-	}
-	var reg *config.Registry
-	for i := range cfg.Registries {
-		if cfg.Registries[i].Name == name {
-			reg = &cfg.Registries[i]
-			break
-		}
-	}
-	if reg == nil {
-		return SyncOutcome{}, fmt.Errorf("registry %q not found in config", name)
-	}
-	if !reg.IsMOAT() {
-		return SyncOutcome{}, fmt.Errorf("registry %q is not MOAT-typed", name)
-	}
-
-	cacheDir := opts.CacheDir
-	if cacheDir == "" {
-		cacheDir, err = config.GlobalDirPath()
-		if err != nil {
-			return SyncOutcome{}, fmt.Errorf("resolve cache dir: %w", err)
-		}
-	}
-
-	lockfilePath := moat.LockfilePath(opts.LockfileRoot)
-	lf, err := moat.LoadLockfile(lockfilePath)
-	if err != nil {
-		return SyncOutcome{}, fmt.Errorf("load lockfile: %w", err)
-	}
-
-	res, err := SyncOneFn(ctx, reg, lf, rootInfo.Bytes, nil, now)
+	cfg, reg, lf, lockfilePath, cacheDir, res, err := syncFetch(ctx, name, opts)
 	if err != nil {
 		return SyncOutcome{MoatResult: res}, err
 	}
@@ -262,4 +223,95 @@ func SyncOne(ctx context.Context, name string, opts SyncOpts) (SyncOutcome, erro
 
 	out.Persisted = true
 	return out, nil
+}
+
+// StatusOne is the read-only counterpart of SyncOne: it fetches and verifies
+// the upstream manifest but persists NOTHING — no config, lockfile, or
+// manifest-cache writes. The in-memory lockfile mutations moat.Sync makes are
+// discarded.
+func StatusOne(ctx context.Context, name string, opts SyncOpts) (StatusOutcome, error) {
+	_, reg, _, _, cacheDir, res, err := syncFetch(ctx, name, opts)
+	out := StatusOutcome{MoatResult: res}
+	if err != nil {
+		return out, err
+	}
+	if res.NotModified {
+		out.UpToDate = true
+		return out, nil
+	}
+	if res.ProfileChanged {
+		out.ProfileChanged = true
+		return out, nil
+	}
+	if res.IsTOFU {
+		out.NotSynced = true
+		return out, nil
+	}
+
+	old, err := regdiff.LoadCachedManifest(cacheDir, reg.Name)
+	if err != nil {
+		return out, nil
+	}
+	if old == nil {
+		out.NotSynced = true
+		return out, nil
+	}
+	d := regdiff.MOATDiff(reg.Name, old, res.Manifest)
+	out.Diff = &d
+	return out, nil
+}
+
+func syncFetch(ctx context.Context, name string, opts SyncOpts) (cfg *config.Config, reg *config.Registry, lf *moat.Lockfile, lockfilePath, cacheDir string, res moat.SyncResult, err error) {
+	now := opts.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
+
+	// Trusted-root is environmental state — checking it before LoadGlobal
+	// means a stale bundle surfaces with the right "run syllago update" error
+	// even on first run before any registries are configured.
+	rootInfo := moat.BundledTrustedRoot(now)
+	switch rootInfo.Status {
+	case moat.TrustedRootStatusExpired,
+		moat.TrustedRootStatusMissing,
+		moat.TrustedRootStatusCorrupt:
+		return nil, nil, nil, "", "", moat.SyncResult{}, &trustedRootStaleError{Status: rootInfo.Status}
+	}
+
+	cfg, err = config.LoadGlobal()
+	if err != nil {
+		return nil, nil, nil, "", "", moat.SyncResult{}, fmt.Errorf("load global config: %w", err)
+	}
+	for i := range cfg.Registries {
+		if cfg.Registries[i].Name == name {
+			reg = &cfg.Registries[i]
+			break
+		}
+	}
+	if reg == nil {
+		return cfg, nil, nil, "", "", moat.SyncResult{}, fmt.Errorf("registry %q not found in config", name)
+	}
+	if !reg.IsMOAT() {
+		return cfg, reg, nil, "", "", moat.SyncResult{}, fmt.Errorf("registry %q is not MOAT-typed", name)
+	}
+
+	cacheDir = opts.CacheDir
+	if cacheDir == "" {
+		cacheDir, err = config.GlobalDirPath()
+		if err != nil {
+			return cfg, reg, nil, "", "", moat.SyncResult{}, fmt.Errorf("resolve cache dir: %w", err)
+		}
+	}
+
+	lockfilePath = moat.LockfilePath(opts.LockfileRoot)
+	lf, err = moat.LoadLockfile(lockfilePath)
+	if err != nil {
+		return cfg, reg, nil, lockfilePath, cacheDir, moat.SyncResult{}, fmt.Errorf("load lockfile: %w", err)
+	}
+
+	res, err = SyncOneFn(ctx, reg, lf, rootInfo.Bytes, nil, now)
+	if err != nil {
+		return cfg, reg, lf, lockfilePath, cacheDir, res, err
+	}
+	return cfg, reg, lf, lockfilePath, cacheDir, res, nil
 }

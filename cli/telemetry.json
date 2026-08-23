@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-23T00:25:38Z",
+  "generatedAt": "2026-08-23T01:52:59Z",
   "syllagoVersion": "0.14.0",
   "events": [
     {
@@ -215,7 +215,8 @@
           "description": "Number of registries involved",
           "example": 2,
           "commands": [
-            "registry_sync"
+            "registry_sync",
+            "registry_status"
           ]
         },
         {

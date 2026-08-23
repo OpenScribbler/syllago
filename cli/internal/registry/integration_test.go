@@ -264,6 +264,62 @@ func TestIntegration_Sync(t *testing.T) {
 	}
 }
 
+func TestIntegration_StatusFetchesRemoteWithoutMovingCheckout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	requireGit(t)
+	setupCacheOverride(t)
+
+	bare := createBareRepo(t, "valid")
+	if err := Clone(bare, "test-reg", ""); err != nil {
+		t.Fatalf("Clone: %v", err)
+	}
+
+	initial, err := Status("test-reg")
+	if err != nil {
+		t.Fatalf("Status initial: %v", err)
+	}
+	if initial.Head == "" {
+		t.Fatal("Status initial Head is empty")
+	}
+	if initial.Head != initial.RemoteHead {
+		t.Fatalf("Status initial Head=%q RemoteHead=%q; want equal", initial.Head, initial.RemoteHead)
+	}
+
+	workspace := filepath.Join(t.TempDir(), "workspace")
+	run(t, "", "git", "clone", bare, workspace)
+	run(t, workspace, "git", "config", "user.email", "test@example.com")
+	run(t, workspace, "git", "config", "user.name", "Test User")
+	writeFile(t, workspace, "skills/status-only/SKILL.md", "---\nname: Status Only\ndescription: Added upstream\n---\n\nNew skill.\n")
+	run(t, workspace, "git", "add", "-A")
+	run(t, workspace, "git", "commit", "-m", "add status-only skill")
+	run(t, workspace, "git", "push")
+
+	cloneDir, err := CloneDir("test-reg")
+	if err != nil {
+		t.Fatalf("CloneDir: %v", err)
+	}
+	beforeHead := gitOutput(t, cloneDir, "rev-parse", "HEAD")
+	outcome, err := Status("test-reg")
+	if err != nil {
+		t.Fatalf("Status after upstream commit: %v", err)
+	}
+	if outcome.Head != beforeHead {
+		t.Fatalf("Status Head=%q; want checkout HEAD %q", outcome.Head, beforeHead)
+	}
+	if outcome.RemoteHead == "" {
+		t.Fatal("Status RemoteHead is empty")
+	}
+	if outcome.RemoteHead == outcome.Head {
+		t.Fatalf("Status RemoteHead=%q; want different from local Head", outcome.RemoteHead)
+	}
+	afterHead := gitOutput(t, cloneDir, "rev-parse", "HEAD")
+	if afterHead != beforeHead {
+		t.Fatalf("checkout HEAD moved to %q; want %q", afterHead, beforeHead)
+	}
+}
+
 func TestIntegration_SyncOutcome(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

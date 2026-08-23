@@ -169,6 +169,13 @@ type GitSyncOutcome struct {
 	NewHead string // HEAD sha after the pull
 }
 
+// GitStatusOutcome reports the local and upstream heads of a registry clone
+// after a fetch. Head == RemoteHead means the clone is up to date.
+type GitStatusOutcome struct {
+	Head       string
+	RemoteHead string
+}
+
 // Head returns the current HEAD sha for a git registry clone.
 func Head(name string) (string, error) {
 	if err := checkGit(); err != nil {
@@ -183,6 +190,40 @@ func Head(name string) (string, error) {
 		return "", fmt.Errorf("git rev-parse HEAD failed for %q: %w", name, err)
 	}
 	return head, nil
+}
+
+// Status fetches the registry clone's upstream refs without moving the
+// checkout, then returns local HEAD vs FETCH_HEAD.
+func Status(name string) (GitStatusOutcome, error) {
+	var outcome GitStatusOutcome
+	if err := checkGit(); err != nil {
+		return outcome, err
+	}
+	dir, err := CloneDir(name)
+	if err != nil {
+		return outcome, err
+	}
+	cmd := exec.Command("git",
+		"-C", dir,
+		"-c", "core.hooksPath=/dev/null",
+		"fetch", "--quiet", "--no-recurse-submodules",
+	)
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return outcome, fmt.Errorf("git fetch failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
+	}
+	head, err := gitHead(dir)
+	if err != nil {
+		return outcome, fmt.Errorf("reading HEAD after git fetch for %q: %w", name, err)
+	}
+	remoteHead, err := gitRevParse(dir, "FETCH_HEAD")
+	if err != nil {
+		return outcome, fmt.Errorf("reading FETCH_HEAD after git fetch for %q: %w", name, err)
+	}
+	outcome.Head = head
+	outcome.RemoteHead = remoteHead
+	return outcome, nil
 }
 
 // Sync runs git pull --ff-only in the registry clone directory.
@@ -218,7 +259,11 @@ func Sync(name string) (GitSyncOutcome, error) {
 }
 
 func gitHead(dir string) (string, error) {
-	cmd := exec.Command("git", "-C", dir, "rev-parse", "HEAD")
+	return gitRevParse(dir, "HEAD")
+}
+
+func gitRevParse(dir, ref string) (string, error) {
+	cmd := exec.Command("git", "-C", dir, "rev-parse", ref)
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
