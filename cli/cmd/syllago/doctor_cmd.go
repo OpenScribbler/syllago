@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/doctor"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +31,7 @@ pass, 1 if there are warnings, 2 if there are errors.`,
 }
 
 func init() {
-	doctorCmd.Flags().Bool("fix", false, "Repair broken provider links: re-link to library content or prune dead links")
+	doctorCmd.Flags().Bool("fix", false, "Repair broken provider links and backfill missing install records")
 	doctorCmd.Flags().BoolP("force", "f", false, "Skip confirmation prompt")
 	rootCmd.AddCommand(doctorCmd)
 }
@@ -80,10 +83,12 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 }
 
 func runDoctorFix(force bool) error {
-	broken, err := doctor.BrokenProviderLinks()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment", err.Error())
 	}
+	links := installer.ScanProviderLinks(provider.AllProviders, home, doctor.SyllagoOwnedRoots(home))
+	broken := doctorFixBrokenLinks(links)
 
 	libraryItems, err := doctorFixLibraryItems()
 	if err != nil {
@@ -91,7 +96,11 @@ func runDoctorFix(force bool) error {
 	}
 
 	actions := installer.PlanLinkFixes(broken, libraryItems)
-	if len(actions) == 0 {
+	storePath, plan := doctorFixBackfillPlan(links, libraryItems)
+	if len(actions) == 0 && len(plan.Entries) == 0 {
+		if len(plan.Legacy) > 0 {
+			fmt.Fprintf(output.Writer, "skipping %d legacy direct link(s) (not library-backed)\n", len(plan.Legacy))
+		}
 		fmt.Fprintln(output.Writer, "Nothing to fix.")
 		return nil
 	}
@@ -103,6 +112,12 @@ func runDoctorFix(force bool) error {
 		case installer.FixPrune:
 			fmt.Fprintf(output.Writer, "prune:  %s (target gone: %s)\n", action.Link.Path, action.Link.Target)
 		}
+	}
+	for _, entry := range plan.Entries {
+		fmt.Fprintf(output.Writer, "record: %s %s/%s\n", entry.Placement.Provider, entry.Coord.Type, entry.Coord.Name)
+	}
+	if len(plan.Legacy) > 0 {
+		fmt.Fprintf(output.Writer, "skipping %d legacy direct link(s) (not library-backed)\n", len(plan.Legacy))
 	}
 
 	if !force {
@@ -121,19 +136,45 @@ func runDoctorFix(force bool) error {
 		}
 	}
 
-	errs := installer.ApplyLinkFixes(actions)
-	if len(errs) > 0 {
-		for _, err := range errs {
-			fmt.Fprintln(output.ErrWriter, err)
+	linkErrs := installer.ApplyLinkFixes(actions)
+	for _, err := range linkErrs {
+		fmt.Fprintln(output.ErrWriter, err)
+	}
+
+	recorded := 0
+	if storePath != "" {
+		for _, entry := range plan.Entries {
+			if err := installstore.RecordInstall(storePath, entry.Coord, entry.LibraryPath, entry.Placement, time.Now()); err != nil {
+				fmt.Fprintln(output.ErrWriter, err)
+				continue
+			}
+			recorded++
 		}
+	}
+
+	if len(linkErrs) > 0 {
 		osExit(1)
 		return nil
 	}
 
 	relinked, pruned := countLinkFixKinds(actions)
-	fmt.Fprintf(output.Writer, "Fixed: %d relinked, %d pruned\n", relinked, pruned)
-	telemetry.Enrich("action_count", len(actions))
+	fmt.Fprintf(output.Writer, "Fixed: %d relinked, %d pruned, %d recorded\n", relinked, pruned, recorded)
+	telemetry.Enrich("action_count", len(actions)+len(plan.Entries))
 	return nil
+}
+
+func doctorFixBackfillPlan(links []installer.ScannedLink, libraryItems []catalog.ContentItem) (string, doctor.BackfillPlan) {
+	storePath, err := installstore.DefaultPath()
+	if err != nil {
+		fmt.Fprintf(output.ErrWriter, "warning: could not plan install-record backfill: %v\n", err)
+		return "", doctor.BackfillPlan{}
+	}
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		fmt.Fprintf(output.ErrWriter, "warning: could not plan install-record backfill: %v\n", err)
+		return "", doctor.BackfillPlan{}
+	}
+	return storePath, doctor.PlanRecordBackfill(links, store, catalog.GlobalContentDir(), libraryItems)
 }
 
 func doctorFixLibraryItems() ([]catalog.ContentItem, error) {
@@ -167,6 +208,16 @@ func countLinkFixKinds(actions []installer.FixAction) (relinked, pruned int) {
 		}
 	}
 	return relinked, pruned
+}
+
+func doctorFixBrokenLinks(links []installer.ScannedLink) []installer.ScannedLink {
+	var broken []installer.ScannedLink
+	for _, link := range links {
+		if link.Class == installer.LinkBroken {
+			broken = append(broken, link)
+		}
+	}
+	return broken
 }
 
 const (
