@@ -11,10 +11,11 @@ const (
 
 // ItemChange is one content item's change between two registry states.
 type ItemChange struct {
-	Type  string // content type dir/slug, e.g. "skills", or MOAT type "skill"
-	Name  string // item name
-	Kind  Kind
-	Paths []string // changed file paths relative to repo root (git registries); nil for MOAT
+	Type     string // content type dir/slug, e.g. "skills", or MOAT type "skill"
+	Name     string // item name
+	Kind     Kind
+	Paths    []string // changed file paths relative to repo root (git registries); nil for MOAT
+	LogLines []string // upstream commit subjects touching this item, newest first, capped; git registries only, nil for MOAT
 }
 
 // Diff is the full change set for one registry between two refs.

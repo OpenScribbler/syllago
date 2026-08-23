@@ -44,6 +44,9 @@ func printRegistryDiffLines(w io.Writer, d *regdiff.Diff) {
 	}
 	for _, change := range d.Changes[:limit] {
 		fmt.Fprintf(w, "  %s %s/%s\n", registryDiffSymbol(change.Kind), change.Type, trimRegistryDiffName(change.Name))
+		for _, line := range change.LogLines {
+			fmt.Fprintf(w, "      · %s\n", line)
+		}
 	}
 	if more := len(d.Changes) - limit; more > 0 {
 		fmt.Fprintf(w, "  … and %d more\n", more)

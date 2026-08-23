@@ -26,6 +26,8 @@ type itemAccum struct {
 	statuses []byte
 }
 
+const logExcerptItemLimit = 20
+
 // GitDiff computes the item-level change set between two commits of a git
 // registry checkout at repoDir. items describes the CURRENT checkout's
 // items; knownTypeDirs lists top-level content-type directory names
@@ -54,6 +56,7 @@ func GitDiff(registry, repoDir, oldHead, newHead string, items []ItemRef, knownT
 
 	current := make(map[itemKey]*itemAccum)
 	fallback := make(map[itemKey]*itemAccum)
+	changeDirs := make(map[itemKey]string)
 	var otherPaths []string
 
 	for _, ps := range parseNameStatus(out) {
@@ -95,6 +98,7 @@ func GitDiff(registry, repoDir, oldHead, newHead string, items []ItemRef, knownT
 			}
 		}
 		diff.Changes = append(diff.Changes, itemChangeFromAccum(acc, kind))
+		changeDirs[acc.key] = acc.dir
 	}
 
 	for _, acc := range fallback {
@@ -109,6 +113,7 @@ func GitDiff(registry, repoDir, oldHead, newHead string, items []ItemRef, knownT
 			}
 		}
 		diff.Changes = append(diff.Changes, itemChangeFromAccum(acc, kind))
+		changeDirs[acc.key] = acc.dir
 	}
 
 	sort.Slice(diff.Changes, func(i, j int) bool {
@@ -119,8 +124,41 @@ func GitDiff(registry, repoDir, oldHead, newHead string, items []ItemRef, knownT
 	})
 	sort.Strings(otherPaths)
 	diff.OtherPaths = otherPaths
+	if len(diff.Changes) <= logExcerptItemLimit {
+		populateGitLogLines(repoDir, oldHead, newHead, diff.Changes, changeDirs)
+	}
 
 	return diff, nil
+}
+
+func populateGitLogLines(repoDir, oldHead, newHead string, changes []ItemChange, changeDirs map[itemKey]string) {
+	revRange := oldHead + ".." + newHead
+	for i := range changes {
+		dir := changeDirs[itemKey{Type: changes[i].Type, Name: changes[i].Name}]
+		if dir == "" {
+			continue
+		}
+		out, err := runGit(repoDir, "log", "--no-merges", "--format=%s", "-n", "3", revRange, "--", dir)
+		if err != nil {
+			continue
+		}
+		lines := splitNonEmptyLines(out)
+		if len(lines) > 0 {
+			changes[i].LogLines = lines
+		}
+	}
+}
+
+func splitNonEmptyLines(out []byte) []string {
+	var lines []string
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		lines = append(lines, line)
+	}
+	return lines
 }
 
 func parseNameStatus(out []byte) []gitPathStatus {

@@ -78,8 +78,11 @@ func TestRegistrySync_PersistsGitLastSyncBookkeeping(t *testing.T) {
 	syncedLine := "Synced: git-sync-bookkeeping\n"
 	diffBlock := "Changes since last sync:\n" +
 		"  - agents/old-agent\n" +
+		"      · update content\n" +
 		"  ~ rules/updated-rule\n" +
-		"  + skills/new-thing\n"
+		"      · update content\n" +
+		"  + skills/new-thing\n" +
+		"      · update content\n"
 	if !strings.Contains(gotOut, syncedLine+diffBlock) {
 		t.Fatalf("second sync output = %q; want Synced line followed by diff block %q", gotOut, diffBlock)
 	}
