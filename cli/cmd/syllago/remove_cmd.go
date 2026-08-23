@@ -155,9 +155,11 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		if installer.CheckStatus(item, prov, globalDir) != installer.StatusInstalled {
 			continue
 		}
-		if _, err := installer.Uninstall(item, prov, globalDir); err != nil {
+		placement, err := installer.Uninstall(item, prov, globalDir)
+		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
 		} else {
+			recordUninstallBookkeeping(item, prov.Slug, placement)
 			uninstalledFrom = append(uninstalledFrom, prov.Name)
 		}
 	}
@@ -182,6 +184,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing from library failed", "Check filesystem permissions", err.Error())
 	}
+	forgetInstallRecord(item)
 
 	if output.JSON {
 		output.Print(removeResult{

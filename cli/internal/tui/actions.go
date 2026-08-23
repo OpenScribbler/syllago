@@ -288,15 +288,18 @@ func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 		var uninstalledFrom []string
 
 		for _, prov := range targetProviders {
-			if _, err := installer.Uninstall(item, prov, repoRoot); err != nil {
+			placement, err := installer.Uninstall(item, prov, repoRoot)
+			if err != nil {
 				continue // best-effort uninstall
 			}
+			recordTUIUninstallBookkeeping(item, prov.Slug, placement)
 			uninstalledFrom = append(uninstalledFrom, prov.Name)
 		}
 
 		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing from library: %w", err)}
 		}
+		forgetTUIInstallRecord(item)
 
 		return removeDoneMsg{itemName: item.Name, uninstalledFrom: uninstalledFrom}
 	}
@@ -308,6 +311,7 @@ func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
 		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
 			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing: %w", err)}
 		}
+		forgetTUIInstallRecord(item)
 		return removeDoneMsg{itemName: item.Name}
 	}
 }
@@ -333,9 +337,11 @@ func (a App) doUninstallCmd(msg confirmResultMsg) tea.Cmd {
 		var uninstalledFrom []string
 		var lastErr error
 		for _, prov := range targetProviders {
-			if _, err := installer.Uninstall(item, prov, repoRoot); err != nil {
+			placement, err := installer.Uninstall(item, prov, repoRoot)
+			if err != nil {
 				lastErr = err
 			} else {
+				recordTUIUninstallBookkeeping(item, prov.Slug, placement)
 				uninstalledFrom = append(uninstalledFrom, prov.Name)
 			}
 		}
@@ -907,6 +913,7 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 				err:          err,
 			}
 		}
+		recordTUIInstallBookkeeping(item, prov.Slug, placement)
 		return installDoneMsg{
 			itemName:     item.DisplayName,
 			providerName: prov.Name,
@@ -1147,12 +1154,13 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 		var firstErr error
 		count := 0
 		for _, prov := range providers {
-			_, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "")
+			placement, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "")
 			if err != nil {
 				if firstErr == nil {
 					firstErr = err
 				}
 			} else {
+				recordTUIInstallBookkeeping(item, prov.Slug, placement)
 				count++
 			}
 		}

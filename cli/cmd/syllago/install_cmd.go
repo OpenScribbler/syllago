@@ -382,6 +382,7 @@ func installToProvider(
 			}
 			continue
 		}
+		recordInstallBookkeeping(item, toSlug, placement)
 		desc := placement.String()
 
 		// Check for portability warnings by running the converter.

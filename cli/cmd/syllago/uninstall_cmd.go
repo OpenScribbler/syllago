@@ -173,6 +173,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
 			continue
 		}
+		recordUninstallBookkeeping(*item, prov.Slug, placement)
 		desc := placement.String()
 		removedFrom = append(removedFrom, prov.Name)
 		if !output.JSON && !output.Quiet {
