@@ -7,6 +7,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 const registryDiffChangeLimit = 20
@@ -43,6 +44,29 @@ func printRegistryDiffLines(w io.Writer, d *regdiff.Diff) {
 	if len(d.OtherPaths) > 0 {
 		fmt.Fprintf(w, "  (plus %d other changed files)\n", len(d.OtherPaths))
 	}
+}
+
+func printInstalledDrift(w io.Writer, drifts []registryops.InstalledDrift) {
+	if output.JSON || output.Quiet || len(drifts) == 0 {
+		return
+	}
+
+	fmt.Fprintln(w, "Installed items drifted from upstream:")
+	for _, drift := range drifts {
+		switch drift.Kind {
+		case registryops.DriftChanged:
+			fmt.Fprintf(w, "  ~ %s/%s changed upstream — refresh: syllago add %s --from %s --force\n", drift.Type, drift.Name, drift.Name, drift.Registry)
+		case registryops.DriftMissing:
+			fmt.Fprintf(w, "  ! %s/%s no longer in registry%s — remove: syllago remove %s\n", drift.Type, drift.Name, installedDriftProviderText(drift.Providers), drift.Name)
+		}
+	}
+}
+
+func installedDriftProviderText(providers []string) string {
+	if len(providers) == 0 {
+		return ""
+	}
+	return " (installed to: " + strings.Join(providers, ", ") + ")"
 }
 
 func registryDiffSymbol(kind regdiff.Kind) string {

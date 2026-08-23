@@ -598,6 +598,11 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 			printRegistryDiff(output.Writer, d)
 		}
 	}
+	drifts := registryops.InstalledGitDrift(r.Name)
+	if len(drifts) > 0 {
+		printInstalledDrift(output.Writer, drifts)
+	}
+	telemetry.Enrich("drift_count", len(drifts))
 	return 0, nil
 }
 

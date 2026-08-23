@@ -180,6 +180,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"registry_sync", "registry_status"},
 				},
 				{
+					Name:        "drift_count",
+					Type:        "int",
+					Description: "Number of installed items drifted from upstream after a registry sync",
+					Example:     2,
+					Commands:    []string{"registry_sync"},
+				},
+				{
 					Name:        "moat_tier",
 					Type:        "string",
 					Description: "Resolved MOAT trust tier for the item (UNSIGNED, SIGNED, DUAL-ATTESTED)",

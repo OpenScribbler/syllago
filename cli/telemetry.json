@@ -220,6 +220,15 @@
           ]
         },
         {
+          "name": "drift_count",
+          "type": "int",
+          "description": "Number of installed items drifted from upstream after a registry sync",
+          "example": 2,
+          "commands": [
+            "registry_sync"
+          ]
+        },
+        {
           "name": "moat_tier",
           "type": "string",
           "description": "Resolved MOAT trust tier for the item (UNSIGNED, SIGNED, DUAL-ATTESTED)",
