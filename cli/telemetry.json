@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-21T21:26:09Z",
+  "generatedAt": "2026-08-23T00:25:38Z",
   "syllagoVersion": "0.14.0",
   "events": [
     {
@@ -133,6 +133,15 @@
           "commands": [
             "list",
             "registry_items"
+          ]
+        },
+        {
+          "name": "plugin_count",
+          "type": "int",
+          "description": "Number of enabled Claude Code plugins shown in list output",
+          "example": 2,
+          "commands": [
+            "list"
           ]
         },
         {
