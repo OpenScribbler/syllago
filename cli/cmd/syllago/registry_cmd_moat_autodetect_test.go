@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,9 +19,12 @@ import (
 
 // stubClone swaps the orchestrator's clone seam (registryops.CloneFn) with a
 // stub that creates a fake clone dir at registry.CloneDir(name) containing a
-// registry.yaml with the given content. Restored on t.Cleanup.
+// committed registry.yaml with the given content. Restored on t.Cleanup.
 func stubClone(t *testing.T, yamlContent string) {
 	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
 	orig := registryops.CloneFn
 	registryops.CloneFn = func(url, name, ref string) error {
 		cloneDir, err := registry.CloneDir(name)
@@ -29,7 +34,23 @@ func stubClone(t *testing.T, yamlContent string) {
 		if err := os.MkdirAll(cloneDir, 0755); err != nil {
 			return err
 		}
-		return os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte(yamlContent), 0644)
+		if err := os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte(yamlContent), 0644); err != nil {
+			return err
+		}
+		for _, args := range [][]string{
+			{"init"},
+			{"config", "user.email", "test@example.com"},
+			{"config", "user.name", "Test User"},
+			{"add", "-A"},
+			{"commit", "-m", "initial"},
+		} {
+			cmd := exec.Command("git", args...)
+			cmd.Dir = cloneDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("git %v: %w: %s", args, err, strings.TrimSpace(string(out)))
+			}
+		}
+		return nil
 	}
 	t.Cleanup(func() { registryops.CloneFn = orig })
 }

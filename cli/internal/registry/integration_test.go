@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -43,6 +44,17 @@ func run(t *testing.T, dir, name string, args ...string) {
 	if err != nil {
 		t.Fatalf("%s %v failed: %s\n%s", name, args, err, string(out))
 	}
+}
+
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %s\n%s", args, err, string(out))
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // writeFile creates a file (and parent directories) in dir.
@@ -236,7 +248,7 @@ func TestIntegration_Sync(t *testing.T) {
 	run(t, workspace, "git", "push")
 
 	// Sync should pull the new commit
-	if err := Sync("test-reg"); err != nil {
+	if _, err := Sync("test-reg"); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
 
@@ -249,6 +261,96 @@ func TestIntegration_Sync(t *testing.T) {
 	count := cat.CountRegistry("test-reg")
 	if count != 4 {
 		t.Errorf("CountRegistry after sync = %d, want 4", count)
+	}
+}
+
+func TestIntegration_SyncOutcome(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+	requireGit(t)
+	setupCacheOverride(t)
+
+	isFullSHA := regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+	tests := []struct {
+		name    string
+		run     func(t *testing.T) (GitSyncOutcome, string, string, error)
+		wantErr bool
+	}{
+		{
+			name: "upstream gained a commit",
+			run: func(t *testing.T) (GitSyncOutcome, string, string, error) {
+				bare := createBareRepo(t, "valid")
+				if err := Clone(bare, "sync-moved", ""); err != nil {
+					t.Fatalf("Clone: %v", err)
+				}
+				dir, _ := CloneDir("sync-moved")
+				oldHead := gitOutput(t, dir, "rev-parse", "HEAD")
+
+				workspace := filepath.Join(t.TempDir(), "workspace")
+				run(t, "", "git", "clone", bare, workspace)
+				run(t, workspace, "git", "config", "user.email", "test@example.com")
+				run(t, workspace, "git", "config", "user.name", "Test User")
+				writeFile(t, workspace, "skills/sync-outcome/SKILL.md", "---\nname: Sync Outcome\ndescription: Added after clone\n---\n\nBody.\n")
+				run(t, workspace, "git", "add", "-A")
+				run(t, workspace, "git", "commit", "-m", "add sync outcome skill")
+				run(t, workspace, "git", "push")
+				newHead := gitOutput(t, workspace, "rev-parse", "HEAD")
+
+				outcome, err := Sync("sync-moved")
+				return outcome, oldHead, newHead, err
+			},
+		},
+		{
+			name: "no upstream change",
+			run: func(t *testing.T) (GitSyncOutcome, string, string, error) {
+				bare := createBareRepo(t, "valid")
+				if err := Clone(bare, "sync-clean", ""); err != nil {
+					t.Fatalf("Clone: %v", err)
+				}
+				dir, _ := CloneDir("sync-clean")
+				head := gitOutput(t, dir, "rev-parse", "HEAD")
+
+				outcome, err := Sync("sync-clean")
+				return outcome, head, head, err
+			},
+		},
+		{
+			name: "missing clone dir",
+			run: func(t *testing.T) (GitSyncOutcome, string, string, error) {
+				outcome, err := Sync("sync-missing")
+				return outcome, "", "", err
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			outcome, wantOld, wantNew, err := tt.run(t)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("Sync error = nil, want error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Sync: %v", err)
+			}
+			if outcome.OldHead != wantOld {
+				t.Errorf("OldHead = %q, want %q", outcome.OldHead, wantOld)
+			}
+			if outcome.NewHead != wantNew {
+				t.Errorf("NewHead = %q, want %q", outcome.NewHead, wantNew)
+			}
+			if !isFullSHA.MatchString(outcome.OldHead) {
+				t.Errorf("OldHead %q is not a 40-hex SHA", outcome.OldHead)
+			}
+			if !isFullSHA.MatchString(outcome.NewHead) {
+				t.Errorf("NewHead %q is not a 40-hex SHA", outcome.NewHead)
+			}
+		})
 	}
 }
 
@@ -644,7 +746,7 @@ func TestIntegration_GitHubKitchenSink(t *testing.T) {
 	}
 
 	// Sync should succeed (no new commits, but no error)
-	if err := Sync(name); err != nil {
+	if _, err := Sync(name); err != nil {
 		t.Errorf("Sync: %v", err)
 	}
 

@@ -178,6 +178,10 @@ type Registry struct {
 	URL  string `json:"url"`
 	Ref  string `json:"ref,omitempty"` // branch/tag/commit, defaults to default branch (git only)
 
+	// Git-only fields. Empty for MOAT registries.
+	LastSyncedSHA string     `json:"last_synced_sha,omitempty"` // git HEAD the registry clone was last synced to
+	LastSyncedAt  *time.Time `json:"last_synced_at,omitempty"`  // when the sync completed
+
 	// Type is the registry backend. Empty = git for back-compat; new
 	// entries populate this explicitly.
 	Type string `json:"type,omitempty"`

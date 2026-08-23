@@ -48,7 +48,8 @@ func (g *GitClient) Sync(ctx context.Context) error {
 	// still used by other call sites; changing its signature is a separate
 	// migration.
 	_ = ctx
-	return Sync(g.name)
+	_, err := Sync(g.name)
+	return err
 }
 
 // Items scans the local clone directory and returns every content item

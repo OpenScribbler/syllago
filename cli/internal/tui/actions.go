@@ -563,7 +563,7 @@ func (a App) handleSync() (tea.Model, tea.Cmd) {
 
 	cmd1 := a.toast.Push("Syncing "+name+"...", toastSuccess)
 	cmd2 := func() tea.Msg {
-		err := registry.Sync(name)
+		_, err := registry.Sync(name)
 		return registrySyncDoneMsg{name: name, err: err}
 	}
 	return a, tea.Batch(cmd1, tea.Cmd(cmd2))
