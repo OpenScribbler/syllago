@@ -571,16 +571,42 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 
 	// Plain git registry.
 	fmt.Fprintf(output.Writer, "Syncing %s...\n", r.Name)
+	var outcome registry.GitSyncOutcome
 	if justCloned {
 		// Deferred first clone just landed: run the clone-dependent content
 		// discovery that `add` deferred for register-only registries.
 		finalizeDeferredClone(r.Name)
-	} else if err := registry.Sync(r.Name); err != nil {
-		return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
+		head, err := registry.Head(r.Name)
+		if err != nil {
+			return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
+		}
+		outcome.NewHead = head
+	} else {
+		var err error
+		outcome, err = registry.Sync(r.Name)
+		if err != nil {
+			return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
+		}
+	}
+	if err := persistGitSyncBookkeeping(cfg, r, outcome.NewHead, time.Now()); err != nil {
+		return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Could not save registry sync bookkeeping", err.Error())
 	}
 	reprobeRegistryVisibility(cfg, r.Name)
 	fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
 	return 0, nil
+}
+
+func persistGitSyncBookkeeping(cfg *config.Config, r *config.Registry, head string, syncedAt time.Time) error {
+	if head == "" {
+		return fmt.Errorf("git HEAD is empty after sync")
+	}
+	now := syncedAt.UTC()
+	r.LastSyncedSHA = head
+	r.LastSyncedAt = &now
+	if err := config.SaveGlobal(cfg); err != nil {
+		return fmt.Errorf("saving registry sync bookkeeping: %w", err)
+	}
+	return nil
 }
 
 // finalizeDeferredClone runs the clone-dependent content-discovery steps that

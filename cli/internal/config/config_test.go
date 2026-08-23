@@ -1,10 +1,12 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoadMissing(t *testing.T) {
@@ -33,6 +35,80 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if len(loaded.Providers) != 2 || loaded.Providers[0] != "claude-code" {
 		t.Errorf("loaded providers = %v, want [claude-code cursor]", loaded.Providers)
+	}
+}
+
+func TestRegistryLastSyncedFieldsRoundTrip(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	syncedAt := time.Date(2026, 8, 22, 12, 34, 56, 0, time.UTC)
+	cfg := &Config{
+		Registries: []Registry{
+			{
+				Name:          "git-reg",
+				URL:           "https://example.com/git-reg.git",
+				LastSyncedSHA: "0123456789abcdef0123456789abcdef01234567",
+				LastSyncedAt:  &syncedAt,
+			},
+		},
+	}
+
+	if err := Save(tmp, cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(tmp)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(loaded.Registries) != 1 {
+		t.Fatalf("loaded %d registries, want 1", len(loaded.Registries))
+	}
+	got := loaded.Registries[0]
+	if got.LastSyncedSHA != cfg.Registries[0].LastSyncedSHA {
+		t.Errorf("LastSyncedSHA = %q, want %q", got.LastSyncedSHA, cfg.Registries[0].LastSyncedSHA)
+	}
+	if got.LastSyncedAt == nil || !got.LastSyncedAt.Equal(syncedAt) {
+		t.Errorf("LastSyncedAt = %v, want %v", got.LastSyncedAt, syncedAt)
+	}
+
+	raw, err := os.ReadFile(FilePath(tmp))
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	registries := decoded["registries"].([]any)
+	registryJSON := registries[0].(map[string]any)
+	if _, ok := registryJSON["last_synced_sha"]; !ok {
+		t.Error("saved config missing last_synced_sha")
+	}
+	if _, ok := registryJSON["last_synced_at"]; !ok {
+		t.Error("saved config missing last_synced_at")
+	}
+}
+
+func TestRegistryLastSyncedFieldsAbsentUnmarshalToZeroValues(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"registries":[{"name":"legacy","url":"https://example.com/legacy.git"}]}`), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	cfg, err := LoadFromPath(path)
+	if err != nil {
+		t.Fatalf("LoadFromPath: %v", err)
+	}
+	if len(cfg.Registries) != 1 {
+		t.Fatalf("loaded %d registries, want 1", len(cfg.Registries))
+	}
+	got := cfg.Registries[0]
+	if got.LastSyncedSHA != "" {
+		t.Errorf("LastSyncedSHA = %q, want empty", got.LastSyncedSHA)
+	}
+	if got.LastSyncedAt != nil {
+		t.Errorf("LastSyncedAt = %v, want nil", got.LastSyncedAt)
 	}
 }
 

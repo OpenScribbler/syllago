@@ -163,15 +163,41 @@ func cloneArgs(url, dir, ref string) []string {
 	return args
 }
 
-// Sync runs git pull --ff-only in the registry clone directory.
-// Returns an error if the clone does not exist or git pull fails.
-func Sync(name string) error {
+// GitSyncOutcome reports the commit movement of one git-registry sync.
+type GitSyncOutcome struct {
+	OldHead string // HEAD sha before the pull; "" if unreadable (e.g. empty repo)
+	NewHead string // HEAD sha after the pull
+}
+
+// Head returns the current HEAD sha for a git registry clone.
+func Head(name string) (string, error) {
 	if err := checkGit(); err != nil {
-		return err
+		return "", err
 	}
 	dir, err := CloneDir(name)
 	if err != nil {
-		return err
+		return "", err
+	}
+	head, err := gitHead(dir)
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse HEAD failed for %q: %w", name, err)
+	}
+	return head, nil
+}
+
+// Sync runs git pull --ff-only in the registry clone directory.
+// Returns an error if the clone does not exist or git pull fails.
+func Sync(name string) (GitSyncOutcome, error) {
+	var outcome GitSyncOutcome
+	if err := checkGit(); err != nil {
+		return outcome, err
+	}
+	dir, err := CloneDir(name)
+	if err != nil {
+		return outcome, err
+	}
+	if oldHead, err := gitHead(dir); err == nil {
+		outcome.OldHead = oldHead
 	}
 	cmd := exec.Command("git",
 		"-C", dir,
@@ -181,15 +207,35 @@ func Sync(name string) error {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
+		return outcome, fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
 	}
-	return nil
+	newHead, err := gitHead(dir)
+	if err != nil {
+		return outcome, fmt.Errorf("reading HEAD after git pull for %q: %w", name, err)
+	}
+	outcome.NewHead = newHead
+	return outcome, nil
+}
+
+func gitHead(dir string) (string, error) {
+	cmd := exec.Command("git", "-C", dir, "rev-parse", "HEAD")
+	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg != "" {
+			return "", fmt.Errorf("%w: %s", err, msg)
+		}
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // SyncResult holds the outcome of a single registry sync.
 type SyncResult struct {
-	Name string
-	Err  error
+	Name    string
+	Outcome GitSyncOutcome
+	Err     error
 }
 
 // SyncAll syncs all registries concurrently (up to 4 at a time) and returns results.
@@ -201,7 +247,8 @@ func SyncAll(names []string) []SyncResult {
 	for i, name := range names {
 		go func(i int, name string) {
 			sem <- struct{}{}
-			results[i] = SyncResult{Name: name, Err: Sync(name)}
+			outcome, err := Sync(name)
+			results[i] = SyncResult{Name: name, Outcome: outcome, Err: err}
 			<-sem
 			done <- struct{}{}
 		}(i, name)
