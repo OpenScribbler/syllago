@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
@@ -68,6 +69,17 @@ func testAppWithInstalledRule(t *testing.T) (App, catalog.ContentItem, provider.
 	app := NewApp(cat, []provider.Provider{prov}, "0.0.0-test", false, nil, testConfig(), false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	return m.(App), item, prov
+}
+
+func assertCurrentToastMessage(t *testing.T, app App, want string) {
+	t.Helper()
+	cur := app.toast.Current()
+	if cur == nil {
+		t.Fatalf("toast.Current() = nil; want %q", want)
+	}
+	if cur.message != want {
+		t.Fatalf("toast message = %q; want %q", cur.message, want)
+	}
 }
 
 // TestHandleInstall_AcceptsUndetectedProviders verifies that the install wizard
@@ -218,6 +230,73 @@ func TestActions_HandleInstallAllDone_EmptyName(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("expected cmd when itemName empty (default to \"item\")")
 	}
+}
+
+func TestSyncDiffSummary(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		diff *regdiff.Diff
+		want string
+	}{
+		{name: "nil", diff: nil, want: ""},
+		{name: "empty", diff: &regdiff.Diff{}, want: ""},
+		{name: "only-other-paths", diff: &regdiff.Diff{OtherPaths: []string{"README.md"}}, want: ""},
+		{
+			name: "adds-only",
+			diff: &regdiff.Diff{Changes: []regdiff.ItemChange{
+				{Kind: regdiff.KindAdded},
+				{Kind: regdiff.KindAdded},
+			}},
+			want: "2 upstream change(s) (+2)",
+		},
+		{
+			name: "mixed",
+			diff: &regdiff.Diff{Changes: []regdiff.ItemChange{
+				{Kind: regdiff.KindAdded},
+				{Kind: regdiff.KindModified},
+				{Kind: regdiff.KindRemoved},
+				{Kind: regdiff.Kind("renamed")},
+			}},
+			want: "4 upstream change(s) (+1 ~2 -1)",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := syncDiffSummary(tc.diff); got != tc.want {
+				t.Fatalf("syncDiffSummary() = %q; want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestHandleSyncDone_WithDiffSummary(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	app.registryOpInProgress = true
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindAdded},
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleSyncDone(registrySyncDoneMsg{name: "test-reg", diff: diff})
+	a := m.(App)
+
+	if a.registryOpInProgress {
+		t.Fatal("registryOpInProgress should clear on success")
+	}
+	assertCurrentToastMessage(t, a, "Synced test-reg: 2 upstream change(s) (+1 ~1)")
+}
+
+func TestHandleSyncDone_NoDiffKeepsPlainToast(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+
+	m, _ := app.handleSyncDone(registrySyncDoneMsg{name: "test-reg"})
+	a := m.(App)
+
+	assertCurrentToastMessage(t, a, "Synced test-reg")
 }
 
 func TestActions_HandleRemoveResult_NotConfirmed(t *testing.T) {

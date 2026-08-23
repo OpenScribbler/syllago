@@ -20,6 +20,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
@@ -50,6 +51,10 @@ type moatSyncDoneMsg struct {
 	// stale is true when the manifest has aged past its 72h window and is
 	// not safe to extend trust from. Surfaced as a warning toast.
 	stale bool
+
+	// diff is best-effort item-level upstream change information. Nil means
+	// no changes or no comparable baseline.
+	diff *regdiff.Diff
 }
 
 // moatSyncFnTUI is the indirection point so tests can stub the end-to-end
@@ -108,5 +113,6 @@ func runMOATSync(ctx context.Context, name, projectRoot string, acceptTOFU bool)
 	return moatSyncDoneMsg{
 		name:  name,
 		stale: outcome.MoatResult.Staleness == moat.StalenessExpired,
+		diff:  outcome.Diff,
 	}
 }

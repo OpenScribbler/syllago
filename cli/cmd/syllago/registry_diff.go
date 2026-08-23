@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 )
@@ -65,32 +63,4 @@ func trimRegistryDiffName(name string) string {
 		}
 	}
 	return name
-}
-
-func gitItemRefs(regName, cloneDir string) []regdiff.ItemRef {
-	cat, err := catalog.ScanRegistriesOnly([]catalog.RegistrySource{
-		{Name: regName, Path: cloneDir},
-	})
-	if err != nil {
-		return nil
-	}
-
-	refs := make([]regdiff.ItemRef, 0, len(cat.Items))
-	for _, item := range cat.Items {
-		rel, err := filepath.Rel(cloneDir, item.Path)
-		if err != nil {
-			continue
-		}
-		cleaned := filepath.Clean(rel)
-		relSlash := filepath.ToSlash(cleaned)
-		if filepath.IsAbs(cleaned) || relSlash == ".." || strings.HasPrefix(relSlash, "../") {
-			continue
-		}
-		refs = append(refs, regdiff.ItemRef{
-			Type: string(item.Type),
-			Name: item.Name,
-			Dir:  relSlash,
-		})
-	}
-	return refs
 }

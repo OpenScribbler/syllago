@@ -24,6 +24,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 )
 
 func TestRegistryIsMOAT_True(t *testing.T) {
@@ -140,6 +141,20 @@ func TestHandleMOATSyncDone_HappyPath(t *testing.T) {
 	}
 }
 
+func TestHandleMOATSyncDone_HappyPathWithDiffSummary(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindAdded},
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleMOATSyncDone(moatSyncDoneMsg{name: "reg", diff: diff})
+	a := m.(App)
+
+	assertCurrentToastMessage(t, a, "Synced reg: 2 upstream change(s) (+1 ~1)")
+}
+
 func TestHandleMOATSyncDone_Stale(t *testing.T) {
 	t.Parallel()
 	app := testApp(t)
@@ -151,6 +166,20 @@ func TestHandleMOATSyncDone_Stale(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("stale path should still toast + rescan")
 	}
+}
+
+func TestHandleMOATSyncDone_StaleWithDiffSummary(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindAdded},
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleMOATSyncDone(moatSyncDoneMsg{name: "reg", stale: true, diff: diff})
+	a := m.(App)
+
+	assertCurrentToastMessage(t, a, "Synced (stale) reg: 2 upstream change(s) (+1 ~1)")
 }
 
 func TestHandleTOFUResult_Rejected(t *testing.T) {
