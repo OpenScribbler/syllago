@@ -20,6 +20,7 @@ package tui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -153,6 +154,34 @@ func TestHandleMOATSyncDone_HappyPathWithDiffSummary(t *testing.T) {
 	a := m.(App)
 
 	assertCurrentToastMessage(t, a, "Synced reg: 2 upstream change(s) (+1 ~1)")
+}
+
+func TestHandleMOATSyncDone_WithInstalledDriftSuffix(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleMOATSyncDone(moatSyncDoneMsg{name: "reg", diff: diff, installedDrift: 1})
+	a := m.(App)
+
+	assertCurrentToastMessage(t, a, "Synced reg: 1 upstream change(s) (~1) — 1 installed item(s) affected")
+}
+
+func TestHandleMOATSyncDone_ZeroInstalledDriftOmitsSuffix(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleMOATSyncDone(moatSyncDoneMsg{name: "reg", diff: diff})
+	a := m.(App)
+
+	if got := a.toast.Current().message; strings.Contains(got, "installed item(s) affected") {
+		t.Fatalf("toast message = %q; want no installed drift suffix", got)
+	}
 }
 
 func TestHandleMOATSyncDone_Stale(t *testing.T) {

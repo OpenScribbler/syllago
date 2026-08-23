@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
@@ -93,6 +94,65 @@ func TestInstalledGitDrift_UninstalledRegistryItemsIgnored(t *testing.T) {
 	}
 }
 
+func TestInstalledMOATDrift_MixedDrift(t *testing.T) {
+	setupInstalledMOATDriftTest(t)
+	saveDriftInstallStore(t,
+		driftRecord("test-reg", "skills", "foo", "", "claude-code"),
+		driftRecord("test-reg", "rules", "bar", "", "claude-code", "cursor"),
+	)
+
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Type: "skills", Name: "foo", Kind: regdiff.KindModified},
+		{Type: "rules", Name: "bar", Kind: regdiff.KindRemoved},
+		{Type: "skills", Name: "baz", Kind: regdiff.KindAdded},
+		{Type: "skills", Name: "tracked", Kind: regdiff.KindModified},
+	}}
+
+	got := InstalledMOATDrift("test-reg", diff)
+	want := []InstalledDrift{
+		{
+			Registry:  "test-reg",
+			Type:      "rules",
+			Name:      "bar",
+			Kind:      DriftMissing,
+			Providers: []string{"claude-code", "cursor"},
+		},
+		{
+			Registry:  "test-reg",
+			Type:      "skills",
+			Name:      "foo",
+			Kind:      DriftChanged,
+			Providers: []string{"claude-code"},
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("InstalledMOATDrift() = %#v; want %#v", got, want)
+	}
+}
+
+func TestInstalledMOATDrift_NilOrEmptyDiff(t *testing.T) {
+	setupInstalledMOATDriftTest(t)
+	saveDriftInstallStore(t, driftRecord("test-reg", "skills", "foo", "", "claude-code"))
+
+	if got := InstalledMOATDrift("test-reg", nil); got != nil {
+		t.Fatalf("InstalledMOATDrift(nil) = %#v; want nil", got)
+	}
+	if got := InstalledMOATDrift("test-reg", &regdiff.Diff{}); got != nil {
+		t.Fatalf("InstalledMOATDrift(empty diff) = %#v; want nil", got)
+	}
+}
+
+func TestInstalledMOATDrift_NoRecords(t *testing.T) {
+	setupInstalledMOATDriftTest(t)
+
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Type: "skills", Name: "foo", Kind: regdiff.KindModified},
+	}}
+	if got := InstalledMOATDrift("test-reg", diff); got != nil {
+		t.Fatalf("InstalledMOATDrift() with no records = %#v; want nil", got)
+	}
+}
+
 type installedGitDriftTestEnv struct {
 	cacheDir  string
 	globalDir string
@@ -120,6 +180,15 @@ func setupInstalledGitDriftTest(t *testing.T) installedGitDriftTestEnv {
 	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
 
 	return env
+}
+
+func setupInstalledMOATDriftTest(t *testing.T) string {
+	t.Helper()
+	configDir := t.TempDir()
+	origConfig := config.GlobalDirOverride
+	config.GlobalDirOverride = configDir
+	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
+	return configDir
 }
 
 func (e installedGitDriftTestEnv) cloneDir(registryName string) string {

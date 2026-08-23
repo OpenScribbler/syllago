@@ -12,6 +12,13 @@ import (
 
 const registryDiffChangeLimit = 20
 
+type installedDriftHintMode int
+
+const (
+	gitDriftHints installedDriftHintMode = iota
+	moatDriftHints
+)
+
 // printRegistryDiff renders an item-level change summary for one registry
 // sync. No-op when d is nil, d.OldRef is empty (no baseline - first sync
 // would list every item as added), d.UpToDate, or there are no changes.
@@ -46,7 +53,7 @@ func printRegistryDiffLines(w io.Writer, d *regdiff.Diff) {
 	}
 }
 
-func printInstalledDrift(w io.Writer, drifts []registryops.InstalledDrift) {
+func printInstalledDrift(w io.Writer, drifts []registryops.InstalledDrift, hints installedDriftHintMode) {
 	if output.JSON || output.Quiet || len(drifts) == 0 {
 		return
 	}
@@ -55,7 +62,12 @@ func printInstalledDrift(w io.Writer, drifts []registryops.InstalledDrift) {
 	for _, drift := range drifts {
 		switch drift.Kind {
 		case registryops.DriftChanged:
-			fmt.Fprintf(w, "  ~ %s/%s changed upstream — refresh: syllago add %s --from %s --force\n", drift.Type, drift.Name, drift.Name, drift.Registry)
+			switch hints {
+			case moatDriftHints:
+				fmt.Fprintf(w, "  ~ %s/%s changed upstream — refresh: syllago install %s/%s\n", drift.Type, drift.Name, drift.Registry, drift.Name)
+			default:
+				fmt.Fprintf(w, "  ~ %s/%s changed upstream — refresh: syllago add %s --from %s --force\n", drift.Type, drift.Name, drift.Name, drift.Registry)
+			}
 		case registryops.DriftMissing:
 			fmt.Fprintf(w, "  ! %s/%s no longer in registry%s — remove: syllago remove %s\n", drift.Type, drift.Name, installedDriftProviderText(drift.Providers), drift.Name)
 		}

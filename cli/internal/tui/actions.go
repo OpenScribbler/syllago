@@ -403,9 +403,10 @@ type registryAddDoneMsg struct {
 
 // registrySyncDoneMsg is sent when a registry sync operation completes.
 type registrySyncDoneMsg struct {
-	name string
-	err  error
-	diff *regdiff.Diff
+	name           string
+	err            error
+	diff           *regdiff.Diff
+	installedDrift int
 }
 
 // registryRemoveDoneMsg is sent when a registry remove operation completes.
@@ -578,8 +579,11 @@ func (a App) doGitSyncCmd(name string) tea.Cmd {
 	return func() tea.Msg {
 		outcome, err := registry.Sync(name)
 		msg := registrySyncDoneMsg{name: name, err: err}
-		if err == nil && outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
-			msg.diff = registryops.GitSyncDiff(name, outcome.OldHead, outcome.NewHead)
+		if err == nil {
+			msg.installedDrift = len(registryops.InstalledGitDrift(name))
+			if outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
+				msg.diff = registryops.GitSyncDiff(name, outcome.OldHead, outcome.NewHead)
+			}
 		}
 		return msg
 	}
@@ -627,6 +631,9 @@ func (a App) handleMOATSyncDone(msg moatSyncDoneMsg) (tea.Model, tea.Cmd) {
 	if summary := syncDiffSummary(msg.diff); summary != "" {
 		text += ": " + summary
 	}
+	if msg.installedDrift > 0 {
+		text += fmt.Sprintf(" — %d installed item(s) affected", msg.installedDrift)
+	}
 	cmd1 := a.toast.Push(text, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
@@ -642,6 +649,9 @@ func (a App) handleSyncDone(msg registrySyncDoneMsg) (tea.Model, tea.Cmd) {
 	text := "Synced " + msg.name
 	if summary := syncDiffSummary(msg.diff); summary != "" {
 		text += ": " + summary
+	}
+	if msg.installedDrift > 0 {
+		text += fmt.Sprintf(" — %d installed item(s) affected", msg.installedDrift)
 	}
 	cmd1 := a.toast.Push(text, toastSuccess)
 	cmd2 := a.rescanCatalog()

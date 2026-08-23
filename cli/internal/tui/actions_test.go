@@ -289,6 +289,19 @@ func TestHandleSyncDone_WithDiffSummary(t *testing.T) {
 	assertCurrentToastMessage(t, a, "Synced test-reg: 2 upstream change(s) (+1 ~1)")
 }
 
+func TestHandleSyncDone_WithInstalledDriftSuffix(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleSyncDone(registrySyncDoneMsg{name: "test-reg", diff: diff, installedDrift: 2})
+	a := m.(App)
+
+	assertCurrentToastMessage(t, a, "Synced test-reg: 1 upstream change(s) (~1) — 2 installed item(s) affected")
+}
+
 func TestHandleSyncDone_NoDiffKeepsPlainToast(t *testing.T) {
 	t.Parallel()
 	app := testApp(t)
@@ -297,6 +310,21 @@ func TestHandleSyncDone_NoDiffKeepsPlainToast(t *testing.T) {
 	a := m.(App)
 
 	assertCurrentToastMessage(t, a, "Synced test-reg")
+}
+
+func TestHandleSyncDone_ZeroInstalledDriftOmitsSuffix(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	diff := &regdiff.Diff{Changes: []regdiff.ItemChange{
+		{Kind: regdiff.KindModified},
+	}}
+
+	m, _ := app.handleSyncDone(registrySyncDoneMsg{name: "test-reg", diff: diff})
+	a := m.(App)
+
+	if got := a.toast.Current().message; strings.Contains(got, "installed item(s) affected") {
+		t.Fatalf("toast message = %q; want no installed drift suffix", got)
+	}
 }
 
 func TestActions_HandleRemoveResult_NotConfirmed(t *testing.T) {
