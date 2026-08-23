@@ -62,6 +62,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	if globalDir == "" {
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment")
 	}
+	projectRoot, _ := findProjectRoot()
 
 	// Use an empty temp dir as the project root so the project scan finds
 	// nothing, leaving only global items in the catalog.
@@ -105,7 +106,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	installedByProvider := make(map[string]bool)
 	var installedIn []string
 	for _, prov := range provider.AllProviders {
-		if installer.CheckStatus(item, prov, globalDir) == installer.StatusInstalled {
+		if installer.CheckStatus(item, prov, projectRoot) == installer.StatusInstalled {
 			installedIn = append(installedIn, prov.Name)
 			installedByProvider[prov.Slug] = true
 		}
@@ -152,10 +153,10 @@ func runRemove(cmd *cobra.Command, args []string) error {
 
 	var uninstalledFrom []string
 	for _, prov := range provider.AllProviders {
-		if installer.CheckStatus(item, prov, globalDir) != installer.StatusInstalled {
+		if installer.CheckStatus(item, prov, projectRoot) != installer.StatusInstalled {
 			continue
 		}
-		placement, err := installer.Uninstall(item, prov, globalDir)
+		placement, err := installer.Uninstall(item, prov, projectRoot)
 		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
 		} else {

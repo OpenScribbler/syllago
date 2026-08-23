@@ -150,6 +150,93 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 	}
 }
 
+func TestUninstallHook_LegacyRootFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(legacyRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	settingsPath := filepath.Join(tmpDir, "settings.json")
+	if err := os.WriteFile(settingsPath, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	overrideHookSettingsPath(t, settingsPath)
+
+	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-hook", "PreToolUse", "Bash", "echo legacy")
+	prov := provider.ClaudeCode
+
+	if _, err := installHook(item, prov, legacyRoot); err != nil {
+		t.Fatalf("seed legacy installHook: %v", err)
+	}
+	if _, err := uninstallHook(item, prov, projectRoot); err != nil {
+		t.Fatalf("uninstallHook with legacy root fallback: %v", err)
+	}
+
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if gjson.GetBytes(data, "hooks.PreToolUse.0").Exists() {
+		t.Fatalf("legacy hook was not removed from settings: %s", data)
+	}
+
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled(legacyRoot): %v", err)
+	}
+	if inst.FindHook("legacy-hook", "PreToolUse") >= 0 {
+		t.Fatal("legacy hook record was not removed")
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
+		t.Fatalf("project installed.json should not be created, stat err = %v", err)
+	}
+}
+
+func TestCheckHookStatus_LegacyRootFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(legacyRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	settingsPath := filepath.Join(tmpDir, "settings.json")
+	if err := os.WriteFile(settingsPath, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	overrideHookSettingsPath(t, settingsPath)
+
+	prov := provider.ClaudeCode
+	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-status-hook", "PreToolUse", "Bash", "echo status")
+	if _, err := installHook(item, prov, legacyRoot); err != nil {
+		t.Fatalf("seed legacy installHook: %v", err)
+	}
+	if status := CheckStatus(item, prov, projectRoot); status != StatusInstalled {
+		t.Fatalf("CheckStatus with legacy hook record = %v, want StatusInstalled", status)
+	}
+
+	missing := writeCanonicalHookItemInProject(t, projectRoot, "missing-status-hook", "PreToolUse", "Bash", "echo missing")
+	if status := CheckStatus(missing, prov, projectRoot); status != StatusNotInstalled {
+		t.Fatalf("CheckStatus without any record = %v, want StatusNotInstalled", status)
+	}
+}
+
 func TestReadSingleManifestHook_Valid(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -362,6 +449,51 @@ func TestInstallHook_RejectsDuplicate(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "already installed") {
 		t.Errorf("expected 'already installed' error, got: %v", err)
+	}
+}
+
+func TestInstallHook_DeduplicatesAgainstLegacyRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(legacyRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	settingsPath := filepath.Join(tmpDir, "settings.json")
+	if err := os.WriteFile(settingsPath, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	overrideHookSettingsPath(t, settingsPath)
+
+	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-dup-hook", "PreToolUse", "Bash", "echo dup")
+	prov := provider.ClaudeCode
+
+	if _, err := installHook(item, prov, legacyRoot); err != nil {
+		t.Fatalf("seed legacy installHook: %v", err)
+	}
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err == nil {
+		t.Fatal("expected duplicate install to be rejected via legacy root record")
+	} else if !strings.Contains(err.Error(), "already installed") {
+		t.Fatalf("duplicate error = %v, want already installed", err)
+	}
+
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	if entries := gjson.GetBytes(data, "hooks.PreToolUse").Array(); len(entries) != 1 {
+		t.Fatalf("expected one hook entry after dedup, got %d: %s", len(entries), data)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
+		t.Fatalf("project installed.json should not be created by rejected duplicate, stat err = %v", err)
 	}
 }
 

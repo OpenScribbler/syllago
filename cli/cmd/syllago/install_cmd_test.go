@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -343,6 +344,52 @@ func TestInstallAllInstallsEverything(t *testing.T) {
 	out := stdout.String()
 	if !strings.Contains(out, "my-skill") {
 		t.Errorf("expected 'my-skill' in output, got: %s", out)
+	}
+}
+
+func TestInstallMCPRunERecordsAtProjectRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	globalDir := filepath.Join(tmpDir, "global-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(filepath.Join(globalDir, "mcp", "cli-root-mcp"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(globalDir, "mcp", "cli-root-mcp", "config.json"), []byte(`{"command":"node","args":["server.js"]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectRoot, ".syllago", "config.json"), []byte(`{"providers":[]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	withGlobalLibrary(t, globalDir)
+	withFakeRepoRoot(t, projectRoot)
+	origCfgDir := config.GlobalDirOverride
+	config.GlobalDirOverride = filepath.Join(tmpDir, "global-config")
+	t.Cleanup(func() { config.GlobalDirOverride = origCfgDir })
+
+	_, _ = output.SetForTest(t)
+
+	installCmd.Flags().Set("to", "cursor")
+	defer installCmd.Flags().Set("to", "")
+	installCmd.Flags().Set("type", "mcp")
+	defer installCmd.Flags().Set("type", "")
+
+	if err := installCmd.RunE(installCmd, []string{"cli-root-mcp"}); err != nil {
+		t.Fatalf("install RunE: %v", err)
+	}
+
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled(projectRoot): %v", err)
+	}
+	if inst.FindMCPByServerKey("cli-root-mcp", "cli-root-mcp") < 0 {
+		t.Fatal("expected MCP install record under project root")
+	}
+	if _, err := os.Stat(filepath.Join(globalDir, ".syllago", "installed.json")); !os.IsNotExist(err) {
+		t.Fatalf("global installed.json should not be created, stat err = %v", err)
 	}
 }
 

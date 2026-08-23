@@ -316,7 +316,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Installing %d items to %s...\n", len(items), prov.Name)
 	}
 
-	result, _ := installToProvider(items, *prov, globalDir, method, dryRun, resolver, toSlug, projectRoot)
+	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot)
 
 	if output.JSON {
 		output.Print(result)
@@ -343,7 +343,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 func installToProvider(
 	items []catalog.ContentItem,
 	prov provider.Provider,
-	globalDir string,
 	method installer.InstallMethod,
 	dryRun bool,
 	resolver *config.PathResolver,
@@ -376,7 +375,7 @@ func installToProvider(
 			continue
 		}
 
-		placement, err := installer.InstallWithResolver(item, prov, globalDir, method, resolver)
+		placement, err := installer.InstallWithResolver(item, prov, projectRoot, method, resolver)
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {
@@ -572,7 +571,7 @@ func runInstallToAll(
 			fmt.Fprintf(output.Writer, "→ %s\n", prov.Name)
 		}
 
-		result, _ := installToProvider(items, prov, globalDir, method, dryRun, resolver, prov.Slug, projectRoot)
+		result, _ := installToProvider(items, prov, method, dryRun, resolver, prov.Slug, projectRoot)
 
 		pr := providerInstallResult{
 			Provider: prov.Name,

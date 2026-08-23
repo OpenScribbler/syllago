@@ -326,10 +326,6 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return Placement{}, err
 	}
 
-	if err := backupFile(cfgPath); err != nil {
-		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
-	}
-
 	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
 		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
@@ -339,6 +335,9 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
+	}
+	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries); ok {
+		return Placement{}, fmt.Errorf("MCP server %q already installed", serverName)
 	}
 
 	// Merge each server entry into the target config
@@ -353,22 +352,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		// H2: Check for collision with user-defined (non-syllago) server keys
 		if gjson.GetBytes(fileData, key).Exists() {
 			// Check if this key was installed by syllago (safe to overwrite)
-			syllagoManaged := false
-			for _, m := range inst.MCP {
-				if m.ServerKey == name {
-					syllagoManaged = true
-					break
-				}
-				for _, sn := range m.ServerNames {
-					if sn == name {
-						syllagoManaged = true
-						break
-					}
-				}
-				if syllagoManaged {
-					break
-				}
-			}
+			syllagoManaged := mcpServerManagedBy(inst, name)
 			if !syllagoManaged {
 				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
 			}
@@ -380,6 +364,10 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		}
 		serverNames = append(serverNames, name)
 		keys = append(keys, key)
+	}
+
+	if err := backupFile(cfgPath); err != nil {
+		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
 	if err := writeJSONFile(cfgPath, fileData); err != nil {
@@ -419,6 +407,10 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 }
 
 func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+	return uninstallMCPAtRoot(item, prov, repoRoot, true)
+}
+
+func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string, allowLegacyFallback bool) (Placement, error) {
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
 		return Placement{}, err
@@ -438,14 +430,13 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 	}
 
 	// Try per-server lookup first (new format), then legacy bulk lookup.
-	instIdx := -1
-	if item.ServerKey != "" {
-		instIdx = inst.FindMCPByServerKey(item.Name, item.ServerKey)
-	}
+	instIdx := findMCPInstallRecord(inst, item)
 	if instIdx < 0 {
-		instIdx = inst.FindMCP(item.Name)
-	}
-	if instIdx < 0 {
+		if allowLegacyFallback {
+			if legacyRoot := legacyRootWithMCPRecord(repoRoot, item); legacyRoot != "" {
+				return uninstallMCPAtRoot(item, prov, legacyRoot, false)
+			}
+		}
 		return Placement{}, fmt.Errorf("%s was not installed by syllago", item.Name)
 	}
 
@@ -499,6 +490,19 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 }
 
 func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+	status := checkMCPStatusAtRoot(item, prov, repoRoot)
+	if status != StatusNotInstalled {
+		return status
+	}
+	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
+		if legacyStatus := checkMCPStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
+			return StatusInstalled
+		}
+	}
+	return status
+}
+
+func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
 		return StatusNotAvailable
@@ -542,4 +546,62 @@ func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot s
 		return StatusInstalled
 	}
 	return StatusNotInstalled
+}
+
+func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage) (string, bool) {
+	legacyRoot := legacyInstalledRoot(repoRoot)
+	if legacyRoot == "" {
+		return "", false
+	}
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		return "", false
+	}
+	if findMCPInstallRecord(inst, item) >= 0 {
+		return item.Name, true
+	}
+	for name := range entries {
+		if mcpServerManagedBy(inst, name) {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem) string {
+	legacyRoot := legacyInstalledRoot(repoRoot)
+	if legacyRoot == "" {
+		return ""
+	}
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		return ""
+	}
+	if findMCPInstallRecord(inst, item) < 0 {
+		return ""
+	}
+	return legacyRoot
+}
+
+func findMCPInstallRecord(inst *Installed, item catalog.ContentItem) int {
+	if item.ServerKey != "" {
+		if idx := inst.FindMCPByServerKey(item.Name, item.ServerKey); idx >= 0 {
+			return idx
+		}
+	}
+	return inst.FindMCP(item.Name)
+}
+
+func mcpServerManagedBy(inst *Installed, serverName string) bool {
+	for _, m := range inst.MCP {
+		if m.ServerKey == serverName {
+			return true
+		}
+		for _, sn := range m.ServerNames {
+			if sn == serverName {
+				return true
+			}
+		}
+	}
+	return false
 }

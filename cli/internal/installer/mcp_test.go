@@ -228,6 +228,50 @@ func TestInstallMCP_Cursor_ProductionPath(t *testing.T) {
 	}
 }
 
+func TestInstallMCP_Cursor_RootsConfigAndRecordAtProjectRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	itemDir := filepath.Join(tmpDir, "cursor-mcp")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	configJSON, _ := json.Marshal(map[string]interface{}{
+		"command": "npx",
+		"args":    []string{"-y", "@example/project-root"},
+	})
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "project-root-mcp", Type: catalog.MCP, Path: itemDir}
+	prov := provider.Cursor
+
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	cfgPath := filepath.Join(projectRoot, ".cursor", "mcp.json")
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatalf("expected cursor MCP config at project root: %v", err)
+	}
+	if got := gjson.GetBytes(data, "mcpServers.project-root-mcp.command").String(); got != "npx" {
+		t.Errorf("mcpServers.project-root-mcp.command = %q, want npx", got)
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled(projectRoot): %v", err)
+	}
+	if inst.FindMCP("project-root-mcp") < 0 {
+		t.Fatal("expected MCP record under project root")
+	}
+}
+
 // TestInstallMCP_Windsurf_ProductionPath exercises slug=windsurf without
 // the test seam. Windsurf's MCP config lives at the user's home dir, so the
 // test has to HOME-swap to avoid polluting the real developer machine.
@@ -721,6 +765,142 @@ func TestCheckMCPStatus_NotInstalled(t *testing.T) {
 	status := checkMCPStatus(item, prov, tmpDir)
 	if status != StatusNotInstalled {
 		t.Errorf("expected StatusNotInstalled, got %v", status)
+	}
+}
+
+func TestUninstallMCP_LegacyRootFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(filepath.Join(legacyRoot, ".cursor"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	legacyConfig := filepath.Join(legacyRoot, ".cursor", "mcp.json")
+	if err := os.WriteFile(legacyConfig, []byte(`{"mcpServers":{"legacy-mcp":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{
+		MCP: []InstalledMCP{{Name: "legacy-mcp", ServerKey: "legacy-mcp", Source: "export"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "legacy-mcp", Type: catalog.MCP, ServerKey: "legacy-mcp"}
+	prov := provider.Cursor
+
+	if _, err := Uninstall(item, prov, projectRoot); err != nil {
+		t.Fatalf("Uninstall with legacy root fallback: %v", err)
+	}
+
+	data, err := os.ReadFile(legacyConfig)
+	if err != nil {
+		t.Fatalf("read legacy config: %v", err)
+	}
+	if gjson.GetBytes(data, "mcpServers.legacy-mcp").Exists() {
+		t.Fatalf("legacy MCP server was not removed: %s", data)
+	}
+
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled(legacyRoot): %v", err)
+	}
+	if inst.FindMCPByServerKey("legacy-mcp", "legacy-mcp") >= 0 {
+		t.Fatal("legacy MCP record was not removed")
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
+		t.Fatalf("project installed.json should not be created, stat err = %v", err)
+	}
+}
+
+func TestCheckMCPStatus_LegacyRootFallback(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(filepath.Join(legacyRoot, ".cursor"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	legacyConfig := filepath.Join(legacyRoot, ".cursor", "mcp.json")
+	if err := os.WriteFile(legacyConfig, []byte(`{"mcpServers":{"legacy-status":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{
+		MCP: []InstalledMCP{{Name: "legacy-status", ServerKey: "legacy-status", Source: "export"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	prov := provider.Cursor
+	item := catalog.ContentItem{Name: "legacy-status", Type: catalog.MCP, ServerKey: "legacy-status"}
+	if status := CheckStatus(item, prov, projectRoot); status != StatusInstalled {
+		t.Fatalf("CheckStatus with legacy record = %v, want StatusInstalled", status)
+	}
+
+	missing := catalog.ContentItem{Name: "missing-status", Type: catalog.MCP, ServerKey: "missing-status"}
+	if status := CheckStatus(missing, prov, projectRoot); status != StatusNotInstalled {
+		t.Fatalf("CheckStatus without any record = %v, want StatusNotInstalled", status)
+	}
+}
+
+func TestInstallMCP_DeduplicatesAgainstLegacyRoot(t *testing.T) {
+	tmpDir := t.TempDir()
+	legacyRoot := filepath.Join(tmpDir, "legacy-content")
+	projectRoot := filepath.Join(tmpDir, "project")
+	if err := os.MkdirAll(filepath.Join(legacyRoot, ".cursor"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	origGlobal := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = legacyRoot
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	legacyConfig := filepath.Join(legacyRoot, ".cursor", "mcp.json")
+	if err := os.WriteFile(legacyConfig, []byte(`{"mcpServers":{"legacy-dup":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{
+		MCP: []InstalledMCP{{Name: "legacy-dup", ServerKey: "legacy-dup", Source: "export"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	itemDir := filepath.Join(tmpDir, "legacy-dup")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"command":"node"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	item := catalog.ContentItem{Name: "legacy-dup", Type: catalog.MCP, Path: itemDir, ServerKey: "legacy-dup"}
+	prov := provider.Cursor
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err == nil {
+		t.Fatal("expected duplicate MCP install to be rejected via legacy root record")
+	}
+
+	if _, err := os.Stat(filepath.Join(projectRoot, ".cursor", "mcp.json")); !os.IsNotExist(err) {
+		t.Fatalf("project MCP config should not be created by rejected duplicate, stat err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
+		t.Fatalf("project installed.json should not be created by rejected duplicate, stat err = %v", err)
 	}
 }
 
