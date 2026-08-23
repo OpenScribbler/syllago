@@ -18,7 +18,7 @@ func TestRegistrySync_PersistsGitLastSyncBookkeeping(t *testing.T) {
 		t.Skip("git binary not available")
 	}
 
-	bare := createBareGitRegistryForSyncTest(t)
+	bare, work, branch := createBareGitRegistryForSyncTest(t)
 	cfg := &config.Config{
 		Providers: []string{"claude-code"},
 		Registries: []config.Registry{
@@ -26,7 +26,7 @@ func TestRegistrySync_PersistsGitLastSyncBookkeeping(t *testing.T) {
 		},
 	}
 	withRegistryProjectAndCache(t, nil, cfg)
-	output.SetForTest(t)
+	stdout, _ := output.SetForTest(t)
 	overrideProbe(t, func(url string) (string, error) {
 		return registry.VisibilityPublic, nil
 	})
@@ -63,11 +63,26 @@ func TestRegistrySync_PersistsGitLastSyncBookkeeping(t *testing.T) {
 	if got.LastSyncedAt.Before(before) || got.LastSyncedAt.After(after) {
 		t.Errorf("LastSyncedAt = %v, want between %v and %v", got.LastSyncedAt, before, after)
 	}
+
+	updateBareGitRegistryForSyncDiffTest(t, work, bare, branch)
+	stdout.Reset()
+	if err := registrySyncCmd.RunE(registrySyncCmd, []string{"git-sync-bookkeeping"}); err != nil {
+		t.Fatalf("second registry sync: %v", err)
+	}
+	gotOut := stdout.String()
+	syncedLine := "Synced: git-sync-bookkeeping\n"
+	diffBlock := "Changes since last sync:\n" +
+		"  - agents/old-agent\n" +
+		"  ~ rules/updated-rule\n" +
+		"  + skills/new-thing\n"
+	if !strings.Contains(gotOut, syncedLine+diffBlock) {
+		t.Fatalf("second sync output = %q; want Synced line followed by diff block %q", gotOut, diffBlock)
+	}
 }
 
-func createBareGitRegistryForSyncTest(t *testing.T) string {
+func createBareGitRegistryForSyncTest(t *testing.T) (bare, work, branch string) {
 	t.Helper()
-	work := filepath.Join(t.TempDir(), "work")
+	work = filepath.Join(t.TempDir(), "work")
 	if err := os.MkdirAll(work, 0755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
@@ -77,12 +92,38 @@ func createBareGitRegistryForSyncTest(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(work, "registry.yaml"), []byte("name: git-sync-bookkeeping\nversion: \"1.0\"\n"), 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
+	writeRepoFileForSyncTest(t, work, "agents/old-agent/AGENT.md", "# Old Agent\n")
+	writeRepoFileForSyncTest(t, work, "rules/claude-code/updated-rule.md", "# Updated Rule\n")
 	gitRunForSyncTest(t, work, "add", "-A")
 	gitRunForSyncTest(t, work, "commit", "-m", "initial")
+	branch = gitOutputForSyncTest(t, work, "branch", "--show-current")
 
-	bare := filepath.Join(t.TempDir(), "registry.git")
+	bare = filepath.Join(t.TempDir(), "registry.git")
 	gitRunForSyncTest(t, "", "clone", "--bare", work, bare)
-	return bare
+	return bare, work, branch
+}
+
+func updateBareGitRegistryForSyncDiffTest(t *testing.T, work, bare, branch string) {
+	t.Helper()
+	if err := os.RemoveAll(filepath.Join(work, "agents", "old-agent")); err != nil {
+		t.Fatalf("remove old-agent: %v", err)
+	}
+	writeRepoFileForSyncTest(t, work, "rules/claude-code/updated-rule.md", "# Updated Rule\n\nv2\n")
+	writeRepoFileForSyncTest(t, work, "skills/new-thing/SKILL.md", "# New Thing\n")
+	gitRunForSyncTest(t, work, "add", "-A")
+	gitRunForSyncTest(t, work, "commit", "-m", "update content")
+	gitRunForSyncTest(t, work, "push", bare, "HEAD:refs/heads/"+branch)
+}
+
+func writeRepoFileForSyncTest(t *testing.T, repoDir, rel, contents string) {
+	t.Helper()
+	path := filepath.Join(repoDir, filepath.FromSlash(rel))
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("MkdirAll %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
+		t.Fatalf("WriteFile %s: %v", rel, err)
+	}
 }
 
 func gitRunForSyncTest(t *testing.T, dir string, args ...string) {

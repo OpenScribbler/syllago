@@ -134,6 +134,7 @@ func syncMOATRegistry(
 		fmt.Fprintf(out, "Synced: %s (verified, revocations+%d, private=%d)\n",
 			reg.Name, res.RevocationsAdded, res.PrivateContentCount)
 	}
+	printRegistryDiff(out, outcome.Diff)
 
 	for _, w := range outcome.ContentCacheReport.Warnings {
 		fmt.Fprintf(errW, "Warning: %s\n", w)
