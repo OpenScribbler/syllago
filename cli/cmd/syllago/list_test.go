@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/ccplugin"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -26,6 +27,9 @@ func isolateListEnv(t *testing.T) {
 	origCache := registry.CacheDirOverride
 	registry.CacheDirOverride = t.TempDir()
 	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+	origLoadPlugins := loadCCPlugins
+	loadCCPlugins = func() ([]ccplugin.Plugin, error) { return nil, nil }
+	t.Cleanup(func() { loadCCPlugins = origLoadPlugins })
 }
 
 // setupListRepo creates a temp syllago repo with items across types and sources.

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-21T21:26:09Z",
+  "generatedAt": "2026-08-23T00:25:37Z",
   "syllagoVersion": "0.14.0",
   "commands": [
     {
@@ -1708,7 +1708,7 @@
           "type": "string",
           "default": "all",
           "required": false,
-          "description": "Filter by source: library, shared, registry, builtin, all"
+          "description": "Filter by source: library, shared, registry, builtin, plugin, all"
         },
         {
           "name": "--type",

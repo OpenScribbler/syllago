@@ -179,7 +179,7 @@ func filterByState(item catalog.ContentItem, states []string) bool {
 }
 
 // filterBySource returns true if the item matches the given source filter.
-// Valid source values: "library", "shared", "registry", "builtin", "all".
+// Valid source values: "library", "shared", "registry", "builtin", "plugin", "all".
 func filterBySource(item catalog.ContentItem, source string) bool {
 	switch source {
 	case "library":
@@ -190,6 +190,8 @@ func filterBySource(item catalog.ContentItem, source string) bool {
 		return item.Registry != ""
 	case "builtin":
 		return item.IsBuiltin()
+	case "plugin":
+		return false
 	case "all":
 		return true
 	default:
