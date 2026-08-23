@@ -68,6 +68,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	if globalDir == "" {
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
+	projectRoot, _ := findProjectRoot()
 
 	// D7 routing: if installed.json has a matching RuleAppend record, the
 	// rule was installed via --method=append and the uninstall must route
@@ -117,7 +118,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
 		}
 		// Verify it is actually installed there
-		status := installer.CheckStatus(*item, *prov, globalDir)
+		status := installer.CheckStatus(*item, *prov, projectRoot)
 		if status != installer.StatusInstalled {
 			return output.NewStructuredError(output.ErrInstallNotInstalled,
 				fmt.Sprintf("%q is not installed in %s", name, prov.Name),
@@ -127,7 +128,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	} else {
 		// Uninstall from all providers where it is currently installed
 		for _, prov := range provider.AllProviders {
-			status := installer.CheckStatus(*item, prov, globalDir)
+			status := installer.CheckStatus(*item, prov, projectRoot)
 			if status == installer.StatusInstalled {
 				targets = append(targets, prov)
 			}
@@ -168,7 +169,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Perform uninstall
 	var removedFrom []string
 	for _, prov := range targets {
-		placement, err := installer.Uninstall(*item, prov, globalDir)
+		placement, err := installer.Uninstall(*item, prov, projectRoot)
 		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
 			continue

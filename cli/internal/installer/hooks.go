@@ -126,6 +126,9 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if inst.FindHook(item.Name, nativeEvent) >= 0 {
 		return Placement{}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
+	if hookInstalledAtLegacyRoot(repoRoot, item.Name, nativeEvent) {
+		return Placement{}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+	}
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
@@ -180,6 +183,10 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 }
 
 func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+	return uninstallHookAtRoot(item, prov, repoRoot, true)
+}
+
+func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string, allowLegacyFallback bool) (Placement, error) {
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
 		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
@@ -208,6 +215,11 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 	}
 	instIdx := inst.FindHook(item.Name, nativeEvent)
 	if instIdx < 0 {
+		if allowLegacyFallback {
+			if legacyRoot := legacyRootWithHookRecord(repoRoot, item.Name, nativeEvent); legacyRoot != "" {
+				return uninstallHookAtRoot(item, prov, legacyRoot, false)
+			}
+		}
 		return Placement{}, fmt.Errorf("hook %s not tracked for %s event (not installed by syllago)", item.Name, nativeEvent)
 	}
 	storedHash := inst.Hooks[instIdx].GroupHash
@@ -273,6 +285,19 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 }
 
 func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+	status := checkHookStatusAtRoot(item, prov, repoRoot)
+	if status != StatusNotInstalled {
+		return status
+	}
+	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
+		if legacyStatus := checkHookStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
+			return StatusInstalled
+		}
+	}
+	return status
+}
+
+func checkHookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
 		return StatusNotAvailable
@@ -314,6 +339,25 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 		}
 	}
 	return StatusNotInstalled
+}
+
+func hookInstalledAtLegacyRoot(repoRoot, name, nativeEvent string) bool {
+	return legacyRootWithHookRecord(repoRoot, name, nativeEvent) != ""
+}
+
+func legacyRootWithHookRecord(repoRoot, name, nativeEvent string) string {
+	legacyRoot := legacyInstalledRoot(repoRoot)
+	if legacyRoot == "" {
+		return ""
+	}
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		return ""
+	}
+	if inst.FindHook(name, nativeEvent) < 0 {
+		return ""
+	}
+	return legacyRoot
 }
 
 // hookScriptsDir returns ~/.syllago/hooks/<name>/ for storing copied scripts.
