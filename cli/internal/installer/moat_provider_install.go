@@ -32,8 +32,8 @@ import (
 // consulted — content verification is the caller's responsibility.
 //
 // Returns the provider-side install path (e.g. ~/.claude/skills/foo) on
-// success. The signature mirrors Install() so callers using a baseDir
-// override (--base-dir flag, project install root) get the same semantics.
+// success. The baseDir override (--base-dir flag, project install root)
+// follows the same semantics as Install().
 func InstallCachedMOATToProvider(
 	cacheDir string,
 	entry *moat.ContentEntry,
@@ -68,5 +68,6 @@ func InstallCachedMOATToProvider(
 		Path:        cacheDir,
 	}
 
-	return Install(item, prov, repoRoot, method, baseDir)
+	placement, err := Install(item, prov, repoRoot, method, baseDir)
+	return placement.String(), err
 }

@@ -254,10 +254,11 @@ func TestInstall_SymlinkMethod(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	desc, err := Install(item, prov, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, prov, repoRoot, MethodSymlink, "")
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
+	desc := placement.String()
 
 	expectedTarget := filepath.Join(tmp, ".testprovider", "rules", "install-rule")
 	if desc != expectedTarget {
@@ -292,10 +293,11 @@ func TestInstall_CopyMethod(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	desc, err := Install(item, prov, repoRoot, MethodCopy, "")
+	placement, err := Install(item, prov, repoRoot, MethodCopy, "")
 	if err != nil {
 		t.Fatalf("Install copy: %v", err)
 	}
+	desc := placement.String()
 
 	expectedTarget := filepath.Join(tmp, ".testprovider", "rules", "copy-rule")
 	if desc != expectedTarget {
@@ -330,10 +332,11 @@ func TestInstall_WithBaseDir(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	desc, err := Install(item, prov, repoRoot, MethodSymlink, baseDir)
+	placement, err := Install(item, prov, repoRoot, MethodSymlink, baseDir)
 	if err != nil {
 		t.Fatalf("Install with baseDir: %v", err)
 	}
+	desc := placement.String()
 
 	expectedTarget := filepath.Join(baseDir, ".testprovider", "rules", "base-rule")
 	if desc != expectedTarget {
@@ -374,10 +377,11 @@ func TestInstall_AgentsUsesAGENTMD(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	desc, err := Install(item, prov, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, prov, repoRoot, MethodSymlink, "")
 	if err != nil {
 		t.Fatalf("Install agent: %v", err)
 	}
+	desc := placement.String()
 
 	expectedTarget := filepath.Join(tmp, ".testprovider", "agents", "my-agent.md")
 	if desc != expectedTarget {
@@ -415,10 +419,11 @@ func TestUninstall_RemovesSymlink(t *testing.T) {
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
 	os.Symlink(sourcePath, targetPath)
 
-	desc, err := Uninstall(item, prov, repoRoot)
+	placement, err := Uninstall(item, prov, repoRoot)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
+	desc := placement.String()
 	if desc != targetPath {
 		t.Errorf("expected desc %s, got %s", targetPath, desc)
 	}
@@ -492,10 +497,11 @@ func TestUninstall_RemovesAgentSymlinkToSourceFile(t *testing.T) {
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
 	os.Symlink(agentFile, targetPath)
 
-	desc, err := Uninstall(item, prov, repoRoot)
+	placement, err := Uninstall(item, prov, repoRoot)
 	if err != nil {
 		t.Fatalf("Uninstall agent: %v", err)
 	}
+	desc := placement.String()
 	if desc != targetPath {
 		t.Errorf("expected desc %s, got %s", targetPath, desc)
 	}
@@ -523,10 +529,11 @@ func TestUninstall_RemovesRegularFile(t *testing.T) {
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
 	os.WriteFile(targetPath, []byte("# Copied"), 0644)
 
-	desc, err := Uninstall(item, prov, repoRoot)
+	placement, err := Uninstall(item, prov, repoRoot)
 	if err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
+	desc := placement.String()
 	if desc != targetPath {
 		t.Errorf("expected desc %s, got %s", targetPath, desc)
 	}
@@ -554,10 +561,11 @@ func TestUninstall_RemovesDirectory(t *testing.T) {
 	os.MkdirAll(targetPath, 0755)
 	os.WriteFile(filepath.Join(targetPath, "file.md"), []byte("# Content"), 0644)
 
-	desc, err := Uninstall(item, prov, repoRoot)
+	placement, err := Uninstall(item, prov, repoRoot)
 	if err != nil {
 		t.Fatalf("Uninstall dir: %v", err)
 	}
+	desc := placement.String()
 	if desc != targetPath {
 		t.Errorf("expected desc %s, got %s", targetPath, desc)
 	}
@@ -864,10 +872,11 @@ func TestInstall_CrossProviderRendering(t *testing.T) {
 		},
 	}
 
-	desc, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
 	if err != nil {
 		t.Fatalf("Install cross-provider: %v", err)
 	}
+	desc := placement.String()
 
 	// Verify the file was written
 	data, err := os.ReadFile(desc)
@@ -914,10 +923,11 @@ func TestInstall_SameProviderWithSource(t *testing.T) {
 		},
 	}
 
-	desc, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
 	if err != nil {
 		t.Fatalf("Install with source: %v", err)
 	}
+	desc := placement.String()
 
 	// Should have installed the original source file
 	data, err := os.ReadFile(desc)
@@ -972,10 +982,11 @@ func TestInstallWithResolver_SameProviderWithSource(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	desc, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
+	desc := placement.String()
 
 	data, err := os.ReadFile(desc)
 	if err != nil {
@@ -1029,10 +1040,11 @@ func TestInstallWithResolver_CrossProviderRendering(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	desc, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver cross-provider: %v", err)
 	}
+	desc := placement.String()
 
 	data, err := os.ReadFile(desc)
 	if err != nil {
@@ -1139,10 +1151,11 @@ func TestInstallWithResolver_AgentsType(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	desc, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
 	if err != nil {
 		t.Fatalf("InstallWithResolver agents: %v", err)
 	}
+	desc := placement.String()
 
 	expected := filepath.Join(customDir, "my-agent.md")
 	if desc != expected {
@@ -1176,10 +1189,11 @@ func TestInstall_MergeTypeMCPDispatch(t *testing.T) {
 		Path: itemDir,
 	}
 
-	desc, err := Install(item, prov, tmpDir, MethodSymlink, "")
+	placement, err := Install(item, prov, tmpDir, MethodSymlink, "")
 	if err != nil {
 		t.Fatalf("Install MCP: %v", err)
 	}
+	desc := placement.String()
 	if desc == "" {
 		t.Error("expected non-empty description")
 	}

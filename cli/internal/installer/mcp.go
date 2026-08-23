@@ -296,11 +296,11 @@ func ExtractServerEntries(rawData []byte, itemName string, jsonKey string) (map[
 	return entries, nil
 }
 
-func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	// Read the MCP config from the content item
 	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
 	if err != nil {
-		return "", fmt.Errorf("reading config.json: %w", err)
+		return Placement{}, fmt.Errorf("reading config.json: %w", err)
 	}
 
 	jsonKey := MCPConfigKey(prov)
@@ -308,14 +308,14 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	// Extract server entries — handles both nested and flat config.json formats
 	entries, err := ExtractServerEntries(rawData, item.Name, jsonKey)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	// If item has a ServerKey, filter to just that one server.
 	if item.ServerKey != "" {
 		configData, ok := entries[item.ServerKey]
 		if !ok {
-			return "", fmt.Errorf("server %q not found in config.json", item.ServerKey)
+			return Placement{}, fmt.Errorf("server %q not found in config.json", item.ServerKey)
 		}
 		entries = map[string]json.RawMessage{item.ServerKey: configData}
 	}
@@ -323,29 +323,30 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	// Read target config file
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	if err := backupFile(cfgPath); err != nil {
-		return "", fmt.Errorf("backing up %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
 	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
-		return "", fmt.Errorf("reading %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
 	// Load installed.json to check for syllago-managed entries
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return "", fmt.Errorf("loading installed.json: %w", err)
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
 
 	// Merge each server entry into the target config
 	var serverNames []string
+	var keys []string
 	for name, configData := range entries {
 		if !catalog.IsValidItemName(name) {
-			return "", fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
+			return Placement{}, fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
 		}
 		key := jsonKey + "." + name
 
@@ -369,19 +370,20 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 				}
 			}
 			if !syllagoManaged {
-				return "", fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
+				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
 			}
 		}
 
 		fileData, err = sjson.SetRawBytes(fileData, key, configData)
 		if err != nil {
-			return "", fmt.Errorf("setting %s: %w", key, err)
+			return Placement{}, fmt.Errorf("setting %s: %w", key, err)
 		}
 		serverNames = append(serverNames, name)
+		keys = append(keys, key)
 	}
 
 	if err := writeJSONFile(cfgPath, fileData); err != nil {
-		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
 	// Record in installed.json (inst already loaded above for collision check)
@@ -404,21 +406,27 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	}
 
 	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return "", fmt.Errorf("saving installed.json: %w", err)
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("%s in %s", jsonKey, cfgPath), nil
+	desc := fmt.Sprintf("%s in %s", jsonKey, cfgPath)
+	return Placement{
+		Mechanism: MechanismMCPMerge,
+		Path:      cfgPath,
+		Keys:      keys,
+		desc:      desc,
+	}, nil
 }
 
-func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (string, error) {
+func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
-		return "", err
+		return Placement{}, err
 	}
 
 	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
-		return "", fmt.Errorf("reading %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
 	jsonKey := MCPConfigKey(prov)
@@ -426,7 +434,7 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 	// Check installed.json for ownership
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return "", fmt.Errorf("loading installed.json: %w", err)
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
 
 	// Try per-server lookup first (new format), then legacy bulk lookup.
@@ -438,11 +446,11 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 		instIdx = inst.FindMCP(item.Name)
 	}
 	if instIdx < 0 {
-		return "", fmt.Errorf("%s was not installed by syllago", item.Name)
+		return Placement{}, fmt.Errorf("%s was not installed by syllago", item.Name)
 	}
 
 	if err := backupFile(cfgPath); err != nil {
-		return "", fmt.Errorf("backing up %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
 	// Determine which server keys to remove.
@@ -459,27 +467,35 @@ func uninstallMCP(item catalog.ContentItem, prov provider.Provider, repoRoot str
 		keysToRemove = []string{item.Name}
 	}
 
+	var keys []string
 	for _, name := range keysToRemove {
 		key := jsonKey + "." + name
+		keys = append(keys, key)
 		if gjson.GetBytes(fileData, key).Exists() {
 			fileData, err = sjson.DeleteBytes(fileData, key)
 			if err != nil {
-				return "", fmt.Errorf("deleting %s: %w", key, err)
+				return Placement{}, fmt.Errorf("deleting %s: %w", key, err)
 			}
 		}
 	}
 
 	if err := writeJSONFile(cfgPath, fileData); err != nil {
-		return "", fmt.Errorf("writing %s: %w", cfgPath, err)
+		return Placement{}, fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
 	// Remove from installed.json
 	inst.RemoveMCP(instIdx)
 	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return "", fmt.Errorf("saving installed.json: %w", err)
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return fmt.Sprintf("%s from %s", jsonKey, cfgPath), nil
+	desc := fmt.Sprintf("%s from %s", jsonKey, cfgPath)
+	return Placement{
+		Mechanism: MechanismMCPMerge,
+		Path:      cfgPath,
+		Keys:      keys,
+		desc:      desc,
+	}, nil
 }
 
 func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {

@@ -46,10 +46,11 @@ func TestInstallHook_E2E_InlineCommand(t *testing.T) {
 	}
 
 	// Install
-	result, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot)
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
+	result := placement.String()
 	if !strings.Contains(result, "hooks.PostToolUse") {
 		t.Errorf("result should mention event, got %q", result)
 	}
@@ -247,10 +248,11 @@ func TestInstallHook_TranslatesCanonicalEvent(t *testing.T) {
 		ConfigDir: filepath.Base(configDir),
 	}
 
-	result, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot)
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
+	result := placement.String()
 
 	// Result message must reference the translated native key.
 	if !strings.Contains(result, "hooks.PreToolUse") {
