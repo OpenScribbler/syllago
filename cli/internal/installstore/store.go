@@ -28,6 +28,7 @@ type Mechanism string
 
 const (
 	MechanismSymlink    Mechanism = "symlink"
+	MechanismCopy       Mechanism = "copy"
 	MechanismHookMerge  Mechanism = "hook_merge"
 	MechanismMCPMerge   Mechanism = "mcp_merge"
 	MechanismRuleAppend Mechanism = "rule_append"
