@@ -47,8 +47,8 @@ func TestGitSyncDiff(t *testing.T) {
 		t.Fatal("GitSyncDiff = nil; want diff")
 	}
 	wantChanges := []regdiff.ItemChange{
-		{Type: "skills", Name: "alpha", Kind: regdiff.KindModified, Paths: []string{"skills/alpha/SKILL.md"}},
-		{Type: "skills", Name: "beta", Kind: regdiff.KindAdded, Paths: []string{"skills/beta/SKILL.md"}},
+		{Type: "skills", Name: "alpha", Kind: regdiff.KindModified, Paths: []string{"skills/alpha/SKILL.md"}, LogLines: []string{"update content"}},
+		{Type: "skills", Name: "beta", Kind: regdiff.KindAdded, Paths: []string{"skills/beta/SKILL.md"}, LogLines: []string{"update content"}},
 	}
 	if !reflect.DeepEqual(got.Changes, wantChanges) {
 		t.Fatalf("Changes = %#v; want %#v", got.Changes, wantChanges)

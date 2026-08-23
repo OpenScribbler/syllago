@@ -127,7 +127,9 @@ func TestRegistryStatusGitShowsUpstreamChangesWithoutConsumingSync(t *testing.T)
 	}
 	wantStatus := "git-status (git): 2 upstream change(s)\n" +
 		"  ~ rules/updated-rule\n" +
-		"  + skills/new-thing\n"
+		"      · update content for status\n" +
+		"  + skills/new-thing\n" +
+		"      · update content for status\n"
 	if got := stdout.String(); got != wantStatus {
 		t.Fatalf("status stdout = %q; want %q", got, wantStatus)
 	}

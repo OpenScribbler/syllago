@@ -93,6 +93,31 @@ func TestPrintRegistryDiffLines_RendersBodyWithoutHeaderOrGuards(t *testing.T) {
 	}
 }
 
+func TestPrintRegistryDiffLines_RendersLogLinesUnderChangedItem(t *testing.T) {
+	output.SetForTest(t)
+	d := &regdiff.Diff{
+		Changes: []regdiff.ItemChange{
+			{
+				Type:     "skills",
+				Name:     "foo",
+				Kind:     regdiff.KindModified,
+				LogLines: []string{"fix foo prompt wording", "add usage examples"},
+			},
+			{Type: "skills", Name: "bar", Kind: regdiff.KindAdded},
+		},
+	}
+
+	var buf bytes.Buffer
+	printRegistryDiffLines(&buf, d)
+	want := "  ~ skills/foo\n" +
+		"      · fix foo prompt wording\n" +
+		"      · add usage examples\n" +
+		"  + skills/bar\n"
+	if got := buf.String(); got != want {
+		t.Fatalf("printRegistryDiffLines() = %q; want %q", got, want)
+	}
+}
+
 func TestPrintRegistryDiff_TrimsKnownExtensionsForDisplay(t *testing.T) {
 	output.SetForTest(t)
 	d := &regdiff.Diff{
