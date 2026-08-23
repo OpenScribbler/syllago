@@ -243,6 +243,11 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
 	}
 
+	globalDir := catalog.GlobalContentDir()
+	if globalDir == "" {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
+	}
+
 	// Registry-sourced install dispatch: `syllago install <registry>/<item>`
 	// routes through the MOAT flow (sync + manifest lookup in this slice).
 	// Library install uses the plain `syllago install <item>` form and falls
@@ -256,6 +261,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				output.ErrWriter,
 				mergedCfg,
 				projectRoot,
+				globalDir,
 				regName,
 				itemName,
 				prov,
@@ -281,10 +287,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Scan global library only.
-	globalDir := catalog.GlobalContentDir()
-	if globalDir == "" {
-		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
-	}
 	globalCat, err := catalog.Scan(globalDir, globalDir)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "scanning library", "Check file permissions in ~/.syllago/content/", err.Error())
