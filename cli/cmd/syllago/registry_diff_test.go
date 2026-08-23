@@ -3,9 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -200,40 +197,4 @@ func TestPrintRegistryDiff_QuietAndJSONSuppressOutput(t *testing.T) {
 			t.Fatalf("json output = %q; want empty", got)
 		}
 	})
-}
-
-func TestGitItemRefs(t *testing.T) {
-	t.Parallel()
-
-	cloneDir := t.TempDir()
-	writeRegistryDiffTestFile(t, cloneDir, "skills/my-skill/SKILL.md", "# My Skill\n")
-	writeRegistryDiffTestFile(t, cloneDir, "rules/a-rule.md", "# A Rule\n")
-	writeRegistryDiffTestFile(t, cloneDir, "registry.yaml", `items:
-  - name: my-skill
-    type: skills
-    path: skills/my-skill
-  - name: a-rule
-    type: rules
-    path: rules/a-rule.md
-`)
-
-	got := gitItemRefs("example", cloneDir)
-	want := []regdiff.ItemRef{
-		{Type: "skills", Name: "my-skill", Dir: "skills/my-skill"},
-		{Type: "rules", Name: "a-rule", Dir: "rules/a-rule.md"},
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("gitItemRefs() = %#v; want %#v", got, want)
-	}
-}
-
-func writeRegistryDiffTestFile(t *testing.T, root, rel, contents string) {
-	t.Helper()
-	path := filepath.Join(root, filepath.FromSlash(rel))
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
-	}
-	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
-		t.Fatalf("write %s: %v", rel, err)
-	}
 }

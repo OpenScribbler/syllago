@@ -20,6 +20,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -404,6 +405,7 @@ type registryAddDoneMsg struct {
 type registrySyncDoneMsg struct {
 	name string
 	err  error
+	diff *regdiff.Diff
 }
 
 // registryRemoveDoneMsg is sent when a registry remove operation completes.
@@ -569,11 +571,18 @@ func (a App) handleSync() (tea.Model, tea.Cmd) {
 	}
 
 	cmd1 := a.toast.Push("Syncing "+name+"...", toastSuccess)
-	cmd2 := func() tea.Msg {
-		_, err := registry.Sync(name)
-		return registrySyncDoneMsg{name: name, err: err}
+	return a, tea.Batch(cmd1, a.doGitSyncCmd(name))
+}
+
+func (a App) doGitSyncCmd(name string) tea.Cmd {
+	return func() tea.Msg {
+		outcome, err := registry.Sync(name)
+		msg := registrySyncDoneMsg{name: name, err: err}
+		if err == nil && outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
+			msg.diff = registryops.GitSyncDiff(name, outcome.OldHead, outcome.NewHead)
+		}
+		return msg
 	}
-	return a, tea.Batch(cmd1, tea.Cmd(cmd2))
 }
 
 // registryIsMOAT reports whether the named registry is MOAT-typed in the
@@ -614,7 +623,11 @@ func (a App) handleMOATSyncDone(msg moatSyncDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.stale {
 		verb = "Synced (stale) "
 	}
-	cmd1 := a.toast.Push(verb+msg.name, toastSuccess)
+	text := verb + msg.name
+	if summary := syncDiffSummary(msg.diff); summary != "" {
+		text += ": " + summary
+	}
+	cmd1 := a.toast.Push(text, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }
@@ -626,9 +639,43 @@ func (a App) handleSyncDone(msg registrySyncDoneMsg) (tea.Model, tea.Cmd) {
 		cmd := a.toast.Push("Sync failed: "+msg.err.Error(), toastError)
 		return a, cmd
 	}
-	cmd1 := a.toast.Push("Synced "+msg.name, toastSuccess)
+	text := "Synced " + msg.name
+	if summary := syncDiffSummary(msg.diff); summary != "" {
+		text += ": " + summary
+	}
+	cmd1 := a.toast.Push(text, toastSuccess)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
+}
+
+func syncDiffSummary(d *regdiff.Diff) string {
+	if d == nil || len(d.Changes) == 0 {
+		return ""
+	}
+
+	var added, modified, removed int
+	for _, change := range d.Changes {
+		switch change.Kind {
+		case regdiff.KindAdded:
+			added++
+		case regdiff.KindRemoved:
+			removed++
+		default:
+			modified++
+		}
+	}
+
+	var parts []string
+	if added > 0 {
+		parts = append(parts, fmt.Sprintf("+%d", added))
+	}
+	if modified > 0 {
+		parts = append(parts, fmt.Sprintf("~%d", modified))
+	}
+	if removed > 0 {
+		parts = append(parts, fmt.Sprintf("-%d", removed))
+	}
+	return fmt.Sprintf("%d upstream change(s) (%s)", len(d.Changes), strings.Join(parts, " "))
 }
 
 // handleTOFUResult routes the user's accept/reject decision from the TOFU
