@@ -17,6 +17,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/gitutil"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -593,6 +594,19 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 	}
 	reprobeRegistryVisibility(cfg, r.Name)
 	fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
+	if !justCloned && outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
+		if cloneDir, err := registry.CloneDir(r.Name); err == nil {
+			items := gitItemRefs(r.Name, cloneDir)
+			types := catalog.AllContentTypes()
+			knownTypeDirs := make([]string, 0, len(types))
+			for _, ct := range types {
+				knownTypeDirs = append(knownTypeDirs, string(ct))
+			}
+			if d, err := regdiff.GitDiff(r.Name, cloneDir, outcome.OldHead, outcome.NewHead, items, knownTypeDirs); err == nil {
+				printRegistryDiff(output.Writer, &d)
+			}
+		}
+	}
 	return 0, nil
 }
 

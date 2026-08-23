@@ -82,6 +82,9 @@ func TestRegistryAddAllowsURLInPolicy(t *testing.T) {
 func TestRegistryListShowsManifest(t *testing.T) {
 	tmp := t.TempDir()
 	withGlobalConfigDir(t, tmp)
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = filepath.Join(tmp, "registry-cache")
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
 
 	// Create a fake registry clone dir with a registry.yaml
 	cacheDir, err := registry.CacheDir()
@@ -89,7 +92,9 @@ func TestRegistryListShowsManifest(t *testing.T) {
 		t.Fatalf("registry.CacheDir: %v", err)
 	}
 	registryClone := filepath.Join(cacheDir, "test-reg-43")
-	os.MkdirAll(registryClone, 0755)
+	if err := os.MkdirAll(registryClone, 0755); err != nil {
+		t.Fatalf("MkdirAll registry clone: %v", err)
+	}
 	defer os.RemoveAll(registryClone)
 
 	manifestContent := "name: test-reg-43\ndescription: A test registry\nversion: \"1.2.3\"\n"

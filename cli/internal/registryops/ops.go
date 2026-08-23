@@ -23,6 +23,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 )
 
 // SyncOpts controls a single MOAT-registry sync.
@@ -90,6 +91,13 @@ type SyncOutcome struct {
 	// missing cloneFn). Per-entry failures travel via Warnings on
 	// ContentCacheReport, not here.
 	ContentCacheErr error
+
+	// Diff is populated only when a fresh manifest was fetched, the previous
+	// cache could be read, and the fresh manifest cache write succeeded. It is
+	// nil on 304s, cache read/write failures, load errors, and missing fresh
+	// manifest structs. A first sync with no cached baseline is represented by
+	// a non-nil Diff with empty OldRef.
+	Diff *regdiff.Diff
 }
 
 // trustedRootStaleError is returned when the bundled Sigstore trusted root is
@@ -222,9 +230,19 @@ func SyncOne(ctx context.Context, name string, opts SyncOpts) (SyncOutcome, erro
 	// a successful sync produces no observable trust state. Skipped on 304
 	// (cache is already current) and when bytes are absent (stub-test path).
 	if !res.NotModified && len(res.ManifestBytes) > 0 && len(res.BundleBytes) > 0 {
+		var manifestDiff *regdiff.Diff
+		if res.Manifest != nil {
+			old, err := regdiff.LoadCachedManifest(cacheDir, reg.Name)
+			if err == nil {
+				d := regdiff.MOATDiff(reg.Name, old, res.Manifest)
+				manifestDiff = &d
+			}
+		}
+
 		if err := moat.WriteManifestCache(cacheDir, reg.Name, res.ManifestBytes, res.BundleBytes); err != nil {
 			return out, fmt.Errorf("write manifest cache: %w", err)
 		}
+		out.Diff = manifestDiff
 
 		// Content cache populates ContentItem.Path/Files at refresh time so
 		// the TUI library preview can render registry items without a fetch

@@ -386,14 +386,21 @@ func TestRunExportOp_CrossProviderConversion(t *testing.T) {
 
 	stdout, _ := output.SetForTest(t)
 
-	err := runInstallOp(root, "cursor", "skills", "cross-skill", "shared", "", "", false)
+	err := runInstallOp(root, "cursor", "skills", "cross-skill", "shared", "", installBase, false)
 	if err != nil {
-		t.Fatalf("cross-provider export failed: %v", err)
+		t.Fatalf("cross-provider export failed: %v%s", err, structuredTestDetails(err))
 	}
 	out := stdout.String()
 	if !strings.Contains(out, "(converted)") {
 		t.Errorf("expected '(converted)' in output, got: %s", out)
 	}
+}
+
+func structuredTestDetails(err error) string {
+	if se, ok := err.(output.StructuredError); ok && se.Details != "" {
+		return ": " + se.Details
+	}
+	return ""
 }
 
 func TestRunExportOp_ExampleWarning(t *testing.T) {
