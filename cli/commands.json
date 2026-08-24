@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-24T17:32:29Z",
-  "syllagoVersion": "dev",
+  "generatedAt": "2026-08-24T18:46:23Z",
+  "syllagoVersion": "0.14.0",
   "commands": [
     {
       "name": "add",
@@ -3258,6 +3258,72 @@
       "seeAlso": [],
       "examples": "  # Remove a skill from library and all providers\n  syllago remove my-skill\n\n  # Disambiguate by type when name exists in multiple types\n  syllago remove my-rule --type rules\n\n  # Skip confirmation prompt\n  syllago remove my-skill --force\n\n  # Preview what would happen\n  syllago remove my-skill --dry-run",
       "source": "cli/cmd/syllago/remove.go"
+    },
+    {
+      "name": "rollback",
+      "displayName": "Rollback",
+      "slug": "rollback",
+      "parent": null,
+      "synopsis": "syllago rollback \u003cname\u003e [flags]",
+      "description": "Restore the previous installed library version",
+      "longDescription": "Restores a registry-sourced library item to its one-step rollback point.\n\nRollback is available after an update replaces an installed item. It works for\npinned items because rollback is an explicit user action.",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--dry-run",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Show what would happen without making changes"
+        },
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": "  # Roll back a skill to the previous version\n  syllago rollback my-skill\n\n  # Disambiguate by type\n  syllago rollback shared-context --type skills\n\n  # Preview the rollback source without changing files\n  syllago rollback my-skill --dry-run",
+      "source": "cli/cmd/syllago/rollback.go"
     },
     {
       "name": "sandbox",

@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-23T01:52:59Z",
+  "generatedAt": "2026-08-24T18:46:24Z",
   "syllagoVersion": "0.14.0",
   "events": [
     {
@@ -44,6 +44,7 @@
             "remove",
             "list",
             "share",
+            "rollback",
             "sync-and-export",
             "registry_items"
           ]
@@ -68,6 +69,7 @@
             "add",
             "uninstall",
             "remove",
+            "rollback",
             "sync-and-export"
           ]
         },
