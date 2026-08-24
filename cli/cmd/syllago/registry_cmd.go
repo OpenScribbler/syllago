@@ -581,6 +581,13 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 			return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Check network connectivity and git credentials", err.Error())
 		}
 		outcome.NewHead = head
+
+		if pinned, errPinned := registry.IsPinned(r.Name); errPinned == nil && pinned {
+			outcome.Pinned = true
+			if remoteHead, errRemote := registry.RemoteDefaultHead(r.Name); errRemote == nil {
+				outcome.RemoteHead = remoteHead
+			}
+		}
 	} else {
 		var err error
 		outcome, err = registry.Sync(r.Name)
@@ -592,10 +599,28 @@ func syncGitOrMOATRegistry(ctx context.Context, cfg *config.Config, r *config.Re
 		return 0, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("sync failed for %q", r.Name), "Could not save registry sync bookkeeping", err.Error())
 	}
 	reprobeRegistryVisibility(cfg, r.Name)
-	fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
-	if !justCloned && outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
-		if d := registryops.GitSyncDiff(r.Name, outcome.OldHead, outcome.NewHead); d != nil {
-			printRegistryDiff(output.Writer, d)
+	if outcome.Pinned {
+		shortHead := outcome.NewHead
+		if len(shortHead) > 12 {
+			shortHead = shortHead[:12]
+		}
+		fmt.Fprintf(output.Writer, "Synced (pinned): %s — checkout held at %s\n", r.Name, shortHead)
+		if outcome.RemoteHead != outcome.NewHead {
+			shortRemote := outcome.RemoteHead
+			if len(shortRemote) > 12 {
+				shortRemote = shortRemote[:12]
+			}
+			fmt.Fprintf(output.Writer, "Upstream has moved to %s — changes below are NOT applied while pinned:\n", shortRemote)
+			if d := registryops.GitSyncDiff(r.Name, outcome.NewHead, outcome.RemoteHead); d != nil {
+				printRegistryDiff(output.Writer, d)
+			}
+		}
+	} else {
+		fmt.Fprintf(output.Writer, "Synced: %s\n", r.Name)
+		if !justCloned && outcome.OldHead != "" && outcome.OldHead != outcome.NewHead {
+			if d := registryops.GitSyncDiff(r.Name, outcome.OldHead, outcome.NewHead); d != nil {
+				printRegistryDiff(output.Writer, d)
+			}
 		}
 	}
 	drifts := registryops.InstalledGitDrift(r.Name)
@@ -929,7 +954,7 @@ func tryUpgradeToMOAT(r *config.Registry, cfg *config.Config, out io.Writer) (bo
 
 func init() {
 	registryAddCmd.Flags().String("name", "", "Override the registry name (default: derived from URL)")
-	registryAddCmd.Flags().String("ref", "", "Branch, tag, or commit to checkout (default: repo default branch)")
+	registryAddCmd.Flags().String("ref", "", "Branch, tag, or commit to checkout (default: repo default branch). Tag and commit refs pin the registry: sync fetches but never moves the checkout.")
 	registryAddCmd.Flags().Bool("sync", false, "Clone and sync immediately after registering (default: register only, sync later with 'registry sync')")
 	registryAddCmd.Flags().Bool("moat", false, "Add as a MOAT-signed registry (required when URL is not in the bundled allowlist and no --signing-identity is passed)")
 	registryAddCmd.Flags().String("signing-identity", "", "Workflow subject SAN (e.g. https://github.com/OWNER/REPO/.github/workflows/moat.yml@refs/heads/main) — implies --moat")

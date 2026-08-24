@@ -82,15 +82,13 @@ func TestCloneArgs_SecurityProtections(t *testing.T) {
 		name string
 		url  string
 		dir  string
-		ref  string
 	}{
-		{"no ref", "https://github.com/acme/tools.git", "/tmp/clone", ""},
-		{"with ref", "https://github.com/acme/tools.git", "/tmp/clone", "main"},
+		{"no ref", "https://github.com/acme/tools.git", "/tmp/clone"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			args := cloneArgs(tt.url, tt.dir, tt.ref)
+			args := cloneArgs(tt.url, tt.dir)
 
 			// Must contain -c core.hooksPath=/dev/null to disable git hooks
 			foundHooksPath := false
@@ -126,20 +124,6 @@ func TestCloneArgs_SecurityProtections(t *testing.T) {
 			}
 			if !foundClone {
 				t.Errorf("cloneArgs missing 'clone' subcommand, got %v", args)
-			}
-
-			// If ref is set, must contain --branch ref
-			if tt.ref != "" {
-				foundBranch := false
-				for i, a := range args {
-					if a == "--branch" && i+1 < len(args) && args[i+1] == tt.ref {
-						foundBranch = true
-						break
-					}
-				}
-				if !foundBranch {
-					t.Errorf("cloneArgs with ref=%q missing --branch flag, got %v", tt.ref, args)
-				}
 			}
 		})
 	}
@@ -223,7 +207,7 @@ func TestClone_SetsGitConfigNoSystem(t *testing.T) {
 	// The actual env var is set in Clone() — we verify it indirectly by
 	// confirming cloneArgs is the only path and checking the source.
 	t.Parallel()
-	args := cloneArgs("https://example.com/repo.git", "/tmp/test", "")
+	args := cloneArgs("https://example.com/repo.git", "/tmp/test")
 
 	// The -c flag must come BEFORE clone to be a global git option
 	cloneIdx := -1

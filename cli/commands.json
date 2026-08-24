@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-23T01:52:59Z",
-  "syllagoVersion": "0.14.0",
+  "generatedAt": "2026-08-24T17:32:29Z",
+  "syllagoVersion": "dev",
   "commands": [
     {
       "name": "add",
@@ -2686,7 +2686,7 @@
           "type": "string",
           "default": null,
           "required": false,
-          "description": "Branch, tag, or commit to checkout (default: repo default branch)"
+          "description": "Branch, tag, or commit to checkout (default: repo default branch). Tag and commit refs pin the registry: sync fetches but never moves the checkout."
         },
         {
           "name": "--signing-identity",
