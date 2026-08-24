@@ -298,18 +298,5 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 // wins when the same rule name exists under multiple source providers — D14
 // uniqueness is enforced per (LibraryID, TargetFile), not per name.
 func findLibraryRuleDir(rulesRoot, name string) (string, error) {
-	entries, err := os.ReadDir(rulesRoot)
-	if err != nil {
-		return "", err
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		candidate := filepath.Join(rulesRoot, e.Name(), name)
-		if info, serr := os.Stat(candidate); serr == nil && info.IsDir() {
-			return candidate, nil
-		}
-	}
-	return "", fs.ErrNotExist
+	return rulestore.FindRuleDir(rulesRoot, name)
 }
