@@ -9,31 +9,55 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
-// StageIntoLibrary copies a verified MOAT source-cache tree into the global
-// library and writes item metadata attributing it to the registry. Returns a
-// ContentItem rooted at the library dir with Registry set.
-func StageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, error) {
+// PreviousRootOverride redirects saved previous-version copies (tests).
+var PreviousRootOverride string
+
+// PreviousDirFor returns the directory where the previous library copy of a
+// registry item is kept for one-step rollback. It lives under the syllago
+// global dir, NOT the content root, so the catalog never scans it.
+func PreviousDirFor(regName string, ct catalog.ContentType, name string) (string, error) {
+	baseDir := PreviousRootOverride
+	if baseDir == "" {
+		var err error
+		baseDir, err = config.GlobalDirPath()
+		if err != nil {
+			return "", err
+		}
+	}
+	return filepath.Join(baseDir, "previous", regName, string(ct), name), nil
+}
+
+// StageIntoLibraryKeepPrev copies a verified MOAT source-cache tree into the global
+// library, saves a copy of the previous library content for rollback (if it was
+// replaced), and writes item metadata. Returns the ContentItem and the path to
+// the saved previous copy, if any.
+func StageIntoLibraryKeepPrev(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, string, error) {
+	return stageIntoLibrary(cacheDir, entry, regName, globalDir, true, now)
+}
+
+func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, keepPrev bool, now time.Time) (catalog.ContentItem, string, error) {
 	if entry == nil {
-		return catalog.ContentItem{}, fmt.Errorf("StageIntoLibrary: entry is nil")
+		return catalog.ContentItem{}, "", fmt.Errorf("StageIntoLibrary: entry is nil")
 	}
 	if cacheDir == "" {
-		return catalog.ContentItem{}, fmt.Errorf("StageIntoLibrary: cacheDir is empty")
+		return catalog.ContentItem{}, "", fmt.Errorf("StageIntoLibrary: cacheDir is empty")
 	}
 	info, err := os.Stat(cacheDir)
 	if err != nil {
-		return catalog.ContentItem{}, fmt.Errorf("StageIntoLibrary: cacheDir %q: %w", cacheDir, err)
+		return catalog.ContentItem{}, "", fmt.Errorf("StageIntoLibrary: cacheDir %q: %w", cacheDir, err)
 	}
 	if !info.IsDir() {
-		return catalog.ContentItem{}, fmt.Errorf("StageIntoLibrary: cacheDir %q is not a directory", cacheDir)
+		return catalog.ContentItem{}, "", fmt.Errorf("StageIntoLibrary: cacheDir %q is not a directory", cacheDir)
 	}
 
 	ct, ok := moat.FromMOATType(entry.Type)
 	if !ok {
-		return catalog.ContentItem{}, fmt.Errorf("StageIntoLibrary: unknown MOAT type %q", entry.Type)
+		return catalog.ContentItem{}, "", fmt.Errorf("StageIntoLibrary: unknown MOAT type %q", entry.Type)
 	}
 
 	destDir := filepath.Join(globalDir, string(ct), entry.Name)
@@ -47,28 +71,42 @@ func StageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, global
 
 	meta, err := metadata.Load(destDir)
 	if err != nil {
-		return catalog.ContentItem{}, fmt.Errorf("load library metadata: %w", err)
+		return catalog.ContentItem{}, "", fmt.Errorf("load library metadata: %w", err)
 	}
 	exists, err := pathExists(destDir)
 	if err != nil {
-		return catalog.ContentItem{}, fmt.Errorf("stat library destination: %w", err)
+		return catalog.ContentItem{}, "", fmt.Errorf("stat library destination: %w", err)
 	}
 
+	var prevCopyPath string
 	if exists {
 		if meta != nil && meta.SourceRegistry == regName {
 			if meta.SourceHash == entry.ContentHash {
-				return item, nil
+				return item, "", nil
+			}
+			if keepPrev {
+				prevDir, err := PreviousDirFor(regName, ct, entry.Name)
+				if err != nil {
+					return catalog.ContentItem{}, "", fmt.Errorf("resolve previous dir: %w", err)
+				}
+				if err := os.RemoveAll(prevDir); err != nil {
+					return catalog.ContentItem{}, "", fmt.Errorf("clear existing previous copy: %w", err)
+				}
+				if err := copyDir(destDir, prevDir); err != nil {
+					return catalog.ContentItem{}, "", fmt.Errorf("save previous copy: %w", err)
+				}
+				prevCopyPath = prevDir
 			}
 			if err := os.RemoveAll(destDir); err != nil {
-				return catalog.ContentItem{}, fmt.Errorf("remove existing registry content: %w", err)
+				return catalog.ContentItem{}, "", fmt.Errorf("remove existing registry content: %w", err)
 			}
 		} else {
-			return catalog.ContentItem{}, fmt.Errorf("library already contains %s/%s not sourced from registry %q", string(ct), entry.Name, regName)
+			return catalog.ContentItem{}, "", fmt.Errorf("library already contains %s/%s not sourced from registry %q", string(ct), entry.Name, regName)
 		}
 	}
 
 	if err := copyDir(cacheDir, destDir); err != nil {
-		return catalog.ContentItem{}, fmt.Errorf("stage registry content into library: %w", err)
+		return catalog.ContentItem{}, "", fmt.Errorf("stage registry content into library: %w", err)
 	}
 
 	m := &metadata.Meta{
@@ -82,10 +120,18 @@ func StageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, global
 		AddedBy:        "syllago moat install",
 	}
 	if err := metadata.Save(destDir, m); err != nil {
-		return catalog.ContentItem{}, fmt.Errorf("save library metadata: %w", err)
+		return catalog.ContentItem{}, "", fmt.Errorf("save library metadata: %w", err)
 	}
 
-	return item, nil
+	return item, prevCopyPath, nil
+}
+
+// StageIntoLibrary copies a verified MOAT source-cache tree into the global
+// library and writes item metadata attributing it to the registry. Returns a
+// ContentItem rooted at the library dir with Registry set.
+func StageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, error) {
+	item, _, err := stageIntoLibrary(cacheDir, entry, regName, globalDir, false, now)
+	return item, err
 }
 
 func pathExists(path string) (bool, error) {

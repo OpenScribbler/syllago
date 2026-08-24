@@ -353,7 +353,7 @@ func runInstallFromRegistry(
 	// Provider-side install: stage the verified source tree into the
 	// library first, then place it from the library with the regular
 	// installer so symlinks and install records share the normal path model.
-	item, stageErr := moatinstall.StageIntoLibrary(cacheDir, entry, reg.Name, globalDir, now)
+	item, prevCopy, stageErr := moatinstall.StageIntoLibraryKeepPrev(cacheDir, entry, reg.Name, globalDir, now)
 	if stageErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,
@@ -371,6 +371,9 @@ func runInstallFromRegistry(
 			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
 			installErr.Error(),
 		)
+	}
+	if prevCopy != "" {
+		recordMOATUpdateBookkeeping(item, prevCopy)
 	}
 	recordMOATInstallBookkeeping(item, targetProv.Slug, placement, &installstore.MOATProvenance{
 		ManifestURI: reg.ManifestURI,
