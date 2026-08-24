@@ -21,11 +21,13 @@ const (
 
 // InstalledDrift is one installed item's drift against its source registry.
 type InstalledDrift struct {
-	Registry  string
-	Type      string // content type slug, e.g. "skills"
-	Name      string
-	Kind      DriftKind
-	Providers []string // provider slugs with placements for this item, sorted, deduped
+	Registry  string    `json:"registry"`
+	Type      string    `json:"type"`
+	Name      string    `json:"name"`
+	Kind      DriftKind `json:"kind"`
+	Providers []string  `json:"providers"`
+	Pinned    bool      `json:"pinned"`
+	HeldAt    string    `json:"held_at"`
 }
 
 // InstalledGitDrift reports drift for every installed item that originated
@@ -73,6 +75,10 @@ func InstalledGitDrift(regName string) []InstalledDrift {
 	for _, rec := range records {
 		key := installedDriftKey{contentType: rec.Type, name: rec.Name}
 		status, ok := discovered[key]
+		heldAt := ""
+		if rec.Pinned {
+			heldAt = rec.SourceSHA
+		}
 		if !ok {
 			drifts = append(drifts, InstalledDrift{
 				Registry:  regName,
@@ -80,6 +86,8 @@ func InstalledGitDrift(regName string) []InstalledDrift {
 				Name:      rec.Name,
 				Kind:      DriftMissing,
 				Providers: installedDriftProviders(rec),
+				Pinned:    rec.Pinned,
+				HeldAt:    heldAt,
 			})
 			continue
 		}
@@ -90,6 +98,8 @@ func InstalledGitDrift(regName string) []InstalledDrift {
 				Name:      rec.Name,
 				Kind:      DriftChanged,
 				Providers: installedDriftProviders(rec),
+				Pinned:    rec.Pinned,
+				HeldAt:    heldAt,
 			})
 		}
 	}
@@ -136,6 +146,10 @@ func InstalledMOATDrift(regName string, diff *regdiff.Diff) []InstalledDrift {
 	drifts := make([]InstalledDrift, 0)
 	for _, rec := range records {
 		key := installedDriftKey{contentType: rec.Type, name: rec.Name}
+		heldAt := ""
+		if rec.Pinned {
+			heldAt = rec.SourceSHA
+		}
 		switch changes[key] {
 		case regdiff.KindModified:
 			drifts = append(drifts, InstalledDrift{
@@ -144,6 +158,8 @@ func InstalledMOATDrift(regName string, diff *regdiff.Diff) []InstalledDrift {
 				Name:      rec.Name,
 				Kind:      DriftChanged,
 				Providers: installedDriftProviders(rec),
+				Pinned:    rec.Pinned,
+				HeldAt:    heldAt,
 			})
 		case regdiff.KindRemoved:
 			drifts = append(drifts, InstalledDrift{
@@ -152,6 +168,8 @@ func InstalledMOATDrift(regName string, diff *regdiff.Diff) []InstalledDrift {
 				Name:      rec.Name,
 				Kind:      DriftMissing,
 				Providers: installedDriftProviders(rec),
+				Pinned:    rec.Pinned,
+				HeldAt:    heldAt,
 			})
 		}
 	}

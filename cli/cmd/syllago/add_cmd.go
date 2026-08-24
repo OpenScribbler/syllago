@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -72,6 +73,7 @@ func init() {
 	addCmd.Flags().String("trusted-root", "", "Path to Sigstore trusted_root.json (overrides registry config and the bundled default)")
 	addCmd.Flags().Bool("install", false, "Install added items immediately after adding (requires --to)")
 	addCmd.Flags().String("to", "", "Target provider for --install")
+	addCmd.Flags().Bool("frozen", false, "Pin the install record created by this command")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -94,6 +96,23 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrInputMissing, "missing --from flag", "Usage: syllago add [type] --from <provider>")
 	}
 
+	// --frozen only makes sense for the provider-import path with a chained
+	// install (--install --to). The monolithic, shared, and registry branches
+	// below never chain an install, so reject the flag up front instead of
+	// silently dropping it.
+	frozenFlag, _ := cmd.Flags().GetBool("frozen")
+	if frozenFlag {
+		installFlagEarly, _ := cmd.Flags().GetBool("install")
+		installToEarly, _ := cmd.Flags().GetString("to")
+		if !installFlagEarly || installToEarly == "" {
+			return output.NewStructuredError(
+				output.ErrInputConflict,
+				"--frozen requires --install and --to: pinning applies to the chained install's record",
+				"Use --install --to <provider> along with --frozen",
+			)
+		}
+	}
+
 	// Monolithic-file mode: any --from value that resolves to an existing file
 	// is treated as a monolithic source path. Per D18, the CLI requires all
 	// --from entries to resolve consistently (either all files or all slugs).
@@ -112,6 +131,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 			"Pass either all file paths or a single provider slug")
 	}
 	if len(monolithicPaths) > 0 {
+		if frozenFlag {
+			return output.NewStructuredError(output.ErrInputConflict,
+				"--frozen is not supported with monolithic file imports",
+				"Pin after installing: syllago pin <name>")
+		}
 		return runAddFromMonolithicFiles(cmd, root, monolithicPaths)
 	}
 
@@ -123,6 +147,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Handle --from shared: add content from the project's shared content directory.
 	if fromSlug == "shared" {
+		if frozenFlag {
+			return output.NewStructuredError(output.ErrInputConflict,
+				"--frozen is not supported with --from shared",
+				"Pin after installing: syllago pin <name>")
+		}
 		addAll, _ := cmd.Flags().GetBool("all")
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 		force, _ := cmd.Flags().GetBool("force")
@@ -146,11 +175,18 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if globalDir == "" {
 			return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 		}
+		if frozenFlag {
+			return output.NewStructuredError(output.ErrInputConflict,
+				"--frozen is not supported when adding from a registry",
+				"Pin at install time instead: syllago install "+fromSlug+"/<item> --to <provider> --frozen")
+		}
 		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
 	}
 
 	installFlag, _ := cmd.Flags().GetBool("install")
 	installTo, _ := cmd.Flags().GetString("to")
+	frozen := frozenFlag
+	telemetry.Enrich("frozen", frozen)
 	if installFlag && installTo == "" {
 		slugs := providerSlugs()
 		return output.NewStructuredError(output.ErrInputMissing, "--to is required with --install", "Available providers: "+strings.Join(slugs, ", "))
@@ -282,7 +318,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("install", installFlag)
 
 	if installFlag && installTo != "" && !dryRun {
-		if err := chainInstallAfterAdd(results, installTo, globalDir, root); err != nil {
+		if err := chainInstallAfterAdd(results, installTo, globalDir, root, frozen); err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: install after add: %v\n", err)
 		}
 	}
@@ -292,7 +328,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 // chainInstallAfterAdd installs items that were successfully added to the
 // global library into the named target provider. Called when --install is set.
-func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoot string) error {
+func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoot string, frozen bool) error {
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
 		return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+toSlug, "Available: "+strings.Join(providerSlugs(), ", "))
@@ -325,6 +361,25 @@ func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoo
 				fmt.Fprintf(output.ErrWriter, "Warning: install %s to %s: %v\n", item.Name, toSlug, err)
 			} else {
 				recordInstallBookkeeping(item, toSlug, placement)
+				if frozen {
+					if item.Meta != nil && item.Meta.SourceRegistry != "" {
+						coord := installstore.Coord{
+							Registry: item.Meta.SourceRegistry,
+							Type:     string(item.Type),
+							Name:     item.Name,
+						}
+						storePath, err := installstore.DefaultPath()
+						if err != nil {
+							warnInstallRecord(err)
+						} else {
+							if err := installstore.SetPinned(storePath, coord, true, time.Now()); err != nil {
+								warnInstallRecord(err)
+							}
+						}
+					} else {
+						fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
+					}
+				}
 			}
 		}
 	}
@@ -1303,6 +1358,38 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 		if head, err := registry.Head(reg.Name); err == nil {
 			sourceSHA = head
 		}
+	}
+
+	// Check if any of the items requested to be added has an active install record that is Pinned: true
+	storePath, storeErr := installstore.DefaultPath()
+	if storeErr == nil {
+		if store, loadErr := installstore.Load(storePath); loadErr == nil {
+			var unpinnedItems []add.DiscoveryItem
+			for _, item := range items {
+				coord := installstore.Coord{Registry: reg.Name, Type: string(item.Type), Name: item.Name}
+				if rec := store.Find(coord); rec != nil && rec.Pinned {
+					if rec.SourceSHA != "" {
+						sha12 := rec.SourceSHA
+						if len(sha12) > 12 {
+							sha12 = sha12[:12]
+						}
+						fmt.Fprintf(output.ErrWriter, "  pinned %s/%s — holding at %s; unpin to update: syllago unpin %s\n", string(item.Type), item.Name, sha12, item.Name)
+					} else {
+						fmt.Fprintf(output.ErrWriter, "  pinned %s/%s; unpin to update: syllago unpin %s\n", string(item.Type), item.Name, item.Name)
+					}
+				} else {
+					unpinnedItems = append(unpinnedItems, item)
+				}
+			}
+			items = unpinnedItems
+		}
+	}
+	if len(items) == 0 {
+		return output.NewStructuredError(
+			output.ErrInstallConflict,
+			"all requested items are pinned",
+			"Run 'syllago unpin <name>' first to unpin the items you want to update",
+		)
 	}
 
 	results := add.AddItems(items, add.AddOptions{

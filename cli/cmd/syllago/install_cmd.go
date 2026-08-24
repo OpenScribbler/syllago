@@ -6,12 +6,14 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/audit"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -121,6 +123,7 @@ func init() {
 	installCmd.Flags().Bool("no-input", false, "Disable interactive prompts, use defaults")
 	installCmd.Flags().StringSlice("hook-scanner", nil, "Path to external hook scanner binary (repeatable)")
 	installCmd.Flags().Bool("force", false, "Proceed past high-severity scanner findings")
+	installCmd.Flags().Bool("frozen", false, "Pin the install record created by this command")
 	// D17 re-install decision flags for --method=append. Values validated in
 	// runInstall so bad inputs error before any disk work. See D17 flag table.
 	installCmd.Flags().String("on-clean", "", "Action when rule is already installed cleanly: replace|skip")
@@ -166,6 +169,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	installAll, _ := cmd.Flags().GetBool("all")
 	scannerPaths, _ := cmd.Flags().GetStringSlice("hook-scanner")
 	force, _ := cmd.Flags().GetBool("force")
+	frozen, _ := cmd.Flags().GetBool("frozen")
+	telemetry.Enrich("frozen", frozen)
 	installer.SetScannerChain(scannerPaths, force)
 	refreshInstallEntryPointsForInstall()
 
@@ -255,8 +260,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// rationale and what this slice intentionally defers.
 	if len(args) == 1 {
 		if regName, itemName, ok := parseRegistryItemSyntax(args[0]); ok {
+			ctx := cmd.Context()
+			if frozen {
+				ctx = ContextWithFrozen(ctx, true)
+			}
 			return runInstallFromRegistry(
-				cmd.Context(),
+				ctx,
 				output.Writer,
 				output.ErrWriter,
 				mergedCfg,
@@ -316,7 +325,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Installing %d items to %s...\n", len(items), prov.Name)
 	}
 
-	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot)
+	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot, frozen)
 
 	if output.JSON {
 		output.Print(result)
@@ -348,6 +357,7 @@ func installToProvider(
 	resolver *config.PathResolver,
 	toSlug string,
 	projectRoot string,
+	frozen bool,
 ) (installResult, error) {
 	var result installResult
 
@@ -384,6 +394,25 @@ func installToProvider(
 			continue
 		}
 		recordInstallBookkeeping(item, toSlug, placement)
+		if frozen {
+			if item.Meta != nil && item.Meta.SourceRegistry != "" {
+				coord := installstore.Coord{
+					Registry: item.Meta.SourceRegistry,
+					Type:     string(item.Type),
+					Name:     item.Name,
+				}
+				storePath, err := installstore.DefaultPath()
+				if err != nil {
+					warnInstallRecord(err)
+				} else {
+					if err := installstore.SetPinned(storePath, coord, true, time.Now()); err != nil {
+						warnInstallRecord(err)
+					}
+				}
+			} else {
+				fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
+			}
+		}
 		desc := placement.String()
 
 		// Check for portability warnings by running the converter.
@@ -458,7 +487,7 @@ type providerInstallResult struct {
 // It detects providers, installs to each, and prints a summary.
 // Returns a non-nil error if any provider had install failures.
 func runInstallToAll(
-	_ *cobra.Command,
+	cmd *cobra.Command,
 	args []string,
 	typeFilter string,
 	_ string,
@@ -468,6 +497,7 @@ func runInstallToAll(
 	installAll bool,
 	noInput bool,
 ) error {
+	frozen, _ := cmd.Flags().GetBool("frozen")
 	globalCfg, err := config.LoadGlobal()
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", err.Error())
@@ -571,7 +601,7 @@ func runInstallToAll(
 			fmt.Fprintf(output.Writer, "→ %s\n", prov.Name)
 		}
 
-		result, _ := installToProvider(items, prov, method, dryRun, resolver, prov.Slug, projectRoot)
+		result, _ := installToProvider(items, prov, method, dryRun, resolver, prov.Slug, projectRoot, frozen)
 
 		pr := providerInstallResult{
 			Provider: prov.Name,

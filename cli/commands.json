@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-24T18:46:23Z",
+  "generatedAt": "2026-08-24T19:18:09Z",
   "syllagoVersion": "0.14.0",
   "commands": [
     {
@@ -60,6 +60,14 @@
           "default": null,
           "required": true,
           "description": "Provider to add from, or path to a monolithic rule file (repeatable for files)"
+        },
+        {
+          "name": "--frozen",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Pin the install record created by this command"
         },
         {
           "name": "--install",
@@ -1581,6 +1589,14 @@
           "description": "Proceed past high-severity scanner findings"
         },
         {
+          "name": "--frozen",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Pin the install record created by this command"
+        },
+        {
           "name": "--hook-scanner",
           "shorthand": null,
           "type": "stringSlice",
@@ -2547,6 +2563,64 @@
       ],
       "examples": null,
       "source": "cli/cmd/syllago/trust_cmd.go"
+    },
+    {
+      "name": "pin",
+      "displayName": "Pin",
+      "slug": "pin",
+      "parent": null,
+      "synopsis": "syllago pin \u003cname\u003e [flags]",
+      "description": "Pin an installed registry item to hold its current content",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/pin.go"
     },
     {
       "name": "providers",
@@ -4711,6 +4785,64 @@
       "seeAlso": [],
       "examples": "  # Uninstall from a specific provider\n  syllago uninstall my-skill --from claude-code\n\n  # Uninstall from all providers\n  syllago uninstall my-agent\n\n  # Skip confirmation prompt\n  syllago uninstall my-rule --from cursor --force\n\n  # Preview what would happen\n  syllago uninstall my-skill --dry-run",
       "source": "cli/cmd/syllago/uninstall.go"
+    },
+    {
+      "name": "unpin",
+      "displayName": "Unpin",
+      "slug": "unpin",
+      "parent": null,
+      "synopsis": "syllago unpin \u003cname\u003e [flags]",
+      "description": "Unpin a pinned registry item to allow updates",
+      "longDescription": null,
+      "aliases": [],
+      "flags": [
+        {
+          "name": "--type",
+          "shorthand": null,
+          "type": "string",
+          "default": null,
+          "required": false,
+          "description": "Disambiguate when name exists in multiple types"
+        }
+      ],
+      "inheritedFlags": [
+        {
+          "name": "--json",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Output in JSON format"
+        },
+        {
+          "name": "--no-color",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Disable color output"
+        },
+        {
+          "name": "--quiet",
+          "shorthand": "-q",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Suppress non-essential output"
+        },
+        {
+          "name": "--verbose",
+          "shorthand": "-v",
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Verbose output"
+        }
+      ],
+      "subcommands": [],
+      "seeAlso": [],
+      "examples": null,
+      "source": "cli/cmd/syllago/unpin.go"
     },
     {
       "name": "update",

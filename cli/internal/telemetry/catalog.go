@@ -51,7 +51,14 @@ func EventCatalog() []EventDef {
 					Type:        "string",
 					Description: "Content type filter or specific type",
 					Example:     "rules",
-					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "rollback", "sync-and-export", "registry_items"},
+					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "rollback", "sync-and-export", "registry_items", "pin", "unpin"},
+				},
+				{
+					Name:        "frozen",
+					Type:        "bool",
+					Description: "Whether --frozen was used to pin the install record",
+					Example:     true,
+					Commands:    []string{"install", "add"},
 				},
 				{
 					Name:        "content_count",
