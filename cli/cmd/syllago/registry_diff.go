@@ -63,6 +63,22 @@ func printInstalledDrift(w io.Writer, drifts []registryops.InstalledDrift, hints
 
 	fmt.Fprintln(w, "Installed items drifted from upstream:")
 	for _, drift := range drifts {
+		if drift.Pinned {
+			provStr := ""
+			if len(drift.Providers) > 0 {
+				provStr = " (" + strings.Join(drift.Providers, ", ") + ")"
+			}
+			sha := drift.HeldAt
+			if len(sha) > 12 {
+				sha = sha[:12]
+			}
+			if sha != "" {
+				fmt.Fprintf(w, "  %s/%s%s is pinned — holding at %s\n", drift.Type, drift.Name, provStr, sha)
+			} else {
+				fmt.Fprintf(w, "  %s/%s%s is pinned\n", drift.Type, drift.Name, provStr)
+			}
+			continue
+		}
 		switch drift.Kind {
 		case registryops.DriftChanged:
 			switch hints {

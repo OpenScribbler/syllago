@@ -350,6 +350,20 @@ func runInstallFromRegistry(
 		)
 	}
 
+	// Check if the item is pinned before overwriting content
+	if storePath, storeErr := installstore.DefaultPath(); storeErr == nil {
+		if store, loadErr := installstore.Load(storePath); loadErr == nil {
+			coord := installstore.Coord{Registry: reg.Name, Type: string(ct), Name: entry.Name}
+			if rec := store.Find(coord); rec != nil && rec.Pinned {
+				return output.NewStructuredError(
+					output.ErrInstallConflict,
+					fmt.Sprintf("could not install %s/%s: item is pinned", reg.Name, entry.Name),
+					fmt.Sprintf("syllago unpin %s", entry.Name),
+				)
+			}
+		}
+	}
+
 	// Provider-side install: stage the verified source tree into the
 	// library first, then place it from the library with the regular
 	// installer so symlinks and install records share the normal path model.
@@ -381,6 +395,22 @@ func runInstallFromRegistry(
 		TrustTier:   entry.TrustTier().String(),
 		AttestedAt:  now,
 	})
+
+	if isFrozenFromContext(ctx) {
+		coord := installRecordCoord(item)
+		if coord.Registry != "" {
+			if storePath, err := installstore.DefaultPath(); err == nil {
+				if err := installstore.SetPinned(storePath, coord, true, now); err != nil {
+					warnInstallRecord(err)
+				}
+			} else {
+				warnInstallRecord(err)
+			}
+		} else {
+			fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
+		}
+	}
+
 	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), placement.String())
 	return nil
 }
@@ -498,4 +528,17 @@ func shortHash(h string) string {
 		return h[:i+13] + "…"
 	}
 	return h
+}
+
+type frozenContextKeyType struct{}
+
+var frozenContextKey = frozenContextKeyType{}
+
+func ContextWithFrozen(ctx context.Context, frozen bool) context.Context {
+	return context.WithValue(ctx, frozenContextKey, frozen)
+}
+
+func isFrozenFromContext(ctx context.Context) bool {
+	val, _ := ctx.Value(frozenContextKey).(bool)
+	return val
 }

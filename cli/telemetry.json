@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-24T18:46:24Z",
+  "generatedAt": "2026-08-24T19:18:10Z",
   "syllagoVersion": "0.14.0",
   "events": [
     {
@@ -46,7 +46,19 @@
             "share",
             "rollback",
             "sync-and-export",
-            "registry_items"
+            "registry_items",
+            "pin",
+            "unpin"
+          ]
+        },
+        {
+          "name": "frozen",
+          "type": "bool",
+          "description": "Whether --frozen was used to pin the install record",
+          "example": true,
+          "commands": [
+            "install",
+            "add"
           ]
         },
         {

@@ -54,7 +54,7 @@ func TestInstallTrustLine_DualAttested(t *testing.T) {
 
 	items := buildTrustItems(t, globalDir, catalog.TrustTierDualAttested, false, "")
 	result, err := installToProvider(items, *prov, installer.MethodSymlink,
-		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 	if err != nil {
 		t.Fatalf("installToProvider: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestInstallTrustLine_Signed(t *testing.T) {
 
 	items := buildTrustItems(t, globalDir, catalog.TrustTierSigned, false, "")
 	result, _ := installToProvider(items, *prov, installer.MethodSymlink,
-		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 
 	if !strings.Contains(stdout.String(), "Verified (registry-attested)") {
 		t.Errorf("expected signed-tier drill-down text, got: %s", stdout.String())
@@ -111,7 +111,7 @@ func TestInstallTrustLine_Revoked(t *testing.T) {
 	// DualAttested + Revoked must still render as Revoked, not Verified.
 	items := buildTrustItems(t, globalDir, catalog.TrustTierDualAttested, true, "publisher revoked 2026-04-18")
 	result, _ := installToProvider(items, *prov, installer.MethodSymlink,
-		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 
 	out := stdout.String()
 	if !strings.Contains(out, "Revoked \u2014 publisher revoked 2026-04-18") {
@@ -144,7 +144,7 @@ func TestInstallTrustLine_UnknownSuppressed(t *testing.T) {
 
 	items := buildTrustItems(t, globalDir, catalog.TrustTierUnknown, false, "")
 	result, _ := installToProvider(items, *prov, installer.MethodSymlink,
-		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 
 	out := stdout.String()
 	if strings.Contains(out, "Verified") || strings.Contains(out, "Revoked") ||
@@ -172,7 +172,7 @@ func TestInstallTrustLine_JSONModeSuppressesText(t *testing.T) {
 
 	items := buildTrustItems(t, globalDir, catalog.TrustTierSigned, false, "")
 	result, _ := installToProvider(items, *prov, installer.MethodSymlink,
-		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		false, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 
 	// installToProvider does not print the result JSON itself — that's the
 	// caller's job. In JSON mode it must not print the human trust line.
@@ -193,7 +193,7 @@ func TestInstallTrustLine_JSONModeSuppressesText(t *testing.T) {
 	// And an Unknown-tier item must omit the trust key entirely (omitempty).
 	itemsUnknown := buildTrustItems(t, globalDir, catalog.TrustTierUnknown, false, "")
 	resultU, _ := installToProvider(itemsUnknown, *prov, installer.MethodSymlink,
-		true /* dryRun so we don't re-install to the same target */, config.NewResolver(nil, ""), prov.Slug, t.TempDir())
+		true /* dryRun so we don't re-install to the same target */, config.NewResolver(nil, ""), prov.Slug, t.TempDir(), false)
 	if len(resultU.Installed) > 0 {
 		t.Fatalf("dry-run should not produce Installed entries, got %d", len(resultU.Installed))
 	}
