@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
@@ -35,6 +39,40 @@ func setupRegistryClone(t *testing.T, cacheDir, registryName string) string {
 	os.WriteFile(filepath.Join(cloneDir, "registry.yaml"), []byte("name: test-registry\n"), 0644)
 
 	return cloneDir
+}
+
+// setupGitRegistryClone creates a fake git-backed registry clone at
+// CacheDirOverride/<name> and returns the clone's initial HEAD.
+func setupGitRegistryClone(t *testing.T, cacheDir, registryName, skillContent string) (string, string) {
+	t.Helper()
+	cloneDir := setupRegistryClone(t, cacheDir, registryName)
+	if err := os.WriteFile(filepath.Join(cloneDir, "skills", "canary-skill", "SKILL.md"), []byte(skillContent), 0644); err != nil {
+		t.Fatalf("WriteFile canary skill: %v", err)
+	}
+	gitRunForRegistryAddTest(t, cloneDir, "init")
+	gitRunForRegistryAddTest(t, cloneDir, "config", "user.email", "test@example.com")
+	gitRunForRegistryAddTest(t, cloneDir, "config", "user.name", "Test User")
+	gitRunForRegistryAddTest(t, cloneDir, "add", "-A")
+	gitRunForRegistryAddTest(t, cloneDir, "commit", "-m", "initial")
+	return cloneDir, gitOutputForRegistryAddTest(t, cloneDir, "rev-parse", "HEAD")
+}
+
+func gitRunForRegistryAddTest(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	_ = gitOutputForRegistryAddTest(t, dir, args...)
+}
+
+func gitOutputForRegistryAddTest(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %v\n%s", args, err, string(out))
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // setupProjectWithRegistry creates a temp project with a .syllago/config.json
@@ -369,6 +407,191 @@ func TestAddFromRegistry_MetadataSourceRegistry(t *testing.T) {
 	// Verify SourceRegistry is set in the metadata (YAML, check as string).
 	if !strings.Contains(string(data), regName) {
 		t.Errorf("expected metadata to contain registry name %q; got:\n%s", regName, string(data))
+	}
+}
+
+func TestAddFromRegistry_MetadataSourceSHA(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
+
+	const regName = "test-org/git-registry"
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	_, head := setupGitRegistryClone(t, cacheDir, regName, "# Canary skill\n")
+
+	root := setupProjectWithRegistry(t, regName)
+	withFakeRepoRoot(t, root)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", regName)
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	t.Cleanup(func() {
+		addCmd.Flags().Set("from", "")
+		addCmd.Flags().Set("all", "false")
+		addCmd.Flags().Set("force", "false")
+		addCmd.Flags().Set("dry-run", "false")
+	})
+
+	if err := addCmd.RunE(addCmd, []string{"skills/canary-skill"}); err != nil {
+		t.Fatalf("add from registry: %v", err)
+	}
+
+	itemDir := filepath.Join(globalDir, "skills", "canary-skill")
+	meta, err := metadata.Load(itemDir)
+	if err != nil || meta == nil {
+		t.Fatalf("metadata load failed: %v", err)
+	}
+	if meta.SourceSHA != head {
+		t.Fatalf("SourceSHA = %q, want %q", meta.SourceSHA, head)
+	}
+}
+
+func TestAddFromRegistryForceRotatesInstallRecord(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
+
+	const regName = "test-org/git-registry-rotate"
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	cloneDir, oldHead := setupGitRegistryClone(t, cacheDir, regName, "# Canary skill\nold\n")
+
+	root := setupProjectWithRegistry(t, regName)
+	withFakeRepoRoot(t, root)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+	configDir := withInstallRecordConfigDir(t)
+
+	stdout, _ := output.SetForTest(t)
+
+	addCmd.Flags().Set("from", regName)
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	t.Cleanup(func() {
+		addCmd.Flags().Set("from", "")
+		addCmd.Flags().Set("all", "false")
+		addCmd.Flags().Set("force", "false")
+		addCmd.Flags().Set("dry-run", "false")
+	})
+
+	if err := addCmd.RunE(addCmd, []string{"skills/canary-skill"}); err != nil {
+		t.Fatalf("initial add from registry: %v", err)
+	}
+
+	libraryPath := filepath.Join(globalDir, "skills", "canary-skill")
+	coord := installstore.Coord{Registry: regName, Type: string(catalog.Skills), Name: "canary-skill"}
+	storePath := filepath.Join(configDir, "installs.json")
+	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
+		Provider:  "claude-code",
+		Mechanism: installstore.MechanismSymlink,
+		Path:      filepath.Join(t.TempDir(), "canary-skill"),
+	}, installstore.InstallMeta{SourceSHA: oldHead}, time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("seed RecordInstallMeta: %v", err)
+	}
+	oldContentHash, err := installstore.HashContent(libraryPath)
+	if err != nil {
+		t.Fatalf("HashContent old library: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(cloneDir, "skills", "canary-skill", "SKILL.md"), []byte("# Canary skill\nnew\n"), 0644); err != nil {
+		t.Fatalf("WriteFile updated skill: %v", err)
+	}
+	gitRunForRegistryAddTest(t, cloneDir, "add", "-A")
+	gitRunForRegistryAddTest(t, cloneDir, "commit", "-m", "update canary")
+	newHead := gitOutputForRegistryAddTest(t, cloneDir, "rev-parse", "HEAD")
+
+	stdout.Reset()
+	addCmd.Flags().Set("force", "true")
+	if err := addCmd.RunE(addCmd, []string{"skills/canary-skill"}); err != nil {
+		t.Fatalf("force add from registry: %v", err)
+	}
+
+	store := mustLoadInstallRecordStore(t, configDir)
+	rec := store.Find(coord)
+	if rec == nil {
+		t.Fatal("install record missing after force add")
+	}
+	if rec.SourceSHA != newHead {
+		t.Fatalf("SourceSHA = %q, want %q", rec.SourceSHA, newHead)
+	}
+	if rec.Previous == nil {
+		t.Fatal("Previous = nil, want rollback point")
+	}
+	if rec.Previous.SourceSHA != oldHead {
+		t.Fatalf("Previous.SourceSHA = %q, want %q", rec.Previous.SourceSHA, oldHead)
+	}
+	if rec.Previous.ContentHash != oldContentHash {
+		t.Fatalf("Previous.ContentHash = %q, want %q", rec.Previous.ContentHash, oldContentHash)
+	}
+}
+
+func TestAddFromRegistryForceWithoutInstallRecordSkipsBookkeeping(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git binary not available")
+	}
+
+	const regName = "test-org/git-registry-no-record"
+	cacheDir := t.TempDir()
+	origCache := registry.CacheDirOverride
+	registry.CacheDirOverride = cacheDir
+	t.Cleanup(func() { registry.CacheDirOverride = origCache })
+
+	cloneDir, _ := setupGitRegistryClone(t, cacheDir, regName, "# Canary skill\nold\n")
+
+	root := setupProjectWithRegistry(t, regName)
+	withFakeRepoRoot(t, root)
+
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+	configDir := withInstallRecordConfigDir(t)
+
+	_, _ = output.SetForTest(t)
+
+	addCmd.Flags().Set("from", regName)
+	addCmd.Flags().Set("all", "false")
+	addCmd.Flags().Set("force", "false")
+	addCmd.Flags().Set("dry-run", "false")
+	t.Cleanup(func() {
+		addCmd.Flags().Set("from", "")
+		addCmd.Flags().Set("all", "false")
+		addCmd.Flags().Set("force", "false")
+		addCmd.Flags().Set("dry-run", "false")
+	})
+
+	if err := addCmd.RunE(addCmd, []string{"skills/canary-skill"}); err != nil {
+		t.Fatalf("initial add from registry: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(cloneDir, "skills", "canary-skill", "SKILL.md"), []byte("# Canary skill\nnew\n"), 0644); err != nil {
+		t.Fatalf("WriteFile updated skill: %v", err)
+	}
+	gitRunForRegistryAddTest(t, cloneDir, "add", "-A")
+	gitRunForRegistryAddTest(t, cloneDir, "commit", "-m", "update canary")
+
+	addCmd.Flags().Set("force", "true")
+	if err := addCmd.RunE(addCmd, []string{"skills/canary-skill"}); err != nil {
+		t.Fatalf("force add from registry without record: %v", err)
+	}
+
+	store := mustLoadInstallRecordStore(t, configDir)
+	coord := installstore.Coord{Registry: regName, Type: string(catalog.Skills), Name: "canary-skill"}
+	if rec := store.Find(coord); rec != nil {
+		t.Fatalf("record was created unexpectedly: %#v", rec)
 	}
 }
 

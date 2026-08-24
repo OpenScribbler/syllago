@@ -214,6 +214,83 @@ func TestAddItems_NewItem(t *testing.T) {
 	}
 }
 
+func TestAddItems_SourceSHARequiresSourceRegistry(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		sourceRegistry string
+		sourceSHA      string
+		wantSourceSHA  string
+		wantYAMLKey    bool
+	}{
+		{
+			name:           "registry and sha stamps source sha",
+			sourceRegistry: "acme/tools",
+			sourceSHA:      "abc123",
+			wantSourceSHA:  "abc123",
+			wantYAMLKey:    true,
+		},
+		{
+			name:           "registry without sha omits field",
+			sourceRegistry: "acme/tools",
+			sourceSHA:      "",
+			wantSourceSHA:  "",
+			wantYAMLKey:    false,
+		},
+		{
+			name:           "sha without registry omits field",
+			sourceRegistry: "",
+			sourceSHA:      "abc123",
+			wantSourceSHA:  "",
+			wantYAMLKey:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmp := t.TempDir()
+			globalDir := t.TempDir()
+			srcPath := filepath.Join(tmp, "rule.md")
+			if err := os.WriteFile(srcPath, []byte("# Rule"), 0644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+
+			results := AddItems([]DiscoveryItem{
+				{Name: "rule", Type: catalog.Rules, Path: srcPath, Status: StatusNew},
+			}, AddOptions{
+				Provider:       "claude-code",
+				SourceRegistry: tt.sourceRegistry,
+				SourceSHA:      tt.sourceSHA,
+			}, globalDir, nil, "test")
+			if results[0].Status != AddStatusAdded {
+				t.Fatalf("Status = %v, want AddStatusAdded", results[0].Status)
+			}
+
+			destDir := filepath.Join(globalDir, "rules", "claude-code", "rule")
+			meta, err := metadata.Load(destDir)
+			if err != nil || meta == nil {
+				t.Fatalf("metadata load failed: %v", err)
+			}
+			if meta.SourceSHA != tt.wantSourceSHA {
+				t.Fatalf("SourceSHA = %q, want %q", meta.SourceSHA, tt.wantSourceSHA)
+			}
+
+			data, err := os.ReadFile(metadata.MetaPath(destDir))
+			if err != nil {
+				t.Fatalf("ReadFile metadata: %v", err)
+			}
+			hasYAMLKey := strings.Contains(string(data), "source_sha:")
+			if hasYAMLKey != tt.wantYAMLKey {
+				t.Fatalf("source_sha YAML presence = %v, want %v\n%s", hasYAMLKey, tt.wantYAMLKey, string(data))
+			}
+		})
+	}
+}
+
 func TestAddItems_UpToDate_Skipped(t *testing.T) {
 	t.Parallel()
 	globalDir := t.TempDir()

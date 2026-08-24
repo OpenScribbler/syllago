@@ -58,6 +58,7 @@ type Meta struct {
 	HasSource        bool                `yaml:"has_source,omitempty"`        // whether .source/ directory exists
 	SourceHash       string              `yaml:"source_hash,omitempty"`       // SHA-256 of source content at import time
 	SourceRegistry   string              `yaml:"source_registry,omitempty"`   // registry name content was imported from (e.g. "acme/internal-rules")
+	SourceSHA        string              `yaml:"source_sha,omitempty"`        // git-registry clone HEAD at add time (rollback coordinate)
 	SourceVisibility string              `yaml:"source_visibility,omitempty"` // visibility at import time: "public", "private", "unknown"
 	AddedAt          *time.Time          `yaml:"added_at,omitempty"`          // when content was added to library
 	AddedBy          string              `yaml:"added_by,omitempty"`          // e.g. "syllago v0.1.0"

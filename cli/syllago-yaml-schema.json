@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generated_at": "2026-08-21T21:26:09Z",
+  "generated_at": "2026-08-24T17:50:16Z",
   "syllago_version": "0.14.0",
   "schema": {
     "struct_name": "Meta",
@@ -197,6 +197,15 @@
         "required": false,
         "comment": "registry name content was imported from (e.g. \"acme/internal-rules\")",
         "group": "registry"
+      },
+      {
+        "name": "SourceSHA",
+        "yaml_key": "source_sha",
+        "type": "string",
+        "omitempty": true,
+        "required": false,
+        "comment": "git-registry clone HEAD at add time (rollback coordinate)",
+        "group": "source-provenance"
       },
       {
         "name": "SourceVisibility",

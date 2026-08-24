@@ -64,6 +64,7 @@ var fieldGroups = map[string]string{
 	"SourceURL":      "source-provenance",
 	"HasSource":      "source-provenance",
 	"SourceHash":     "source-provenance",
+	"SourceSHA":      "source-provenance",
 	"AddedAt":        "source-provenance",
 	"AddedBy":        "source-provenance",
 

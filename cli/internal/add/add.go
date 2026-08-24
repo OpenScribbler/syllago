@@ -90,6 +90,7 @@ type AddOptions struct {
 	DryRun           bool
 	Provider         string // provider slug, used for directory layout
 	SourceRegistry   string // registry name for taint propagation (e.g., "acme/internal-rules")
+	SourceSHA        string // registry clone HEAD the items are being copied from; empty for non-git sources
 	SourceVisibility string // visibility at import time: "public", "private", "unknown"
 }
 
@@ -332,6 +333,7 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 	// Taint propagation: if registry source is explicitly provided, use it.
 	if opts.SourceRegistry != "" {
 		meta.SourceRegistry = opts.SourceRegistry
+		meta.SourceSHA = opts.SourceSHA
 		meta.SourceVisibility = opts.SourceVisibility
 		meta.SourceType = "registry"
 	} else {
