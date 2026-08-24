@@ -22,6 +22,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
 
 // --- Step enum ---
@@ -120,9 +121,10 @@ type addDiscoveryDoneMsg struct {
 }
 
 type addExecItemDoneMsg struct {
-	seq    int
-	index  int
-	result addExecResult
+	seq       int
+	index     int
+	result    addExecResult
+	sourceSHA string
 }
 
 type addExecAllDoneMsg struct {
@@ -262,12 +264,14 @@ type addWizardModel struct {
 	renameDiscoveryIdx int // index into m.discoveredItems the modal is editing
 
 	// Execute step
-	executeResults   []addExecResult
-	executeCurrent   int
-	executeOffset    int
-	executeDone      bool
-	executeCancelled bool
-	executing        bool
+	executeResults    []addExecResult
+	executeCurrent    int
+	executeOffset     int
+	executeDone       bool
+	executeCancelled  bool
+	executing         bool
+	executeSourceSHA  string
+	executeResolveSHA bool
 
 	// Git source
 	gitTempDir string
@@ -1417,7 +1421,21 @@ func (m *addWizardModel) enterExecute() {
 	m.executeDone = false
 	m.executeCancelled = false
 	m.executing = true
+	m.executeSourceSHA = ""
+	m.executeResolveSHA = m.sourceRegistry != "" && addWizardRegistryIsGit(m.cfg, m.sourceRegistry)
 	m.updateMaxStep()
+}
+
+func addWizardRegistryIsGit(cfg *config.Config, name string) bool {
+	if cfg == nil {
+		return false
+	}
+	for _, reg := range cfg.Registries {
+		if reg.Name == name {
+			return reg.IsGit()
+		}
+	}
+	return false
 }
 
 // startDiscoveryCmd creates an async tea.Cmd to discover content from the selected source.
@@ -1694,6 +1712,8 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 	contentRoot := m.contentRoot
 	sourceReg := m.sourceRegistry
 	sourceVis := m.sourceVisibility
+	sourceSHA := m.executeSourceSHA
+	resolveSHA := index == 0 && m.executeResolveSHA
 	source := m.source
 	provSlug := ""
 	if source == addSourceProvider && m.providerCursor < len(m.providers) {
@@ -1701,8 +1721,13 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		result := addSingleItem(item, contentRoot, sourceReg, sourceVis, provSlug)
-		return addExecItemDoneMsg{seq: seq, index: index, result: result}
+		if resolveSHA {
+			if head, err := registry.Head(sourceReg); err == nil {
+				sourceSHA = head
+			}
+		}
+		result := addSingleItem(item, contentRoot, sourceReg, sourceVis, provSlug, sourceSHA)
+		return addExecItemDoneMsg{seq: seq, index: index, result: result, sourceSHA: sourceSHA}
 	}
 }
 
@@ -2495,7 +2520,7 @@ func discoverFromGitURL(
 }
 
 // addSingleItem adds a single item to the library.
-func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug string) addExecResult {
+func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	if item.underlying == nil {
 		return addExecResult{
 			name:   item.name,
@@ -2510,7 +2535,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 	// hook.json. Instead, serialize the parsed HookData directly. Mirrors
 	// cli/cmd/syllago/add_cmd.go addHooksFromLocation.
 	if item.itemType == catalog.Hooks && item.hookData != nil {
-		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug)
+		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
 	}
 
 	// Auto-split branch (P4 of syllago-50wq4): a rule item whose source file
@@ -2525,6 +2550,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 		Force:            item.overwrite,
 		Provider:         provSlug,
 		SourceRegistry:   srcReg,
+		SourceSHA:        srcSHA,
 		SourceVisibility: srcVis,
 	}
 
@@ -2547,6 +2573,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 	case add.AddStatusAdded:
 		return addExecResult{name: item.name, status: "added"}
 	case add.AddStatusUpdated:
+		recordTUIAddUpdateBookkeeping(srcReg, string(item.itemType), item.name, "", srcSHA)
 		return addExecResult{name: item.name, status: "updated"}
 	case add.AddStatusUpToDate:
 		return addExecResult{name: item.name, status: "skipped"}
@@ -2562,7 +2589,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug 
 // writeHookToLibrary serializes a HookData to ~/.syllago/hooks/<provider>/<name>/hook.json,
 // bundles any referenced scripts into the same directory, and writes .syllago.yaml
 // metadata. Mirrors addHooksFromLocation in cli/cmd/syllago/add_cmd.go.
-func writeHookToLibrary(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug string) addExecResult {
+func writeHookToLibrary(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	itemDir := filepath.Join(contentRoot, string(catalog.Hooks), provSlug, item.name)
 
 	if !item.overwrite {
@@ -2623,6 +2650,7 @@ func writeHookToLibrary(item addDiscoveryItem, contentRoot, srcReg, srcVis, prov
 	}
 	if srcReg != "" {
 		meta.SourceType = "registry"
+		meta.SourceSHA = srcSHA
 	}
 	if err := metadata.Save(itemDir, meta); err != nil {
 		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("writing metadata: %w", err)}

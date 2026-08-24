@@ -8,6 +8,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 // TestWriteHookToLibrary_WritesManifestHookJSON is a regression test for the bug
@@ -34,7 +35,7 @@ func TestWriteHookToLibrary_WritesManifestHookJSON(t *testing.T) {
 		hookSourceDir: "",
 	}
 
-	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code")
+	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("expected status=added, got %q err=%v", result.status, result.err)
 	}
@@ -106,8 +107,38 @@ func TestWriteHookToLibrary_SkipsExisting(t *testing.T) {
 		overwrite: false,
 	}
 
-	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code")
+	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code", "")
 	if result.status != "skipped" {
 		t.Errorf("expected skipped for existing dir without overwrite, got %q", result.status)
+	}
+}
+
+func TestWriteHookToLibrary_StampsRegistrySourceSHA(t *testing.T) {
+	contentRoot := t.TempDir()
+	hook := converter.HookData{
+		Event: "before_tool_execute",
+		Hooks: []converter.HookEntry{{Type: "command", Command: "echo hi"}},
+	}
+	item := addDiscoveryItem{
+		name:     "my-hook",
+		itemType: catalog.Hooks,
+		scope:    "global",
+		hookData: &hook,
+	}
+
+	result := writeHookToLibrary(item, contentRoot, "acme/tools", "private", "claude-code", "sha-from-registry")
+	if result.status != "added" {
+		t.Fatalf("expected status=added, got %q err=%v", result.status, result.err)
+	}
+
+	meta, err := metadata.Load(filepath.Join(contentRoot, string(catalog.Hooks), "claude-code", "my-hook"))
+	if err != nil {
+		t.Fatalf("Load metadata: %v", err)
+	}
+	if meta == nil {
+		t.Fatal("metadata missing")
+	}
+	if meta.SourceRegistry != "acme/tools" || meta.SourceSHA != "sha-from-registry" {
+		t.Fatalf("registry provenance = registry %q sha %q, want acme/tools sha-from-registry", meta.SourceRegistry, meta.SourceSHA)
 	}
 }

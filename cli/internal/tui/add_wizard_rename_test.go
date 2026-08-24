@@ -611,7 +611,7 @@ func TestWriteHookToLibrary_HonorsDisplayNameAndDescription(t *testing.T) {
 		hookData:    &hook,
 	}
 
-	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code")
+	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("expected status=added, got %q err=%v", result.status, result.err)
 	}

@@ -1334,6 +1334,9 @@ func (m *addWizardModel) handleExecItemDone(msg addExecItemDoneMsg) (*addWizardM
 	if msg.index < len(m.executeResults) {
 		m.executeResults[msg.index] = msg.result
 	}
+	if msg.index == 0 {
+		m.executeSourceSHA = msg.sourceSHA
+	}
 	m.executeCurrent = msg.index + 1
 
 	if next := m.nextPending(); next >= 0 && !m.executeCancelled {
