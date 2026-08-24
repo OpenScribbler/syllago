@@ -277,3 +277,132 @@ func assertFileContent(t *testing.T, path, want string) {
 		t.Fatalf("%s = %q, want %q", path, data, want)
 	}
 }
+
+func TestPreviousDirFor(t *testing.T) {
+	t.Cleanup(func() { PreviousRootOverride = "" })
+
+	// Test with override
+	overrideDir := t.TempDir()
+	PreviousRootOverride = overrideDir
+	path, err := PreviousDirFor("example-reg", catalog.Skills, "test-skill")
+	if err != nil {
+		t.Fatalf("PreviousDirFor failed: %v", err)
+	}
+	wantPath := filepath.Join(overrideDir, "previous", "example-reg", "skills", "test-skill")
+	if path != wantPath {
+		t.Errorf("PreviousDirFor = %q, want %q", path, wantPath)
+	}
+
+	// Test without override
+	PreviousRootOverride = ""
+	path, err = PreviousDirFor("example-reg", catalog.Skills, "test-skill")
+	if err != nil {
+		t.Fatalf("PreviousDirFor failed: %v", err)
+	}
+	suffix := filepath.Join("previous", "example-reg", "skills", "test-skill")
+	if !strings.HasSuffix(path, suffix) {
+		t.Errorf("PreviousDirFor = %q, want suffix %q", path, suffix)
+	}
+}
+
+func TestStageIntoLibraryKeepPrev(t *testing.T) {
+	t.Cleanup(func() { PreviousRootOverride = "" })
+	PreviousRootOverride = t.TempDir()
+
+	globalDir := t.TempDir()
+	now := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+
+	// 1. Fresh install should return prev path "" and no previous dir should be created.
+	cacheV1 := writeStageCache(t, map[string]string{
+		"SKILL.md": "# v1\n",
+	})
+	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
+	item, prevPath, err := StageIntoLibraryKeepPrev(cacheV1, entry, "example", globalDir, now)
+	if err != nil {
+		t.Fatalf("Fresh install failed: %v", err)
+	}
+	if prevPath != "" {
+		t.Errorf("Fresh install returned non-empty prev path: %q", prevPath)
+	}
+	destDir := filepath.Join(globalDir, "skills", "my-skill")
+	if item.Path != destDir {
+		t.Errorf("staged item path = %q, want %q", item.Path, destDir)
+	}
+	assertFileContent(t, filepath.Join(destDir, "SKILL.md"), "# v1\n")
+
+	// Verify no previous dir exists under our override root yet.
+	if _, err := os.Stat(filepath.Join(PreviousRootOverride, "previous")); !os.IsNotExist(err) {
+		t.Errorf("expected previous/ to not exist, got err: %v", err)
+	}
+
+	// 2. Idempotent same-hash stage should return prev path "" and not create previous dir.
+	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV1, entry, "example", globalDir, now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("Idempotent stage failed: %v", err)
+	}
+	if prevPath != "" {
+		t.Errorf("Idempotent stage returned non-empty prev path: %q", prevPath)
+	}
+
+	// 3. Replace (v2) with different ContentHash should return a valid prevPath,
+	// which contains v1 files and metadata.
+	cacheV2 := writeStageCache(t, map[string]string{
+		"SKILL.md": "# v2\n",
+	})
+	entry.ContentHash = "sha256:bbbbbbbb"
+	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV2, entry, "example", globalDir, now.Add(2*time.Hour))
+	if err != nil {
+		t.Fatalf("Replace v2 failed: %v", err)
+	}
+
+	expectedPrevDir, _ := PreviousDirFor("example", catalog.Skills, "my-skill")
+	if prevPath != expectedPrevDir {
+		t.Errorf("Replace v2 returned prevPath = %q, want %q", prevPath, expectedPrevDir)
+	}
+	assertFileContent(t, filepath.Join(prevPath, "SKILL.md"), "# v1\n")
+	assertFileContent(t, filepath.Join(destDir, "SKILL.md"), "# v2\n")
+	// Check that v1 metadata also exists in the saved previous copy
+	meta, err := metadata.Load(prevPath)
+	if err != nil {
+		t.Fatalf("Failed to load metadata from prevPath: %v", err)
+	}
+	if meta == nil || meta.SourceHash != "sha256:aaaaaaaa" {
+		t.Errorf("Metadata in prevPath = %+v, want SourceHash sha256:aaaaaaaa", meta)
+	}
+
+	// 4. Second replace (v3) should overwrite the prev copy with v2, not accumulate.
+	cacheV3 := writeStageCache(t, map[string]string{
+		"SKILL.md":  "# v3\n",
+		"extra.txt": "extra\n",
+	})
+	entry.ContentHash = "sha256:cccccccc"
+	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV3, entry, "example", globalDir, now.Add(3*time.Hour))
+	if err != nil {
+		t.Fatalf("Replace v3 failed: %v", err)
+	}
+	if prevPath != expectedPrevDir {
+		t.Errorf("Replace v3 returned prevPath = %q, want %q", prevPath, expectedPrevDir)
+	}
+	assertFileContent(t, filepath.Join(prevPath, "SKILL.md"), "# v2\n")
+	assertFileContent(t, filepath.Join(destDir, "SKILL.md"), "# v3\n")
+	assertFileContent(t, filepath.Join(destDir, "extra.txt"), "extra\n")
+	// Make sure v1 file from first previous copy is NOT in the second previous copy
+	if _, err := os.Stat(filepath.Join(prevPath, "extra.txt")); !os.IsNotExist(err) {
+		t.Errorf("extra.txt should not exist in prevPath for v2 copy, got err: %v", err)
+	}
+
+	// 5. Normal StageIntoLibrary (the wrapper) replacing a path should NOT create a previous dir.
+	// Clean up PreviousRootOverride to isolate.
+	PreviousRootOverride = t.TempDir()
+	cacheV4 := writeStageCache(t, map[string]string{
+		"SKILL.md": "# v4\n",
+	})
+	entry.ContentHash = "sha256:dddddddd"
+	_, err = StageIntoLibrary(cacheV4, entry, "example", globalDir, now.Add(4*time.Hour))
+	if err != nil {
+		t.Fatalf("Wrapper StageIntoLibrary failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(PreviousRootOverride, "previous")); !os.IsNotExist(err) {
+		t.Errorf("expected wrapper StageIntoLibrary to not create previous/, got err: %v", err)
+	}
+}

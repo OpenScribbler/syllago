@@ -459,3 +459,241 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 	)
 	assertStructuredCode(t, err, output.ErrMoatTierBelowPolicy)
 }
+
+func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
+	// Setup environment
+	env := setupIntegrationEnv(t)
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+	configDir := withInstallRecordConfigDir(t)
+	output.SetForTest(t)
+
+	// Enable PreviousRootOverride for testing
+	origOverride := moatinstall.PreviousRootOverride
+	prevOverride := t.TempDir()
+	moatinstall.PreviousRootOverride = prevOverride
+	t.Cleanup(func() { moatinstall.PreviousRootOverride = origOverride })
+
+	t.Setenv("HOME", env.projectRoot)
+
+	// 1. Install v1 first
+	fixtureRoot1 := t.TempDir()
+	contentHash1 := makeRepoFixture(t, fixtureRoot1, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# from registry v1\n",
+	})
+	stubCloneFromFixture(t, fixtureRoot1)
+	now := time.Date(2026, 8, 22, 14, 0, 0, 0, time.UTC)
+
+	env.syncResultFn = func() (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL: "https://example.com/m",
+			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
+				Name:        "my-skill",
+				Type:        "skill",
+				ContentHash: contentHash1,
+				SourceURI:   "https://github.com/example/repo",
+				AttestedAt:  now,
+			}}},
+			IncomingProfile: incomingProfile(),
+			Staleness:       moat.StalenessFresh,
+		}, nil
+	}
+
+	prov := integrationTestProvider()
+	err := runInstallFromRegistry(
+		context.Background(),
+		&bytes.Buffer{},
+		&bytes.Buffer{},
+		cfgWithPinnedMOATRegistry(),
+		env.projectRoot,
+		globalDir,
+		"example",
+		"my-skill",
+		&prov,
+		installer.MethodSymlink,
+		"",
+		false,
+		now,
+	)
+	if err != nil {
+		t.Fatalf("first install failed: %v", err)
+	}
+
+	// Verify v1 install record exists
+	storePath := filepath.Join(configDir, "installs.json")
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	rec := store.Find(installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"})
+	if rec == nil {
+		t.Fatal("v1 record missing")
+	}
+	if rec.Previous != nil {
+		t.Fatal("v1 record should have no Previous")
+	}
+	v1Hash := rec.ContentHash
+
+	// 2. Install v2 (different content hash)
+	fixtureRoot2 := t.TempDir()
+	contentHash2 := makeRepoFixture(t, fixtureRoot2, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# from registry v2\n",
+	})
+	stubCloneFromFixture(t, fixtureRoot2)
+
+	env.syncResultFn = func() (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL: "https://example.com/m2",
+			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
+				Name:        "my-skill",
+				Type:        "skill",
+				ContentHash: contentHash2,
+				SourceURI:   "https://github.com/example/repo",
+				AttestedAt:  now.Add(time.Hour),
+			}}},
+			IncomingProfile: incomingProfile(),
+			Staleness:       moat.StalenessFresh,
+		}, nil
+	}
+
+	err = runInstallFromRegistry(
+		context.Background(),
+		&bytes.Buffer{},
+		&bytes.Buffer{},
+		cfgWithPinnedMOATRegistry(),
+		env.projectRoot,
+		globalDir,
+		"example",
+		"my-skill",
+		&prov,
+		installer.MethodSymlink,
+		"",
+		false,
+		now.Add(time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("second install failed: %v", err)
+	}
+
+	// 3. Verify record's Previous is populated correctly
+	store, err = installstore.Load(storePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	rec = store.Find(installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"})
+	if rec == nil {
+		t.Fatal("v2 record missing")
+	}
+	if rec.Previous == nil {
+		t.Fatal("v2 record Previous is nil, want populated previous version copy")
+	}
+
+	expectedPrevDir, _ := moatinstall.PreviousDirFor("example", catalog.Skills, "my-skill")
+	if rec.Previous.CopyPath != expectedPrevDir {
+		t.Errorf("Previous.CopyPath = %q, want %q", rec.Previous.CopyPath, expectedPrevDir)
+	}
+	if rec.Previous.ContentHash != v1Hash {
+		t.Errorf("Previous.ContentHash = %q, want %q", rec.Previous.ContentHash, v1Hash)
+	}
+	expectedV2Hash, err := installstore.HashContent(filepath.Join(globalDir, "skills", "my-skill"))
+	if err != nil {
+		t.Fatalf("HashContent: %v", err)
+	}
+	if rec.ContentHash != expectedV2Hash {
+		t.Errorf("ContentHash = %q, want %q", rec.ContentHash, expectedV2Hash)
+	}
+	if rec.MOAT == nil {
+		t.Fatal("MOAT provenance missing after replace")
+	}
+}
+
+func TestInstallIntegration_ReplaceWithoutRecord(t *testing.T) {
+	env := setupIntegrationEnv(t)
+	globalDir := t.TempDir()
+	withGlobalLibrary(t, globalDir)
+	configDir := withInstallRecordConfigDir(t)
+	output.SetForTest(t)
+
+	origOverride := moatinstall.PreviousRootOverride
+	prevOverride := t.TempDir()
+	moatinstall.PreviousRootOverride = prevOverride
+	t.Cleanup(func() { moatinstall.PreviousRootOverride = origOverride })
+
+	t.Setenv("HOME", env.projectRoot)
+
+	// Stage a v1 item directly into library so there is no install record for it.
+	libraryPath := filepath.Join(globalDir, "skills", "my-skill")
+	if err := os.MkdirAll(libraryPath, 0755); err != nil {
+		t.Fatalf("mkdir library: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "SKILL.md"), []byte("# v1 directly staged\n"), 0644); err != nil {
+		t.Fatalf("write library file: %v", err)
+	}
+	if err := metadata.Save(libraryPath, &metadata.Meta{
+		Name:           "my-skill",
+		Type:           "skills",
+		SourceType:     "registry",
+		SourceRegistry: "example",
+		SourceHash:     "sha256:oldhash",
+	}); err != nil {
+		t.Fatalf("save meta: %v", err)
+	}
+
+	// Install v2
+	fixtureRoot := t.TempDir()
+	contentHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
+		"SKILL.md": "# from registry v2\n",
+	})
+	stubCloneFromFixture(t, fixtureRoot)
+	now := time.Date(2026, 8, 22, 14, 0, 0, 0, time.UTC)
+
+	env.syncResultFn = func() (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL: "https://example.com/m",
+			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
+				Name:        "my-skill",
+				Type:        "skill",
+				ContentHash: contentHash,
+				SourceURI:   "https://github.com/example/repo",
+				AttestedAt:  now,
+			}}},
+			IncomingProfile: incomingProfile(),
+			Staleness:       moat.StalenessFresh,
+		}, nil
+	}
+
+	prov := integrationTestProvider()
+	err := runInstallFromRegistry(
+		context.Background(),
+		&bytes.Buffer{},
+		&bytes.Buffer{},
+		cfgWithPinnedMOATRegistry(),
+		env.projectRoot,
+		globalDir,
+		"example",
+		"my-skill",
+		&prov,
+		installer.MethodSymlink,
+		"",
+		false,
+		now,
+	)
+	if err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Verify that a record was created for the new install, but since there was no
+	// record before, its Previous field is nil.
+	storePath := filepath.Join(configDir, "installs.json")
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	rec := store.Find(installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"})
+	if rec == nil {
+		t.Fatal("record missing after first install")
+	}
+	if rec.Previous != nil {
+		t.Errorf("record Previous = %+v, want nil", rec.Previous)
+	}
+}

@@ -42,6 +42,30 @@ func recordMOATInstallBookkeeping(item catalog.ContentItem, provSlug string, pl 
 	}
 }
 
+// recordMOATUpdateBookkeeping rotates the install record for a MOAT item whose
+// library copy was just replaced, capturing the saved previous copy for
+// one-step rollback. Best-effort; items without records skip silently.
+func recordMOATUpdateBookkeeping(item catalog.ContentItem, prevCopyPath string) {
+	storePath, err := installstore.DefaultPath()
+	if err != nil {
+		warnInstallRecord(err)
+		return
+	}
+	coord := installRecordCoord(item)
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		warnInstallRecord(err)
+		return
+	}
+	rec := store.Find(coord)
+	if rec == nil {
+		return
+	}
+	if err := installstore.RecordUpdate(storePath, coord, item.Path, "", prevCopyPath, time.Now()); err != nil {
+		warnInstallRecord(err)
+	}
+}
+
 // recordAddUpdateBookkeeping rotates install records for items that were
 // force-overwritten in the library, capturing the one-step rollback point.
 func recordAddUpdateBookkeeping(results []add.AddResult, regName, sourceSHA string) {
