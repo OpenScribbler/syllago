@@ -51,7 +51,7 @@ func EventCatalog() []EventDef {
 					Type:        "string",
 					Description: "Content type filter or specific type",
 					Example:     "rules",
-					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "sync-and-export", "registry_items"},
+					Commands:    []string{"install", "add", "convert", "create", "uninstall", "remove", "list", "share", "rollback", "sync-and-export", "registry_items"},
 				},
 				{
 					Name:        "content_count",
@@ -65,7 +65,7 @@ func EventCatalog() []EventDef {
 					Type:        "bool",
 					Description: "Whether --dry-run flag was used",
 					Example:     false,
-					Commands:    []string{"install", "add", "uninstall", "remove", "sync-and-export"},
+					Commands:    []string{"install", "add", "uninstall", "remove", "rollback", "sync-and-export"},
 				},
 				{
 					Name:        "from",
