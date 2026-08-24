@@ -247,6 +247,15 @@ func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 		return a, a.doInstallAllCmd(*pendingAll)
 	}
 
+	if msg.purpose == confirmPurposeRollback {
+		plan := a.pendingRollback
+		a.pendingRollback = nil
+		if !msg.confirmed {
+			return a, nil
+		}
+		return a, a.doRollbackCmd(plan)
+	}
+
 	if !msg.confirmed {
 		return a, nil
 	}

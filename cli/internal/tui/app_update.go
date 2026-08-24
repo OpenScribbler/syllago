@@ -281,6 +281,14 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case msg.String() == keyUninstall:
 			return a.handleUninstall()
 
+		// Pin/unpin registry item
+		case msg.String() == keyPin:
+			return a.handlePin()
+
+		// Rollback last update
+		case msg.String() == keyRollback:
+			return a.handleRollback()
+
 		// Install item to a provider
 		case msg.String() == keyInstall:
 			return a.handleInstall()
@@ -510,6 +518,67 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case libraryUninstallMsg:
 		return a.handleUninstall()
+
+	case libraryPinMsg:
+		return a.handlePin()
+
+	case libraryRollbackMsg:
+		return a.handleRollback()
+
+	case pinToggleMsg:
+		if msg.err != nil {
+			return a, a.toast.Push(msg.err.Error(), toastWarning)
+		}
+		var toastCmd tea.Cmd
+		if msg.pinned {
+			if msg.sourceSHA != "" {
+				toastCmd = a.toast.Push(fmt.Sprintf("Pinned %s/%s — holding at %s", msg.typ, msg.name, shortSHA(msg.sourceSHA)), toastSuccess)
+			} else {
+				toastCmd = a.toast.Push(fmt.Sprintf("Pinned %s/%s", msg.typ, msg.name), toastSuccess)
+			}
+		} else {
+			toastCmd = a.toast.Push(fmt.Sprintf("Unpinned %s/%s", msg.typ, msg.name), toastSuccess)
+		}
+		return a, tea.Batch(toastCmd, a.rescanCatalog())
+
+	case rollbackPlanMsg:
+		if msg.err != nil {
+			return a, a.toast.Push(msg.err.Error(), toastWarning)
+		}
+		plan := msg.plan
+		a.pendingRollback = plan
+
+		var body string
+		if plan.FromCopy {
+			when := "unknown date"
+			if !plan.Prev.ReplacedAt.IsZero() {
+				when = plan.Prev.ReplacedAt.Format("2006-01-02")
+			}
+			body = fmt.Sprintf("Restores %s/%s to the saved copy from %s.\nOne-step: the current version becomes the new rollback point.", plan.Item.Type, plan.Item.Name, when)
+		} else {
+			body = fmt.Sprintf("Restores %s/%s to %s.\nOne-step: the current version becomes the new rollback point.", plan.Item.Type, plan.Item.Name, shortSHA(plan.Prev.SourceSHA))
+		}
+
+		title := fmt.Sprintf("Roll back %q?", plan.Item.Name)
+		a.confirm.OpenForItem(title, body, "Roll back", true, nil, plan.Item)
+		a.confirm.purpose = confirmPurposeRollback
+		return a, nil
+
+	case rollbackDoneMsg:
+		if msg.err != nil {
+			return a, a.toast.Push(msg.err.Error(), toastWarning)
+		}
+		var toastCmds []tea.Cmd
+		if msg.fromCopy {
+			toastCmds = append(toastCmds, a.toast.Push(fmt.Sprintf("Rolled back %s/%s to previous version", msg.typ, msg.name), toastSuccess))
+		} else {
+			toastCmds = append(toastCmds, a.toast.Push(fmt.Sprintf("Rolled back %s/%s to %s", msg.typ, msg.name, shortSHA(msg.sha)), toastSuccess))
+		}
+		for _, w := range msg.warnings {
+			toastCmds = append(toastCmds, a.toast.Push("warning: "+w, toastWarning))
+		}
+		toastCmds = append(toastCmds, a.rescanCatalog())
+		return a, tea.Batch(toastCmds...)
 
 	case libraryDrillMsg:
 		a.updateNavState()

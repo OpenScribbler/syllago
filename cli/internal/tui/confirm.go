@@ -19,6 +19,7 @@ type confirmResultMsg struct {
 	item               catalog.ContentItem
 	itemName           string
 	uninstallProviders []provider.Provider
+	purpose            string
 }
 
 // confirmCheckbox represents a toggleable checkbox in the confirm modal.
@@ -40,6 +41,7 @@ type confirmModal struct {
 	focusIdx     int
 	width        int
 	height       int
+	purpose      string
 
 	// Caller context — passed through to result messages untouched.
 	item               catalog.ContentItem
@@ -75,6 +77,7 @@ func (m *confirmModal) Open(title, body, confirmLabel string, danger bool, check
 	m.item = catalog.ContentItem{}
 	m.itemName = ""
 	m.uninstallProviders = nil
+	m.purpose = ""
 }
 
 // OpenForItem is a convenience that also stores item context for the result message.
@@ -96,6 +99,7 @@ func (m *confirmModal) Close() {
 	m.item = catalog.ContentItem{}
 	m.itemName = ""
 	m.uninstallProviders = nil
+	m.purpose = ""
 }
 
 func (m confirmModal) result(confirmed bool) (confirmModal, tea.Cmd) {
@@ -105,6 +109,7 @@ func (m confirmModal) result(confirmed bool) (confirmModal, tea.Cmd) {
 		item:               m.item,
 		itemName:           m.itemName,
 		uninstallProviders: m.uninstallProviders,
+		purpose:            m.purpose,
 	}
 	m.Close()
 	return m, func() tea.Msg { return res }

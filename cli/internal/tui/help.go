@@ -112,6 +112,8 @@ func (h helpOverlay) View() string {
 			{"e", "Edit name/description"},
 			{"d", "Remove from library"},
 			{"x", "Uninstall from provider"},
+			{"p", "Pin/unpin"},
+			{"z", "Rollback"},
 			{"t", "Inspect trust details"},
 			{"/", "Search"},
 			{"s / S", "Sort / reverse sort"},
