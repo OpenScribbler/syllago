@@ -1121,7 +1121,7 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 		now := time.Now()
-		staged, stageErr := moatinstall.StageIntoLibrary(cacheDir, entry, reg.Name, globalDir, now)
+		staged, prevCopy, stageErr := moatinstall.StageIntoLibraryKeepPrev(cacheDir, entry, reg.Name, globalDir, now)
 		if stageErr != nil {
 			done.err = stageErr
 			return done
@@ -1131,6 +1131,9 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 		if installErr != nil {
 			done.err = installErr
 			return done
+		}
+		if prevCopy != "" {
+			recordTUIMOATUpdateBookkeeping(staged, prevCopy)
 		}
 		recordTUIMOATInstallBookkeeping(staged, prov.Slug, placement, &installstore.MOATProvenance{
 			ManifestURI: reg.ManifestURI,
@@ -1361,9 +1364,17 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem, installAfter bool) (tea
 			di.Description = itemCopy.Description
 		}
 
+		sourceSHA := ""
+		if itemCopy.Registry != "" {
+			if head, err := registry.Head(itemCopy.Registry); err == nil {
+				sourceSHA = head
+			}
+		}
+
 		opts := add.AddOptions{
 			Force:          false,
 			SourceRegistry: itemCopy.Registry,
+			SourceSHA:      sourceSHA,
 		}
 		results := add.AddItems([]add.DiscoveryItem{di}, opts, contentRoot, nil, "syllago")
 		if len(results) == 0 {
