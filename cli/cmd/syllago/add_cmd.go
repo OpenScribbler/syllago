@@ -264,12 +264,14 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	srcRegistry, _ := cmd.Flags().GetString("source-registry")
 	srcVisibility, _ := cmd.Flags().GetString("source-visibility")
+	sourceSHA := sourceSHAForConfiguredGitRegistry(mergedCfg, srcRegistry)
 
 	results := add.AddItems(items, add.AddOptions{
 		Force:            force,
 		DryRun:           dryRun,
 		Provider:         fromSlug,
 		SourceRegistry:   srcRegistry,
+		SourceSHA:        sourceSHA,
 		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
 
@@ -327,6 +329,21 @@ func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoo
 		}
 	}
 	return nil
+}
+
+func sourceSHAForConfiguredGitRegistry(cfg *config.Config, srcRegistry string) string {
+	if cfg == nil || srcRegistry == "" {
+		return ""
+	}
+	reg := findRegistryByName(cfg, srcRegistry)
+	if reg == nil || !reg.IsGit() {
+		return ""
+	}
+	head, err := registry.Head(reg.Name)
+	if err != nil {
+		return ""
+	}
+	return head
 }
 
 // filterDiscoveryItems filters a discovery list by content type and optional name.
@@ -1281,13 +1298,23 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 	if visibility == "" {
 		visibility = "unknown"
 	}
+	sourceSHA := ""
+	if reg.IsGit() {
+		if head, err := registry.Head(reg.Name); err == nil {
+			sourceSHA = head
+		}
+	}
 
 	results := add.AddItems(items, add.AddOptions{
 		Force:            force,
 		DryRun:           dryRun,
 		SourceRegistry:   reg.Name,
+		SourceSHA:        sourceSHA,
 		SourceVisibility: visibility,
 	}, globalDir, nil, version)
+	if !dryRun {
+		recordAddUpdateBookkeeping(results, reg.Name, sourceSHA)
+	}
 
 	telemetry.Enrich("from", fromSlug)
 	telemetry.Enrich("content_type", typeStr)

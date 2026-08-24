@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
@@ -18,7 +19,9 @@ func recordInstallBookkeeping(item catalog.ContentItem, provSlug string, pl inst
 		warnInstallRecord(err)
 		return
 	}
-	if err := installstore.RecordInstall(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), time.Now()); err != nil {
+	if err := installstore.RecordInstallMeta(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), installstore.InstallMeta{
+		SourceSHA: installRecordSourceSHA(item),
+	}, time.Now()); err != nil {
 		warnInstallRecord(err)
 	}
 }
@@ -31,8 +34,39 @@ func recordMOATInstallBookkeeping(item catalog.ContentItem, provSlug string, pl 
 		warnInstallRecord(err)
 		return
 	}
-	if err := installstore.RecordInstallMOAT(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), moatProv, time.Now()); err != nil {
+	if err := installstore.RecordInstallMeta(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), installstore.InstallMeta{
+		MOAT:      moatProv,
+		SourceSHA: installRecordSourceSHA(item),
+	}, time.Now()); err != nil {
 		warnInstallRecord(err)
+	}
+}
+
+// recordAddUpdateBookkeeping rotates install records for items that were
+// force-overwritten in the library, capturing the one-step rollback point.
+func recordAddUpdateBookkeeping(results []add.AddResult, regName, sourceSHA string) {
+	for _, r := range results {
+		if r.Status != add.AddStatusUpdated {
+			continue
+		}
+		storePath, err := installstore.DefaultPath()
+		if err != nil {
+			warnInstallRecord(err)
+			continue
+		}
+		coord := installstore.Coord{Registry: regName, Type: string(r.Type), Name: r.Name}
+		store, err := installstore.Load(storePath)
+		if err != nil {
+			warnInstallRecord(err)
+			continue
+		}
+		rec := store.Find(coord)
+		if rec == nil {
+			continue
+		}
+		if err := installstore.RecordUpdate(storePath, coord, rec.LibraryPath, sourceSHA, "", time.Now()); err != nil {
+			warnInstallRecord(err)
+		}
 	}
 }
 
@@ -79,6 +113,13 @@ func installRecordPlacement(provSlug string, pl installer.Placement) installstor
 		Path:      pl.Path,
 		Keys:      pl.Keys,
 	}
+}
+
+func installRecordSourceSHA(item catalog.ContentItem) string {
+	if item.Meta == nil {
+		return ""
+	}
+	return item.Meta.SourceSHA
 }
 
 func warnInstallRecord(err error) {

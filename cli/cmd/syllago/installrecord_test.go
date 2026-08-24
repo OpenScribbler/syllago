@@ -8,6 +8,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -49,6 +50,46 @@ func TestInstallCommandRecordsInstallState(t *testing.T) {
 	wantPath := filepath.Join(installBase, "skills", "my-skill")
 	if got.Provider != "record-install-provider" || got.Mechanism != installstore.MechanismSymlink || got.Path != wantPath || got.Key != "" {
 		t.Fatalf("placement = %#v, want provider record-install-provider symlink path %s", got, wantPath)
+	}
+}
+
+func TestRecordInstallBookkeepingCarriesSourceSHA(t *testing.T) {
+	configDir := withInstallRecordConfigDir(t)
+	output.SetForTest(t)
+
+	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
+	if err := os.MkdirAll(libraryPath, 0755); err != nil {
+		t.Fatalf("MkdirAll library path: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"), 0644); err != nil {
+		t.Fatalf("WriteFile library content: %v", err)
+	}
+
+	item := catalog.ContentItem{
+		Name: "writer",
+		Type: catalog.Skills,
+		Path: libraryPath,
+		Meta: &metadata.Meta{
+			SourceType:     "registry",
+			SourceRegistry: "acme/tools",
+			SourceSHA:      "sha-from-meta",
+		},
+	}
+	placement := installer.Placement{
+		Mechanism: installer.MechanismSymlink,
+		Path:      filepath.Join(t.TempDir(), "writer"),
+	}
+
+	recordInstallBookkeeping(item, "claude-code", placement)
+
+	store := mustLoadInstallRecordStore(t, configDir)
+	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
+	rec := store.Find(coord)
+	if rec == nil {
+		t.Fatal("install record missing")
+	}
+	if rec.SourceSHA != "sha-from-meta" {
+		t.Fatalf("SourceSHA = %q, want sha-from-meta", rec.SourceSHA)
 	}
 }
 
