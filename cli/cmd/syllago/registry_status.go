@@ -26,6 +26,7 @@ type registryStatusJSON struct {
 	Modified int    `json:"modified"`
 	Removed  int    `json:"removed"`
 	Error    string `json:"error,omitempty"`
+	Pinned   bool   `json:"pinned"`
 }
 
 var registryStatusCmd = &cobra.Command{
@@ -155,9 +156,16 @@ func registryStatusGit(reg *config.Registry) (registryStatusJSON, error) {
 	if err != nil {
 		return row, output.NewStructuredErrorDetail(output.ErrRegistrySyncFailed, fmt.Sprintf("status failed for %q", reg.Name), "Check network connectivity and git credentials", err.Error())
 	}
+	row.Pinned = outcome.Pinned
+
+	kind := "git"
+	if outcome.Pinned {
+		kind = "git, pinned"
+	}
+
 	if outcome.Head == outcome.RemoteHead {
 		row.State = "up_to_date"
-		registryStatusPrintLine("%s (git): up to date\n", reg.Name)
+		registryStatusPrintLine("%s (%s): up to date\n", reg.Name, kind)
 		return row, nil
 	}
 
@@ -165,25 +173,25 @@ func registryStatusGit(reg *config.Registry) (registryStatusJSON, error) {
 	if d == nil {
 		row.State = "error"
 		row.Error = "could not compare"
-		registryStatusPrintLine("%s (git): could not compare — run 'syllago registry sync %s'\n", reg.Name, reg.Name)
+		registryStatusPrintLine("%s (%s): could not compare — run 'syllago registry sync %s'\n", reg.Name, kind, reg.Name)
 		return row, nil
 	}
 	cloneDir, err := registry.CloneDir(reg.Name)
 	if err != nil {
 		row.State = "error"
 		row.Error = "could not compare"
-		registryStatusPrintLine("%s (git): could not compare — run 'syllago registry sync %s'\n", reg.Name, reg.Name)
+		registryStatusPrintLine("%s (%s): could not compare — run 'syllago registry sync %s'\n", reg.Name, kind, reg.Name)
 		return row, nil
 	}
 	refineRegistryStatusGitKinds(cloneDir, outcome.Head, outcome.RemoteHead, d)
 	if registryStatusHasChanges(d) {
 		registryStatusSetChangeCounts(&row, d)
-		registryStatusPrintDiff(reg.Name, "git", d)
+		registryStatusPrintDiff(reg.Name, kind, d)
 		return row, nil
 	}
 
 	row.State = "up_to_date"
-	registryStatusPrintLine("%s (git): up to date\n", reg.Name)
+	registryStatusPrintLine("%s (%s): up to date\n", reg.Name, kind)
 	return row, nil
 }
 

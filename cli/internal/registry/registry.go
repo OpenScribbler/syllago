@@ -133,7 +133,7 @@ func Clone(url, name, ref string) error {
 		return fmt.Errorf("creating registry cache: %w", err)
 	}
 
-	args := cloneArgs(url, dir, ref)
+	args := cloneArgs(url, dir)
 	cmd := exec.Command("git", args...)
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
@@ -144,29 +144,61 @@ func Clone(url, name, ref string) error {
 		_ = os.RemoveAll(dir)
 		return fmt.Errorf("git clone failed: %s", strings.TrimSpace(string(out)))
 	}
+
+	if ref != "" {
+		cmdVerify := exec.Command("git", "-C", dir, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/"+ref)
+		cmdVerify.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		errVerify := cmdVerify.Run()
+		isBranch := errVerify == nil
+
+		cArgs := checkoutArgs(dir, ref, isBranch)
+		cmdCheckout := exec.Command("git", cArgs...)
+		cmdCheckout.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		outCheckout, errCheckout := cmdCheckout.CombinedOutput()
+		if errCheckout != nil {
+			_ = os.RemoveAll(dir)
+			return fmt.Errorf("git checkout %q failed: %s", ref, strings.TrimSpace(string(outCheckout)))
+		}
+	}
+
 	return nil
 }
 
 // cloneArgs builds the git argument list for a secure clone.
 // It disables hooks via core.hooksPath and prevents submodule recursion.
 // GIT_CONFIG_NOSYSTEM=1 must also be set on the command's Env by the caller.
-func cloneArgs(url, dir, ref string) []string {
-	args := []string{
+func cloneArgs(url, dir string) []string {
+	return []string{
 		"-c", "core.hooksPath=/dev/null",
 		"clone",
 		"--no-recurse-submodules",
 		url, dir,
 	}
-	if ref != "" {
-		args = append(args, "--branch", ref)
+}
+
+func checkoutArgs(dir, ref string, isBranch bool) []string {
+	if isBranch {
+		return []string{
+			"-C", dir,
+			"-c", "core.hooksPath=/dev/null",
+			"checkout", "--quiet",
+			ref,
+		}
 	}
-	return args
+	return []string{
+		"-C", dir,
+		"-c", "core.hooksPath=/dev/null",
+		"checkout", "--quiet", "--detach",
+		ref,
+	}
 }
 
 // GitSyncOutcome reports the commit movement of one git-registry sync.
 type GitSyncOutcome struct {
-	OldHead string // HEAD sha before the pull; "" if unreadable (e.g. empty repo)
-	NewHead string // HEAD sha after the pull
+	OldHead    string // HEAD sha before the pull; "" if unreadable (e.g. empty repo)
+	NewHead    string // HEAD sha after the pull
+	Pinned     bool   // True if the checkout is pinned (detached HEAD) and fetch-only
+	RemoteHead string // FETCH_HEAD sha after the fetch (pinned path only)
 }
 
 // GitStatusOutcome reports the local and upstream heads of a registry clone
@@ -174,6 +206,7 @@ type GitSyncOutcome struct {
 type GitStatusOutcome struct {
 	Head       string
 	RemoteHead string
+	Pinned     bool // True if the checkout is pinned (detached HEAD)
 }
 
 // Head returns the current HEAD sha for a git registry clone.
@@ -192,6 +225,36 @@ func Head(name string) (string, error) {
 	return head, nil
 }
 
+func isDetachedHead(dir string) bool {
+	cmdSym := exec.Command("git", "-C", dir, "symbolic-ref", "--quiet", "HEAD")
+	cmdSym.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+	return cmdSym.Run() != nil
+}
+
+// IsPinned checks if the registry clone at name has a detached HEAD.
+func IsPinned(name string) (bool, error) {
+	if err := checkGit(); err != nil {
+		return false, err
+	}
+	dir, err := CloneDir(name)
+	if err != nil {
+		return false, err
+	}
+	return isDetachedHead(dir), nil
+}
+
+// RemoteDefaultHead returns the commit SHA of refs/remotes/origin/HEAD.
+func RemoteDefaultHead(name string) (string, error) {
+	if err := checkGit(); err != nil {
+		return "", err
+	}
+	dir, err := CloneDir(name)
+	if err != nil {
+		return "", err
+	}
+	return gitRevParse(dir, "refs/remotes/origin/HEAD")
+}
+
 // Status fetches the registry clone's upstream refs without moving the
 // checkout, then returns local HEAD vs FETCH_HEAD.
 func Status(name string) (GitStatusOutcome, error) {
@@ -203,6 +266,9 @@ func Status(name string) (GitStatusOutcome, error) {
 	if err != nil {
 		return outcome, err
 	}
+
+	isDetached := isDetachedHead(dir)
+
 	cmd := exec.Command("git",
 		"-C", dir,
 		"-c", "core.hooksPath=/dev/null",
@@ -211,18 +277,23 @@ func Status(name string) (GitStatusOutcome, error) {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return outcome, fmt.Errorf("git fetch failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
+		return outcome, fmt.Errorf("git fetch failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s` (deleting the clone also discards local history used for item rollback))", name, strings.TrimSpace(string(out)), name, name)
 	}
 	head, err := gitHead(dir)
 	if err != nil {
 		return outcome, fmt.Errorf("reading HEAD after git fetch for %q: %w", name, err)
 	}
-	remoteHead, err := gitRevParse(dir, "FETCH_HEAD")
+	remoteRef := "FETCH_HEAD"
+	if isDetached {
+		remoteRef = "refs/remotes/origin/HEAD"
+	}
+	remoteHead, err := gitRevParse(dir, remoteRef)
 	if err != nil {
-		return outcome, fmt.Errorf("reading FETCH_HEAD after git fetch for %q: %w", name, err)
+		return outcome, fmt.Errorf("reading %s after git fetch for %q: %w", remoteRef, name, err)
 	}
 	outcome.Head = head
 	outcome.RemoteHead = remoteHead
+	outcome.Pinned = isDetached
 	return outcome, nil
 }
 
@@ -240,6 +311,34 @@ func Sync(name string) (GitSyncOutcome, error) {
 	if oldHead, err := gitHead(dir); err == nil {
 		outcome.OldHead = oldHead
 	}
+
+	isDetached := isDetachedHead(dir)
+
+	if isDetached {
+		cmdFetch := exec.Command("git",
+			"-C", dir,
+			"-c", "core.hooksPath=/dev/null",
+			"fetch", "--quiet", "--no-recurse-submodules",
+		)
+		cmdFetch.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
+		outFetch, errFetch := cmdFetch.CombinedOutput()
+		if errFetch != nil {
+			return outcome, fmt.Errorf("git fetch failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s` (deleting the clone also discards local history used for item rollback))", name, strings.TrimSpace(string(outFetch)), name, name)
+		}
+		currHead, errHead := gitHead(dir)
+		if errHead != nil {
+			return outcome, fmt.Errorf("reading HEAD after git fetch for %q: %w", name, errHead)
+		}
+		remoteHead, errRemote := gitRevParse(dir, "refs/remotes/origin/HEAD")
+		if errRemote != nil {
+			return outcome, fmt.Errorf("reading refs/remotes/origin/HEAD after git fetch for %q: %w", name, errRemote)
+		}
+		outcome.NewHead = currHead
+		outcome.Pinned = true
+		outcome.RemoteHead = remoteHead
+		return outcome, nil
+	}
+
 	cmd := exec.Command("git",
 		"-C", dir,
 		"-c", "core.hooksPath=/dev/null",
@@ -248,13 +347,14 @@ func Sync(name string) (GitSyncOutcome, error) {
 	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return outcome, fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s`)", name, strings.TrimSpace(string(out)), name, name)
+		return outcome, fmt.Errorf("git pull failed for %q: %s\n(Hint: delete the clone at ~/.syllago/registries/%s and re-run `syllago registry sync %s` (deleting the clone also discards local history used for item rollback))", name, strings.TrimSpace(string(out)), name, name)
 	}
 	newHead, err := gitHead(dir)
 	if err != nil {
 		return outcome, fmt.Errorf("reading HEAD after git pull for %q: %w", name, err)
 	}
 	outcome.NewHead = newHead
+	outcome.Pinned = false
 	return outcome, nil
 }
 
