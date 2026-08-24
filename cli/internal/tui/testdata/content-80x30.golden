@@ -27,4 +27,4 @@
 │                           │                                                  │
 ╰───────────────────────────┴──────────────────────────────────────────────────╯
 1/2/3 groups · tab items · ↑/↓ navigate · ←/→ switch pane   syllago v0.0.0-test
-enter detail · / search · i install · e edit · d remove · x uninstall · t trust · R refresh · a add · ? help · q quit
+enter detail · / search · i install · e edit · d remove · x uninstall · p pin/unpin · z rollback · t trust · R refresh · a add · ? help · q quit

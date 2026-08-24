@@ -64,6 +64,12 @@ type libraryRemoveMsg struct{}
 // libraryUninstallMsg is sent when the uninstall button is clicked in the metadata bar.
 type libraryUninstallMsg struct{}
 
+// libraryPinMsg is sent when the pin button is clicked in the metadata bar.
+type libraryPinMsg struct{}
+
+// libraryRollbackMsg is sent when the rollback button is clicked in the metadata bar.
+type libraryRollbackMsg struct{}
+
 // libraryCloseMsg is sent when the user closes the detail view.
 type libraryCloseMsg struct{}
 
@@ -491,6 +497,12 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 			if zone.Get("meta-uninstall").InBounds(msg) {
 				return l, func() tea.Msg { return libraryUninstallMsg{} }
 			}
+			if zone.Get("meta-pin").InBounds(msg) {
+				return l, func() tea.Msg { return libraryPinMsg{} }
+			}
+			if zone.Get("meta-rollback").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRollbackMsg{} }
+			}
 			if zone.Get("meta-trust").InBounds(msg) {
 				if item := l.table.Selected(); item != nil {
 					return l, func() tea.Msg { return libraryTrustInspectMsg{item: item} }
@@ -543,6 +555,12 @@ func (l libraryModel) updateMouse(msg tea.MouseMsg) (libraryModel, tea.Cmd) {
 			}
 			if zone.Get("meta-uninstall").InBounds(msg) {
 				return l, func() tea.Msg { return libraryUninstallMsg{} }
+			}
+			if zone.Get("meta-pin").InBounds(msg) {
+				return l, func() tea.Msg { return libraryPinMsg{} }
+			}
+			if zone.Get("meta-rollback").InBounds(msg) {
+				return l, func() tea.Msg { return libraryRollbackMsg{} }
 			}
 			if zone.Get("meta-trust").InBounds(msg) {
 				if l.detailItem != nil {

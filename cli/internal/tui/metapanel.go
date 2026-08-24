@@ -10,8 +10,16 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
+
+func shortSHA(sha string) string {
+	if len(sha) <= 12 {
+		return sha
+	}
+	return sha[:12]
+}
 
 // ruleTargetStatus is a single row for the D16 per-target breakdown in the
 // rule metapanel: which target file an InstalledRuleAppend record points at
@@ -28,6 +36,10 @@ type metaPanelData struct {
 	typeDetail  string // type-specific detail (hooks/MCP/loadouts) or ""
 	canInstall  bool   // true when item is in library and has at least one uninstalled provider
 	ruleRecords []ruleTargetStatus
+	pinned      bool
+	heldAt      string
+	canRollback bool
+	hasRecord   bool
 }
 
 // computeMetaPanelData computes installed status and type-specific detail for an item.
@@ -62,10 +74,39 @@ func computeMetaPanelData(item catalog.ContentItem, providers []provider.Provide
 		}
 	}
 
+	var pinned bool
+	var heldAt string
+	var canRollback bool
+	var hasRecord bool
+
+	if item.Meta != nil && item.Meta.SourceRegistry != "" {
+		if storePath, err := installstore.DefaultPath(); err == nil {
+			if store, err := installstore.Load(storePath); err == nil {
+				coord := installstore.Coord{
+					Registry: item.Meta.SourceRegistry,
+					Type:     string(item.Type),
+					Name:     item.Name,
+				}
+				if rec := store.Find(coord); rec != nil {
+					hasRecord = true
+					pinned = rec.Pinned
+					if pinned {
+						heldAt = shortSHA(rec.SourceSHA)
+					}
+					canRollback = rec.Previous != nil && (rec.Previous.SourceSHA != "" || rec.Previous.CopyPath != "")
+				}
+			}
+		}
+	}
+
 	return metaPanelData{
-		installed:  installed,
-		typeDetail: computeTypeDetail(item),
-		canInstall: canInstall,
+		installed:   installed,
+		typeDetail:  computeTypeDetail(item),
+		canInstall:  canInstall,
+		pinned:      pinned,
+		heldAt:      heldAt,
+		canRollback: canRollback,
+		hasRecord:   hasRecord,
 	}
 }
 
@@ -242,6 +283,16 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 			btns = append(btns, zone.Mark("meta-remove", activeButtonStyle.Render("[d] Remove")))
 		}
 		btns = append(btns, zone.Mark("meta-edit", activeButtonStyle.Render("[e] Edit")))
+		if item.Meta != nil && item.Meta.SourceRegistry != "" && data.hasRecord {
+			if data.pinned {
+				btns = append(btns, zone.Mark("meta-pin", activeButtonStyle.Render("[p] Unpin")))
+			} else {
+				btns = append(btns, zone.Mark("meta-pin", activeButtonStyle.Render("[p] Pin")))
+			}
+		}
+		if data.canRollback {
+			btns = append(btns, zone.Mark("meta-rollback", activeButtonStyle.Render("[z] Rollback")))
+		}
 	}
 	btnRow := strings.Join(btns, " ")
 	btnRowW := lipgloss.Width(btnRow)
@@ -282,6 +333,15 @@ func renderMetaPanel(item *catalog.ContentItem, data metaPanelData, width int) s
 		visibilityStyle = privateIndicatorStyle
 	}
 	leftPortion += gap + boldStyle.Render("Visibility: ") + visibilityStyle.Render(visibility)
+
+	if data.pinned {
+		pinnedVal := "Pinned"
+		if data.heldAt != "" {
+			pinnedVal = "Pinned @" + data.heldAt
+		}
+		pinnedVal = truncate(pinnedVal, 20)
+		leftPortion += gap + lipgloss.NewStyle().Foreground(warningColor).Bold(true).Render(pinnedVal)
+	}
 
 	// Gap between left portion and buttons; always at least one space.
 	leftW := lipgloss.Width(leftPortion)

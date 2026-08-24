@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/rollback"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
@@ -108,6 +109,7 @@ type App struct {
 	// / pendingInstallAll is non-nil at a time.
 	pendingInstall    *installResultMsg
 	pendingInstallAll *installAllResultMsg
+	pendingRollback   *rollback.Plan
 
 	// MOAT install-gate state. moatSession persists for the TUI run so a
 	// publisher-warn acknowledgement survives rescans (ADR 0007 G-8 warn-
@@ -462,7 +464,7 @@ func (a App) currentHints() []string {
 		if a.library.mode == libraryDetail {
 			return append(base, "↑/↓ navigate", "←/→ switch pane", "esc close", "t trust", "R refresh", "? help", "q back")
 		}
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "? help", "q back")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "e edit", "d remove", "x uninstall", "p pin/unpin", "z rollback", "t trust", "R refresh", "? help", "q back")
 	}
 	if a.isRegistriesTab() && !a.galleryDrillIn {
 		return append(base, "arrows grid", "enter select", "tab grid/contents", "/ search", "a add", "S sync", "d remove", "e edit", "t trust", "R refresh", "? help", "q back")
@@ -477,7 +479,7 @@ func (a App) currentHints() []string {
 	}
 
 	if a.isLibraryTab() {
-		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "i install", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "a add", "? help", "q quit")
+		return append(base, "↑/↓ navigate", "enter preview", "/ search", "s sort", "i install", "e edit", "d remove", "x uninstall", "p pin/unpin", "z rollback", "t trust", "R refresh", "a add", "? help", "q quit")
 	}
 
 	// Explorer in detail mode
@@ -487,7 +489,7 @@ func (a App) currentHints() []string {
 
 	hints := append(base, "↑/↓ navigate", "←/→ switch pane", "enter detail", "/ search")
 	if group != "Config" {
-		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "t trust", "R refresh", "a add")
+		hints = append(hints, "i install", "e edit", "d remove", "x uninstall", "p pin/unpin", "z rollback", "t trust", "R refresh", "a add")
 	}
 	return append(hints, "? help", "q quit")
 }

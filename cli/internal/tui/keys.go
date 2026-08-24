@@ -26,4 +26,6 @@ const (
 	keyHelp      = "?"
 	keyTrust     = "t"
 	keyFilter    = "f"
+	keyPin       = "p"
+	keyRollback  = "z"
 )

@@ -387,6 +387,12 @@ func (e explorerModel) updateBrowseMouse(msg tea.MouseMsg) (explorerModel, tea.C
 		if zone.Get("meta-uninstall").InBounds(msg) {
 			return e, func() tea.Msg { return libraryUninstallMsg{} }
 		}
+		if zone.Get("meta-pin").InBounds(msg) {
+			return e, func() tea.Msg { return libraryPinMsg{} }
+		}
+		if zone.Get("meta-rollback").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRollbackMsg{} }
+		}
 		if zone.Get("meta-trust").InBounds(msg) {
 			if item := e.items.Selected(); item != nil {
 				return e, func() tea.Msg { return explorerTrustInspectMsg{item: item} }
@@ -470,6 +476,12 @@ func (e explorerModel) updateDetailMouse(msg tea.MouseMsg) (explorerModel, tea.C
 		}
 		if zone.Get("meta-uninstall").InBounds(msg) {
 			return e, func() tea.Msg { return libraryUninstallMsg{} }
+		}
+		if zone.Get("meta-pin").InBounds(msg) {
+			return e, func() tea.Msg { return libraryPinMsg{} }
+		}
+		if zone.Get("meta-rollback").InBounds(msg) {
+			return e, func() tea.Msg { return libraryRollbackMsg{} }
 		}
 		if zone.Get("meta-trust").InBounds(msg) {
 			if e.detailItem != nil {
