@@ -59,9 +59,29 @@ type Record struct {
 	ContentHash string          `json:"content_hash"`
 	LibraryPath string          `json:"library_path"`
 	MOAT        *MOATProvenance `json:"moat,omitempty"`
-	InstalledAt time.Time       `json:"installed_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
-	Placements  []Placement     `json:"placements,omitempty"`
+	// SourceSHA is the git-registry clone HEAD the library copy was taken from.
+	// Empty for MOAT, local, shared, and backfilled records ("no rollback data").
+	SourceSHA string `json:"source_sha,omitempty"`
+	// Pinned marks the item as held at its current content: update flows must
+	// refuse to overwrite it and drift reports annotate instead of hinting.
+	Pinned   bool      `json:"pinned,omitempty"`
+	PinnedAt time.Time `json:"pinned_at,omitzero"`
+	// Previous is the one-step rollback point, replaced on every update.
+	Previous    *PreviousVersion `json:"previous,omitempty"`
+	InstalledAt time.Time        `json:"installed_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+	Placements  []Placement      `json:"placements,omitempty"`
+}
+
+// PreviousVersion captures the state replaced by the last update, enabling
+// one-step rollback. For git-registry items SourceSHA is the rollback
+// coordinate (content is re-extracted from the registry clone); for MOAT
+// items CopyPath points at a saved copy of the previous library content.
+type PreviousVersion struct {
+	SourceSHA   string    `json:"source_sha,omitempty"`
+	ContentHash string    `json:"content_hash"`
+	CopyPath    string    `json:"copy_path,omitempty"`
+	ReplacedAt  time.Time `json:"replaced_at"`
 }
 
 // Store is the on-disk install-record store.
@@ -314,8 +334,17 @@ func cloneRecord(rec Record) Record {
 		moat := *rec.MOAT
 		rec.MOAT = &moat
 	}
+	rec.Previous = clonePrevious(rec.Previous)
 	if rec.Placements != nil {
 		rec.Placements = append([]Placement(nil), rec.Placements...)
 	}
 	return rec
+}
+
+func clonePrevious(p *PreviousVersion) *PreviousVersion {
+	if p == nil {
+		return nil
+	}
+	clone := *p
+	return &clone
 }
