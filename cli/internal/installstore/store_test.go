@@ -172,6 +172,80 @@ func TestStoreRoundTrip(t *testing.T) {
 	}
 }
 
+func TestStoreRoundTripPinRollbackFieldsDeterministic(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "state", "installs.json")
+	coord := testCoord("core", "skills", "writer")
+	rec := testRecord(coord, fixedTime(1))
+	rec.SourceSHA = "abc123"
+	rec.Pinned = true
+	rec.PinnedAt = fixedTime(2)
+	rec.Previous = &PreviousVersion{
+		SourceSHA:   "def456",
+		ContentHash: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		CopyPath:    filepath.Join(t.TempDir(), "rollback", "writer"),
+		ReplacedAt:  fixedTime(3),
+	}
+
+	s := mustLoadStore(t, path)
+	s.Records = []Record{rec}
+	mustSaveStore(t, s)
+	firstBytes := mustReadFile(t, path)
+
+	loaded := mustLoadStore(t, path)
+	got := loaded.Find(coord)
+	if got == nil {
+		t.Fatal("record missing after load")
+	}
+	if !reflect.DeepEqual(got, &rec) {
+		t.Fatalf("new fields round-trip mismatch\n got: %#v\nwant: %#v", got, &rec)
+	}
+
+	mustSaveStore(t, loaded)
+	if secondBytes := mustReadFile(t, path); !bytes.Equal(secondBytes, firstBytes) {
+		t.Fatalf("second save changed bytes\nfirst:\n%s\nsecond:\n%s", firstBytes, secondBytes)
+	}
+}
+
+func TestLoadOldStoreCompatNewFieldsZero(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "installs.json")
+	writeFile(t, path, []byte(`{
+  "version": 1,
+  "records": [
+    {
+      "registry": "core",
+      "type": "skills",
+      "name": "writer",
+      "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "library_path": "skills/writer",
+      "installed_at": "2026-08-22T01:00:00Z",
+      "updated_at": "2026-08-22T02:00:00Z"
+    }
+  ]
+}`))
+
+	s := mustLoadStore(t, path)
+	rec := s.Find(testCoord("core", "skills", "writer"))
+	if rec == nil {
+		t.Fatal("record missing")
+	}
+	if rec.SourceSHA != "" {
+		t.Fatalf("SourceSHA = %q, want empty", rec.SourceSHA)
+	}
+	if rec.Pinned {
+		t.Fatal("Pinned = true, want false")
+	}
+	if !rec.PinnedAt.IsZero() {
+		t.Fatalf("PinnedAt = %v, want zero", rec.PinnedAt)
+	}
+	if rec.Previous != nil {
+		t.Fatalf("Previous = %#v, want nil", rec.Previous)
+	}
+}
+
 func TestStoreSaveDeterministic(t *testing.T) {
 	t.Parallel()
 
