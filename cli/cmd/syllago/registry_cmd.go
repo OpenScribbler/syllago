@@ -349,6 +349,7 @@ type registryListItem struct {
 	Status    string             `json:"status"`
 	URL       string             `json:"url"`
 	Ref       string             `json:"ref"`
+	Pinned    bool               `json:"pinned"` // True if the clone sits on a detached HEAD, so sync fetches without moving it
 	Manifest  *registry.Manifest `json:"manifest,omitempty"`
 	IsMOAT    bool               `json:"is_moat"`
 	TrustTier string             `json:"trust_tier,omitempty"` // "moat", "pending", or "" for git registries
@@ -376,8 +377,14 @@ var registryListCmd = &cobra.Command{
 		var items []registryListItem
 		for _, r := range cfg.Registries {
 			status := "missing"
+			pinned := false
 			if registry.IsCloned(r.Name) {
 				status = "cloned"
+				// The checkout is the truth about pinning: a tag or commit ref
+				// leaves a detached HEAD, a branch ref does not.
+				if p, errPinned := registry.IsPinned(r.Name); errPinned == nil {
+					pinned = p
+				}
 			}
 			ref := r.Ref
 			if ref == "" {
@@ -397,6 +404,7 @@ var registryListCmd = &cobra.Command{
 				Status:    status,
 				URL:       r.URL,
 				Ref:       ref,
+				Pinned:    pinned,
 				Manifest:  manifest,
 				IsMOAT:    r.IsMOAT(),
 				TrustTier: tier,
@@ -408,10 +416,11 @@ var registryListCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n", "NAME", "STATUS", "VERSION", "TRUST", "URL / DESCRIPTION")
-		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n",
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-18s  %-9s  %s\n", "NAME", "STATUS", "VERSION", "REF", "TRUST", "URL / DESCRIPTION")
+		fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-18s  %-9s  %s\n",
 			strings.Repeat("─", 20), strings.Repeat("─", 8),
-			strings.Repeat("─", 8), strings.Repeat("─", 9), strings.Repeat("─", 40))
+			strings.Repeat("─", 8), strings.Repeat("─", 18),
+			strings.Repeat("─", 9), strings.Repeat("─", 40))
 		for _, item := range items {
 			version := "─"
 			if item.Manifest != nil && item.Manifest.Version != "" {
@@ -421,8 +430,9 @@ var registryListCmd = &cobra.Command{
 			if item.TrustTier != "" {
 				trust = item.TrustTier
 			}
-			fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-9s  %s\n",
-				truncateStr(item.Name, 20), item.Status, version, trust, item.URL)
+			fmt.Fprintf(output.Writer, "%-20s  %-8s  %-8s  %-18s  %-9s  %s\n",
+				truncateStr(item.Name, 20), item.Status, version,
+				registryRefCell(item.Ref, item.Pinned), trust, item.URL)
 			if item.Manifest != nil && item.Manifest.Description != "" {
 				fmt.Fprintf(output.Writer, "  %s\n", item.Manifest.Description)
 			}
@@ -873,6 +883,23 @@ func runRegistryCreateNew(cmd *cobra.Command, name string) error {
 func runRegistryCreateFromNative(cmd *cobra.Command) error {
 	desc, _ := cmd.Flags().GetString("description")
 	return registryCreateFromNative(desc)
+}
+
+// registryRefCell renders the REF column for one registry. An unconfigured ref
+// shows as a dash rather than the internal "default" sentinel, and a clone
+// sitting on a detached HEAD carries a "(pinned)" marker so a held checkout is
+// visible without reading `registry list --json`.
+func registryRefCell(ref string, pinned bool) string {
+	if ref == "" || ref == "default" {
+		if pinned {
+			return "─ (pinned)"
+		}
+		return "─"
+	}
+	if pinned {
+		return truncateStr(ref, 9) + " (pinned)"
+	}
+	return truncateStr(ref, 18)
 }
 
 // truncateStr cuts a string to max length with "..." suffix.
