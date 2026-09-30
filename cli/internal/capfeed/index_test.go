@@ -7,7 +7,7 @@ import (
 )
 
 // validIndexJSON mirrors the live feed shape at
-// https://openscribbler.github.io/capmon/v1/index.json: files is a map of
+// https://openscribbler.github.io/capmon/v2/index.json: files is a map of
 // path → {sha256}, per-provider entries live in a separate providers array,
 // and max_staleness_hours is published by the feed itself.
 const validIndexJSON = `{

@@ -6,7 +6,7 @@ This directory is a **verbatim, attestation-verified mirror** of the Capability 
 
 The **Capmon Pull** maintainer tool (`cli/cmd/capmon-pull`, core logic in `cli/internal/capfeed`) runs daily via [`.github/workflows/capmon-pull.yml`](../../.github/workflows/capmon-pull.yml):
 
-1. Polls the feed's `v1/index.json` with a conditional GET (at most daily).
+1. Polls the feed's `v2/index.json` with a conditional GET (at most daily).
 2. Verifies **fail-closed** before anything is written: SLSA provenance on the index (in-process sigstore-go, pinned to capmon's `publish.yml` workflow identity), then every file's `sha256` against the verified index. A tampered, unsigned, or stale (`generated_at` older than the feed's `max_staleness_hours`) feed writes nothing and turns the run red — the committed mirror is always last-known-good.
 3. On a new `data_revision`, mirrors the feed byte-for-byte into this directory and force-updates the single rolling PR on the `automation/capmon-pull` branch.
 

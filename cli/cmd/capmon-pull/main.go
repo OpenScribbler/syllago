@@ -21,7 +21,7 @@ import (
 )
 
 // DefaultFeedURL is the published Capability Feed index.
-const DefaultFeedURL = "https://openscribbler.github.io/capmon/v1/index.json"
+const DefaultFeedURL = "https://openscribbler.github.io/capmon/v2/index.json"
 
 // nowFunc is the tool's clock; a var so tests can pin it relative to a
 // recorded feed snapshot's generated_at.
@@ -36,7 +36,7 @@ func main() {
 func run(args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("capmon-pull", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	feedURL := fs.String("feed-url", DefaultFeedURL, "URL of the Capability Feed v1/index.json")
+	feedURL := fs.String("feed-url", DefaultFeedURL, "URL of the Capability Feed v2/index.json")
 	check := fs.Bool("check", false, "fetch, verify, and inspect the feed index only; write nothing")
 	repoRoot := fs.String("repo-root", ".", "syllago repo root containing docs/provider-capabilities")
 	etagFile := fs.String("etag-file", "", "file persisting the index ETag between runs (optional)")

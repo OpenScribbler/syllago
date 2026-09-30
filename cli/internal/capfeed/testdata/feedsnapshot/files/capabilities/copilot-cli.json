@@ -48,7 +48,7 @@
             "type": "object"
           },
           "key_path": "hooks.handler_types",
-          "mechanism": "hook handler types documented under 'Hook types' heading (session, prompt, tool, error)",
+          "mechanism": "three hook handler types - command (shell), HTTP (POST), and prompt hooks - documented under 'Hook configuration format' -> 'Command hooks' / 'HTTP hooks' / 'Prompt hooks' headings",
           "supported": true
         },
         "json_io_protocol": {
@@ -59,7 +59,7 @@
             "type": "bool"
           },
           "key_path": "hooks.json_io_protocol",
-          "mechanism": "JSON I/O protocol documented under 'Reading input' / 'Outputting JSON' headings",
+          "mechanism": "hooks receive event-specific JSON on stdin (inline schema per event under 'Hook event input payloads') and return JSON decision output (per-event 'decision control' / 'postToolUse output' headings)",
           "supported": true
         }
       },
@@ -167,7 +167,7 @@
       "supported": true
     }
   },
-  "display_name": "copilot-cli",
+  "display_name": "Copilot CLI",
   "provider_exclusive": {
     "skills.cli_management": {
       "confidence": "inferred",
@@ -175,7 +175,8 @@
       "supported": true
     }
   },
-  "schema_version": "1",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "copilot-cli",
   "status": "live"
 }

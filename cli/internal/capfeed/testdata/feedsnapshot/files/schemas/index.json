@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openscribbler.github.io/capmon/v1/schemas/index.json",
+  "$id": "https://openscribbler.github.io/capmon/v2/schemas/index.json",
   "schema_version": "1",
-  "title": "v1 per-major discovery index",
-  "description": "v1/index.json. source_commit is optional (omitted when unset); the freeze fields superseded_by/frozen_at are OPTIONAL from initial publication so the freeze mutation cannot invalidate a document against the pinned v1 schema.",
+  "title": "v2 per-major discovery index",
+  "description": "v2/index.json. source_commit is optional (omitted when unset); the freeze fields superseded_by/frozen_at are OPTIONAL from initial publication so the freeze mutation cannot invalidate a document against the pinned v2 schema.",
   "type": "object",
   "required": [
     "schema_version",

@@ -15,7 +15,7 @@ import (
 // says otherwise (heartbeat semantics).
 const DefaultMaxStalenessHours = 48
 
-// Index is the tolerantly-decoded v1/index.json. Unknown fields at every
+// Index is the tolerantly-decoded v2/index.json. Unknown fields at every
 // level are ignored (default encoding/json semantics — never
 // DisallowUnknownFields), enums are open strings, per the Capability Feed's
 // field-semantics spec.
@@ -53,7 +53,7 @@ type ProviderEntry struct {
 	Status string
 }
 
-// rawIndex mirrors the wire shape of v1/index.json.
+// rawIndex mirrors the wire shape of v2/index.json.
 type rawIndex struct {
 	DataRevision      string                  `json:"data_revision"`
 	GeneratedAt       string                  `json:"generated_at"`
@@ -108,7 +108,7 @@ func validateFeedPath(p string) error {
 	return nil
 }
 
-// ParseIndex tolerantly decodes v1/index.json bytes. Missing data_revision,
+// ParseIndex tolerantly decodes v2/index.json bytes. Missing data_revision,
 // generated_at, or an empty attested file list is an error — the tool cannot
 // change-detect or verify without them (fail-closed). A file entry without a
 // sha256 is likewise an error: an unverifiable file must never be mirrored.

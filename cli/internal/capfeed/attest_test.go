@@ -18,7 +18,7 @@ import (
 )
 
 // loadSnapshot returns the captured live feed snapshot: the exact
-// v1/index.json bytes and their real Sigstore attestation bundle, recorded
+// v2/index.json bytes and their real Sigstore attestation bundle, recorded
 // from the live feed + GitHub attestations API (see testdata/feedsnapshot).
 func loadSnapshot(t *testing.T) (indexBytes, bundleBytes []byte) {
 	t.Helper()
