@@ -17,7 +17,7 @@ import (
 // substitutable (FeedURL is explicit; the attestations API sits behind the
 // package base-URL var) and the clock is injectable.
 type Options struct {
-	// FeedURL is the Capability Feed's v1/index.json URL.
+	// FeedURL is the Capability Feed's v2/index.json URL.
 	FeedURL string
 	// RepoRoot is the syllago repo root containing docs/provider-capabilities.
 	RepoRoot string

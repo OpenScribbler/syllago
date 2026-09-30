@@ -200,7 +200,7 @@
             "type": "bool"
           },
           "key_path": "rules.auto_memory",
-          "mechanism": "/memory show / add / reload slash commands manage hierarchical memory (documented under 'Manage context with the /memory command')",
+          "mechanism": "/memory show / reload slash commands manage the hierarchical GEMINI.md memory (documented under 'Manage context with the /memory command'); the /memory add append subcommand was removed upstream",
           "supported": true
         },
         "file_imports": {
@@ -229,8 +229,9 @@
       "supported": true
     }
   },
-  "display_name": "gemini-cli",
-  "schema_version": "1",
+  "display_name": "Gemini CLI",
+  "provider_status": "active",
+  "schema_version": "2",
   "slug": "gemini-cli",
   "status": "live"
 }

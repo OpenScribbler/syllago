@@ -82,6 +82,24 @@ Per the consumer contract, every enum-valued field is **open**: an
 unrecognized `conversion` value MUST be handled as "unknown/other", never as
 an error.
 
+## `status` vs. `provider_status`
+
+Two independent lifecycle axes share the word "status":
+
+- **`status`** is the **published document's** lifecycle within the major:
+  `live` while the major is current, `frozen`/`removed`/`withdrawn` per the
+  consumer contract's freeze and tombstone rules. It says nothing about the
+  provider product itself.
+- **`provider_status`** is the **provider product's** health, joined verbatim
+  from the source manifest: `active`, `archived` (the product is sunset or
+  frozen upstream — its capability data describes the final shipped state,
+  which may still function), or `beta`. Absent means unknown.
+
+A sunset provider is the motivating case: its document stays `"status":
+"live"` (the data is still published and correct) while carrying
+`"provider_status": "archived"`. Per the consumer contract, both enums are
+**open** — handle unrecognized values as "unknown/other", never as an error.
+
 ## nil vs. false
 
 `supported` absent means **unknown** — never treat it as `false`.

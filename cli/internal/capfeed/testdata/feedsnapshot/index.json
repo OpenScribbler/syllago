@@ -1,151 +1,151 @@
 {
   "cadence": "daily",
-  "data_revision": "ea39f43f88e5eb951ada3bc791bfa070112a41e7d5578ab1e62e1c7ecd84ed05",
+  "data_revision": "805cfe99d7a993fb94188c63d780253e9e01c24e46f62456538b7b6fa62157cb",
   "files": {
     "advisories.json": {
       "sha256": "deddbb22674d330c52383b1fc7022118e76d597abca1b7fb69e446151b352851"
     },
     "by-content-type/agents.json": {
-      "sha256": "5b1b9f9ee2c72ffcdd0d5b378d602d0a8e337deb1b397e7525ad1a54a282234f"
+      "sha256": "16617ebc5a4522d05e8e834caf9a62ea40e4cc632008437a51cbbe7c78089330"
     },
     "by-content-type/commands.json": {
-      "sha256": "213a7ec50314a0a830197ca63fe572e096ff1e8d1c45e7eb80e474512e7de301"
+      "sha256": "63cde4eaadc0aa520097a6cf0ca805dba06fc3ea327e4152a40d3545a8f1b5a0"
     },
     "by-content-type/hooks.json": {
-      "sha256": "89ce96f0146a13f3375620bd87912f97117dfea3063e63e3b3d79f59b9f17212"
+      "sha256": "8be13377cdd5769134d1e817cd7d81dc23ae9ae5a5397cd4bfc57dd23631da6c"
     },
     "by-content-type/mcp.json": {
-      "sha256": "4034c834e5a7c95733c4d47411f6ec7cd020f2482cb7ec7e67f61ed1261269f7"
+      "sha256": "557ea25f75777a11094d6a0b892b532c888d55ad4666206e4b101b8195215c72"
     },
     "by-content-type/rules.json": {
-      "sha256": "2a8a9374b0a5d3c97b861458b521dea377fed056bd770e2414029a1aec920ed7"
+      "sha256": "8b53117bde1077a4fe71e7b5af32f9f2516f0caa6a37f9aec2ec2813c97d4c5b"
     },
     "by-content-type/skills.json": {
-      "sha256": "668db67b236c9de9673ae0f1bf884160d7c2ac426efef9eeb62657cd3594efb4"
+      "sha256": "82b39147a60b68e514cee87dbe9b63894d31dbe2c59a06028b8fb99707564279"
     },
     "capabilities/all.json": {
-      "sha256": "ea39f43f88e5eb951ada3bc791bfa070112a41e7d5578ab1e62e1c7ecd84ed05"
+      "sha256": "805cfe99d7a993fb94188c63d780253e9e01c24e46f62456538b7b6fa62157cb"
     },
     "schemas/advisories.json": {
-      "sha256": "dbd838d3b788a32875591a4397b775d0db80bb38b39e1bbb40d57ac72a2664c0"
+      "sha256": "fa5ae97a45e6c05930dee2125b996e54588f8fb72c11514011712ac10bfcecff"
     },
     "schemas/all-providers.json": {
-      "sha256": "d5fcadb994af29d9cc0dbaa7a3d95663eabe4fb949afda66d7739f7d0748bb9b"
+      "sha256": "e9a25f2c4e4812ce659f6560ee9a8e5783ce4fba9026c7e914033052eea1b3a7"
     },
     "schemas/by-content-type.json": {
-      "sha256": "52946e1ac3e3fd9c33045186e24a3c5357c49dc2467d66703adae5d91eb2b6d9"
+      "sha256": "540b7caebcdaa214afa7ae6892144f9243e355680a2f6526d73e2bc0d8f418a5"
     },
     "schemas/canonical-keys.json": {
-      "sha256": "e0c293be6f75b1018e2b99fe5e8f78f7bb7ae4598d5a88a38824c510c91def38"
+      "sha256": "21f5ecb67528fb9a760cc2889d7197eae7766fa2ab075d3b6edb626f5c6d01fa"
     },
     "schemas/index.json": {
-      "sha256": "7030a7fc064eedf1b1366fcea88ba383b0d3578fb2ab4a1fb4d4ca4df665a916"
+      "sha256": "151eba649378550d2d9de94f681a5e8fbf33611285341a9cd7867a45beef6f99"
     },
     "schemas/provider-capabilities.json": {
-      "sha256": "72ffa98d3e40a89c072af6ee7fff204fb63fc1b7569ee8cf726d5a7830233d65"
+      "sha256": "7c97fb06b478d80f3dc8ab6b46fe09707fd1cdbfbe76ecffc7dab8c8cf9f36cb"
     },
     "spec/canonical-keys.json": {
       "sha256": "db6e25caf8b83192eabcf46a419eda6ba9e093380c32d92264cafe993c2e39d0"
     },
     "spec/field-semantics.md": {
-      "sha256": "2f10a4853cc7c0171359d321a502760fc29a42e543f254983506004b649512bb"
+      "sha256": "8e39e0ece917446e78ca83d822e8b16663e166aa87c9b6b76149b8eb3c272e0a"
     }
   },
-  "generated_at": "2026-07-12T20:41:41Z",
+  "generated_at": "2026-09-30T10:45:03Z",
   "max_staleness_hours": 48,
   "providers": [
     {
       "path": "capabilities/amp.json",
-      "sha256": "cb6f53a8cc7d1e3c8a2f15e33aa57f74c50304b3e4c0e1ad83b0983b57ff6b4f",
+      "sha256": "c05bb3310881ea0ad188dab0a1b7cdd6735476bc1b15ef68e2c8ee90a3c2e0cb",
       "slug": "amp",
       "status": "tracked"
     },
     {
       "path": "capabilities/claude-code.json",
-      "sha256": "290dcf2912f1813b746a28d764fda67e2d2fec5bfaf9280099d9c3370170aed8",
+      "sha256": "86527908219126c109516d459547c9292e8e711d0f43ba3356b37cab5b00a0b1",
       "slug": "claude-code",
       "status": "tracked"
     },
     {
       "path": "capabilities/cline.json",
-      "sha256": "b5c6b7402a6f7a33f21b6e0e88a618eb658f6c0e1472f339f6c7632628df110f",
+      "sha256": "630734f34559606234005e569c758b11c7416b86c03fc0feb6d6952dcc1ef2fe",
       "slug": "cline",
       "status": "tracked"
     },
     {
       "path": "capabilities/codex.json",
-      "sha256": "26cffc1c9e924859338acb1aaea349c1b8d93dd57778058699f27a17a89f23a7",
+      "sha256": "7db2cafbfd8a2f3204cf08bd085e19b6fca22c3feb0b07eaae9658a2e2bc7942",
       "slug": "codex",
       "status": "tracked"
     },
     {
       "path": "capabilities/copilot-cli.json",
-      "sha256": "56216863dead05144262e2b48d51780fd699dc3c198c1aea904a81b3d2bc3809",
+      "sha256": "e4cf21a71e26ba62cbd4b4bec393fc6c8d5b7d5621eabdc0dfbda94fbcc61c24",
       "slug": "copilot-cli",
       "status": "tracked"
     },
     {
       "path": "capabilities/crush.json",
-      "sha256": "ee36029a6ed4bb80b39130d55a28b23adb97d908cbcbc20338caaf622d788073",
+      "sha256": "461872b9b76a6e58381bf20dcc3224ff9608ce8871802dde1d8aa2c64c112d2f",
       "slug": "crush",
       "status": "tracked"
     },
     {
       "path": "capabilities/cursor.json",
-      "sha256": "c6e5a13bf48f51918604e456405cd44a8f4723af3feb9568718f1370f019cc5d",
+      "sha256": "6a6c084fe90101d6a7700d8f850a6f167f48d04407f67a29308357843069f299",
       "slug": "cursor",
       "status": "tracked"
     },
     {
+      "path": "capabilities/devin.json",
+      "sha256": "9be68520a08b58dfec94d15820e8528dd38f8668bee3780a79f52e0464830ba0",
+      "slug": "devin",
+      "status": "tracked"
+    },
+    {
       "path": "capabilities/factory-droid.json",
-      "sha256": "660b8d83e92f2c67393bc8dde3fc0870efaff4e7ab0deec58c1c8d34a652f6a8",
+      "sha256": "81e0782cd1814f2615dcde6ec07038d66234eaf7f5f22bea737104f139efa274",
       "slug": "factory-droid",
       "status": "tracked"
     },
     {
       "path": "capabilities/gemini-cli.json",
-      "sha256": "17a5009d7d739deace9e90d64d62ade6207e85a980c863e5dc44b238ee7369df",
+      "sha256": "ab82f18dac1799c644bbb63d1bc8e0297217caa0a90307dd78f1a8ec18135963",
       "slug": "gemini-cli",
       "status": "tracked"
     },
     {
       "path": "capabilities/kiro.json",
-      "sha256": "fca1fe210c1bddd8e371cacecf649afd7fea970e94819e7b090e17a8d927e249",
+      "sha256": "0d7eb55d414231f8122954fea9e972c5a88610038538cf700a1b33a1a1d29280",
       "slug": "kiro",
       "status": "tracked"
     },
     {
       "path": "capabilities/opencode.json",
-      "sha256": "b8e323a51ac4800325c2a715e525da43f1707c9a5bec824e7992dc3ac6734a1a",
+      "sha256": "b5b0da99db90a5e36b64965fdeee067aa0249da584a640e7ac48ce7474cd26d4",
       "slug": "opencode",
       "status": "tracked"
     },
     {
       "path": "capabilities/pi.json",
-      "sha256": "0ca26b1fd86abb1d72cf98000fe462e94b567544940880e51fc6288acd67ae9d",
+      "sha256": "1dab1c48c44a926a4478c855c20148775ad71f27d5bf563c881d6072d7b6e952",
       "slug": "pi",
       "status": "tracked"
     },
     {
       "path": "capabilities/roo-code.json",
-      "sha256": "fe0980bf09f350c200759757d5ddf491808a5bc57d40ec249245c04774c59712",
+      "sha256": "3f9fcfa6ba554cefa4f4b14ce75e666240050e4eee0d2a39e1ac7b8fc3902408",
       "slug": "roo-code",
       "status": "tracked"
     },
     {
-      "path": "capabilities/windsurf.json",
-      "sha256": "f72dcc25c2772ca1e68566c0a46b559a36b755594f97c28d7c4f584da29810d0",
-      "slug": "windsurf",
-      "status": "tracked"
-    },
-    {
       "path": "capabilities/zed.json",
-      "sha256": "26b02f6aceb5059b40c8865c4c5e450e57c3af8ebc9073ca7fea769fd46fcaec",
+      "sha256": "a795c497ddf79daffa4804758d1112f7327f3e5f2dbab44c1b9edeb22fe60d1c",
       "slug": "zed",
       "status": "tracked"
     }
   ],
   "schema_version": "1",
-  "source_commit": "9c7cba8a43b65051ffa488ea4d9092594200a715",
+  "source_commit": "99dd310ff96f79f5df16fd5fdb1ce609524c34d1",
   "status": "live"
 }
