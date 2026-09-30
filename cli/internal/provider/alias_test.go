@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"io"
 	"strings"
 	"testing"
 
@@ -49,6 +50,21 @@ func TestCanonicalSlugNonComparableWriter(t *testing.T) {
 	CanonicalSlug("windsurf")
 	CanonicalSlug("windsurf")
 	if len(got) != 2 || !strings.Contains(got[0], "renamed to") {
+		t.Errorf("warnings = %q, want the warning on each call", got)
+	}
+}
+
+// wrappedWriter's type is comparable, but its value holds a funcWriter, so
+// hashing it as a map key would panic.
+type wrappedWriter struct{ io.Writer }
+
+func TestCanonicalSlugWrappedNonComparableWriter(t *testing.T) {
+	output.SetForTest(t)
+	var got []string
+	output.ErrWriter = wrappedWriter{funcWriter(func(p []byte) { got = append(got, string(p)) })}
+	CanonicalSlug("windsurf")
+	CanonicalSlug("windsurf")
+	if len(got) != 2 {
 		t.Errorf("warnings = %q, want the warning on each call", got)
 	}
 }

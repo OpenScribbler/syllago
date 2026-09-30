@@ -170,34 +170,39 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 		return nil // publishing to private registry is always fine
 	}
 
-	// Resolve referenced items to catalog entries and check their taint.
+	// Resolve referenced items through a scan of the library, so every
+	// storage layout (directory or single-file items, provider directories
+	// under retired slugs) contributes the metadata the scanner attaches.
+	// A provider-specific reference matches the item for every provider the
+	// loadout targets, or for any provider when it names none, because a
+	// privacy gate must err toward finding the private copy.
 	globalDir := catalog.GlobalContentDir()
+	var lib []catalog.ContentItem
+	if _, statErr := os.Stat(globalDir); statErr == nil {
+		libCat, scanErr := catalog.Scan(globalDir, globalDir)
+		if scanErr != nil {
+			return fmt.Errorf("scanning library to check loadout privacy: %w", scanErr)
+		}
+		lib = libCat.Items
+	}
+	targets := map[string]bool{}
+	for _, slug := range m.EffectiveProviders() {
+		targets[slug] = true
+	}
 	var items []catalog.ContentItem
 	for ct, refs := range m.RefsByType() {
 		for _, ref := range refs {
-			// Content saved before a provider rename still sits under the
-			// retired slug's directory, while m.Provider holds the current one.
-			var meta *metadata.Meta
-			for _, slug := range append([]string{m.Provider}, catalog.RetiredProviderSlugs(m.Provider)...) {
-				if meta, _ = metadata.Load(resolveItemDir(globalDir, ct, slug, ref.Name)); meta != nil {
-					break
+			for _, it := range lib {
+				if it.Type != ct || it.Name != ref.Name {
+					continue
 				}
+				if !ct.IsUniversal() && len(targets) > 0 && !targets[it.Provider] {
+					continue
+				}
+				items = append(items, it)
 			}
-			items = append(items, catalog.ContentItem{
-				Name: ref.Name,
-				Type: ct,
-				Meta: meta,
-			})
 		}
 	}
 
 	return loadout.CheckLoadoutPublishGate(items, targetVis)
-}
-
-// resolveItemDir returns the library directory for an item.
-func resolveItemDir(globalDir string, ct catalog.ContentType, provider, name string) string {
-	if ct.IsUniversal() {
-		return filepath.Join(globalDir, string(ct), name)
-	}
-	return filepath.Join(globalDir, string(ct), provider, name)
 }

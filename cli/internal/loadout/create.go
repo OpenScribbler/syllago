@@ -69,12 +69,19 @@ func BuildManifestFromNames(provider, name, description string, items map[catalo
 // resolveItemID reads the .syllago.yaml for a library item and returns its ID.
 // Returns empty string if the metadata can't be read.
 func resolveItemID(globalDir string, ct catalog.ContentType, provider, name string) string {
-	var itemDir string
 	if ct.IsUniversal() {
-		itemDir = filepath.Join(globalDir, string(ct), name)
-	} else {
-		itemDir = filepath.Join(globalDir, string(ct), provider, name)
+		return loadItemID(filepath.Join(globalDir, string(ct), name))
 	}
+	// Items saved before a provider rename sit under the retired slug.
+	for _, slug := range append([]string{provider}, catalog.RetiredProviderSlugs(provider)...) {
+		if id := loadItemID(filepath.Join(globalDir, string(ct), slug, name)); id != "" {
+			return id
+		}
+	}
+	return ""
+}
+
+func loadItemID(itemDir string) string {
 	meta, err := metadata.Load(itemDir)
 	if err != nil || meta == nil {
 		return ""

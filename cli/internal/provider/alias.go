@@ -19,7 +19,7 @@ func ResolveSlugAlias(slug string) (canonical string, aliased bool) {
 // aliasWarnings records which retired slugs have already been warned about
 // on which writer, so one command that meets a retired slug in several flags
 // or config fields warns once. Keying on the writer lets each test that
-// installs its own stderr see the warning afresh. A writer whose type is not
+// installs its own stderr see the warning afresh. A writer whose value is not
 // comparable cannot be a map key, so it gets the warning every time.
 var (
 	aliasWarnMu   sync.Mutex
@@ -42,7 +42,7 @@ func CanonicalSlug(slug string) string {
 	aliasWarnMu.Lock()
 	defer aliasWarnMu.Unlock()
 	w := output.ErrWriter
-	if w != nil && reflect.TypeOf(w).Comparable() {
+	if w != nil && reflect.ValueOf(w).Comparable() {
 		key := aliasWarnKey{w, slug}
 		if aliasWarnings[key] {
 			return canonical

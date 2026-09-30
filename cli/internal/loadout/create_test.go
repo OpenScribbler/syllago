@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 // --- BuildManifest tests ---
@@ -279,5 +280,18 @@ rules:
 	}
 	if m.Rules[1].Name != "other-rule" || m.Rules[1].ID != "" {
 		t.Errorf("Rules[1] = %+v, want {Name:other-rule ID:}", m.Rules[1])
+	}
+}
+
+func TestBuildManifestFromNames_FindsIDUnderRetiredSlug(t *testing.T) {
+	t.Parallel()
+	globalDir := t.TempDir()
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "old-rule")
+	os.MkdirAll(itemDir, 0755)
+	metadata.Save(itemDir, &metadata.Meta{ID: "old-id", Name: "old-rule"})
+
+	m := BuildManifestFromNames("devin", "lo", "d", map[catalog.ContentType][]string{catalog.Rules: {"old-rule"}}, globalDir)
+	if len(m.Rules) != 1 || m.Rules[0].ID != "old-id" {
+		t.Errorf("rules = %+v, want old-rule with ID old-id", m.Rules)
 	}
 }
