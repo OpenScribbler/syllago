@@ -107,20 +107,20 @@ func (c *CommandsConverter) Render(content []byte, target provider.Provider) (*R
 		return renderOpenCodeCommand(meta, body)
 	case "vscode-copilot":
 		return renderVSCodeCopilotCommand(meta, body)
-	case "windsurf":
-		return renderWindsurfCommand(meta, body)
+	case "devin":
+		return renderDevinCommand(meta, body)
 	default:
 		// Claude Code, Copilot CLI — YAML frontmatter + markdown
 		return renderClaudeCommand(meta, body)
 	}
 }
 
-// --- Windsurf ---
+// --- Devin ---
 
-// renderWindsurfCommand renders a canonical command to Windsurf's "Workflow" format.
-// Windsurf workflows are step-based markdown files with a # title heading and numbered steps.
+// renderDevinCommand renders a canonical command to Devin's "Workflow" format.
+// Devin workflows are step-based markdown files with a # title heading and numbered steps.
 // Unsupported fields are embedded as behavioral prose notes.
-func renderWindsurfCommand(meta CommandMeta, body string) (*Result, error) {
+func renderDevinCommand(meta CommandMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
 	var buf bytes.Buffer
@@ -173,7 +173,7 @@ func renderWindsurfCommand(meta CommandMeta, body string) (*Result, error) {
 
 	var warnings []string
 	if strings.Contains(body, "$ARGUMENTS") {
-		warnings = append(warnings, "Windsurf workflows do not support argument placeholders; $ARGUMENTS will appear as literal text")
+		warnings = append(warnings, "Devin workflows do not support argument placeholders; $ARGUMENTS will appear as literal text")
 	}
 
 	name := "workflow"

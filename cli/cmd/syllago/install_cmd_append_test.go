@@ -83,13 +83,13 @@ func TestInstall_MethodAppend_WritesMonolithicFile(t *testing.T) {
 }
 
 // TestInstall_MethodAppend_QuietSuppressesNote verifies D10: providers with a
-// MonolithicHint (e.g., windsurf) print a "NOTE:" line to stderr after append,
-// but --quiet suppresses it. Uses windsurf because it has a non-empty hint.
+// MonolithicHint (e.g., devin) print a "NOTE:" line to stderr after append,
+// but --quiet suppresses it. Uses devin because it has a non-empty hint.
 func TestInstall_MethodAppend_QuietSuppressesNote(t *testing.T) {
 	projectRoot := t.TempDir()
 	globalDir := t.TempDir()
 
-	seedLibraryRule(t, globalDir, "windsurf", "foo", "# foo rule body\n\nAppend me.\n")
+	seedLibraryRule(t, globalDir, "devin", "foo", "# foo rule body\n\nAppend me.\n")
 
 	origRoot := findProjectRoot
 	findProjectRoot = func() (string, error) { return projectRoot, nil }
@@ -102,7 +102,7 @@ func TestInstall_MethodAppend_QuietSuppressesNote(t *testing.T) {
 	_, stderr := output.SetForTest(t)
 	output.Quiet = true
 
-	installCmd.Flags().Set("to", "windsurf")
+	installCmd.Flags().Set("to", "devin")
 	installCmd.Flags().Set("method", "append")
 	installCmd.Flags().Set("type", "rules")
 	t.Cleanup(func() {

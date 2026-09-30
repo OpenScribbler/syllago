@@ -99,9 +99,9 @@ func TestKitchenSinkSkillRoundTrip(t *testing.T) {
 			bodySubstring: "Kitchen Sink Skill",
 		},
 		{
-			name:          "windsurf",
-			provider:      provider.Windsurf,
-			sourceSlug:    "windsurf",
+			name:          "devin",
+			provider:      provider.Devin,
+			sourceSlug:    "devin",
 			bodySubstring: "Kitchen Sink Skill",
 		},
 		// Amp/Cline/RooCode — minimal frontmatter renderers (name+description only).

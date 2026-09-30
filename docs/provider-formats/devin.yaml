@@ -1,4 +1,4 @@
-provider: windsurf
+provider: devin
 docs_url: "https://docs.windsurf.com"
 category: standalone-app
 last_fetched_at: "2026-05-06T13:00:00Z"
@@ -104,12 +104,12 @@ content_types:
       skills defined. Automatic invocation (model decides from description match) is the most
       common path; manual @mention is the fallback for explicit control.
     notes: >
-      Windsurf implements the agentskills.io open standard (https://agentskills.io). Skills are
+      Devin Desktop implements the agentskills.io open standard (https://agentskills.io). Skills are
       structurally differentiated from Rules (single .md file, behavioral guidelines, always_on/glob/
       model_decision/manual activation) and Workflows (single .md file, manual-only via slash command).
       The key advantage of Skills over Rules is the supporting resource files bundle: scripts,
       templates, checklists, and config files can all be co-located in the skill directory.
-      Cross-agent compatibility: Windsurf discovers skills in .agents/skills/ and ~/.agents/skills/
+      Cross-agent compatibility: Devin Desktop discovers skills in .agents/skills/ and ~/.agents/skills/
       for interoperability with other agents. If Claude Code config reading is enabled, .claude/skills/
       and ~/.claude/skills/ are also scanned. Enterprise system-level paths: macOS
       /Library/Application Support/Windsurf/skills/, Linux/WSL /etc/windsurf/skills/,
@@ -135,19 +135,19 @@ content_types:
         confidence: confirmed
       file_imports:
         supported: false
-        mechanism: "No @-import or file inclusion syntax documented for Windsurf rule files"
+        mechanism: "No @-import or file inclusion syntax documented for Devin Desktop rule files"
         confidence: confirmed
       cross_provider_recognition:
         supported: true
-        mechanism: "agents_md_auto_scoping: Windsurf reads both AGENTS.md and agents.md (case-insensitive) files from other providers and applies them with workspace-aware scoping"
+        mechanism: "agents_md_auto_scoping: Devin Desktop reads both AGENTS.md and agents.md (case-insensitive) files from other providers and applies them with workspace-aware scoping"
         confidence: confirmed
       auto_memory:
         supported: true
-        mechanism: "auto_generated_memories: Windsurf AI generates persistent memories stored in ~/.codeium/windsurf/memories/ as rule-like files"
+        mechanism: "auto_generated_memories: Devin Desktop AI generates persistent memories stored in ~/.codeium/windsurf/memories/ as rule-like files"
         confidence: confirmed
       hierarchical_loading:
         supported: true
-        mechanism: "rules_hierarchical_discovery: Windsurf discovers .windsurf/rules/ directories in the current workspace, all sub-directories, and parent directories up to the git root; rules from all levels are merged and deduplicated"
+        mechanism: "rules_hierarchical_discovery: Devin Desktop discovers .windsurf/rules/ directories in the current workspace, all sub-directories, and parent directories up to the git root; rules from all levels are merged and deduplicated"
         confidence: confirmed
     provider_extensions:
       - id: activation_modes
@@ -177,7 +177,7 @@ content_types:
         conversion: not-portable
       - id: rules_hierarchical_discovery
         name: Multi-level hierarchical rules discovery
-        summary: "Windsurf searches for .windsurf/rules/ directories in the current workspace, all subdirectories, and parent directories up to the git root; rules from multiple locations are merged and deduplicated, displayed with shortest relative paths."
+        summary: "Devin Desktop searches for .windsurf/rules/ directories in the current workspace, all subdirectories, and parent directories up to the git root; rules from multiple locations are merged and deduplicated, displayed with shortest relative paths."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/memories.md#rules-discovery"
         graduation_candidate: false
         conversion: not-portable
@@ -192,12 +192,12 @@ content_types:
       the maximum context cost per rule. Rules are discovered hierarchically: from the current
       workspace, all subdirectories, and parent directories up to the git root.
     notes: >
-      Windsurf Rules and AGENTS.md feed the same internal Rules engine, just with different
+      Devin Desktop Rules and AGENTS.md feed the same internal Rules engine, just with different
       activation mode inference. Rules use explicit frontmatter (`trigger:` field); AGENTS.md
       derives activation from file location (root = always-on, subdirectory = glob). Both are
-      single-file formats (not directory bundles), which distinguishes them from Skills. Windsurf
+      single-file formats (not directory bundles), which distinguishes them from Skills. Devin Desktop
       recognizes both `AGENTS.md` and `agents.md` (case-insensitive). Cross-agent interoperability:
-      Windsurf also discovers AGENTS.md files created for other agents. The docs note that for
+      Devin Desktop also discovers AGENTS.md files created for other agents. The docs note that for
       reliably reusable knowledge, Rules or AGENTS.md are preferred over auto-generated Memories,
       since they are version-controlled and team-shareable. Rules discovery now includes
       subdirectories of the workspace and parent directories up to the git root, enabling
@@ -215,23 +215,23 @@ content_types:
     canonical_mappings:
       handler_types:
         supported: false
-        mechanism: "Windsurf hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
+        mechanism: "Devin Desktop hooks execute shell commands only; no HTTP, LLM prompt, or agent handler types documented"
         confidence: inferred
       matcher_patterns:
         supported: false
-        mechanism: "Windsurf hooks fire on all events of their configured type; no per-tool or regex matching documented"
+        mechanism: "Devin Desktop hooks fire on all events of their configured type; no per-tool or regex matching documented"
         confidence: inferred
       decision_control:
         supported: false
-        mechanism: "Windsurf hooks are observational by default; pre-hooks can block via exit code 2 but cannot allow or modify the triggering action"
+        mechanism: "Devin Desktop hooks are observational by default; pre-hooks can block via exit code 2 but cannot allow or modify the triggering action"
         confidence: inferred
       input_modification:
         supported: false
-        mechanism: "Windsurf hooks cannot modify tool input arguments before execution"
+        mechanism: "Devin Desktop hooks cannot modify tool input arguments before execution"
         confidence: inferred
       async_execution:
         supported: false
-        mechanism: "Windsurf hooks run synchronously; post_cascade_response and post_cascade_response_with_transcript fire asynchronously after the response but hooks themselves do not execute fire-and-forget"
+        mechanism: "Devin Desktop hooks run synchronously; post_cascade_response and post_cascade_response_with_transcript fire asynchronously after the response but hooks themselves do not execute fire-and-forget"
         confidence: inferred
       hook_scopes:
         supported: true
@@ -239,15 +239,15 @@ content_types:
         confidence: confirmed
       json_io_protocol:
         supported: true
-        mechanism: "json_stdin_context: Windsurf hooks receive event context as JSON on stdin"
+        mechanism: "json_stdin_context: Devin Desktop hooks receive event context as JSON on stdin"
         confidence: confirmed
       context_injection:
         supported: false
-        mechanism: "Windsurf hooks cannot inject context into the agent's active session"
+        mechanism: "Devin Desktop hooks cannot inject context into the agent's active session"
         confidence: inferred
       permission_control:
         supported: false
-        mechanism: "Windsurf hooks do not participate in permission decisions"
+        mechanism: "Devin Desktop hooks do not participate in permission decisions"
         confidence: inferred
     provider_extensions:
       - id: twelve_hook_events
@@ -270,7 +270,7 @@ content_types:
         conversion: not-portable
       - id: cloud_dashboard_distribution
         name: Cloud dashboard distribution for enterprise teams
-        summary: "Enterprise teams configure hooks via the Windsurf Team Settings dashboard, distributed to all members and merged ahead of local scopes."
+        summary: "Enterprise teams configure hooks via the Devin Desktop Team Settings dashboard, distributed to all members and merged ahead of local scopes."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/hooks.md#cloud-dashboard-configuration"
         graduation_candidate: false
         conversion: not-portable
@@ -294,7 +294,7 @@ content_types:
       files at startup/merge time. The hook script receives its input via stdin JSON; it
       communicates back via exit code and stdout/stderr. No model context is consumed.
     notes: >
-      Windsurf hooks use snake_case event names (pre_read_code, post_write_code, etc.) that
+      Devin Desktop hooks use snake_case event names (pre_read_code, post_write_code, etc.) that
       map naturally to syllago's canonical hook event naming conventions. The config key is
       `hooks` inside the JSON file, with each event key mapping to an array of hook objects.
       Each hook object has `command` (required on macOS/Linux), `powershell` (optional; Windows
@@ -319,15 +319,15 @@ content_types:
     canonical_mappings:
       transport_types:
         supported: true
-        mechanism: "three_transport_types: Windsurf supports stdio, SSE, and HTTP/streamable-HTTP transports"
+        mechanism: "three_transport_types: Devin Desktop supports stdio, SSE, and HTTP/streamable-HTTP transports"
         confidence: confirmed
       oauth_support:
         supported: true
-        mechanism: "Windsurf supports OAuth for each transport type (stdio, Streamable HTTP, and SSE) for remote MCP server authentication"
+        mechanism: "Devin Desktop supports OAuth for each transport type (stdio, Streamable HTTP, and SSE) for remote MCP server authentication"
         confidence: confirmed
       env_var_expansion:
         supported: true
-        mechanism: "config_interpolation: Windsurf MCP configuration supports ${env:VAR_NAME} and ${file:/path} interpolation for environment variables and file contents"
+        mechanism: "config_interpolation: Devin Desktop MCP configuration supports ${env:VAR_NAME} and ${file:/path} interpolation for environment variables and file contents"
         confidence: confirmed
       tool_filtering:
         supported: true
@@ -335,19 +335,19 @@ content_types:
         confidence: confirmed
       auto_approve:
         supported: false
-        mechanism: "Windsurf does not support pre-configured auto-approval for specific MCP tools"
+        mechanism: "Devin Desktop does not support pre-configured auto-approval for specific MCP tools"
         confidence: inferred
       marketplace:
         supported: true
-        mechanism: "mcp_marketplace: Windsurf has an in-IDE MCP server discovery and one-click installation experience"
+        mechanism: "mcp_marketplace: Devin Desktop has an in-IDE MCP server discovery and one-click installation experience"
         confidence: confirmed
       resource_referencing:
         supported: false
-        mechanism: "Windsurf does not document @-mention or equivalent access to MCP resources"
+        mechanism: "Devin Desktop does not document @-mention or equivalent access to MCP resources"
         confidence: inferred
       enterprise_management:
         supported: true
-        mechanism: "enterprise_whitelist_and_registry: Windsurf supports organization-level MCP server allowlists and enterprise registries"
+        mechanism: "enterprise_whitelist_and_registry: Devin Desktop supports organization-level MCP server allowlists and enterprise registries"
         confidence: confirmed
     provider_extensions:
       - id: three_transport_types
@@ -370,7 +370,7 @@ content_types:
         conversion: not-portable
       - id: enterprise_whitelist_and_registry
         name: Enterprise MCP whitelist and custom registry
-        summary: "Team admins can whitelist approved MCP servers (regex matching) and replace the default marketplace with custom MCP registry URLs. Multiple registry URLs are supported; Windsurf takes the union of all registries."
+        summary: "Team admins can whitelist approved MCP servers (regex matching) and replace the default marketplace with custom MCP registry URLs. Multiple registry URLs are supported; Devin Desktop takes the union of all registries."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md#admin-controls-teams-enterprises"
         graduation_candidate: false
         conversion: not-portable
@@ -382,7 +382,7 @@ content_types:
         conversion: not-portable
       - id: oauth_per_transport
         name: OAuth support for all transport types
-        summary: "Windsurf supports OAuth authentication for MCP servers across all three transport types (stdio, Streamable HTTP, SSE), enabling authenticated remote server connections."
+        summary: "Devin Desktop supports OAuth authentication for MCP servers across all three transport types (stdio, Streamable HTTP, SSE), enabling authenticated remote server connections."
         source_ref: "https://docs.windsurf.com/windsurf/cascade/mcp.md"
         graduation_candidate: true
         conversion: translated
@@ -396,13 +396,13 @@ content_types:
       configured tools become available to Cascade as callable tools. OAuth is supported for
       all transport types for remote server authentication.
     notes: >
-      Windsurf's MCP config format uses the mcpServers key (matches Claude Desktop / standard
+      Devin Desktop's MCP config format uses the mcpServers key (matches Claude Desktop / standard
       MCP config schema). The config file lives at ~/.codeium/windsurf/mcp_config.json.
-      Windsurf supports tools, resources, and prompts from MCP servers. Enterprise users must
+      Devin Desktop supports tools, resources, and prompts from MCP servers. Enterprise users must
       manually enable MCP via settings. OAuth is now confirmed for all transport types. The
       disabledTools array (referenced in admin docs) tracks which tools are toggled off and is
       handled separately from server whitelist matching. Custom registries must follow the official
-      MCP registry schema; when multiple registries are configured, Windsurf takes the union of
+      MCP registry schema; when multiple registries are configured, Devin Desktop takes the union of
       all sources. The provider does not assume liability for MCP tool call failures since tool
       implementations are written by arbitrary server authors.
 
@@ -412,13 +412,13 @@ content_types:
     canonical_mappings: {}
     provider_extensions: []
     notes: >
-      Windsurf has no installable-agent harness. The AGENTS.md support documented at
+      Devin Desktop has no installable-agent harness. The AGENTS.md support documented at
       https://docs.windsurf.com/windsurf/cascade/agents-md.md is a rules delivery
       mechanism that piggybacks on the Rules engine — root-level AGENTS.md files are
       always-on and subdirectory files are subtree-scoped, but these are not invocable
       agents and have no structured definition, tool restrictions, or orchestration.
       AGENTS.md recognition is represented under content_types.rules.cross_provider_recognition,
-      not as an agents-content-type. Reassess if Windsurf adds a dedicated custom-agent
+      not as an agents-content-type. Reassess if Devin Desktop adds a dedicated custom-agent
       format (equivalent to Cursor's .cursor/agents/ or Factory's custom droids).
 
   commands:

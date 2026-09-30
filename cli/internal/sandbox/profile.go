@@ -52,8 +52,8 @@ func ProfileFor(slug, homeDir, projectDir string) (*MountProfile, error) {
 		return copilotProfile(homeDir, projectDir)
 	case "cursor":
 		return cursorProfile(homeDir, projectDir)
-	case "windsurf":
-		return nil, fmt.Errorf("windsurf does not support sandbox in v1")
+	case "devin":
+		return nil, fmt.Errorf("devin does not support sandbox in v1")
 	default:
 		return nil, fmt.Errorf("unknown provider %q — supported: claude-code, gemini-cli, codex, copilot-cli, cursor", slug)
 	}

@@ -248,7 +248,7 @@ var infoFormatsCmd = &cobra.Command{
 			Providers []string `json:"providers"`
 		}
 		formats := []formatInfo{
-			{Format: "Markdown", Extension: ".md", Providers: []string{"claude-code", "windsurf", "codex", "gemini-cli"}},
+			{Format: "Markdown", Extension: ".md", Providers: []string{"claude-code", "devin", "codex", "gemini-cli"}},
 			{Format: "Cursor MDC", Extension: ".mdc", Providers: []string{"cursor"}},
 			{Format: "JSON", Extension: ".json", Providers: []string{"claude-code", "cursor"}},
 		}

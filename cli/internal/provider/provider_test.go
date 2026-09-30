@@ -23,7 +23,7 @@ func TestDiscoveryPaths(t *testing.T) {
 		{Cursor, catalog.MCP, 1},
 		{Cursor, catalog.Hooks, 1},
 		{GeminiCLI, catalog.Rules, 1},
-		{Windsurf, catalog.Rules, 1},
+		{Devin, catalog.Rules, 1},
 		{Codex, catalog.Rules, 1},
 	}
 	for _, tt := range tests {

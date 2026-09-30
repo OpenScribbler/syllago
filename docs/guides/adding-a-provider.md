@@ -107,7 +107,7 @@ case "my-provider":
 
 **Provider supports subset of fields:** Create a provider-specific meta struct with only supported fields. Embed unsupported fields as prose notes via `BuildConversionNotes` / `AppendNotes`. See `renderGeminiSkill`, `renderCursorSkill`, `renderAmpSkill`.
 
-**Provider uses different field names:** Parse provider-specific struct, map to canonical fields. See `canonicalizeOpenCodeAgent` (steps -> maxTurns), `canonicalizeWindsurfMCP` (serverUrl -> url).
+**Provider uses different field names:** Parse provider-specific struct, map to canonical fields. See `canonicalizeOpenCodeAgent` (steps -> maxTurns), `canonicalizeDevinMCP` (serverUrl -> url).
 
 **Provider uses different format (TOML, JSONC, etc.):** Use appropriate unmarshaler. See `canonicalizeGeminiCommand` (TOML), `canonicalizeOpencodeMCP` (JSONC).
 

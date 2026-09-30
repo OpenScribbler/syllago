@@ -7,7 +7,7 @@ What happens when syllago converts content between providers? This document desc
 Syllago uses a **hub-and-spoke model**: content goes from the source provider format to a canonical intermediate format, then from canonical to the target provider format. This means every conversion involves two steps, even for direct provider-to-provider operations.
 
 ```
-Source (Cursor .mdc) → Canonical (YAML frontmatter + markdown) → Target (Windsurf .md)
+Source (Cursor .mdc) → Canonical (YAML frontmatter + markdown) → Target (Devin Desktop .md)
 ```
 
 ## Rules Conversion
@@ -30,7 +30,7 @@ Rule content here (markdown).
 
 ### Field Mapping by Provider
 
-| Canonical Field | Claude Code | Cursor | Windsurf | Copilot | Kiro | Cline | Zed |
+| Canonical Field | Claude Code | Cursor | Devin Desktop | Copilot | Kiro | Cline | Zed |
 |----------------|-------------|--------|----------|---------|------|-------|-----|
 | `alwaysApply: true` | No frontmatter (plain md) | `alwaysApply: true` | `trigger: always_on` | No frontmatter | `inclusion: always` | No frontmatter | Plain text |
 | `alwaysApply: false` + globs | `paths:` array | `globs:` string | `trigger: glob` + `globs:` | `applyTo:` string | `inclusion: fileMatch` + `fileMatchPattern:` | `paths:` array | Dropped (warning) |
@@ -48,7 +48,7 @@ Rule content here (markdown).
 - **Zed**: Cannot express conditional activation. Glob-scoped rules become unconditional (with a warning).
 - **Claude Code**: `description` is dropped. Scope for non-glob rules is embedded as prose text with a `syllago:converted` marker.
 - **Copilot**: `description` is dropped for glob-scoped rules (only `applyTo` is used).
-- **Windsurf `manual` trigger**: No direct equivalent in other providers. Maps to non-alwaysApply without globs.
+- **Devin Desktop `manual` trigger**: No direct equivalent in other providers. Maps to non-alwaysApply without globs.
 
 ## Hooks Conversion
 
@@ -99,7 +99,7 @@ These content types are primarily markdown-based and convert with high fidelity:
 Use `syllago convert --diff` to see exactly what changes:
 
 ```bash
-syllago convert ./my-rule.mdc --from cursor --to windsurf --diff
+syllago convert ./my-rule.mdc --from cursor --to devin --diff
 ```
 
 Use `syllago compat <item>` to see which providers support a content item and what warnings apply.

@@ -87,7 +87,7 @@ var AllProviders = []Provider{
 	ClaudeCode,
 	GeminiCLI,
 	Cursor,
-	Windsurf,
+	Devin,
 	Codex,
 	CopilotCLI,
 	Zed,

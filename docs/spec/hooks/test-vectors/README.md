@@ -32,7 +32,7 @@ Each hook definition in the `hooks` array:
 | `degradation` | no | Object mapping capability names to strategies (`"block"`, `"warn"`, `"exclude"`). Governs converter behavior when the target provider lacks the capability. |
 | `provider_data` | no | Object keyed by provider slug. Passthrough data rendered only when converting to that provider. |
 
-### Provider vectors (`claude-code/`, `gemini-cli/`, `cursor/`, `windsurf/`)
+### Provider vectors (`claude-code/`, `gemini-cli/`, `cursor/`, `devin/`)
 
 Provider vectors are the expected output of converting the paired canonical vector to that provider's native format. They are in the provider's native JSON structure, not canonical.
 
@@ -58,7 +58,7 @@ canonical/simple-blocking.json   <-- input
 claude-code/simple-blocking.json <-- expected output for Claude Code
 gemini-cli/simple-blocking.json  <-- expected output for Gemini CLI
 cursor/simple-blocking.json      <-- expected output for Cursor
-windsurf/simple-blocking.json    <-- expected output for Windsurf
+devin/simple-blocking.json    <-- expected output for Devin Desktop
 ```
 
 A provider vector with no canonical pair is a standalone test. The two round-trip vectors in `claude-code/` follow a different pairing rule: `roundtrip-source.json` is the native input, and `roundtrip-canonical.json` is the expected canonical form after decoding it. Re-encoding that canonical form back to Claude Code MUST produce output structurally equivalent to `roundtrip-source.json`.
@@ -75,7 +75,7 @@ test-vectors/
   claude-code/            Expected outputs for Claude Code (unified-event, .claude/settings.json)
   gemini-cli/             Expected outputs for Gemini CLI (flat array, .gemini/settings.json)
   cursor/                 Expected outputs for Cursor (split-event, .cursor/hooks/ JSON)
-  windsurf/               Expected outputs for Windsurf (split-event, .windsurf/settings.json)
+  devin/               Expected outputs for Devin Desktop (split-event, .windsurf/settings.json)
   invalid/                Documents that a conforming parser MUST reject.
 ```
 
@@ -83,7 +83,7 @@ Provider classifications:
 
 - **Unified-event** (Claude Code): hooks are grouped under a single event key; the matcher filters within the event.
 - **Flat-array** (Gemini CLI): hooks are a flat JSON array; each entry has a `trigger` field for the event and a `toolMatcher` field.
-- **Split-event** (Cursor, Windsurf): the event name encodes both timing (before/after) and tool category. No separate matcher field is needed for the tool — it is implied by the event name. Array matchers in canonical form must be expanded into one entry per matched tool/event.
+- **Split-event** (Cursor, Devin Desktop): the event name encodes both timing (before/after) and tool category. No separate matcher field is needed for the tool — it is implied by the event name. Array matchers in canonical form must be expanded into one entry per matched tool/event.
 
 ---
 
@@ -105,18 +105,18 @@ Provider classifications:
 | `simple-blocking.json` | Claude Code | `claude-code/simple-blocking.json` | `before_tool_execute` -> `PreToolUse`; `shell` -> `Bash`; timeout stays in seconds. |
 | `simple-blocking.json` | Gemini CLI | `gemini-cli/simple-blocking.json` | `before_tool_execute` -> `BeforeTool`; `shell` -> `run_shell_command`; timeout seconds -> milliseconds. |
 | `simple-blocking.json` | Cursor | `cursor/simple-blocking.json` | Split-event: `before_tool_execute + shell` -> `beforeShellExecution`; no matcher field needed; timeout stays. |
-| `simple-blocking.json` | Windsurf | `windsurf/simple-blocking.json` | Split-event: `before_tool_execute + shell` -> `pre_run_command`; timeout dropped; blocking implicit via exit code. |
+| `simple-blocking.json` | Devin Desktop | `devin/simple-blocking.json` | Split-event: `before_tool_execute + shell` -> `pre_run_command`; timeout dropped; blocking implicit via exit code. |
 | `full-featured.json` | Claude Code | `claude-code/full-featured.json` | MCP matcher -> `mcp__github__create_issue` (double underscore); `session_start` -> `SessionStart`; platform/cwd/env dropped with warn. |
 | `full-featured.json` | Gemini CLI | `gemini-cli/full-featured.json` | MCP matcher -> `mcp_github_create_issue` (single underscore); `session_start` -> `SessionStart`; platform/cwd/env dropped. |
 | `full-featured.json` | Cursor | `cursor/full-featured.json` | MCP matcher -> `beforeMCPExecution` with `matcher: "github__create_issue"`; `session_start` dropped (unsupported). |
-| `full-featured.json` | Windsurf | `windsurf/full-featured.json` | MCP matcher -> `pre_mcp_tool_use` (granularity lost — fires for all MCP tools); `provider_data.windsurf` rendered; `session_start` dropped. |
+| `full-featured.json` | Devin Desktop | `devin/full-featured.json` | MCP matcher -> `pre_mcp_tool_use` (granularity lost — fires for all MCP tools); `provider_data.devin` rendered; `session_start` dropped. |
 | `multi-event.json` | Claude Code | `claude-code/multi-event.json` | Array matcher `['shell','file_write']` -> regex alternation `Bash\|Write`; `before_prompt` -> `UserPromptSubmit`; `agent_stop` -> `Stop`. |
 | `multi-event.json` | Gemini CLI | `gemini-cli/multi-event.json` | Array matcher expands to two separate entries (Gemini has no regex alternation); `before_prompt` -> `BeforeAgent`; `agent_stop` -> `AfterAgent`. |
 | `multi-event.json` | Cursor | `cursor/multi-event.json` | Array matcher splits into `beforeShellExecution` + `afterFileEdit` (timing shift warning: Cursor has no `beforeFileEdit`); `before_prompt` -> `beforeSubmitPrompt`. |
-| `multi-event.json` | Windsurf | `windsurf/multi-event.json` | Array matcher splits into `pre_run_command` + `pre_write_code`; wildcard `after_tool_execute` expands to all four post-events; `agent_stop` -> `post_cascade_response` (semantic approximation). |
+| `multi-event.json` | Devin Desktop | `devin/multi-event.json` | Array matcher splits into `pre_run_command` + `pre_write_code`; wildcard `after_tool_execute` expands to all four post-events; `agent_stop` -> `post_cascade_response` (semantic approximation). |
 | `degradation-input-rewrite.json` | Gemini CLI | `gemini-cli/degradation-input-rewrite.json` | `input_rewrite` unsupported; strategy `block` applied; converted hook unconditionally exits 2 with explanation message. |
 | `degradation-input-rewrite.json` | Cursor | `cursor/degradation-input-rewrite.json` | `input_rewrite` unsupported; strategy `block` applied; `beforeShellExecution` wraps original command name in block message. |
-| `degradation-input-rewrite.json` | Windsurf | `windsurf/degradation-input-rewrite.json` | `input_rewrite` unsupported; strategy `block` applied; `pre_run_command` unconditionally exits 2. Original command NOT executed. |
+| `degradation-input-rewrite.json` | Devin Desktop | `devin/degradation-input-rewrite.json` | `input_rewrite` unsupported; strategy `block` applied; `pre_run_command` unconditionally exits 2. Original command NOT executed. |
 
 ### Round-trip vectors (Claude Code)
 

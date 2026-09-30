@@ -92,7 +92,7 @@ Provider-neutral interchange formats for each content type. Specs live under [`d
 
 ## New Providers
 
-Currently shipping support for **15 providers**: Claude Code, Cursor, Windsurf, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro, Amp, Factory Droid, Pi, Crush.
+Currently shipping support for **15 providers**: Claude Code, Cursor, Devin Desktop, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro, Amp, Factory Droid, Pi, Crush.
 
 | Provider | Notes |
 |----------|-------|

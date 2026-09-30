@@ -23,7 +23,7 @@ In February 2026, hooks in AI coding tools were identified as an RCE vector (CVE
 
 ### 1.3 Cross-Provider Amplification
 
-The hub-and-spoke conversion model is a force multiplier for supply chain attacks. A single malicious hook, once converted to canonical format, can be deployed to all supported providers simultaneously. A compromised hook in a community registry could propagate across Claude Code, Gemini CLI, Cursor, Windsurf, and other providers in a single conversion operation. Distribution mechanisms (registries, package managers) MUST account for this amplification when designing integrity and review controls.
+The hub-and-spoke conversion model is a force multiplier for supply chain attacks. A single malicious hook, once converted to canonical format, can be deployed to all supported providers simultaneously. A compromised hook in a community registry could propagate across Claude Code, Gemini CLI, Cursor, Devin Desktop, and other providers in a single conversion operation. Distribution mechanisms (registries, package managers) MUST account for this amplification when designing integrity and review controls.
 
 ---
 

@@ -22,7 +22,7 @@ func TestSimpleDetectors_Slugs(t *testing.T) {
 		det  ContentDetector
 		slug string
 	}{
-		{&WindsurfDetector{}, "windsurf"},
+		{&DevinDetector{}, "devin"},
 		{&ClineDetector{}, "cline"},
 		{&RooCodeDetector{}, "roo-code"},
 		{&CodexDetector{}, "codex"},
@@ -43,7 +43,7 @@ func TestSimpleDetectors_PatternCounts(t *testing.T) {
 		det   ContentDetector
 		count int
 	}{
-		{"windsurf", &WindsurfDetector{}, 1},
+		{"devin", &DevinDetector{}, 1},
 		{"cline", &ClineDetector{}, 2},
 		{"roo-code", &RooCodeDetector{}, 2},
 		{"codex", &CodexDetector{}, 2},
@@ -70,10 +70,10 @@ func TestSimpleDetectors_Classify(t *testing.T) {
 		wantType catalog.ContentType
 	}{
 		{
-			name:     "windsurf rules",
-			det:      &WindsurfDetector{},
+			name:     "devin rules",
+			det:      &DevinDetector{},
 			relPath:  ".windsurfrules",
-			content:  "# Windsurf rules\nBe concise.\n",
+			content:  "# Devin rules\nBe concise.\n",
 			wantType: catalog.Rules,
 		},
 		{
@@ -162,7 +162,7 @@ func TestSimpleDetectors_EmptyFile(t *testing.T) {
 		det     ContentDetector
 		relPath string
 	}{
-		{"windsurf", &WindsurfDetector{}, ".windsurfrules"},
+		{"devin", &DevinDetector{}, ".windsurfrules"},
 		{"cline", &ClineDetector{}, ".clinerules"},
 		{"roo-code", &RooCodeDetector{}, ".roo/rules/empty.md"},
 		{"codex", &CodexDetector{}, "AGENTS.md"},
@@ -194,7 +194,7 @@ func TestSimpleDetectors_MissingFile(t *testing.T) {
 		det     ContentDetector
 		relPath string
 	}{
-		{"windsurf", &WindsurfDetector{}, ".windsurfrules"},
+		{"devin", &DevinDetector{}, ".windsurfrules"},
 		{"cline", &ClineDetector{}, ".clinerules"},
 		{"roo-code", &RooCodeDetector{}, ".roo/rules/ghost.md"},
 		{"codex", &CodexDetector{}, "AGENTS.md"},

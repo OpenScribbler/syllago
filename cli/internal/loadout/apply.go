@@ -408,7 +408,7 @@ func injectSessionEndHook(prov provider.Provider, homeDir string, resolver *conf
 
 	// Encode the hook in the provider's native format via its adapter (mirrors
 	// applyHook). A naive CC-shape append would write the wrong format for
-	// non-CC providers (e.g. windsurf's split-event model). Not tracked in
+	// non-CC providers (e.g. devin's split-event model). Not tracked in
 	// installed.json — it is reverted when the snapshot restores the file.
 	h := converter.Hook{
 		Name:    "syllago-auto-revert",

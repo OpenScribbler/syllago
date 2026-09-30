@@ -83,7 +83,7 @@ type plainRuleSpec struct {
 }
 
 // plainRuleSpecs is the descriptor table for the plain-markdown renderer
-// family. Windsurf, Kiro, and Cursor renderers stay bespoke — they have
+// family. Devin, Kiro, and Cursor renderers stay bespoke — they have
 // real frontmatter/trigger logic.
 var plainRuleSpecs = map[string]plainRuleSpec{
 	// Claude Code: glob-scoped rules use native paths frontmatter

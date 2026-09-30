@@ -21,7 +21,7 @@ from typing import Any
 
 # Maps canonical tool name → provider slug → provider-native tool name.
 # A None value means the provider has no equivalent tool for that canonical
-# name. Split-event providers (cursor, windsurf) carry event-level notes in
+# name. Split-event providers (cursor, devin) carry event-level notes in
 # parentheses in the spec table; those entries are omitted here because they
 # are handled at the encode layer (event mapping), not as matcher strings.
 TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
@@ -29,7 +29,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Bash",
         "gemini-cli": "run_shell_command",
         "cursor": "run_terminal_cmd",
-        "windsurf": None,   # split-event: maps to pre_run_command event, not a matcher
+        "devin": None,   # split-event: maps to pre_run_command event, not a matcher
         "copilot-cli": "bash",
         "kiro": "execute_bash",
         "opencode": "bash",
@@ -38,7 +38,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Read",
         "gemini-cli": "read_file",
         "cursor": "read_file",
-        "windsurf": None,   # split-event: maps to pre_read_code event
+        "devin": None,   # split-event: maps to pre_read_code event
         "copilot-cli": "view",
         "kiro": "fs_read",
         "opencode": "read",
@@ -47,7 +47,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Write",
         "gemini-cli": "write_file",
         "cursor": "edit_file",
-        "windsurf": None,   # split-event: maps to pre_write_code event
+        "devin": None,   # split-event: maps to pre_write_code event
         "copilot-cli": "create",
         "kiro": "fs_write",
         "opencode": "write",
@@ -56,7 +56,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Edit",
         "gemini-cli": "replace",
         "cursor": "edit_file",
-        "windsurf": None,   # split-event: maps to pre_write_code event
+        "devin": None,   # split-event: maps to pre_write_code event
         "copilot-cli": "edit",
         "kiro": "fs_write",
         "opencode": "edit",
@@ -65,7 +65,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Grep",
         "gemini-cli": "grep_search",
         "cursor": "grep_search",
-        "windsurf": None,
+        "devin": None,
         "copilot-cli": "grep",
         "kiro": "grep",
         "opencode": "grep",
@@ -74,7 +74,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Glob",
         "gemini-cli": "glob",
         "cursor": "file_search",
-        "windsurf": None,
+        "devin": None,
         "copilot-cli": "glob",
         "kiro": "glob",
         "opencode": "glob",
@@ -83,7 +83,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "WebSearch",
         "gemini-cli": "google_web_search",
         "cursor": "web_search",
-        "windsurf": None,
+        "devin": None,
         "copilot-cli": None,
         "kiro": "web_search",
         "opencode": None,
@@ -92,7 +92,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "WebFetch",
         "gemini-cli": "web_fetch",
         "cursor": None,
-        "windsurf": None,
+        "devin": None,
         "copilot-cli": "web_fetch",
         "kiro": "web_fetch",
         "opencode": None,
@@ -101,7 +101,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Agent",
         "gemini-cli": None,
         "cursor": None,
-        "windsurf": None,
+        "devin": None,
         "copilot-cli": "task",
         "kiro": "use_subagent",
         "opencode": None,
@@ -145,7 +145,7 @@ _MCP_PROVIDER_FORMAT: dict[str, str] = {
     "gemini-cli":   "single_underscore_prefix",   # mcp_<server>_<tool>
     "copilot-cli":  "slash",                       # <server>/<tool>
     "cursor":       "double_underscore",           # <server>__<tool>
-    "windsurf":     "double_underscore",
+    "devin":     "double_underscore",
     # opencode not present in tools.md §2; falls through to pass-through
 }
 

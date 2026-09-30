@@ -114,7 +114,7 @@ func createBareRepo(t *testing.T, layout string) string {
 		writeFile(t, work, "mcp/filtered-server/config.json", `{"mcpServers":{"filtered":{"command":"npx","args":["@example/server"],"type":"stdio","trust":"full","includeTools":["search"],"excludeTools":["admin_delete"]}}}`)
 
 		// Rules (11 — one per provider)
-		providers := []string{"claude-code", "gemini-cli", "cursor", "windsurf", "codex", "copilot-cli", "zed", "cline", "roo-code", "opencode", "kiro"}
+		providers := []string{"claude-code", "gemini-cli", "cursor", "devin", "codex", "copilot-cli", "zed", "cline", "roo-code", "opencode", "kiro"}
 		for _, p := range providers {
 			writeFile(t, work, "rules/"+p+"/code-style/rule.md", "---\ndescription: Code style\nalwaysApply: true\n---\n\n# Code Style\n\nTest rule.\n")
 			writeFile(t, work, "rules/"+p+"/code-style/README.md", "# code-style\n")
@@ -715,7 +715,7 @@ func TestIntegration_KitchenSink_RulesAllProviders(t *testing.T) {
 		providers[r.Provider] = true
 	}
 
-	expected := []string{"claude-code", "gemini-cli", "cursor", "windsurf", "codex", "copilot-cli", "zed", "cline", "roo-code", "opencode", "kiro"}
+	expected := []string{"claude-code", "gemini-cli", "cursor", "devin", "codex", "copilot-cli", "zed", "cline", "roo-code", "opencode", "kiro"}
 	for _, p := range expected {
 		if !providers[p] {
 			t.Errorf("missing rule for provider %q", p)

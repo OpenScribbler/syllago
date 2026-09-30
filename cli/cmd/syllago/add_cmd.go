@@ -182,9 +182,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		}
 		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
 	}
+	fromSlug = prov.Slug
 
 	installFlag, _ := cmd.Flags().GetBool("install")
 	installTo, _ := cmd.Flags().GetString("to")
+	installTo = provider.CanonicalSlug(installTo)
 	frozen := frozenFlag
 	telemetry.Enrich("frozen", frozen)
 	if installFlag && installTo == "" {

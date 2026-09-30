@@ -62,7 +62,7 @@ func filenameToProviderSlug(filename string) string {
 	case ".clinerules":
 		return "cline"
 	case ".windsurfrules":
-		return "windsurf"
+		return "devin"
 	}
 	return ""
 }
@@ -397,7 +397,7 @@ func filenameToFormat(filename string) string {
 	case ".clinerules":
 		return "cline"
 	case ".windsurfrules":
-		return "windsurf"
+		return "devin"
 	}
 	return "markdown"
 }

@@ -99,7 +99,7 @@ content_types:
         summary: "Optional steering/ subdirectory containing workflow-specific guidance files loaded on-demand. Complex powers can map different steering files to specific workflows to avoid context overload."
         source_ref: "https://kiro.dev/docs/powers/create/"
         graduation_candidate: true
-        graduation_notes: "Cross-provider supporting-files concept — windsurf, amp, cline, claude-code, codex, copilot-cli, factory-droid, and gemini-cli all have analogous supporting files loaded alongside a primary skill file."
+        graduation_notes: "Cross-provider supporting-files concept — devin, amp, cline, claude-code, codex, copilot-cli, factory-droid, and gemini-cli all have analogous supporting files loaded alongside a primary skill file."
         conversion: embedded
       - id: bundled_mcp_config
         name: "mcp.json bundled in power directory"
@@ -349,7 +349,7 @@ content_types:
         summary: "Remote MCP servers configured with 'url' (HTTPS or localhost HTTP endpoint) and optional 'headers' map for authentication. Configuration applies automatically upon saving."
         source_ref: "https://kiro.dev/docs/mcp/configuration/"
         graduation_candidate: false
-        graduation_notes: "Remote server URL config is shared across multiple providers (Claude Desktop, Windsurf, etc.) — already an emerging cross-provider pattern but not Kiro-specific."
+        graduation_notes: "Remote server URL config is shared across multiple providers (Claude Desktop, Devin Desktop, etc.) — already an emerging cross-provider pattern but not Kiro-specific."
         provider_field: url
         conversion: embedded
       - id: kiro_mcp_env_var_expansion

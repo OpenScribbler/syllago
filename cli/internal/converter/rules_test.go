@@ -10,9 +10,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// --- Cursor → canonical → Windsurf ---
+// --- Cursor → canonical → Devin ---
 
-func TestCursorAlwaysApplyToWindsurf(t *testing.T) {
+func TestCursorAlwaysApplyToDevin(t *testing.T) {
 	input := []byte("---\ndescription: \"Always on rule\"\nalwaysApply: true\n---\n\nDo the thing.\n")
 
 	conv := &RulesConverter{}
@@ -21,7 +21,7 @@ func TestCursorAlwaysApplyToWindsurf(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestCursorAlwaysApplyToWindsurf(t *testing.T) {
 	assertEqual(t, "rule.md", result.Filename)
 }
 
-func TestCursorGlobsToWindsurf(t *testing.T) {
+func TestCursorGlobsToDevin(t *testing.T) {
 	input := []byte("---\ndescription: \"TS rule\"\nglobs:\n  - \"*.ts\"\n  - \"*.tsx\"\nalwaysApply: false\n---\n\nUse strict.\n")
 
 	conv := &RulesConverter{}
@@ -42,7 +42,7 @@ func TestCursorGlobsToWindsurf(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestCursorGlobsToWindsurf(t *testing.T) {
 	assertContains(t, out, "Use strict.")
 }
 
-func TestCursorModelDecisionToWindsurf(t *testing.T) {
+func TestCursorModelDecisionToDevin(t *testing.T) {
 	input := []byte("---\ndescription: \"Apply when writing tests\"\nalwaysApply: false\n---\n\nTest conventions.\n")
 
 	conv := &RulesConverter{}
@@ -62,7 +62,7 @@ func TestCursorModelDecisionToWindsurf(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestCursorModelDecisionToWindsurf(t *testing.T) {
 	assertContains(t, out, "description: Apply when writing tests")
 }
 
-func TestCursorManualToWindsurf(t *testing.T) {
+func TestCursorManualToDevin(t *testing.T) {
 	input := []byte("---\nalwaysApply: false\n---\n\nManual rule.\n")
 
 	conv := &RulesConverter{}
@@ -81,7 +81,7 @@ func TestCursorManualToWindsurf(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -90,13 +90,13 @@ func TestCursorManualToWindsurf(t *testing.T) {
 	assertContains(t, out, "trigger: manual")
 }
 
-// --- Windsurf → canonical → Cursor ---
+// --- Devin → canonical → Cursor ---
 
-func TestWindsurfAlwaysOnToCursor(t *testing.T) {
+func TestDevinAlwaysOnToCursor(t *testing.T) {
 	input := []byte("---\ntrigger: always_on\ndescription: \"Global rule\"\n---\n\nGlobal content.\n")
 
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -112,11 +112,11 @@ func TestWindsurfAlwaysOnToCursor(t *testing.T) {
 	assertEqual(t, "rule.mdc", result.Filename)
 }
 
-func TestWindsurfGlobToCursor(t *testing.T) {
+func TestDevinGlobToCursor(t *testing.T) {
 	input := []byte("---\ntrigger: glob\nglobs: \"*.ts, *.tsx\"\ndescription: \"TS files\"\n---\n\nTS content.\n")
 
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -132,11 +132,11 @@ func TestWindsurfGlobToCursor(t *testing.T) {
 	assertContains(t, out, "*.tsx")
 }
 
-func TestWindsurfManualToCursor(t *testing.T) {
+func TestDevinManualToCursor(t *testing.T) {
 	input := []byte("---\ntrigger: manual\n---\n\nManual rule.\n")
 
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -202,18 +202,18 @@ func TestCursorNotAlwaysApplyEmbedsScopeToClaude(t *testing.T) {
 // --- Round-trip tests ---
 
 func TestCanonicalRoundTrip(t *testing.T) {
-	// Canonical → Windsurf → Canonical should preserve semantics
+	// Canonical → Devin → Canonical should preserve semantics
 	original := "---\ndescription: Round-trip test\nalwaysApply: true\nglobs:\n    - \"*.go\"\n---\n\nGo content.\n"
 
 	conv := &RulesConverter{}
-	windsurfResult, err := conv.Render([]byte(original), provider.Windsurf)
+	devinResult, err := conv.Render([]byte(original), provider.Devin)
 	if err != nil {
-		t.Fatalf("Render to Windsurf: %v", err)
+		t.Fatalf("Render to Devin: %v", err)
 	}
 
-	backToCanonical, err := conv.Canonicalize(windsurfResult.Content, "windsurf")
+	backToCanonical, err := conv.Canonicalize(devinResult.Content, "devin")
 	if err != nil {
-		t.Fatalf("Canonicalize from Windsurf: %v", err)
+		t.Fatalf("Canonicalize from Devin: %v", err)
 	}
 
 	meta, body, err := parseCanonical(backToCanonical.Content)
@@ -317,13 +317,13 @@ func TestBareNonAlwaysApplyEmbedsScopeAsExplicit(t *testing.T) {
 	assertContains(t, out, "**Scope:** Apply only when explicitly asked.")
 }
 
-// --- Windsurf model_decision ---
+// --- Devin model_decision ---
 
-func TestWindsurfModelDecisionToCursor(t *testing.T) {
+func TestDevinModelDecisionToCursor(t *testing.T) {
 	input := []byte("---\ntrigger: model_decision\ndescription: \"Use when refactoring\"\n---\n\nRefactoring guide.\n")
 
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}

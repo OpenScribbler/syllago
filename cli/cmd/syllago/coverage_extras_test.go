@@ -67,7 +67,7 @@ func withStdin(t *testing.T, input string) {
 func makeConflict() []installer.Conflict {
 	return []installer.Conflict{{
 		InstallingTo: provider.Provider{Name: "Cursor"},
-		AlsoReadBy:   []provider.Provider{{Name: "Windsurf"}},
+		AlsoReadBy:   []provider.Provider{{Name: "Devin Desktop"}},
 		SharedPath:   "~/.shared/rules",
 	}}
 }

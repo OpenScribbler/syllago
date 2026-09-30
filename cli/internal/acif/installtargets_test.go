@@ -130,7 +130,7 @@ func TestResolveInstallTargets_DispositionLanes(t *testing.T) {
 	t.Run("no_entry_point", func(t *testing.T) {
 		t.Parallel()
 		reject := resolveReject(t, InstallResolveInput{
-			Provider: "windsurf", ContentType: "hook", ContentName: "guard",
+			Provider: "cline", ContentType: "hook", ContentName: "guard",
 			HomeDir: "/h", ProjectRoot: "/p",
 		})
 		if reject.ID != "acif.install.no_entry_point" {

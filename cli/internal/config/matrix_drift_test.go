@@ -25,13 +25,17 @@ var knownMismatches = map[string]struct{}{
 	// Expressing a tool-owned consolidated file needs an ACIF layout-enum
 	// addition (Class C) — tracked in syllago-t63g5.
 	"pi/hooks": {}, // tracked in syllago-t63g5
+	// devin/rules: the matrix's first user rule row is the merged
+	// ~/.config/devin/AGENTS.md, while the provider table installs rule
+	// files into ~/.codeium/windsurf.
+	"devin/rules": {},
 }
 
 func TestInstallMatrixMatchesLegacyProviderTables(t *testing.T) {
 	unsetACIFInstallEntryPointsEnv(t)
 
-	if len(knownMismatches) != 7 {
-		t.Fatalf("knownMismatches must contain exactly seven tracked entries, got %d", len(knownMismatches))
+	if len(knownMismatches) != 8 {
+		t.Fatalf("knownMismatches must contain exactly eight tracked entries, got %d", len(knownMismatches))
 	}
 
 	contentTypes := []catalog.ContentType{

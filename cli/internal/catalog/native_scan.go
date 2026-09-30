@@ -272,8 +272,8 @@ func providerNativePatterns() []nativePattern {
 		// Cursor
 		{providerSlug: "cursor", providerName: "Cursor", path: ".cursorrules", typeLabel: "rules"},
 		{providerSlug: "cursor", providerName: "Cursor", path: ".cursor/rules", typeLabel: "rules"},
-		// Windsurf
-		{providerSlug: "windsurf", providerName: "Windsurf", path: ".windsurfrules", typeLabel: "rules"},
+		// Devin
+		{providerSlug: "devin", providerName: "Devin Desktop", path: ".windsurfrules", typeLabel: "rules"},
 		// Codex
 		{providerSlug: "codex", providerName: "Codex", path: ".codex", typeLabel: "config"},
 		// Copilot CLI

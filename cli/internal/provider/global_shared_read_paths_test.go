@@ -21,7 +21,7 @@ func TestGlobalSharedReadPaths_SkillsConflictProviders(t *testing.T) {
 		provider Provider
 	}{
 		{"GeminiCLI", GeminiCLI},
-		{"Windsurf", Windsurf},
+		{"Devin Desktop", Devin},
 		{"RooCode", RooCode},
 		{"OpenCode", OpenCode},
 	}
@@ -100,7 +100,7 @@ func TestGlobalSharedReadPaths_NonSkillsTypes(t *testing.T) {
 		provider Provider
 	}{
 		{"GeminiCLI", GeminiCLI},
-		{"Windsurf", Windsurf},
+		{"Devin Desktop", Devin},
 		{"RooCode", RooCode},
 		{"OpenCode", OpenCode},
 	}

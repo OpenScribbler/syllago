@@ -12,7 +12,7 @@ The tool vocabulary defines canonical tool names that abstract over provider-spe
 
 ## §1 Canonical Tool Names
 
-| Canonical Name | Description | claude-code | gemini-cli | cursor | windsurf | copilot-cli | kiro | opencode | factory-droid | codex |
+| Canonical Name | Description | claude-code | gemini-cli | cursor | devin    | copilot-cli | kiro | opencode | factory-droid | codex |
 |----------------|-------------|-------------|------------|--------|----------|-------------|------|----------|---------------|-------|
 | `shell` | Shell command execution | Bash | run_shell_command | run_terminal_cmd | (event: pre_run_command) | bash | execute_bash | bash | Bash | Bash |
 | `file_read` | Read file contents | Read | read_file | read_file | (event: pre_read_code) | view | fs_read | read | Read | -- |
@@ -26,7 +26,7 @@ The tool vocabulary defines canonical tool names that abstract over provider-spe
 
 A `--` indicates the provider does not have an equivalent tool or the tool vocabulary is not enumerated in hook documentation.
 
-For split-event providers (Cursor, Windsurf), certain tool vocabulary entries map to native events rather than tool name matchers. For example, encoding `matcher: "shell"` for Windsurf produces a hook bound to the `pre_run_command` event rather than a matcher on a tool name.
+For split-event providers (Cursor, Devin Desktop), certain tool vocabulary entries map to native events rather than tool name matchers. For example, encoding `matcher: "shell"` for Devin Desktop produces a hook bound to the `pre_run_command` event rather than a matcher on a tool name.
 
 **Matcher field support note:** VS Code Copilot and Copilot CLI do not honor the `matcher` field on hook entries. VS Code Copilot accepts but ignores matcher syntax — hooks fire for all tool invocations on the matching event regardless of the tool name. Copilot CLI has no matcher system at all. Hooks targeting tool-specific behavior on these providers must use separate hook definitions per native event, or accept that the hook will fire for all tools. Adapters encoding to these providers MUST emit a warning when a hook has a non-wildcard matcher.
 
@@ -41,7 +41,7 @@ MCP tools use structured objects in the canonical format. The provider-specific 
 | claude-code, kiro, factory-droid | `mcp__<server>__<tool>` | `mcp__github__create_issue` |
 | gemini-cli | `mcp_<server>_<tool>` | `mcp_github_create_issue` |
 | copilot-cli | `<server>/<tool>` | `github/create_issue` |
-| cursor, windsurf | `<server>__<tool>` | `github__create_issue` |
+| cursor, devin    | `<server>__<tool>` | `github__create_issue` |
 | codex | Not applicable — codex uses MCP as a tool provider, not as a hook matcher target | — |
 | cline | Not applicable — cline hook scripts receive tool names but have no MCP matcher format | — |
 
@@ -50,7 +50,7 @@ MCP tools use structured objects in the canonical format. The provider-specific 
 The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `capmon generate` to refresh.
 
 <!-- GENERATED FROM provider-capabilities/*.yaml -->
-| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | devin    | zed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 <!-- END GENERATED -->

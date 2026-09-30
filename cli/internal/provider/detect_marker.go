@@ -40,7 +40,7 @@ func dirExists(path string) bool {
 
 // appDataDir returns the OS-specific application data directory for the
 // named app, joined under homeDir. Used by Electron-based provider Detect
-// functions (Cursor, Windsurf, Kiro) to find paths the IDE itself creates
+// functions (Cursor, Devin, Kiro) to find paths the IDE itself creates
 // — distinct from ~/.<slug>/ which syllago also writes into.
 //
 //   - Linux:   <homeDir>/.config/<appName>

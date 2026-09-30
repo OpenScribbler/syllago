@@ -64,8 +64,8 @@ Provider-exclusive events exist in only one provider. They are included in the r
 | `before_task` | Fires before a spec task executes. | Kiro |
 | `after_task` | Fires after a spec task completes. | Kiro |
 | `manual_trigger` | Fires when a hook is manually triggered by the user (not tied to an agent lifecycle event). | Kiro |
-| `windsurf_transcript_response` | Post-response event that provides a `transcript_path` (JSONL file) with the full response. Enterprise compliance variant of `agent_stop`. | Windsurf |
-| `windsurf_worktree_setup` | Fires after worktree creation; has `worktree_path` and `root_workspace_path` fields. | Windsurf |
+| `windsurf_transcript_response` | Post-response event that provides a `transcript_path` (JSONL file) with the full response. Enterprise compliance variant of `agent_stop`. | Devin Desktop |
+| `windsurf_worktree_setup` | Fires after worktree creation; has `worktree_path` and `root_workspace_path` fields. | Devin Desktop |
 | `opencode_command_before` | Fires before a shell command executes (OpenCode plugin system). | OpenCode |
 | `opencode_command_after` | Fires after a shell command executes. | OpenCode |
 | `opencode_chat_params` | Fires before an LLM API call; allows modifying LLM request parameters. | OpenCode |
@@ -81,7 +81,7 @@ Provider-exclusive events exist in only one provider. They are included in the r
 
 The following table maps canonical event names to provider-native names. Adapters use this mapping during decode (native to canonical) and encode (canonical to native).
 
-| Canonical | claude-code | gemini-cli | cursor | windsurf | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
+| Canonical | claude-code | gemini-cli | cursor | devin    | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
 |-----------|-------------|------------|--------|----------|-----------------|-------------|------|----------|---------------|-------|-------|
 | `before_tool_execute` | PreToolUse | BeforeTool | beforeShellExecution / beforeMCPExecution / beforeReadFile | pre_read_code / pre_write_code / pre_run_command / pre_mcp_tool_use | PreToolUse | preToolUse | preToolUse | tool.execute.before | PreToolUse | PreToolUse | PreToolUse |
 | `after_tool_execute` | PostToolUse | AfterTool | afterShellExecution / afterMCPExecution / afterFileEdit | post_read_code / post_write_code / post_run_command / post_mcp_tool_use | PostToolUse | postToolUse | postToolUse | tool.execute.after | PostToolUse | PostToolUse | PostToolUse |
@@ -130,7 +130,7 @@ The following table maps canonical event names to provider-native names. Adapter
 
 A `--` indicates the provider does not support that event. When encoding a hook for a provider that does not support its event, the adapter MUST apply the degradation strategy (Section 11).
 
-**Split-event providers:** Cursor and Windsurf map a single `before_tool_execute` event to multiple provider-native events based on the matcher. When encoding for these providers, adapters MUST inspect the `matcher` field to select the correct native event. When decoding from these providers, adapters MUST merge split events into `before_tool_execute` with an appropriate matcher.
+**Split-event providers:** Cursor and Devin Desktop map a single `before_tool_execute` event to multiple provider-native events based on the matcher. When encoding for these providers, adapters MUST inspect the `matcher` field to select the correct native event. When decoding from these providers, adapters MUST merge split events into `before_tool_execute` with an appropriate matcher.
 
 **Footnotes:**
 
@@ -147,7 +147,7 @@ A `--` indicates the provider does not support that event. When encoding a hook 
 The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `capmon generate` to refresh.
 
 <!-- GENERATED FROM provider-capabilities/*.yaml -->
-| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | devin    | zed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 <!-- END GENERATED -->

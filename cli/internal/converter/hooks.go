@@ -240,10 +240,10 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		// Cursor hooks use CC-style event names (mapped via HookEvents).
 		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
 		return canonicalizeStandardHooks(content, sourceProvider)
-	case "windsurf":
-		// Windsurf uses per-tool-category events (pre_read_code, etc.) — structural
+	case "devin":
+		// Devin uses per-tool-category events (pre_read_code, etc.) — structural
 		// mismatch with generic PreToolUse+matcher. Standard canonicalization is a
-		// best-effort pass-through. TODO: implement proper Windsurf event mapping.
+		// best-effort pass-through. TODO: implement proper Devin event mapping.
 		return canonicalizeStandardHooks(content, sourceProvider)
 	default:
 		// Claude Code and Gemini CLI share the same structure, just different event/tool names
@@ -316,10 +316,10 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 		// Cursor uses CC-style event names (PreToolUse, etc.) mapped via HookEvents.
 		// TODO: support Cursor-specific fields.
 		return renderStandardHooks(cfg, target.Slug, mode)
-	case "windsurf":
-		// Windsurf uses per-tool-category events (pre_read_code, pre_write_code, etc.)
+	case "devin":
+		// Devin uses per-tool-category events (pre_read_code, pre_write_code, etc.)
 		// instead of generic PreToolUse+matcher. This structural mismatch means event-level
-		// translation may not be accurate. TODO: implement Windsurf-specific event mapping.
+		// translation may not be accurate. TODO: implement Devin-specific event mapping.
 		return renderStandardHooks(cfg, target.Slug, mode)
 	default:
 		// Claude Code and Gemini CLI

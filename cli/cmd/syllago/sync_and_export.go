@@ -88,6 +88,7 @@ func runSyncInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	toSlug, _ := cmd.Flags().GetString("to")
+	toSlug = provider.CanonicalSlug(toSlug)
 	typeFilter, _ := cmd.Flags().GetString("type")
 	nameFilter, _ := cmd.Flags().GetString("name")
 	sourceFilter, _ := cmd.Flags().GetString("source")

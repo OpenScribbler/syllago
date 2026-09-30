@@ -15,7 +15,7 @@ func MonolithicFilenames(slug string) []string {
 		return []string{".cursorrules"}
 	case "cline":
 		return []string{".clinerules"}
-	case "windsurf":
+	case "devin":
 		return []string{".windsurfrules"}
 	}
 	return nil
@@ -44,7 +44,7 @@ func SlugForMonolithicFilename(filename string) string {
 	case ".clinerules":
 		return "cline"
 	case ".windsurfrules":
-		return "windsurf"
+		return "devin"
 	}
 	return ""
 }
@@ -56,8 +56,8 @@ func MonolithicHint(slug string) string {
 	switch slug {
 	case "codex":
 		return "Codex prefers per-directory AGENTS.md files; consider installing per directory rather than as a single root file."
-	case "windsurf":
-		return "Windsurf has a 6KB limit on this file; the file rules format (.windsurf/rules/) is recommended for non-trivial content."
+	case "devin":
+		return "Devin has a 6KB limit on this file; the file rules format (.windsurf/rules/) is recommended for non-trivial content."
 	}
 	return ""
 }

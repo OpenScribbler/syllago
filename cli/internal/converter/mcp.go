@@ -33,11 +33,11 @@ type mcpServerConfig struct {
 	AutoApprove  []string `json:"autoApprove,omitempty"`  // Claude-specific
 
 	// Multi-provider fields
-	DisabledTools []string `json:"disabledTools,omitempty"` // Kiro, Windsurf, Roo Code
+	DisabledTools []string `json:"disabledTools,omitempty"` // Kiro, Devin, Roo Code
 
 	// Gemini alternate field names
 	HTTPUrl   string `json:"httpUrl,omitempty"`   // Gemini uses httpUrl instead of url
-	ServerUrl string `json:"serverUrl,omitempty"` // Windsurf uses serverUrl for HTTP transport
+	ServerUrl string `json:"serverUrl,omitempty"` // Devin uses serverUrl for HTTP transport
 
 	// OpenCode-specific (preserved in canonical for round-trips)
 	Environment  map[string]string `json:"environment,omitempty"`  // OpenCode uses "environment" not "env"
@@ -137,8 +137,8 @@ func (c *MCPConverter) Canonicalize(content []byte, sourceProvider string) (*Res
 	if sourceProvider == "roo-code" {
 		return canonicalizeRooCodeMCP(content)
 	}
-	if sourceProvider == "windsurf" {
-		return canonicalizeWindsurfMCP(content)
+	if sourceProvider == "devin" {
+		return canonicalizeDevinMCP(content)
 	}
 	if sourceProvider == "amp" {
 		return canonicalizeAmpMCP(content)
@@ -266,8 +266,8 @@ func (c *MCPConverter) Render(content []byte, target provider.Provider) (*Result
 		// Cursor uses .cursor/mcp.json with the same mcpServers key and transport
 		// types as Claude Code. Route through the same renderer.
 		return renderCursorMCP(cfg)
-	case "windsurf":
-		return renderWindsurfMCP(cfg)
+	case "devin":
+		return renderDevinMCP(cfg)
 	case "amp":
 		return renderAmpMCP(cfg)
 	case "vscode-copilot":
@@ -777,9 +777,9 @@ func renderKiroMCP(cfg mcpConfig) (*Result, error) {
 	return &Result{Content: result, Filename: "mcp.json", Warnings: warnings}, nil
 }
 
-// windsurfServerConfig is Windsurf's per-server format.
-// Windsurf uses the standard mcpServers key but uses serverUrl (not url) for HTTP transport.
-type windsurfServerConfig struct {
+// devinServerConfig is Devin's per-server format.
+// Devin uses the standard mcpServers key but uses serverUrl (not url) for HTTP transport.
+type devinServerConfig struct {
 	Command       string            `json:"command,omitempty"`
 	Args          []string          `json:"args,omitempty"`
 	Env           map[string]string `json:"env,omitempty"`
@@ -789,14 +789,14 @@ type windsurfServerConfig struct {
 	DisabledTools []string          `json:"disabledTools,omitempty"`
 }
 
-type windsurfMCPConfig struct {
-	MCPServers map[string]windsurfServerConfig `json:"mcpServers"`
+type devinMCPConfig struct {
+	MCPServers map[string]devinServerConfig `json:"mcpServers"`
 }
 
-func canonicalizeWindsurfMCP(content []byte) (*Result, error) {
-	var src windsurfMCPConfig
+func canonicalizeDevinMCP(content []byte) (*Result, error) {
+	var src devinMCPConfig
 	if err := json.Unmarshal(content, &src); err != nil {
-		return nil, fmt.Errorf("parsing Windsurf MCP config: %w", err)
+		return nil, fmt.Errorf("parsing Devin MCP config: %w", err)
 	}
 
 	out := mcpConfig{MCPServers: make(map[string]mcpServerConfig)}
@@ -835,12 +835,12 @@ func canonicalizeWindsurfMCP(content []byte) (*Result, error) {
 	return &Result{Content: result, Filename: "mcp.json"}, nil
 }
 
-func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
+func renderDevinMCP(cfg mcpConfig) (*Result, error) {
 	var warnings []string
-	out := windsurfMCPConfig{MCPServers: make(map[string]windsurfServerConfig)}
+	out := devinMCPConfig{MCPServers: make(map[string]devinServerConfig)}
 
 	for name, server := range cfg.MCPServers {
-		s := windsurfServerConfig{
+		s := devinServerConfig{
 			Command:       server.Command,
 			Args:          server.Args,
 			Env:           server.Env,
@@ -861,7 +861,7 @@ func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
 
 		// Warn about dropped provider-specific fields
 		if server.Cwd != "" {
-			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Windsurf)", name))
+			warnings = append(warnings, fmt.Sprintf("server %q: cwd dropped (not supported by Devin)", name))
 		}
 		if len(server.AutoApprove) > 0 {
 			warnings = append(warnings, fmt.Sprintf("server %q: autoApprove dropped (Claude-specific)", name))
@@ -876,7 +876,7 @@ func renderWindsurfMCP(cfg mcpConfig) (*Result, error) {
 			warnings = append(warnings, fmt.Sprintf("server %q: excludeTools dropped (Gemini-specific)", name))
 		}
 		if len(server.OAuth) > 0 {
-			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Windsurf", name))
+			warnings = append(warnings, fmt.Sprintf("server %q: oauth config may not be supported by Devin", name))
 		}
 
 		out.MCPServers[name] = s

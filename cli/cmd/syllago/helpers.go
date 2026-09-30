@@ -81,7 +81,9 @@ func isInteractiveImpl() bool {
 }
 
 // findProviderBySlug returns a pointer to the matching provider, or nil.
+// A retired slug resolves to its current provider with a deprecation warning.
 func findProviderBySlug(slug string) *provider.Provider {
+	slug = provider.CanonicalSlug(slug)
 	for i := range provider.AllProviders {
 		if provider.AllProviders[i].Slug == slug {
 			return &provider.AllProviders[i]

@@ -189,8 +189,8 @@ var HookOutputCapabilities = map[string]map[HookOutputField]bool{
 		// Cursor supports decision field (partial structured output)
 		OutputDecision: true,
 	},
-	"kiro":     {}, // No structured output support
-	"windsurf": {}, // No structured output support
+	"kiro":  {}, // No structured output support
+	"devin": {}, // No structured output support
 	"crush": {
 		// Crush hook responses support decision (allow/deny/null), context,
 		// and updated_input (a shallow-merge patch against tool_input; see

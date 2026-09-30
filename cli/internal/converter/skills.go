@@ -15,7 +15,7 @@ import (
 var hookConfigHints = map[string]string{
 	"gemini-cli":  ".gemini/settings.json hooks section",
 	"cursor":      ".cursor/settings.json hooks section",
-	"windsurf":    ".windsurf/hooks.json",
+	"devin":       ".windsurf/hooks.json",
 	"copilot-cli": ".github/hooks/ directory",
 	"kiro":        ".kiro/ hooks agent file",
 	"codex":       ".codex/hooks.json",
@@ -26,7 +26,7 @@ var hookConfigHints = map[string]string{
 var hookScopingNotes = map[string]string{
 	"gemini-cli":  "Gemini hooks are global (skill scoping will be lost)",
 	"cursor":      "Cursor hooks are global (skill scoping will be lost)",
-	"windsurf":    "Windsurf hooks are global (skill scoping will be lost)",
+	"devin":       "Devin hooks are global (skill scoping will be lost)",
 	"copilot-cli": "Copilot hooks are global (skill scoping will be lost)",
 	"kiro":        "Kiro hooks are global (skill scoping will be lost)",
 	"codex":       "Codex hooks are global (skill scoping will be lost)",
@@ -107,7 +107,7 @@ func init() {
 	RegisterFrontmatter(catalog.Skills, "kiro", kiroSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "opencode", opencodeSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "gemini-cli", geminiSkillMeta{})
-	RegisterFrontmatter(catalog.Skills, "windsurf", windsurfSkillMeta{})
+	RegisterFrontmatter(catalog.Skills, "devin", devinSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "amp", ampSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "cline", clineSkillMeta{})
 	RegisterFrontmatter(catalog.Skills, "roo-code", rooCodeSkillMeta{})
@@ -234,8 +234,8 @@ func (c *SkillsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderKiroSkill(meta, body)
 	case "cursor":
 		return renderCursorSkill(meta, body)
-	case "windsurf":
-		return renderWindsurfSkill(meta, body)
+	case "devin":
+		return renderDevinSkill(meta, body)
 	case "amp":
 		return renderAmpSkill(meta, body)
 	case "cline":
@@ -482,27 +482,27 @@ func renderCopilotSkill(meta SkillMeta, body string) (*Result, error) {
 	return res, nil
 }
 
-// windsurfSkillMeta is the subset of fields Windsurf supports in SKILL.md frontmatter.
-// Windsurf only supports name and description — same as Gemini CLI.
-type windsurfSkillMeta struct {
+// devinSkillMeta is the subset of fields Devin supports in SKILL.md frontmatter.
+// Devin only supports name and description — same as Gemini CLI.
+type devinSkillMeta struct {
 	Name        string `yaml:"name,omitempty"`
 	Description string `yaml:"description,omitempty"`
 }
 
-// renderWindsurfSkill renders a canonical skill to Windsurf's SKILL.md format.
-// Windsurf uses the Agent Skills standard (SKILL.md with YAML frontmatter) but only
+// renderDevinSkill renders a canonical skill to Devin's SKILL.md format.
+// Devin uses the Agent Skills standard (SKILL.md with YAML frontmatter) but only
 // supports name and description fields. Unsupported fields are embedded as prose notes.
-func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
+func renderDevinSkill(meta SkillMeta, body string) (*Result, error) {
 	cleanBody := StripConversionNotes(body)
 
-	// Build behavioral embedding notes for fields Windsurf doesn't support
+	// Build behavioral embedding notes for fields Devin doesn't support
 	var notes []string
 	if len(meta.AllowedTools) > 0 {
-		translated := TranslateTools(meta.AllowedTools, "windsurf")
+		translated := TranslateTools(meta.AllowedTools, "devin")
 		notes = append(notes, fmt.Sprintf("**Tool restriction:** Use only %s tools.", strings.Join(translated, ", ")))
 	}
 	if len(meta.DisallowedTools) > 0 {
-		translated := TranslateTools(meta.DisallowedTools, "windsurf")
+		translated := TranslateTools(meta.DisallowedTools, "devin")
 		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(translated, ", ")))
 	}
 	if meta.Context == "fork" {
@@ -526,8 +526,8 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 	if meta.ArgumentHint != "" {
 		notes = append(notes, fmt.Sprintf("Usage: %s", meta.ArgumentHint))
 	}
-	// Hooks: generate actionable warnings instead of prose (Windsurf supports hooks)
-	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "windsurf")
+	// Hooks: generate actionable warnings instead of prose (Devin supports hooks)
+	hookWarnings := formatSkillHookWarnings(meta.Name, meta.Hooks, "devin")
 
 	outBody := cleanBody
 	if len(notes) > 0 {
@@ -535,7 +535,7 @@ func renderWindsurfSkill(meta SkillMeta, body string) (*Result, error) {
 		outBody = AppendNotes(outBody, notesBlock)
 	}
 
-	wm := windsurfSkillMeta{
+	wm := devinSkillMeta{
 		Name:        meta.Name,
 		Description: meta.Description,
 	}

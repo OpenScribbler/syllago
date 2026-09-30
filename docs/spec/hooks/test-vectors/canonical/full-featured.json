@@ -1,5 +1,5 @@
 {
-  "_comment": "Full-featured hook manifest exercising most canonical fields. Contains: (1) a blocking shell hook with platform overrides, cwd, env, degradation, and windsurf provider_data; (2) an MCP matcher hook gating GitHub issue creation; (3) a session_start hook for initialization. Tests platform_commands, custom_env, configurable_cwd capabilities, provider_data passthrough, MCP matcher encoding, and non-tool event handling.",
+  "_comment": "Full-featured hook manifest exercising most canonical fields. Contains: (1) a blocking shell hook with platform overrides, cwd, env, degradation, and devin provider_data; (2) an MCP matcher hook gating GitHub issue creation; (3) a session_start hook for initialization. Tests platform_commands, custom_env, configurable_cwd capabilities, provider_data passthrough, MCP matcher encoding, and non-tool event handling.",
   "spec": "hooks/0.1",
   "hooks": [
     {
@@ -27,7 +27,7 @@
         "platform_commands": "warn"
       },
       "provider_data": {
-        "windsurf": {
+        "devin": {
           "show_output": true,
           "working_directory": "/opt/hooks"
         }

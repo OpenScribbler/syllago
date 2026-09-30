@@ -37,8 +37,8 @@ Output goes to stdout by default, or to a file with --output.`,
 	Example: `  # Convert a Cursor rule to Claude Code format
   syllago convert ./my-rule.mdc --from cursor --to claude-code
 
-  # Convert a library item to Windsurf format
-  syllago convert my-rule --to windsurf
+  # Convert a library item to Devin format
+  syllago convert my-rule --to devin
 
   # Convert and save to a file
   syllago convert my-rule --to cursor --output ./cursor-rule.mdc
@@ -63,6 +63,8 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	input := args[0]
 	toSlug, _ := cmd.Flags().GetString("to")
 	fromSlug, _ := cmd.Flags().GetString("from")
+	toSlug = provider.CanonicalSlug(toSlug)
+	fromSlug = provider.CanonicalSlug(fromSlug)
 	typeStr, _ := cmd.Flags().GetString("type")
 	outputPath, _ := cmd.Flags().GetString("output")
 	showDiff, _ := cmd.Flags().GetBool("diff")

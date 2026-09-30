@@ -13,10 +13,10 @@ func TestProfileFor_UnknownProvider(t *testing.T) {
 	}
 }
 
-func TestProfileFor_Windsurf(t *testing.T) {
-	_, err := ProfileFor("windsurf", "/home/user", "/tmp/project")
+func TestProfileFor_Devin(t *testing.T) {
+	_, err := ProfileFor("devin", "/home/user", "/tmp/project")
 	if err == nil {
-		t.Error("expected error for windsurf (not supported in v1)")
+		t.Error("expected error for devin (not supported in v1)")
 	}
 }
 

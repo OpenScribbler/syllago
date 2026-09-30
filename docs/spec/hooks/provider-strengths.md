@@ -27,7 +27,7 @@ File system lifecycle hooks. `file_created`, `file_saved`, and `file_deleted` ev
 
 Pre-read file access control. The `beforeReadFile` event lets hooks gate file reads, enabling data classification and access control patterns. The split-event model (`beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile`) provides category-specific context without matcher overhead.
 
-## Windsurf
+## Devin Desktop
 
 Enterprise deployment infrastructure. Cloud dashboard hook management, MDM deployment (Jamf, Intune, Ansible), immutable system-level hooks, and a three-tier priority system (system > user > workspace) support organizational policy enforcement at scale. Transcript access hooks enable compliance auditing.
 

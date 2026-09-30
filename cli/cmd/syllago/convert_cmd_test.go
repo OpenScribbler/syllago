@@ -160,13 +160,42 @@ func TestConvertFileMode(t *testing.T) {
 	ruleFile := filepath.Join(dir, "my-rule.mdc")
 	os.WriteFile(ruleFile, []byte("---\ndescription: Test rule\nalwaysApply: true\n---\n\nAlways follow this rule.\n"), 0644)
 
-	convertCmd.Flags().Set("to", "windsurf")
+	convertCmd.Flags().Set("to", "devin")
 	convertCmd.Flags().Set("from", "cursor")
 	defer resetConvertFlags(t)
 
 	err := convertCmd.RunE(convertCmd, []string{ruleFile})
 	if err != nil {
 		t.Fatalf("file-mode convert should succeed, got: %v", err)
+	}
+}
+
+func TestConvertToRetiredSlugResolvesToDevin(t *testing.T) {
+	_, stderr := output.SetForTest(t)
+
+	dir := t.TempDir()
+	ruleFile := filepath.Join(dir, "cursor-rule.mdc")
+	os.WriteFile(ruleFile, []byte("---\ndescription: TS conventions\nalwaysApply: false\nglobs: \"*.ts\"\n---\n\nUse strict TypeScript.\n"), 0644)
+
+	outFile := filepath.Join(dir, "out.md")
+	convertCmd.Flags().Set("to", "windsurf")
+	convertCmd.Flags().Set("from", "cursor")
+	convertCmd.Flags().Set("output", outFile)
+	defer resetConvertFlags(t)
+
+	if err := convertCmd.RunE(convertCmd, []string{ruleFile}); err != nil {
+		t.Fatalf("convert --to windsurf should resolve to devin, got: %v", err)
+	}
+	data, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("expected output file: %v", err)
+	}
+	if !strings.Contains(string(data), "trigger: glob") {
+		t.Errorf("expected Devin glob trigger, got:\n%s", data)
+	}
+	want := `warning: provider "windsurf" was renamed to "devin"; use "devin" instead`
+	if got := strings.Count(stderr.String(), want); got != 1 {
+		t.Errorf("expected one deprecation warning, got %d in stderr:\n%s", got, stderr.String())
 	}
 }
 
@@ -177,8 +206,8 @@ func TestConvertFileModeToOutputFile(t *testing.T) {
 	ruleFile := filepath.Join(dir, "cursor-rule.mdc")
 	os.WriteFile(ruleFile, []byte("---\ndescription: TS conventions\nalwaysApply: false\nglobs: \"*.ts, *.tsx\"\n---\n\nUse strict TypeScript.\n"), 0644)
 
-	outFile := filepath.Join(dir, "windsurf-rule.md")
-	convertCmd.Flags().Set("to", "windsurf")
+	outFile := filepath.Join(dir, "devin-rule.md")
+	convertCmd.Flags().Set("to", "devin")
 	convertCmd.Flags().Set("from", "cursor")
 	convertCmd.Flags().Set("output", outFile)
 	defer resetConvertFlags(t)
@@ -194,7 +223,7 @@ func TestConvertFileModeToOutputFile(t *testing.T) {
 	}
 	out := string(data)
 	if !strings.Contains(out, "trigger: glob") {
-		t.Errorf("expected Windsurf glob trigger, got:\n%s", out)
+		t.Errorf("expected Devin glob trigger, got:\n%s", out)
 	}
 	if !strings.Contains(out, "*.ts") {
 		t.Errorf("expected glob pattern in output, got:\n%s", out)

@@ -177,6 +177,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	}
 
 	toSlug, _ := cmd.Flags().GetString("to")
+	toSlug = provider.CanonicalSlug(toSlug)
 	methodStr, _ := cmd.Flags().GetString("method")
 	method := installer.MethodSymlink
 	if methodStr == "copy" {

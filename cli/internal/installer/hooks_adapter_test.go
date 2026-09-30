@@ -151,23 +151,23 @@ func TestInstallHook_Adapter_PreservesSiblings(t *testing.T) {
 	}
 }
 
-// TestInstallHook_Windsurf_DeferredToPhase1b: windsurf is deferred to Phase 1b.
+// TestInstallHook_Devin_DeferredToPhase1b: devin is deferred to Phase 1b.
 // Its adapter fans one before_tool_execute hook out to four split-events and
 // only merges them back when each has exactly one entry, so a hook's
-// post-round-trip identity is not stable once a second windsurf hook exists —
+// post-round-trip identity is not stable once a second devin hook exists —
 // uninstall/status/orphans can't reliably match it. Until Phase 1b adds a
-// stable per-entry identity, installing a windsurf hook must reject and write
+// stable per-entry identity, installing a devin hook must reject and write
 // nothing.
-func TestInstallHook_Windsurf_DeferredToPhase1b(t *testing.T) {
+func TestInstallHook_Devin_DeferredToPhase1b(t *testing.T) {
 	item, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "shell", "echo hi")
 
 	settingsPath := filepath.Join(t.TempDir(), "config.json")
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	_, err := installHook(item, provider.Windsurf, projectRoot)
+	_, err := installHook(item, provider.Devin, projectRoot)
 	if err == nil {
-		t.Fatal("expected error installing hook to windsurf (Phase 1b)")
+		t.Fatal("expected error installing hook to devin (Phase 1b)")
 	}
 	if !strings.Contains(err.Error(), "stable per-entry identity") {
 		t.Errorf("error should explain the missing per-entry identity, got: %v", err)

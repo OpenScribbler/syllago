@@ -19,7 +19,7 @@ func testAddProviders() []provider.Provider {
 	return []provider.Provider{
 		testInstallProvider("Claude Code", "claude-code", true),
 		testInstallProvider("Cursor", "cursor", true),
-		testInstallProvider("Windsurf", "windsurf", false), // not detected
+		testInstallProvider("Devin Desktop", "devin", false), // not detected
 	}
 }
 
@@ -109,7 +109,7 @@ func TestAddWizard_AcceptsUndetectedProviders(t *testing.T) {
 	// Order matters: undetected first. Correct cursor default must skip past
 	// it to the detected one (index 1).
 	providers := []provider.Provider{
-		testInstallProvider("Windsurf", "windsurf", false),
+		testInstallProvider("Devin Desktop", "devin", false),
 		testInstallProvider("Claude Code", "claude-code", true),
 	}
 	m := openAddWizard(providers, testAddRegistries(), testAddConfig(), "/tmp/project", "/tmp/content", "")
@@ -131,8 +131,8 @@ func TestAddWizard_AcceptsUndetectedProviders(t *testing.T) {
 	for _, l := range subListLines {
 		combined += l + "\n"
 	}
-	if !contains(combined, "Windsurf") {
-		t.Error("provider sub-list should include Windsurf even when undetected")
+	if !contains(combined, "Devin Desktop") {
+		t.Error("provider sub-list should include Devin even when undetected")
 	}
 	if !contains(combined, "(not detected)") {
 		t.Error("provider sub-list should label undetected providers with '(not detected)'")
@@ -147,7 +147,7 @@ func TestAddWizard_AcceptsUndetectedProviders(t *testing.T) {
 func TestAddWizard_SourceProviderOption_EnabledWithUndetected(t *testing.T) {
 	t.Parallel()
 	providers := []provider.Provider{
-		testInstallProvider("Windsurf", "windsurf", false),
+		testInstallProvider("Devin Desktop", "devin", false),
 		testInstallProvider("Cursor", "cursor", false),
 	}
 	m := openAddWizard(providers, testAddRegistries(), testAddConfig(), "/tmp/project", "/tmp/content", "")

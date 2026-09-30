@@ -7,9 +7,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
-var Windsurf = Provider{
-	Name:      "Windsurf",
-	Slug:      "windsurf",
+var Devin = Provider{
+	Name:      "Devin Desktop",
+	Slug:      "devin",
 	ConfigDir: ".codeium/windsurf",
 	InstallDir: func(homeDir string, ct catalog.ContentType) string {
 		base := filepath.Join(homeDir, ".codeium", "windsurf")
@@ -17,7 +17,7 @@ var Windsurf = Provider{
 		case catalog.Rules:
 			return base
 		case catalog.Skills:
-			return filepath.Join(base, "skills")
+			return filepath.Join(homeDir, ".config", "devin", "skills")
 		case catalog.Hooks:
 			return JSONMergeSentinel
 		case catalog.MCP:
@@ -32,7 +32,7 @@ var Windsurf = Provider{
 		// shared with syllago install paths (skills/, global_workflows/), so
 		// trust the windsurf binary on PATH or the Electron app-data dir
 		// (~/.config/Windsurf on Linux, ~/Library/Application Support/Windsurf
-		// on macOS) — that path is created by Windsurf itself.
+		// on macOS) — that path is created by Devin itself.
 		return binaryOnPath("windsurf") || dirExists(appDataDir(homeDir, "Windsurf"))
 	},
 	DiscoveryPaths: func(projectRoot string, ct catalog.ContentType) []string {

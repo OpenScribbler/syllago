@@ -474,7 +474,7 @@ func TestInitWizard_CursorNavigation(t *testing.T) {
 	allProviders := []provider.Provider{
 		{Name: "Claude Code", Slug: "claude-code"},
 		{Name: "Cursor", Slug: "cursor"},
-		{Name: "Windsurf", Slug: "windsurf"},
+		{Name: "Devin Desktop", Slug: "devin"},
 	}
 	w := newInitWizard(nil, allProviders)
 

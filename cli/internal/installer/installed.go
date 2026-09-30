@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // InstalledHook records a hook placed into settings.json by syllago.
@@ -81,6 +82,10 @@ func LoadInstalled(projectRoot string) (*Installed, error) {
 	var inst Installed
 	if err := json.Unmarshal(data, &inst); err != nil {
 		return nil, err
+	}
+	// Entries written before a provider rename carry its retired slug.
+	for i := range inst.RuleAppends {
+		inst.RuleAppends[i].Provider, _ = provider.ResolveSlugAlias(inst.RuleAppends[i].Provider)
 	}
 	return &inst, nil
 }

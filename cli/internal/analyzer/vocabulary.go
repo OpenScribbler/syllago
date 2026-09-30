@@ -61,7 +61,7 @@ var knownHookEventNames = map[string]bool{
 	"postToolUseFailure":  true,
 	"afterFileEdit":       true,
 
-	// Windsurf native
+	// Devin native
 	"pre_user_prompt":                       true,
 	"post_cascade_response":                 true,
 	"post_setup_worktree":                   true,

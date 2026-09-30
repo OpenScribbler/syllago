@@ -15,7 +15,7 @@ func init() {
 	Register(&RulesConverter{})
 	RegisterFrontmatter(catalog.Rules, "claude-code", claudeCodePathsFrontmatter{})
 	RegisterFrontmatter(catalog.Rules, "cursor", cursorRuleFrontmatter{})
-	RegisterFrontmatter(catalog.Rules, "windsurf", windsurfOutput{})
+	RegisterFrontmatter(catalog.Rules, "devin", devinOutput{})
 	RegisterFrontmatter(catalog.Rules, "kiro", kiroRuleFrontmatter{})
 	RegisterFrontmatter(catalog.Rules, "copilot-cli", copilotFrontmatter{})
 	RegisterFrontmatter(catalog.Rules, "cline", clineFrontmatter{})
@@ -42,8 +42,8 @@ func (c *RulesConverter) Canonicalize(content []byte, sourceProvider string) (*R
 	switch sourceProvider {
 	case "cursor":
 		return canonicalizeCursorRule(content)
-	case "windsurf":
-		return canonicalizeWindsurfRule(content)
+	case "devin":
+		return canonicalizeDevinRule(content)
 	case "cline":
 		return canonicalizeClineRule(content)
 	case "copilot-cli":
@@ -69,8 +69,8 @@ func (c *RulesConverter) Render(content []byte, target provider.Provider) (*Resu
 	switch target.Slug {
 	case "cursor":
 		return renderCursorRule(meta, body)
-	case "windsurf":
-		return renderWindsurfRule(meta, body)
+	case "devin":
+		return renderDevinRule(meta, body)
 	case "cline":
 		return renderClineRule(meta, body)
 	case "kiro":
@@ -144,14 +144,14 @@ func canonicalizeCursorRule(content []byte) (*Result, error) {
 	return &Result{Content: canonical, Filename: "rule.md"}, nil
 }
 
-// windsurfFrontmatter represents Windsurf's YAML frontmatter fields.
-type windsurfFrontmatter struct {
+// devinFrontmatter represents Devin's YAML frontmatter fields.
+type devinFrontmatter struct {
 	Trigger     string `yaml:"trigger"`
 	Description string `yaml:"description,omitempty"`
 	Globs       string `yaml:"globs,omitempty"`
 }
 
-func canonicalizeWindsurfRule(content []byte) (*Result, error) {
+func canonicalizeDevinRule(content []byte) (*Result, error) {
 	yamlBytes, body, ok := parse.SplitFrontmatter(content)
 	if !ok {
 		meta := RuleMeta{AlwaysApply: true}
@@ -162,7 +162,7 @@ func canonicalizeWindsurfRule(content []byte) (*Result, error) {
 		return &Result{Content: canonical, Filename: "rule.md"}, nil
 	}
 
-	var wfm windsurfFrontmatter
+	var wfm devinFrontmatter
 	if err := yaml.Unmarshal(yamlBytes, &wfm); err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func canonicalizeWindsurfRule(content []byte) (*Result, error) {
 
 	var warnings []string
 	if wfm.Trigger == "manual" {
-		warnings = append(warnings, "Windsurf 'manual' trigger has no direct equivalent; rule will only activate when explicitly requested")
+		warnings = append(warnings, "Devin 'manual' trigger has no direct equivalent; rule will only activate when explicitly requested")
 	}
 
 	canonical, err := buildCanonical(meta, body)
@@ -356,15 +356,15 @@ func renderCursorRule(meta RuleMeta, body string) (*Result, error) {
 	return renderWithFrontmatter(cfm, body, "rule.mdc")
 }
 
-// windsurfOutput represents the Windsurf frontmatter for rendering.
-type windsurfOutput struct {
+// devinOutput represents the Devin frontmatter for rendering.
+type devinOutput struct {
 	Trigger     string `yaml:"trigger"`
 	Description string `yaml:"description,omitempty"`
 	Globs       string `yaml:"globs,omitempty"`
 }
 
-func renderWindsurfRule(meta RuleMeta, body string) (*Result, error) {
-	wf := windsurfOutput{Description: meta.Description}
+func renderDevinRule(meta RuleMeta, body string) (*Result, error) {
+	wf := devinOutput{Description: meta.Description}
 
 	switch {
 	case meta.AlwaysApply:

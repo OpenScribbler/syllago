@@ -102,7 +102,7 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsLLMHooks:         false,
 		SupportsHTTPHooks:        false,
 	},
-	"windsurf": {
+	"devin": {
 		Events: []string{
 			"before_tool_execute", "after_tool_execute", "before_prompt",
 			"agent_stop", "session_start", "session_end",

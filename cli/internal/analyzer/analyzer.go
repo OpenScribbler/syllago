@@ -25,7 +25,7 @@ func New(config AnalysisConfig) *Analyzer {
 			&ClaudeCodePluginDetector{},
 			&CursorDetector{},
 			&CopilotDetector{},
-			&WindsurfDetector{},
+			&DevinDetector{},
 			&ClineDetector{},
 			&RooCodeDetector{},
 			&CodexDetector{},
