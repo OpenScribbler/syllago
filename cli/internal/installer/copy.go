@@ -20,7 +20,18 @@ func CopyContent(src, dst string) error {
 	return copyFile(src, dst)
 }
 
-func copyFile(src, dst string) (err error) {
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = in.Close() }()
+	return writeFileAtomic(dst, in)
+}
+
+// writeFileAtomic writes r to dst through a temp file in dst's directory and
+// a rename, so it never writes through a symlink or hard link at dst.
+func writeFileAtomic(dst string, r io.Reader) (err error) {
 	dstDir := filepath.Dir(dst)
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
 		return err
@@ -35,12 +46,6 @@ func copyFile(src, dst string) (err error) {
 			return fmt.Errorf("destination is a symlink: %s (refusing to follow for security)", dst)
 		}
 	}
-
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = in.Close() }()
 
 	// Write to a temp file in the same directory as dst, then atomically
 	// rename. This eliminates the TOCTOU window between the symlink check
@@ -59,7 +64,7 @@ func copyFile(src, dst string) (err error) {
 		}
 	}()
 
-	if _, err = io.Copy(tmp, in); err != nil {
+	if _, err = io.Copy(tmp, r); err != nil {
 		return err
 	}
 	if err = tmp.Close(); err != nil {

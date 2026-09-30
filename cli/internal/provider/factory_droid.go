@@ -73,7 +73,7 @@ var FactoryDroid = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Skills:   true,
-		catalog.Agents:   true,
+		catalog.Agents:   false, // installed as a rendered copy
 		catalog.Commands: true,
 		catalog.MCP:      false, // JSON merge
 		catalog.Hooks:    false, // JSON merge

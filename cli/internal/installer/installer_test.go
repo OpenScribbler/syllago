@@ -359,45 +359,6 @@ func TestInstall_UnsupportedTypeReturnsError(t *testing.T) {
 	}
 }
 
-func TestInstall_AgentsUsesAGENTMD(t *testing.T) {
-	tmp := t.TempDir()
-	repoRoot := filepath.Join(tmp, "repo")
-	os.MkdirAll(repoRoot, 0755)
-	t.Setenv("HOME", tmp)
-
-	prov := testProvider("test")
-
-	sourcePath := filepath.Join(repoRoot, "agents", "test", "my-agent")
-	os.MkdirAll(sourcePath, 0755)
-	os.WriteFile(filepath.Join(sourcePath, "AGENT.md"), []byte("# Agent"), 0644)
-
-	item := catalog.ContentItem{
-		Name: "my-agent",
-		Type: catalog.Agents,
-		Path: sourcePath,
-	}
-
-	placement, err := Install(item, prov, repoRoot, MethodSymlink, "")
-	if err != nil {
-		t.Fatalf("Install agent: %v", err)
-	}
-	desc := placement.String()
-
-	expectedTarget := filepath.Join(tmp, ".testprovider", "agents", "my-agent.md")
-	if desc != expectedTarget {
-		t.Errorf("expected target %s, got %s", expectedTarget, desc)
-	}
-
-	// Verify symlink points to the AGENT.md file, not the directory
-	link, err := os.Readlink(expectedTarget)
-	if err != nil {
-		t.Fatalf("Readlink: %v", err)
-	}
-	if filepath.Base(link) != "AGENT.md" {
-		t.Errorf("expected symlink to AGENT.md, got %s", link)
-	}
-}
-
 func TestUninstall_RemovesSymlink(t *testing.T) {
 	tmp := t.TempDir()
 	repoRoot := filepath.Join(tmp, "repo")

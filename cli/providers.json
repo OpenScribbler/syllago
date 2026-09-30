@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-09-30T11:18:54Z",
+  "generatedAt": "2026-09-30T23:14:02Z",
   "syllagoVersion": "0.14.0",
   "providers": [
     {
@@ -16,7 +16,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.claude/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.claude/agents"
           ],
@@ -278,7 +278,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.gemini/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.gemini/agents"
           ],
@@ -436,7 +436,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.cursor/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.cursor/agents",
             "{project}/AGENTS.md"
@@ -606,7 +606,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.config/devin/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.devin/agents",
             "{project}/.agents/agents"
@@ -733,8 +733,8 @@
           "supported": true,
           "fileFormat": "toml",
           "installMethod": "filesystem",
-          "installPath": "{home}/.codex",
-          "symlinkSupport": true,
+          "installPath": "{home}/.codex/agents",
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.codex/agents"
           ]
@@ -816,7 +816,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.github/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.copilot/agents",
             "{project}/.github/agents",
@@ -1122,7 +1122,7 @@
           "supported": true,
           "fileFormat": "yaml",
           "installMethod": "project-scope",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "frontmatterFields": [
             "slug",
             "name",
@@ -1212,7 +1212,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.config/opencode/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.opencode/agents"
           ],
@@ -1308,7 +1308,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.kiro/agents",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.kiro/agents"
           ],
@@ -1541,7 +1541,7 @@
           "fileFormat": "md",
           "installMethod": "filesystem",
           "installPath": "{home}/.factory/droids",
-          "symlinkSupport": true,
+          "symlinkSupport": false,
           "discoveryPaths": [
             "{project}/.factory/droids"
           ],

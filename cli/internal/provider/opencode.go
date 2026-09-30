@@ -85,7 +85,7 @@ var OpenCode = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Commands: true,
-		catalog.Agents:   true,
+		catalog.Agents:   false, // installed as a rendered copy
 		catalog.Skills:   true,
 		catalog.MCP:      false, // JSON merge
 	},

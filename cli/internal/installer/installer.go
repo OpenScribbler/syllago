@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -114,7 +115,7 @@ func resolveTargetWithBase(item catalog.ContentItem, prov provider.Provider, bas
 		return "", fmt.Errorf("%s %s is project-scoped (use export with --to from within a project directory)", prov.Name, item.Type.Label())
 	}
 	if item.Type == catalog.Agents {
-		return filepath.Join(installDir, item.Name+".md"), nil
+		return agentTargetPath(installDir, item, prov), nil
 	}
 	if item.Type.IsUniversal() {
 		return filepath.Join(installDir, item.Name), nil
@@ -196,7 +197,7 @@ func CheckStatusWithResolver(item catalog.ContentItem, prov provider.Provider, r
 	// Compute target path directly from the resolved install dir.
 	var targetPath string
 	if item.Type == catalog.Agents {
-		targetPath = filepath.Join(installDir, item.Name+".md")
+		targetPath = agentTargetPath(installDir, item, prov)
 	} else if item.Type.IsUniversal() {
 		targetPath = filepath.Join(installDir, item.Name)
 	} else {
@@ -245,6 +246,14 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 			return "", fmt.Errorf("getting home directory: %w", err)
 		}
 		return resolveTargetWithBase(item, prov, home)
+	}
+
+	if item.Type == catalog.Agents {
+		targetPath, err := resolveTarget()
+		if err != nil {
+			return Placement{}, err
+		}
+		return installAgent(item, prov, targetPath)
 	}
 
 	// Check for cross-provider rendering via converter
@@ -322,11 +331,15 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 	// Compute target path from resolved install dir (same logic as CheckStatusWithResolver).
 	var targetPath string
 	if item.Type == catalog.Agents {
-		targetPath = filepath.Join(installDir, item.Name+".md")
+		targetPath = agentTargetPath(installDir, item, prov)
 	} else if item.Type.IsUniversal() {
 		targetPath = filepath.Join(installDir, item.Name)
 	} else {
 		targetPath = filepath.Join(installDir, filepath.Base(item.Path))
+	}
+
+	if item.Type == catalog.Agents {
+		return installAgent(item, prov, targetPath)
 	}
 
 	// Check for cross-provider rendering via converter
@@ -447,6 +460,84 @@ func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {
 	sourcePath := filepath.Clean(SourcePathFor(item))
 	itemPath := filepath.Clean(item.Path)
 	return target == sourcePath || target == itemPath || pathWithinRoot(target, itemPath)
+}
+
+// agentTargetPath returns where an agent installs for prov: one file named
+// after the item, with the extension of prov's agent format.
+func agentTargetPath(installDir string, item catalog.ContentItem, prov provider.Provider) string {
+	return filepath.Join(installDir, item.Name+converter.AgentFileExt(prov.Slug))
+}
+
+// installAgent writes item to targetPath in prov's agent format. The library
+// file is not in any target's native format, so an agent install is always a
+// copy, never a symlink to it: the preserved original when prov is the
+// provider the agent came from, otherwise a render for prov.
+func installAgent(item catalog.ContentItem, prov provider.Provider, targetPath string) (Placement, error) {
+	placement := Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}
+
+	// Releases before agents were rendered left symlinks to the canonical
+	// file here. Replace one that points into this item; never write through
+	// any other symlink.
+	if info, err := os.Lstat(targetPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		actual, err := resolveSymlinkTarget(targetPath)
+		if err != nil || !symlinkTargetBelongsToItem(actual, item) {
+			return Placement{}, fmt.Errorf("destination is a symlink: %s (refusing to follow for security)", targetPath)
+		}
+		if err := os.Remove(targetPath); err != nil {
+			return Placement{}, err
+		}
+	}
+
+	// Copy the original only when it is in the format prov reads from
+	// targetPath: a Kiro CLI JSON agent does not belong in a Kiro .md file.
+	src := converter.SourceFilePath(item)
+	if src != "" && itemSourceProvider(item) == prov.Slug && strings.HasSuffix(src, converter.AgentFileExt(prov.Slug)) {
+		return placement, CopyContent(src, targetPath)
+	}
+
+	contentFile := converter.ResolveContentFile(item)
+	if contentFile == "" {
+		return Placement{}, fmt.Errorf("no content file found in %s", item.Path)
+	}
+	content, err := os.ReadFile(contentFile)
+	if err != nil {
+		return Placement{}, fmt.Errorf("reading content file: %w", err)
+	}
+
+	// The library file is in the source provider's format when it was added
+	// without a type (add --all skips canonicalization), and canonical
+	// otherwise. Canonicalize from the source provider the way convert does;
+	// a file that fails to parse in that format is already canonical.
+	conv := converter.For(catalog.Agents)
+	if canonical, cErr := conv.Canonicalize(content, itemSourceProvider(item)); cErr == nil && canonical != nil && canonical.Content != nil {
+		content = canonical.Content
+	}
+
+	result, err := conv.Render(content, prov)
+	if err != nil {
+		return Placement{}, fmt.Errorf("rendering for %s: %w", prov.Name, err)
+	}
+	for _, w := range result.Warnings {
+		fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
+	}
+	if result.Content == nil {
+		return Placement{}, fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
+	}
+	return placement, writeFileAtomic(targetPath, bytes.NewReader(result.Content))
+}
+
+// itemSourceProvider returns the provider slug item was imported from: the
+// catalog's provider directory for provider-specific types, the metadata's
+// source_provider for universal types such as agents, which the catalog
+// scans without a provider directory.
+func itemSourceProvider(item catalog.ContentItem) string {
+	if item.Provider != "" {
+		return item.Provider
+	}
+	if item.Meta != nil {
+		return item.Meta.SourceProvider
+	}
+	return ""
 }
 
 // installWithRenderTo reads canonical content, renders it for the target provider,

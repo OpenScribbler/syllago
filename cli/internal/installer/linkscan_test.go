@@ -233,7 +233,7 @@ func TestPlanLinkFixes_BrokenSkillWithMatchingLibraryRelinks(t *testing.T) {
 	}
 }
 
-func TestPlanLinkFixes_BrokenAgentWithMatchingLibraryRelinksToAgentFile(t *testing.T) {
+func TestPlanLinkFixes_BrokenAgentLinkPrunes(t *testing.T) {
 	t.Parallel()
 
 	tmp := t.TempDir()
@@ -257,8 +257,10 @@ func TestPlanLinkFixes_BrokenAgentWithMatchingLibraryRelinksToAgentFile(t *testi
 	if len(actions) != 1 {
 		t.Fatalf("len(actions) = %d, want 1: %#v", len(actions), actions)
 	}
-	if actions[0].Kind != FixRelink || actions[0].NewSource != source {
-		t.Fatalf("action = %#v, want relink to %q", actions[0], source)
+	// Agents install as rendered copies, so a broken agent link is never
+	// relinked to the library file.
+	if actions[0].Kind != FixPrune {
+		t.Fatalf("action = %#v, want prune", actions[0])
 	}
 }
 

@@ -175,6 +175,23 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 	}
 }
 
+// AgentFileExt returns the file extension of the agent format Render
+// produces for the provider with the given slug.
+func AgentFileExt(slug string) string {
+	switch slug {
+	case "copilot-cli":
+		return ".agent.md"
+	case "roo-code":
+		return ".yaml"
+	case "kiro-json":
+		return ".json"
+	case "codex":
+		return ".toml"
+	default:
+		return ".md"
+	}
+}
+
 // --- Canonical parser ---
 
 func parseAgentCanonical(content []byte) (AgentMeta, string, error) {

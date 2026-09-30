@@ -368,6 +368,8 @@ func installToProvider(
 				m := "symlink"
 				if installer.IsJSONMerge(prov, item.Type) {
 					m = "json-merge"
+				} else if item.Type == catalog.Agents {
+					m = "copy"
 				}
 				fmt.Fprintf(output.Writer, "[dry-run] would install %s (%s) to %s via %s\n", item.Name, item.Type.Label(), prov.Name, m)
 
@@ -415,6 +417,12 @@ func installToProvider(
 			}
 		}
 		desc := placement.String()
+		// Report the method actually used: agents, cross-provider renders,
+		// and Windows mounts are copied even when a symlink was requested.
+		usedMethod := method
+		if method == installer.MethodSymlink && placement.Mechanism == installer.MechanismCopy {
+			usedMethod = installer.MethodCopy
+		}
 
 		// Check for portability warnings by running the converter.
 		var warnings []string
@@ -448,7 +456,7 @@ func installToProvider(
 		result.Installed = append(result.Installed, installedItem{
 			Name:     item.Name,
 			Type:     string(item.Type),
-			Method:   string(method),
+			Method:   string(usedMethod),
 			Path:     desc,
 			Warnings: warnings,
 			Trust:    trustText,
@@ -461,7 +469,7 @@ func installToProvider(
 		}
 
 		if !output.JSON && !output.Quiet {
-			if method == installer.MethodSymlink {
+			if usedMethod == installer.MethodSymlink {
 				fmt.Fprintf(output.Writer, "  Symlinked %s to %s\n", item.Name, desc)
 			} else {
 				fmt.Fprintf(output.Writer, "  Copied %s to %s\n", item.Name, desc)

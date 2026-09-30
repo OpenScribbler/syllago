@@ -293,10 +293,17 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 	}
 
 	// Preserve original in .source/ if source format differs from canonical (.md).
+	// Drop any .source/ left by an earlier add of the same name first, so
+	// installs never treat another provider's original as this item's source.
 	hasSource := false
 	sourceExt := filepath.Ext(item.Path)
+	sourceDir := filepath.Join(destDir, ".source")
+	if rmErr := os.RemoveAll(sourceDir); rmErr != nil {
+		r.Status = AddStatusError
+		r.Error = fmt.Errorf("removing stale %s: %w", sourceDir, rmErr)
+		return r
+	}
 	if sourceExt != "" && sourceExt != ".md" {
-		sourceDir := filepath.Join(destDir, ".source")
 		if mkErr := os.MkdirAll(sourceDir, 0755); mkErr == nil {
 			origDest := filepath.Join(sourceDir, filepath.Base(item.Path))
 			// Non-fatal: best-effort preservation of source file.

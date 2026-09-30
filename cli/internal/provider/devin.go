@@ -94,8 +94,8 @@ var Devin = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Skills:   true,
-		catalog.Commands: true, // File-based workflows
-		catalog.Agents:   true,
+		catalog.Commands: true,  // File-based workflows
+		catalog.Agents:   false, // installed as a rendered copy
 		catalog.Hooks:    false, // JSON merge
 		catalog.MCP:      false, // JSON merge
 	},
