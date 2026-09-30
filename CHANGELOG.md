@@ -17,9 +17,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `~/.codeium/windsurf/`, are unchanged. Global skills now install to
   `~/.config/devin/skills/`, the Devin Desktop user skills directory; skills
   installed to `~/.codeium/windsurf/skills/` by earlier releases still show
-  as installed and still uninstall. Library and registry content stored
-  under a `windsurf/` directory, or whose metadata names `windsurf` as its
-  source provider, is treated as `devin` without a warning.
+  as installed and still uninstall. On the first command after upgrading,
+  syllago renames each `windsurf/` folder in your library to `devin/`,
+  repoints the global provider links and install records that referenced it, and
+  rewrites `windsurf` to `devin` in the library's metadata and loadout
+  files, printing one notice line. Each old folder stays behind as a link
+  to the new one, so links and hook commands that loadouts applied in
+  project folders keep working. If a library already has both folders,
+  syllago leaves them and warns with both paths. Registry and project
+  content stored under `windsurf/` is read as `devin` without changes.
 
 ### Fixed
 

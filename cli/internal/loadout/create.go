@@ -72,13 +72,7 @@ func resolveItemID(globalDir string, ct catalog.ContentType, provider, name stri
 	if ct.IsUniversal() {
 		return loadItemID(filepath.Join(globalDir, string(ct), name))
 	}
-	// Items saved before a provider rename sit under the retired slug.
-	for _, slug := range append([]string{provider}, catalog.RetiredProviderSlugs(provider)...) {
-		if id := loadItemID(filepath.Join(globalDir, string(ct), slug, name)); id != "" {
-			return id
-		}
-	}
-	return ""
+	return loadItemID(filepath.Join(globalDir, string(ct), provider, name))
 }
 
 func loadItemID(itemDir string) string {

@@ -151,10 +151,7 @@ func BuildLibraryIndex(globalDir string) (LibraryIndex, error) {
 					if err != nil {
 						return nil, fmt.Errorf("loading metadata for %s/%s/%s: %w", ct, provEntry.Name(), itemEntry.Name(), err)
 					}
-					// Key by the current slug, so items saved under a retired
-					// provider directory are found by the provider's new slug.
-					provSlug, _ := catalog.ResolveProviderSlug(provEntry.Name())
-					key := string(ct) + "/" + provSlug + "/" + itemEntry.Name()
+					key := string(ct) + "/" + provEntry.Name() + "/" + itemEntry.Name()
 					idx[key] = meta
 				}
 			}
@@ -230,17 +227,6 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		destDir = filepath.Join(globalDir, string(item.Type), item.Name)
 	} else {
 		destDir = filepath.Join(globalDir, string(item.Type), opts.Provider, item.Name)
-		// Update an item saved under a retired provider directory in place
-		// rather than adding a second copy under the current slug.
-		if _, err := os.Stat(destDir); os.IsNotExist(err) {
-			for _, old := range catalog.RetiredProviderSlugs(opts.Provider) {
-				legacy := filepath.Join(globalDir, string(item.Type), old, item.Name)
-				if _, err := os.Stat(legacy); err == nil {
-					destDir = legacy
-					break
-				}
-			}
-		}
 	}
 
 	if opts.DryRun {
