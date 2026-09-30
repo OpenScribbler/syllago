@@ -104,16 +104,11 @@ func parseCanonical(content []byte) (RuleMeta, string, error) {
 	return meta, body, nil
 }
 
-// renderFrontmatter marshals any struct as YAML frontmatter. It returns nil
-// when v has no fields to emit, because a "---\n{}\n---" block is not valid
-// frontmatter for any provider.
+// renderFrontmatter marshals any struct as YAML frontmatter.
 func renderFrontmatter(v any) ([]byte, error) {
 	yamlBytes, err := yaml.Marshal(v)
 	if err != nil {
 		return nil, err
-	}
-	if strings.TrimSpace(string(yamlBytes)) == "{}" {
-		return nil, nil
 	}
 	var buf bytes.Buffer
 	buf.WriteString("---\n")

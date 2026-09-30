@@ -73,40 +73,13 @@ type geminiAgentMeta struct {
 // opencodeAgentMeta is the subset of fields OpenCode supports in frontmatter.
 // OpenCode uses "steps" instead of "maxTurns" and tools as map[string]bool.
 type opencodeAgentMeta struct {
-	Name        string        `yaml:"name,omitempty"`
-	Description string        `yaml:"description,omitempty"`
-	Tools       opencodeTools `yaml:"tools,omitempty"`
-	Model       string        `yaml:"model,omitempty"`
-	Steps       int           `yaml:"steps,omitempty"`
-	Color       string        `yaml:"color,omitempty"`
-	Temperature float64       `yaml:"temperature,omitempty"`
-}
-
-// opencodeTools is OpenCode's tools map. It also decodes a YAML list, which
-// is how canonical agents store tools: convert re-canonicalizes library
-// content with its source provider's parser, and an agent added from
-// OpenCode is stored in canonical form.
-type opencodeTools map[string]bool
-
-func (t *opencodeTools) UnmarshalYAML(n *yaml.Node) error {
-	if n.Kind == yaml.SequenceNode {
-		var names []string
-		if err := n.Decode(&names); err != nil {
-			return err
-		}
-		m := make(opencodeTools, len(names))
-		for _, name := range names {
-			m[name] = true
-		}
-		*t = m
-		return nil
-	}
-	var m map[string]bool
-	if err := n.Decode(&m); err != nil {
-		return err
-	}
-	*t = m
-	return nil
+	Name        string          `yaml:"name,omitempty"`
+	Description string          `yaml:"description,omitempty"`
+	Tools       map[string]bool `yaml:"tools,omitempty"`
+	Model       string          `yaml:"model,omitempty"`
+	Steps       int             `yaml:"steps,omitempty"`
+	Color       string          `yaml:"color,omitempty"`
+	Temperature float64         `yaml:"temperature,omitempty"`
 }
 
 // copilotAgentMeta is the subset of fields Copilot CLI supports.
@@ -617,10 +590,18 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 
 // canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
 // OpenCode agents use "steps" instead of "maxTurns" and tools as map[string]bool.
+//
+// Content that is already canonical passes through unchanged. convert
+// re-canonicalizes library content with its source provider's parser, and
+// an agent added from OpenCode is stored canonically, so parsing it as
+// OpenCode would fail on the tools list and drop maxTurns.
 func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
 	var oc opencodeAgentMeta
 	yamlBytes, body, ok := parse.SplitFrontmatter(content)
 	if ok {
+		if isCanonicalAgentFrontmatter(yamlBytes) {
+			return &Result{Content: content, Filename: "agent.md"}, nil
+		}
 		if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
 			return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
 		}
@@ -651,6 +632,20 @@ func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
 		return nil, err
 	}
 	return &Result{Content: canonical, Filename: "agent.md"}, nil
+}
+
+// isCanonicalAgentFrontmatter reports whether frontmatter uses canonical
+// agent keys that no OpenCode agent file has: tools as a list, or maxTurns.
+func isCanonicalAgentFrontmatter(yamlBytes []byte) bool {
+	var fm map[string]yaml.Node
+	if err := yaml.Unmarshal(yamlBytes, &fm); err != nil {
+		return false
+	}
+	if tools, ok := fm["tools"]; ok && tools.Kind == yaml.SequenceNode {
+		return true
+	}
+	_, ok := fm["maxTurns"]
+	return ok
 }
 
 // renderOpenCodeAgent renders a canonical agent to OpenCode's markdown format.

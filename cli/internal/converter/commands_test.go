@@ -783,3 +783,21 @@ func TestCodexPlainBodyNoFrontmatter(t *testing.T) {
 	out := string(canonical.Content)
 	assertContains(t, out, "Just review the code.")
 }
+
+// A command with no metadata keeps its canonical frontmatter block, so a body
+// that opens with "---" is not mistaken for frontmatter on render.
+func TestGeminiCommandBodyWithRulesSurvivesRender(t *testing.T) {
+	input := []byte("prompt = \"---\\nKeep this section.\\n---\\nTail.\"\n")
+	conv := &CommandsConverter{}
+	canonical, err := conv.Canonicalize(input, "gemini-cli")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	out := string(result.Content)
+	assertContains(t, out, "Keep this section.")
+	assertContains(t, out, "Tail.")
+}

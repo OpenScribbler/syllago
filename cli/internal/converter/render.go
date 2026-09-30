@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // renderFrontmatterDoc marshals meta as YAML frontmatter and joins it to
@@ -15,18 +17,14 @@ import (
 //	---
 //
 //	<body>
-//
-// When meta has no fields to emit, the document is the body alone.
 func renderFrontmatterDoc(meta any, body string) ([]byte, error) {
 	fm, err := renderFrontmatter(meta)
 	if err != nil {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	if len(fm) > 0 {
-		buf.Write(fm)
-		buf.WriteString("\n")
-	}
+	buf.Write(fm)
+	buf.WriteString("\n")
 	buf.WriteString(body)
 	buf.WriteString("\n")
 	return buf.Bytes(), nil
@@ -34,7 +32,20 @@ func renderFrontmatterDoc(meta any, body string) ([]byte, error) {
 
 // renderWithFrontmatter is the shared render tail: frontmatter document plus
 // output filename. Callers that emit warnings set Result.Warnings afterwards.
+//
+// When meta has no fields to emit, the output is the body alone, because a
+// "---\n{}\n---" block is not valid frontmatter for any provider. Canonical
+// builders keep the empty block: canonical content is always parsed as
+// frontmatter plus body, so dropping it would let a body that opens with
+// "---" be read as frontmatter.
 func renderWithFrontmatter(meta any, body, filename string) (*Result, error) {
+	yamlBytes, err := yaml.Marshal(meta)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(yamlBytes)) == "{}" {
+		return &Result{Content: []byte(body + "\n"), Filename: filename}, nil
+	}
 	content, err := renderFrontmatterDoc(meta, body)
 	if err != nil {
 		return nil, err

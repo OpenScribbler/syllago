@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
@@ -1180,9 +1179,10 @@ func TestCursorAgentDefaultPermissionNoNote(t *testing.T) {
 	}
 }
 
-// Canonical tools must not depend on Go map iteration order.
+// Canonical tools list only enabled tools, and must not depend on Go map
+// iteration order.
 func TestOpenCodeAgentCanonicalizeSortsTools(t *testing.T) {
-	input := []byte("---\nname: r\ntools:\n  write: true\n  bash: true\n  read: true\n  grep: true\n---\n\nBody.\n")
+	input := []byte("---\nname: r\ntools:\n  write: true\n  bash: true\n  edit: false\n  read: true\n  grep: true\n---\n\nBody.\n")
 	for i := 0; i < 20; i++ {
 		res, err := canonicalizeOpenCodeAgent(input)
 		if err != nil {
@@ -1192,16 +1192,16 @@ func TestOpenCodeAgentCanonicalizeSortsTools(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parse canonical: %v", err)
 		}
-		if !sort.StringsAreSorted(meta.Tools) {
-			t.Fatalf("tools not sorted: %v", meta.Tools)
+		if got := strings.Join(meta.Tools, ","); got != "file_read,file_write,search,shell" {
+			t.Fatalf("tools = %s, want file_read,file_write,search,shell", got)
 		}
 	}
 }
 
-// Library agents added from OpenCode are stored canonically, with tools as a
-// list. Re-canonicalizing that content as OpenCode must accept the list.
-func TestOpenCodeAgentCanonicalizeAcceptsCanonicalToolsList(t *testing.T) {
-	input := []byte("---\nname: r\ntools:\n    - Read\n    - Bash\n---\n\nBody.\n")
+// Library agents added from OpenCode are stored canonically. Re-canonicalizing
+// that content as OpenCode must pass it through, keeping maxTurns.
+func TestOpenCodeAgentCanonicalizePassesCanonicalThrough(t *testing.T) {
+	input := []byte("---\nname: r\ntools:\n    - file_read\n    - shell\nmaxTurns: 7\n---\n\nBody.\n")
 	res, err := canonicalizeOpenCodeAgent(input)
 	if err != nil {
 		t.Fatalf("canonicalize canonical input: %v", err)
@@ -1210,7 +1210,10 @@ func TestOpenCodeAgentCanonicalizeAcceptsCanonicalToolsList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse canonical: %v", err)
 	}
-	if strings.Join(meta.Tools, ",") != "Bash,Read" {
-		t.Errorf("tools = %v, want [Bash Read]", meta.Tools)
+	if got := strings.Join(meta.Tools, ","); got != "file_read,shell" {
+		t.Errorf("tools = %s, want file_read,shell", got)
+	}
+	if meta.MaxTurns != 7 {
+		t.Errorf("maxTurns = %d, want 7", meta.MaxTurns)
 	}
 }

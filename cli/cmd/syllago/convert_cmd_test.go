@@ -288,13 +288,13 @@ func TestConvertOpenCodeSourcedAgentFromLibrary(t *testing.T) {
 	lib := t.TempDir()
 	agentDir := filepath.Join(lib, "agents", "reviewer")
 	os.MkdirAll(agentDir, 0755)
-	os.WriteFile(filepath.Join(agentDir, "agent.md"), []byte("---\nname: reviewer\ndescription: Reviews code\ntools:\n    - Bash\n    - Read\n---\n\nReview the diff.\n"), 0644)
+	os.WriteFile(filepath.Join(agentDir, "agent.md"), []byte("---\nname: reviewer\ndescription: Reviews code\ntools:\n    - shell\n    - file_read\nmaxTurns: 7\n---\n\nReview the diff.\n"), 0644)
 	os.WriteFile(filepath.Join(agentDir, ".syllago.yaml"), []byte("format_version: 1\nname: reviewer\ntype: agents\nsource_provider: opencode\nsource_format: md\n"), 0644)
 	withConvertLibrary(t, lib)
 	_, _ = output.SetForTest(t)
 
 	outFile := filepath.Join(t.TempDir(), "reviewer.md")
-	convertCmd.Flags().Set("to", "claude-code")
+	convertCmd.Flags().Set("to", "opencode")
 	convertCmd.Flags().Set("output", outFile)
 	defer resetConvertFlags(t)
 
@@ -305,7 +305,7 @@ func TestConvertOpenCodeSourcedAgentFromLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading output: %v", err)
 	}
-	for _, want := range []string{"- Bash", "- Read", "Review the diff."} {
+	for _, want := range []string{"bash: true", "read: true", "steps: 7", "Review the diff."} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("output missing %q:\n%s", want, data)
 		}
