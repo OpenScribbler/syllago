@@ -6,6 +6,7 @@
       "command",
       "core",
       "hook",
+      "install",
       "mcp",
       "publisher",
       "registry",
@@ -26,24 +27,26 @@
         "mcp",
         "publisher",
         "registry",
-        "render"
+        "render",
+        "install"
       ],
       "version": "0.0.0-dev"
     },
     "hello_error": null,
     "invocation": "/tmp/acif-adapter"
   },
-  "binding_set_hash": "c0d2accc6bb38f1927def449c0453a05c5817500202e0861ed8ef8f50c7abc2b",
+  "binding_set_hash": "9e791d04493ca24ee61d2d03ac4328a8e5e4556c4f2481dad14980f52526472e",
   "catalog_hashes": {
     "agent.yaml": "9ee8000bb65f1ec536ea2b4bbfc6095491f627c06214362c1ce2df890c83ba62",
     "command.yaml": "f21fc4ea33ea96756c1265c97092ada78332e5c10879f6bdf4e187ef5eb8791f",
     "core.yaml": "6ee229fcee55cce883a6a1b01e30140304eb9043e580a7a13727edcc83f49dc8",
     "fresh.yaml": "643cb8ad306dc09d397d85f3d7caaf6a3fc8e055a92f1cf2e783fc2fc5c93fdf",
-    "hook.yaml": "f32c93a57f93d7fc1e4e7b931ef942422f9606a3f5e6a4209e3c6a237707427f",
+    "hook.yaml": "8956aa17acad4f1ec79e5ab9424107a8d84eccb54886eae514d6e2dcb652aa82",
+    "install.yaml": "f6b378e2e4cab6a9e010ec565a09c092c22ddaad7bcd0f445c6677dd5d45784d",
     "mcp.yaml": "3182608d87cf36b3f5420d065315091c6cd31d6496dd9de3eaf2fe1c336569f0",
-    "platform.yaml": "edc238855b07542b0db16acdb68a023a884abb3c47a9edbda51f12df7f99c6cd",
+    "platform.yaml": "e54b9860922f3754d1b34d7023b076f31c3ad96a9265df06591a49f3a78d22f7",
     "render.yaml": "8de6a43006d5e68be7cdf1460719f9fd30270b3b18f4f63f63a5c54c8a9c0147",
-    "rule.yaml": "30528ca8a795520e5a05b9c6cc943c7d6234c26e6535fb13581ef191772eaa7f",
+    "rule.yaml": "e473be422f5634a33d7c614a700fd95cbfae47354ba3e1719ded274c05dda44d",
     "skill.yaml": "74e9939811aa02fcd99e4bf56ff2ffcf1957a6fb9a587f6f3ab2f93d7d4176dc",
     "uri.yaml": "050e4f1c7232b4750a3c1ba0e36bc2482671891606815b1a8ffaef020b19625c"
   },
@@ -70,23 +73,13 @@
     "version": "0.1.0-stage1"
   },
   "scopes": {
-    "requested": [
-      "agent",
-      "command",
-      "core",
-      "hook",
-      "mcp",
-      "publisher",
-      "registry",
-      "render",
-      "rule",
-      "skill"
-    ],
+    "requested": [],
     "selected": [
       "agent",
       "command",
       "core",
       "hook",
+      "install",
       "mcp",
       "publisher",
       "registry",
@@ -108,6 +101,19 @@
         "status": "pass"
       },
       "hook": {
+        "blocking": [
+          {
+            "id": "TV-HOOK-k",
+            "status": "unsupported"
+          },
+          {
+            "id": "TV-HOOK-m",
+            "status": "unsupported"
+          }
+        ],
+        "status": "not-passed"
+      },
+      "install": {
         "blocking": [],
         "status": "pass"
       },
@@ -124,8 +130,17 @@
         "status": "pass"
       },
       "render": {
-        "blocking": [],
-        "status": "pass"
+        "blocking": [
+          {
+            "id": "TV-HOOK-k",
+            "status": "unsupported"
+          },
+          {
+            "id": "TV-HOOK-m",
+            "status": "unsupported"
+          }
+        ],
+        "status": "not-passed"
       },
       "rule": {
         "blocking": [],
@@ -178,9 +193,9 @@
       "id": "TV-1",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-0n01o2rr\",\"entry_file\":\"SKILL.md\",\"context\":{}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-661a04mq\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"11111111-1111-4111-8111-111111111111\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-c_5b3gp3\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"22222222-2222-4222-8222-222222222222\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-jj2ll3va\",\"entry_file\":\"SKILL.md\",\"context\":{}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-lmbzsqob\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"11111111-1111-4111-8111-111111111111\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-f01z7l9z\",\"entry_file\":\"SKILL.md\",\"context\":{\"pack_id\":\"22222222-2222-4222-8222-222222222222\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -556,9 +571,9 @@
       "id": "TV-12",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-x2ms3jm8\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gakyp6c8\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-nni812h_\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-4ph_scz2\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-vkpephdw\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-odndt7x5\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -592,9 +607,9 @@
       "id": "TV-13",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-97x7t70r\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-pcwk6ku8\",\"entry_file\":\"caf\u00e9.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-eq9pd78o\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gnqr59wg\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-jirhxqrg\",\"entry_file\":\"café.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-y2i3gvjz\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -649,8 +664,8 @@
       "id": "TV-L2-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-9im67aam\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-kkarvmc1\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-locj3mi4\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-ol8cldi4\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1379,7 +1394,7 @@
       "id": "TV-HOOK-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"sidecar\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"}]}]},\"body_root\":\"/tmp/acif-fixture-ltgj1ua4\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"sidecar\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"}]}]},\"body_root\":\"/tmp/acif-fixture-vyhjuoq_\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1410,6 +1425,122 @@
         "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"sidecar\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"../outside/run.sh\"}]}]}}}"
       ],
       "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "hook.yaml",
+      "expected_vs_observed": [],
+      "fixture_paths": [],
+      "id": "TV-HOOK-k",
+      "message": "session_end: adapter returned unsupported",
+      "request_lines": [
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"before_prompt\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}",
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"agent_stop\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}",
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"session_start\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}",
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"session_end\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}"
+      ],
+      "status": "unsupported",
+      "vacuous": false
+    },
+    {
+      "catalog": "hook.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "cli_prompt",
+          "expected": "before_prompt",
+          "field": "canonical_event",
+          "observed": "before_prompt",
+          "pass": true
+        },
+        {
+          "case": "cascade_prompt",
+          "expected": "before_prompt",
+          "field": "canonical_event",
+          "observed": "before_prompt",
+          "pass": true
+        },
+        {
+          "case": "cli_stop",
+          "expected": "agent_stop",
+          "field": "canonical_event",
+          "observed": "agent_stop",
+          "pass": true
+        },
+        {
+          "case": "cascade_stop",
+          "expected": "agent_stop",
+          "field": "canonical_event",
+          "observed": "agent_stop",
+          "pass": true
+        },
+        {
+          "case": "cli_session_start",
+          "expected": "session_start",
+          "field": "canonical_event",
+          "observed": "session_start",
+          "pass": true
+        },
+        {
+          "case": "cli_session_end",
+          "expected": "session_end",
+          "field": "canonical_event",
+          "observed": "session_end",
+          "pass": true
+        },
+        {
+          "case": "cascade_transcript",
+          "expected": "transcript_export",
+          "field": "canonical_event",
+          "observed": "transcript_export",
+          "pass": true
+        },
+        {
+          "case": "cli_prompt=cascade_prompt",
+          "expected": true,
+          "field": "body_hash_equal",
+          "observed": [
+            "f85d592c2e5bd71168fc69318080020625bd5eb3d04ca5f5fe19ecfcb74bd5c7",
+            "f85d592c2e5bd71168fc69318080020625bd5eb3d04ca5f5fe19ecfcb74bd5c7"
+          ],
+          "pass": true
+        },
+        {
+          "case": "cli_stop=cascade_stop",
+          "expected": true,
+          "field": "body_hash_equal",
+          "observed": [
+            "ee2943e0effe30d5ee28d8e4650d13d0dbef056398069bd2546da3b726ccb282",
+            "ee2943e0effe30d5ee28d8e4650d13d0dbef056398069bd2546da3b726ccb282"
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-HOOK-l",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"UserPromptSubmit\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"pre_user_prompt\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"Stop\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"post_cascade_response\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"SessionStart\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"SessionEnd\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"provider_config\":{\"provider\":\"devin\",\"path\":\"hooks.json\",\"content\":{\"event\":\"post_cascade_response_with_transcript\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "hook.yaml",
+      "expected_vs_observed": [],
+      "fixture_paths": [],
+      "id": "TV-HOOK-m",
+      "message": "no_native_row: adapter returned unsupported",
+      "request_lines": [
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"transcript_export\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}",
+        "{\"op\":\"render\",\"input\":{\"canonical\":{\"hook\":{\"event\":\"worktree_remove\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\"}]}]}},\"target\":\"devin\"}}"
+      ],
+      "status": "unsupported",
       "vacuous": false
     },
     {
@@ -1488,8 +1619,8 @@
       "id": "TV-PLATFORM-c",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-igftgvp4\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[]}]}],\"blocking\":false}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-mve0ts9m\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"arch\":[]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-rq0dn4fd\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-jxzjby1c\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"arch\":[]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1516,8 +1647,8 @@
       "id": "TV-PLATFORM-d",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-42tftarp\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\",\"freebsd\"]}]}],\"blocking\":false}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ovyytaxf\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"Linux\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-w9z0y6et\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\",\"freebsd\"]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-s_7c42qj\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"Linux\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1537,7 +1668,7 @@
       "id": "TV-PLATFORM-e",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-rl8b4yrw\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"},{\"type\":\"file\",\"path\":\"hooks/run.ps1\"}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-fvltl225\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\"},{\"type\":\"file\",\"path\":\"hooks/run.ps1\"}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1579,7 +1710,7 @@
       "id": "TV-PLATFORM-f",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-7basf3kw\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/lin.sh\",\"os\":[\"linux\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-whh7n5d0\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/lin.sh\",\"os\":[\"linux\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1599,7 +1730,7 @@
       "id": "TV-PLATFORM-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6hikv89b\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-1gdg9p_n\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1626,7 +1757,7 @@
       "id": "TV-PLATFORM-g2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-cwrm_y42\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-po22yw9g\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"hook\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/benign.sh\"},{\"type\":\"file\",\"path\":\"hooks/other.cmd\",\"os\":[\"windows\"]}]}],\"blocking\":false}},\"projection\":\"os_coverage\"}}"
       ],
       "status": "pass",
@@ -1753,7 +1884,7 @@
       "id": "TV-PLATFORM-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-_lh5rnmc\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/lin.sh\",\"osx\":\"hooks/mac.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-1mme_thc\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/lin.sh\",\"osx\":\"hooks/mac.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1827,7 +1958,7 @@
       "id": "TV-PLATFORM-i2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-brxtzers\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/unix.sh\",\"osx\":\"hooks/unix.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-hjwp4q_z\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\",\"linux\":\"hooks/unix.sh\",\"osx\":\"hooks/unix.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1856,7 +1987,7 @@
       "id": "TV-PLATFORM-j",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-8ihgyrre\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"osx\":\"hooks/mac.sh\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-24bapww0\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"osx\":\"hooks/mac.sh\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -1926,7 +2057,7 @@
       "id": "TV-PLATFORM-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-nav569a3\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{\"bash\":\"hooks/run.sh\",\"powershell\":\"hooks/run.ps1\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-h450blqt\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{\"bash\":\"hooks/run.sh\",\"powershell\":\"hooks/run.ps1\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2060,12 +2191,12 @@
       "id": "TV-PLATFORM-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6x9c2tn8\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/a.ps1\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qkgx2ciw\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/b.cmd\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-_t2hdb8y\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/c.bat\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-q1j24xxn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/d.sh\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-tguvm0tn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/pwsh-shebang\"}}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-m17kc_vn\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/e.xyz\"}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-hndy6joj\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/a.ps1\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-pob3lc5k\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/b.cmd\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ltf45155\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/c.bat\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-dit4rp8g\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/d.sh\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-poses_ph\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/pwsh-shebang\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-q8v13y7t\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/e.xyz\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2118,7 +2249,7 @@
       "id": "TV-PLATFORM-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-6kth9jhy\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-99sbgjpe\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\"}}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"blocking\":false,\"event\":\"before_tool_execute\",\"handlers\":[{\"async\":false,\"scripts\":[{\"path\":\"hooks/run\",\"shell\":\"pwsh\\\", \\\"rm -rf /tmp\\\"\",\"type\":\"file\"}],\"type\":\"command\"}]},\"target\":\"per-os-key-map-provider\"}}"
       ],
       "status": "pass",
@@ -2139,7 +2270,7 @@
       "id": "TV-PLATFORM-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ewqurjsx\",\"provider_config\":{\"provider\":\"unknown-per-os-table\",\"path\":\"hooks.json\",\"content\":{\"platforms\":{\"win32\":\"hooks/w.cmd\"}}}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-43y4tqyo\",\"provider_config\":{\"provider\":\"unknown-per-os-table\",\"path\":\"hooks.json\",\"content\":{\"platforms\":{\"win32\":\"hooks/w.cmd\"}}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2255,9 +2386,9 @@
       "id": "TV-PLATFORM-q",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-aafqlvvd\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qgyhwwx_\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"windows\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-3cj4ad92\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"],\"shell\":\"powershell\"}]}]}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-c7o5enhh\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-pjzko8e2\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"windows\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-4m7e4ctq\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/run.sh\",\"os\":[\"linux\"],\"shell\":\"powershell\"}]}]}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2304,8 +2435,8 @@
       "id": "TV-PLATFORM-q2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-b3zu42gf\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}]}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-21vdqr27\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]},{\"type\":\"inline\",\"content\":\"#!/bin/sh\\r\\necho hi\\r\\n\",\"os\":[\"linux\",\"darwin\"]}]}]}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-vpnnf4_4\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"inline\",\"content\":\"#!/bin/sh\\necho hi\\n\",\"os\":[\"darwin\",\"linux\"]},{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]}]}]}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ixz6gozb\",\"sidecar\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/win.cmd\",\"os\":[\"windows\"]},{\"type\":\"inline\",\"content\":\"#!/bin/sh\\r\\necho hi\\r\\n\",\"os\":[\"linux\",\"darwin\"]}]}]}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2451,6 +2582,229 @@
       "request_lines": [
         "{\"op\":\"evaluate_install\",\"input\":{\"item\":{\"hook\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]}]}],\"blocking\":true}},\"install_target_os\":\"windows\"}}",
         "{\"op\":\"evaluate_install\",\"input\":{\"item\":{\"hook\":{\"event\":\"before_tool_execute\",\"handlers\":[{\"type\":\"command\",\"scripts\":[{\"type\":\"file\",\"path\":\"hooks/unix.sh\",\"os\":[\"darwin\",\"linux\"]}]}],\"blocking\":false}},\"install_target_os\":\"windows\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "platform.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_5",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_6",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        },
+        {
+          "case": "case_7",
+          "expected": "acif.hook.platform_mechanism_malformed",
+          "field": "error",
+          "observed": "acif.hook.platform_mechanism_malformed",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-PLATFORM-u",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-skbt4bn5\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"windows\":123,\"command\":\"hooks/base.sh\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-r8u2f60u\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":{\"timeout\":5,\"windows\":\"hooks/win.cmd\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-mv_36kby\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{\"bash\":\"hooks/run.sh\",\"fish\":\"hooks/run.fish\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-cucrm4gu\",\"provider_config\":{\"provider\":\"dual-shell-fields\",\"path\":\"hooks.json\",\"content\":{}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-frkcqpym\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"path\":\"hooks/x.sh\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-11n2kafz\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-b30uek5s\",\"provider_config\":{\"provider\":\"per-os-key-map\",\"path\":\"hooks.json\",\"content\":\"{not json\"}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "platform.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "source",
+          "expected": [
+            {
+              "os": [
+                "windows"
+              ],
+              "path": "hooks/win.cmd",
+              "type": "file"
+            },
+            {
+              "path": "hooks/base.sh",
+              "type": "file"
+            }
+          ],
+          "field": "canonical_scripts",
+          "observed": [
+            {
+              "os": [
+                "windows"
+              ],
+              "path": "hooks/win.cmd",
+              "type": "file"
+            },
+            {
+              "path": "hooks/base.sh",
+              "type": "file"
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "source",
+          "expected": "declared",
+          "field": "provenance",
+          "observed": "declared",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-PLATFORM-v",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-c2h8zqzp\",\"provider_config\":{\"provider\":\"per-os-key-map-provider\",\"path\":\"hooks.json\",\"content\":{\"command\":\"hooks/base.sh\",\"windows\":\"hooks/win.cmd\"}}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "platform.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": [
+            "windows"
+          ],
+          "field": "os",
+          "observed": [
+            "windows"
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_1",
+          "expected": "hooks/A.PS1",
+          "field": "path",
+          "observed": "hooks/A.PS1",
+          "pass": true
+        },
+        {
+          "case": "case_1",
+          "expected": "acif.hook.platform_filename_inferred",
+          "field": "diagnostic",
+          "observed": [
+            {
+              "id": "acif.hook.platform_filename_inferred"
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": [
+            "darwin",
+            "linux"
+          ],
+          "field": "os",
+          "observed": [
+            "darwin",
+            "linux"
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "hooks/b.SH",
+          "field": "path",
+          "observed": "hooks/b.SH",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "acif.hook.platform_filename_inferred",
+          "field": "diagnostic",
+          "observed": [
+            {
+              "id": "acif.hook.platform_filename_inferred"
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            "windows"
+          ],
+          "field": "os",
+          "observed": [
+            "windows"
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "hooks/c.Cmd",
+          "field": "path",
+          "observed": "hooks/c.Cmd",
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "acif.hook.platform_filename_inferred",
+          "field": "diagnostic",
+          "observed": [
+            {
+              "id": "acif.hook.platform_filename_inferred"
+            }
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-PLATFORM-w",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-pwvzqdck\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/A.PS1\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-qmqpaxa7\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/b.SH\"}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"hook\",\"body_root\":\"/tmp/acif-fixture-ruak617l\",\"provider_config\":{\"provider\":\"filename-extension-convention\",\"path\":\"hooks.json\",\"content\":{\"file\":\"hooks/c.Cmd\"}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2764,11 +3118,11 @@
       "id": "TV-SKILL-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-hdisx3b1\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-2liaszrv\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yvpq9y2h\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gjd1hj2h\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-rwdbhbo3\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-74pl1keu\",\"entry_file\":\"SKILL.md\"}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"multi-file\",\"kind\":\"skill\",\"skill\":{\"activation\":{\"type\":\"auto\",\"user_invocable\":true},\"body\":\"Use this to demo classification.\\n\"}},\"projection\":\"derived_capabilities\"}}"
       ],
       "status": "pass",
@@ -2818,8 +3172,8 @@
       "id": "TV-SKILL-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-6p8c7ojw\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-lkumqnlv\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-cy45uusl\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-knjrey7x\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2846,8 +3200,8 @@
       "id": "TV-SKILL-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-ffc_o5jr\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yxo3cf50\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-twkax62b\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-un8eexd3\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -2935,9 +3289,9 @@
       "id": "TV-SKILL-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-xovflvkx\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-_pfan4uz\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-yf2wxv37\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-xf4_yam7\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-07jd0j76\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-vbtbsa0h\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3052,8 +3406,8 @@
       "id": "TV-SKILL-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-gliz2c0r\",\"entry_file\":\"SKILL.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-_9ri2pfn\",\"entry_file\":\"SKILL.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-8ghj2bst\",\"entry_file\":\"SKILL.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-rncmk3t5\",\"entry_file\":\"SKILL.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3099,8 +3453,8 @@
       "id": "TV-RULE-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-i93b68ke\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-e9ipgmkb\",\"entry_file\":\"conventions.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-f3d36nau\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-0gppbidb\",\"entry_file\":\"conventions.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3501,7 +3855,7 @@
       "id": "TV-RULE-k",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-crq8scpw\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-_76dtwv0\",\"entry_file\":\"conventions.md\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"kind\":\"rule\",\"rule\":{\"activation\":{\"mode\":\"always\"},\"body\":\"Follow @security.md and @~/company-standards.md.\\n\"}},\"target\":\"native-rule-format\"}}"
       ],
       "status": "pass",
@@ -3555,9 +3909,9 @@
       "id": "TV-RULE-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-jy3tafp3\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-cmnxetu9\",\"entry_file\":\"conventions.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-revixfms\",\"entry_file\":\"conventions.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-lhbe4o21\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-3fmrtwyc\",\"entry_file\":\"conventions.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"body_root\":\"/tmp/acif-fixture-k324zk1e\",\"entry_file\":\"conventions.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3594,6 +3948,145 @@
       "message": "",
       "request_lines": [
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"rule\":{\"activation\":{\"mode\":\"manual\"}}},\"target\":\"no-declaration-surface-provider\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "rule.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": "always",
+          "field": "canonical.rule.activation.mode",
+          "observed": "always",
+          "pass": true
+        },
+        {
+          "case": "case_1",
+          "expected": "absent",
+          "field": "canonical.rule.activation.globs",
+          "observed": "absent",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "always",
+          "field": "canonical.rule.activation.mode",
+          "observed": "always",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "absent",
+          "field": "canonical.rule.activation.globs",
+          "observed": "absent",
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "glob",
+          "field": "canonical.rule.activation.mode",
+          "observed": "glob",
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            "src/**"
+          ],
+          "field": "canonical.rule.activation.globs",
+          "observed": [
+            "src/**"
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": "glob",
+          "field": "canonical.rule.activation.mode",
+          "observed": "glob",
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": [
+            "src/**"
+          ],
+          "field": "canonical.rule.activation.globs",
+          "observed": [
+            "src/**"
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_5",
+          "expected": "model_decision",
+          "field": "canonical.rule.activation.mode",
+          "observed": "model_decision",
+          "pass": true
+        },
+        {
+          "case": "case_5",
+          "expected": "absent",
+          "field": "canonical.rule.activation.globs",
+          "observed": "absent",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-RULE-n",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":\"legacy\",\"always_apply\":true,\"globs\":[\"*.ts\"]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":\"legacy\",\"always_apply\":true}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":\"legacy\",\"globs\":[\"src/**\"]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":\"legacy\",\"always_apply\":\"true\",\"globs\":[\"src/**\"]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":\"legacy\",\"always_apply\":false,\"globs\":\"src/**\"}}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "rule.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": "acif.rule.activation_mode_missing",
+          "field": "error",
+          "observed": "acif.rule.activation_mode_missing",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "acif.rule.activation_mode_missing",
+          "field": "error",
+          "observed": "acif.rule.activation_mode_missing",
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "acif.rule.activation_mode_missing",
+          "field": "error",
+          "observed": "acif.rule.activation_mode_missing",
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": "acif.rule.activation_mode_missing",
+          "field": "error",
+          "observed": "acif.rule.activation_mode_missing",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-RULE-o",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":\"not an object\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"globs\":[\"*.md\"]}}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"rule\",\"provider_config\":{\"provider\":\"rule-activation-source\",\"path\":\"rule\",\"content\":{\"source_sub_mode\":7}}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -3669,8 +4162,8 @@
       "id": "TV-COMMAND-a",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-savfuz9v\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-n8y5g76j\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-d1zotuen\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-klhl8ce9\",\"entry_file\":\"review.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review PR $ARGUMENTS carefully.\\n\"},\"kind\":\"command\"},\"target\":\"gemini-form\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review PR $ARGUMENTS carefully.\\n\"},\"kind\":\"command\"},\"target\":\"no-row-target\"}}"
       ],
@@ -3752,8 +4245,8 @@
       "id": "TV-COMMAND-b",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-qfcb_ghc\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-55s2qbvx\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-1h9rk0dq\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-gpk0k3_n\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"input-form\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Open $ARGUMENTS now.\\n\"},\"kind\":\"command\"},\"target\":\"input-form\"}}"
       ],
       "status": "pass",
@@ -3825,7 +4318,7 @@
       "id": "TV-COMMAND-d",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-3lwps_d2\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-hh8x4tyd\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"gemini-form\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Use it like:\\n```\\nreview $ARGUMENTS\\n```\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3853,7 +4346,7 @@
       "id": "TV-COMMAND-e",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-zt8hm8v7\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-m0j6rhk6\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"The token $ARGUMENTS is special.\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3889,7 +4382,7 @@
       "id": "TV-COMMAND-f",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-mtws0006\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-kebaomam\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"git rebase --onto $1 $2 && echo ${@:3}\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3917,7 +4410,7 @@
       "id": "TV-COMMAND-g",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-z8oqoyq5\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-zrc_0__n\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Context: !{git status} and @{docs/notes.md}\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -3965,8 +4458,8 @@
       "id": "TV-COMMAND-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-aealy8pl\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-a5tjdmau\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-71k13ulb\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-wl5z0q3x\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -4173,7 +4666,7 @@
       "id": "TV-COMMAND-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-dxwqxbzm\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"command\",\"body_root\":\"/tmp/acif-fixture-sgffhc_e\",\"entry_file\":\"cmd.md\",\"context\":{\"source_provider\":\"canonical\"}}}",
         "{\"op\":\"project\",\"input\":{\"item\":{\"classification\":\"single-file\",\"command\":{\"body\":\"Review $ARGUMENTS.\\n\"},\"kind\":\"command\"},\"projection\":\"advisory\"}}"
       ],
       "status": "pass",
@@ -4659,11 +5152,11 @@
       "id": "TV-AGENT-h",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-sp0rj2tf\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-nm_4nm26\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-xktvavsu\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-q67tthje\",\"entry_file\":\"agent.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-zf7wxgrq\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-awxiyk9v\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-dawqkk_n\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-6f9dbb4v\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-328nyvs7\",\"entry_file\":\"agent.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-gj0lspja\",\"entry_file\":\"agent.md\"}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"agent\":{\"tools\":[\"agent\"]}},\"target\":\"claude-code\"}}",
         "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"provider_config\":{\"provider\":\"claude-code\",\"path\":\"agent.rendered\",\"content\":\"---\\ntools:\\n    - Agent\\n---\\n\"}}}",
         "{\"op\":\"render\",\"input\":{\"canonical\":{\"agent\":{\"tools\":[\"agent\"]}},\"target\":\"copilot-cli\"}}",
@@ -4732,9 +5225,9 @@
       "id": "TV-AGENT-i",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-ytam53od\",\"entry_file\":\"scout.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-5eemf0ck\",\"entry_file\":\"scout.md\"}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-5wmus_k1\",\"entry_file\":\"scout.md\"}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-ln57yl34\",\"entry_file\":\"scout.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-kxorvz1e\",\"entry_file\":\"scout.md\"}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"agent\",\"body_root\":\"/tmp/acif-fixture-1ka02zhz\",\"entry_file\":\"scout.md\"}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5785,7 +6278,7 @@
       "id": "TV-URI-l",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"new.example.com\":\"127.0.0.1:33879\",\"old.example.com\":\"127.0.0.1:38055\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"new.example.com\":\"127.0.0.1:37673\",\"old.example.com\":\"127.0.0.1:39459\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5805,7 +6298,7 @@
       "id": "TV-URI-l2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:37137\",\"edge.example.com\":\"127.0.0.1:46453\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:38775\",\"edge.example.com\":\"127.0.0.1:37005\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5825,7 +6318,7 @@
       "id": "TV-URI-l3",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:40437\",\"b.example.com\":\"127.0.0.1:37279\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:36313\",\"b.example.com\":\"127.0.0.1:38693\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5845,7 +6338,7 @@
       "id": "TV-URI-m",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"b.example.com\":\"127.0.0.1:39339\",\"a.example.com\":\"127.0.0.1:44447\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"b.example.com\":\"127.0.0.1:41351\",\"a.example.com\":\"127.0.0.1:33099\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5865,7 +6358,7 @@
       "id": "TV-URI-m2",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"c.example.com\":\"127.0.0.1:35715\",\"a.example.com\":\"127.0.0.1:38305\",\"b.example.com\":\"127.0.0.1:36811\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/x\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"c.example.com\":\"127.0.0.1:34523\",\"a.example.com\":\"127.0.0.1:41929\",\"b.example.com\":\"127.0.0.1:40279\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5892,8 +6385,8 @@
       "id": "TV-URI-n",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/0\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35383\",\"b.example.com\":\"127.0.0.1:42955\"}}}",
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/loop\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:35383\",\"b.example.com\":\"127.0.0.1:42955\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/0\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:34853\",\"b.example.com\":\"127.0.0.1:46045\"}}}",
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/loop\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:34853\",\"b.example.com\":\"127.0.0.1:46045\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5913,7 +6406,7 @@
       "id": "TV-URI-w",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:44935\",\"c.example.com\":\"127.0.0.1:40995\",\"edge.example.com\":\"127.0.0.1:40767\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:42993\",\"c.example.com\":\"127.0.0.1:38175\",\"edge.example.com\":\"127.0.0.1:34731\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5933,7 +6426,7 @@
       "id": "TV-URI-x",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"edge.example.com\":\"127.0.0.1:40503\",\"new.example.com\":\"127.0.0.1:39931\",\"old.example.com\":\"127.0.0.1:38385\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://old.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"edge.example.com\":\"127.0.0.1:38671\",\"new.example.com\":\"127.0.0.1:45069\",\"old.example.com\":\"127.0.0.1:44497\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5953,7 +6446,7 @@
       "id": "TV-URI-y",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:41867\",\"b.example.com\":\"127.0.0.1:40825\",\"c.example.com\":\"127.0.0.1:36749\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:40519\",\"b.example.com\":\"127.0.0.1:35443\",\"c.example.com\":\"127.0.0.1:35411\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -5973,7 +6466,7 @@
       "id": "TV-URI-z",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:43639\",\"b.example.com\":\"127.0.0.1:44475\",\"d.example.com\":\"127.0.0.1:43875\",\"edge.example.com\":\"127.0.0.1:37447\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://a.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"a.example.com\":\"127.0.0.1:43079\",\"b.example.com\":\"127.0.0.1:45873\",\"d.example.com\":\"127.0.0.1:43447\",\"edge.example.com\":\"127.0.0.1:32993\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -6158,8 +6651,8 @@
       "id": "TV-URI-s",
       "message": "",
       "request_lines": [
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-q86df5mg\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://a.example.com/SKILL.md\"}}}",
-        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-vd37oq69\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://mirror.example.org/SKILL.md\"}}}"
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-s8spm3hq\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://a.example.com/SKILL.md\"}}}",
+        "{\"op\":\"ingest\",\"input\":{\"kind\":\"skill\",\"body_root\":\"/tmp/acif-fixture-g_7_v_kq\",\"entry_file\":\"SKILL.md\",\"context\":{\"source_uri\":\"https://mirror.example.org/SKILL.md\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -6182,8 +6675,8 @@
       "id": "TV-URI-t",
       "message": "",
       "request_lines": [
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:34969\",\"edge-1.example.com\":\"127.0.0.1:42381\"}}}",
-        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-z2ocujqz/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:34969\",\"edge-1.example.com\":\"127.0.0.1:42381\",\"edge-2.example.com\":\"127.0.0.1:42371\"}}}"
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:37543\",\"edge-1.example.com\":\"127.0.0.1:32843\"}}}",
+        "{\"op\":\"fetch_uri\",\"input\":{\"url\":\"https://cdn.example.com/skill.md\",\"trust_ca\":\"/tmp/acif-mock-http-esvhk733/ca.pem\",\"resolve\":{\"cdn.example.com\":\"127.0.0.1:37543\",\"edge-1.example.com\":\"127.0.0.1:32843\",\"edge-2.example.com\":\"127.0.0.1:44775\"}}}"
       ],
       "status": "pass",
       "vacuous": false
@@ -6578,6 +7071,722 @@
       "message": "",
       "request_lines": [
         "{\"op\":\"evaluate_freshness\",\"input\":{\"record\":{\"fetched_at\":\"2026-05-01T00:00:00Z\",\"generated_at\":\"2026-05-11T00:00:00Z\"},\"consumer_clock\":\"2026-05-10T00:00:00Z\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "matrix",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/home/u/.github/agents/reviewer.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/proj/.copilot/agents/reviewer.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/proj/.github/agents/reviewer.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/home/u/.github/agents/reviewer.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/proj/.copilot/agents/reviewer.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/proj/.github/agents/reviewer.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-a",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"copilot-cli\",\"content_type\":\"agent\",\"content_name\":\"reviewer\",\"home_dir\":\"/home/u\",\"project_root\":\"/proj\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/h/.claude/agents/helper.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/h/.claude/agents/helper.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/p/.factory/commands/deploy.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/p/.factory/commands/deploy.md",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/h/.claude/settings.json",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/h/.claude/settings.json",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/p/.kiro/settings/mcp.json",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/p/.kiro/settings/mcp.json",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_5",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/p/.cursor/rules/style.mdc",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/p/.cursorrules",
+              "scope": "project",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/p/.cursor/rules/style.mdc",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/p/.cursorrules",
+              "scope": "project",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_6",
+          "expected": [
+            {
+              "layout": "directory_of_files",
+              "path": "/h/.gemini/skills/review/",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "/h/.agents/skills/review/",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "directory_of_files",
+              "path": "/h/.gemini/skills/review/",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "/h/.agents/skills/review/",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-b",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"agent\",\"content_name\":\"helper\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"user\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"factory-droid\",\"content_type\":\"command\",\"content_name\":\"deploy\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"project\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"hook\",\"content_name\":\"guard\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"user\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"kiro\",\"content_type\":\"mcp_config\",\"content_name\":\"search\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"project\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"cursor\",\"content_type\":\"rule\",\"content_name\":\"style\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"project\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"gemini-cli\",\"content_type\":\"skill\",\"content_name\":\"review\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"user\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "variant_1",
+          "expected": "acif.install.content_name_invalid",
+          "field": "error",
+          "observed": "acif.install.content_name_invalid",
+          "pass": true
+        },
+        {
+          "case": "variant_2",
+          "expected": "acif.install.content_name_invalid",
+          "field": "error",
+          "observed": "acif.install.content_name_invalid",
+          "pass": true
+        },
+        {
+          "case": "variant_3",
+          "expected": "acif.install.content_name_invalid",
+          "field": "error",
+          "observed": "acif.install.content_name_invalid",
+          "pass": true
+        },
+        {
+          "case": "variant_4",
+          "expected": "acif.install.content_name_invalid",
+          "field": "error",
+          "observed": "acif.install.content_name_invalid",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-c",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"a/b\",\"home_dir\":\"/h\",\"project_root\":\"/p\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"a\\\\b\",\"home_dir\":\"/h\",\"project_root\":\"/p\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"..\",\"home_dir\":\"/h\",\"project_root\":\"/p\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"\",\"home_dir\":\"/h\",\"project_root\":\"/p\"}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "row",
+          "expected": "acif.install.placeholder_unrecognized",
+          "field": "error",
+          "observed": "acif.install.placeholder_unrecognized",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-d",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"deploy\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"entry\":{\"scope\":\"user\",\"path_template\":\"~/.claude/commands/<unknown-variant>/<content-name>.md\",\"layout\":\"single_file\",\"status\":\"current\"}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": "acif.install.no_entry_point",
+          "field": "error",
+          "observed": "acif.install.no_entry_point",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": "acif.install.scope_unavailable",
+          "field": "error",
+          "observed": "acif.install.scope_unavailable",
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": {
+            "id": "acif.install.scope_unavailable",
+            "params": {
+              "available_scopes": [
+                "project"
+              ]
+            }
+          },
+          "field": "diagnostic",
+          "observed": {
+            "available_scopes": [
+              "project"
+            ]
+          },
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/h/.claude/commands/deploy.md",
+              "scope": "user",
+              "status": "superseded",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/h/.claude/commands/deploy.md",
+              "scope": "user",
+              "status": "superseded",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": "acif.install.entry_point_superseded",
+          "field": "diagnostic",
+          "observed": [
+            {
+              "id": "acif.install.entry_point_superseded",
+              "params": {
+                "scope": "user"
+              }
+            }
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-e",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"cline\",\"content_type\":\"hook\",\"content_name\":\"guard\",\"home_dir\":\"/h\",\"project_root\":\"/p\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"kiro\",\"content_type\":\"rule\",\"content_name\":\"style\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"user\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"command\",\"content_name\":\"deploy\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"entry\":{\"scope\":\"user\",\"path_template\":\"~/.claude/commands/<content-name>.md\",\"layout\":\"single_file\",\"status\":\"superseded\"}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/home/dev/.pi/agent/extensions/tracer.ts",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/home/dev/.pi/agent/extensions/tracer.ts",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/work/repo/.pi/extensions/tracer.ts",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/work/repo/.pi/extensions/tracer.ts",
+              "scope": "project",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            {
+              "layout": "single_file",
+              "path": "/etc/acme/agents/auditor.md",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "single_file",
+              "path": "/etc/acme/agents/auditor.md",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            }
+          ],
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-f",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"pi\",\"content_type\":\"hook\",\"content_name\":\"tracer\",\"home_dir\":\"/home/dev\",\"project_root\":\"/work/repo\",\"scope\":\"user\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"pi\",\"content_type\":\"hook\",\"content_name\":\"tracer\",\"home_dir\":\"/home/dev\",\"project_root\":\"/work/repo\",\"scope\":\"project\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"agent\",\"content_name\":\"auditor\",\"home_dir\":\"/home/dev\",\"project_root\":\"/work/repo\",\"entry\":{\"scope\":\"managed\",\"path_template\":\"/etc/acme/agents/<content-name>.md\",\"layout\":\"single_file\",\"status\":\"current\"}}}"
+      ],
+      "status": "pass",
+      "vacuous": false
+    },
+    {
+      "catalog": "install.yaml",
+      "expected_vs_observed": [
+        {
+          "case": "case_1",
+          "expected": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.config/devin/AGENTS.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/home/u/.devin/rules/style.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.devin/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.codeium/windsurf/memories/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.config/devin/AGENTS.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "/home/u/.devin/rules/style.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.devin/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "/home/u/.codeium/windsurf/memories/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_2",
+          "expected": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "D:/Roaming/u/devin/AGENTS.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "C:/Users/u/.devin/rules/style.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "C:/Users/u/.devin/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "C:/Users/u/.codeium/windsurf/memories/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "merged_into_shared_file",
+              "path": "D:/Roaming/u/devin/AGENTS.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "single_file",
+              "path": "C:/Users/u/.devin/rules/style.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "C:/Users/u/.devin/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            },
+            {
+              "layout": "merged_into_shared_file",
+              "path": "C:/Users/u/.codeium/windsurf/memories/global_rules.md",
+              "scope": "user",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_3",
+          "expected": [
+            {
+              "layout": "directory_of_files",
+              "path": "/Library/Application Support/Devin/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "/Library/Application Support/Windsurf/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "directory_of_files",
+              "path": "/Library/Application Support/Devin/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "/Library/Application Support/Windsurf/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_4",
+          "expected": [
+            {
+              "layout": "directory_of_files",
+              "path": "C:/ProgramData/Devin/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "C:/ProgramData/Windsurf/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "field": "targets",
+          "observed": [
+            {
+              "layout": "directory_of_files",
+              "path": "C:/ProgramData/Devin/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": true
+            },
+            {
+              "layout": "directory_of_files",
+              "path": "C:/ProgramData/Windsurf/skills/review/",
+              "scope": "managed",
+              "status": "current",
+              "write_target": false
+            }
+          ],
+          "pass": true
+        },
+        {
+          "case": "case_5",
+          "expected": "acif.install.no_entry_point",
+          "field": "error",
+          "observed": "acif.install.no_entry_point",
+          "pass": true
+        },
+        {
+          "case": "case_6",
+          "expected": "acif.install.no_entry_point",
+          "field": "error",
+          "observed": "acif.install.no_entry_point",
+          "pass": true
+        }
+      ],
+      "fixture_paths": [],
+      "id": "TV-INSTALL-g",
+      "message": "",
+      "request_lines": [
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"devin\",\"content_type\":\"rule\",\"content_name\":\"style\",\"home_dir\":\"/home/u\",\"project_root\":\"/p\",\"scope\":\"user\",\"os\":\"linux\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"devin\",\"content_type\":\"rule\",\"content_name\":\"style\",\"home_dir\":\"C:/Users/u\",\"project_root\":\"C:/p\",\"scope\":\"user\",\"os\":\"windows\",\"appdata_dir\":\"D:/Roaming/u\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"devin\",\"content_type\":\"skill\",\"content_name\":\"review\",\"home_dir\":\"/Users/u\",\"project_root\":\"/p\",\"scope\":\"managed\",\"os\":\"darwin\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"devin\",\"content_type\":\"skill\",\"content_name\":\"review\",\"home_dir\":\"C:/Users/u\",\"project_root\":\"C:/p\",\"scope\":\"managed\",\"os\":\"windows\",\"appdata_dir\":\"D:/Roaming/u\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"hook\",\"content_name\":\"guard\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"entry\":{\"scope\":\"managed\",\"os\":[\"windows\"],\"path_template\":\"C:/ProgramData/Acme/hooks.json\",\"layout\":\"merged_into_shared_file\",\"status\":\"current\"},\"os\":\"linux\"}}",
+        "{\"op\":\"resolve_install_targets\",\"input\":{\"provider\":\"claude-code\",\"content_type\":\"hook\",\"content_name\":\"guard\",\"home_dir\":\"/h\",\"project_root\":\"/p\",\"scope\":\"managed\",\"entry\":{\"scope\":\"managed\",\"os\":[\"windows\"],\"path_template\":\"C:/ProgramData/Acme/hooks.json\",\"layout\":\"merged_into_shared_file\",\"status\":\"current\"},\"os\":\"linux\"}}"
       ],
       "status": "pass",
       "vacuous": false

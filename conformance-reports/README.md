@@ -24,5 +24,6 @@ Naming: `acif-all-scope-report-<run date>-suite<N>.json`.
 
 | Date | Suite | Adapter protocol | Adapter commit | Result | binding_set |
 |---|---|---|---|---|---|
+| 2026-09-30 | 10 | 2 | `165626e5` | 177 pass + 2 vacuous · 2 unsupported (TV-HOOK-k, TV-HOOK-m: devin hook render pins) · 0 fail · nine of eleven claimed scopes pass; hook and render not-passed | `9e791d04493ca24ee61d2d03ac4328a8e5e4556c4f2481dad14980f52526472e` |
 | 2026-07-14 | 5 | 2 | `59181871` | 164 pass + 2 vacuous · 0 fail · all ten scopes | `c0d2accc6bb38f1927def449c0453a05c5817500202e0861ed8ef8f50c7abc2b` |
 | 2026-07-14 | 3 | 1 | `b426d3ce` | 164 pass + 2 vacuous · 0 fail · all ten scopes | `1142a672f79a0865b935bb8eac0a619656f789eea81544ebfba05f1103d7e536` |
