@@ -82,7 +82,7 @@ var CopilotCLI = Provider{
 		catalog.Rules:    true,
 		catalog.Skills:   true,
 		catalog.Commands: true,
-		catalog.Agents:   true,
+		catalog.Agents:   false, // installed as a rendered copy
 		catalog.Hooks:    false, // adapter-routed into a syllago-owned file
 		catalog.MCP:      false, // JSON merge
 	},

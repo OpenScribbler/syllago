@@ -17,7 +17,7 @@ var Codex = Provider{
 		case catalog.Commands:
 			return filepath.Join(homeDir, ".codex")
 		case catalog.Agents:
-			return filepath.Join(homeDir, ".codex")
+			return filepath.Join(homeDir, ".codex", "agents")
 		case catalog.Skills:
 			return filepath.Join(homeDir, ".agents", "skills")
 		case catalog.MCP:
@@ -76,7 +76,7 @@ var Codex = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Commands: true,
-		catalog.Agents:   true,
+		catalog.Agents:   false, // installed as a rendered copy
 		catalog.Skills:   true,
 	},
 	ConfigLocations: map[catalog.ContentType]string{

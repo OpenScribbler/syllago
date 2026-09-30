@@ -82,7 +82,7 @@ var Kiro = Provider{
 	},
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:  true,
-		catalog.Agents: true,
+		catalog.Agents: false, // installed as a rendered copy
 		catalog.Skills: true,
 		catalog.Hooks:  false, // adapter-routed into a syllago-owned file
 		catalog.MCP:    false, // JSON merge

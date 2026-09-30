@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -132,6 +133,9 @@ func scanLinkDir(prov provider.Provider, ct catalog.ContentType, dir string, roo
 // SourcePathFor returns the filesystem source path used when installing item.
 func SourcePathFor(item catalog.ContentItem) string {
 	if item.Type == catalog.Agents {
+		if p := converter.ResolveContentFile(item); p != "" {
+			return p
+		}
 		return filepath.Join(item.Path, "AGENT.md")
 	}
 	return item.Path
@@ -143,7 +147,9 @@ func PlanLinkFixes(broken []ScannedLink, libraryItems []catalog.ContentItem) []F
 	actions := make([]FixAction, 0, len(broken))
 	for _, link := range broken {
 		action := FixAction{Kind: FixPrune, Link: link}
-		if item, ok := findLinkFixMatch(link, libraryItems); ok {
+		// Agents install as rendered copies, never as links to the canonical
+		// file, so a broken agent link is pruned rather than relinked.
+		if item, ok := findLinkFixMatch(link, libraryItems); ok && item.Type != catalog.Agents {
 			sourcePath := SourcePathFor(item)
 			if _, err := os.Stat(sourcePath); err == nil {
 				action.Kind = FixRelink

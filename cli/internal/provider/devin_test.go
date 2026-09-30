@@ -131,8 +131,8 @@ func TestDevinAgentsSupport(t *testing.T) {
 			t.Errorf("Devin.DiscoveryPaths(Agents)[%d] = %q, want %q", i, paths[i], want[i])
 		}
 	}
-	if !Devin.SymlinkSupport[catalog.Agents] {
-		t.Error("Devin.SymlinkSupport[Agents] = false, want true")
+	if supported, ok := Devin.SymlinkSupport[catalog.Agents]; !ok || supported {
+		t.Error("Devin.SymlinkSupport[Agents] should be present and false: agents install as rendered copies")
 	}
 	if got := Devin.FileFormat(catalog.Agents); got != FormatMarkdown {
 		t.Errorf("Devin.FileFormat(Agents) = %q, want %q", got, FormatMarkdown)
