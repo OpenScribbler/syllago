@@ -111,7 +111,7 @@ func contributingContent(name string) string {
 	b.WriteString("    README.md         # Required.\n")
 	b.WriteString("    .syllago.yaml     # Optional metadata.\n")
 	b.WriteString("```\n\n")
-	b.WriteString("Supported provider slugs: `claude-code`, `cursor`, `copilot`, `windsurf`, `zed`, `aider`, `continue`, `gemini-cli`, `amp`.\n\n")
+	b.WriteString("Supported provider slugs: `claude-code`, `cursor`, `copilot`, `devin`, `zed`, `aider`, `continue`, `gemini-cli`, `amp`.\n\n")
 	b.WriteString("## Naming Conventions\n\n")
 	b.WriteString("- Use lowercase letters, numbers, hyphens, and underscores only.\n")
 	b.WriteString("- No spaces, dots, or special characters.\n")

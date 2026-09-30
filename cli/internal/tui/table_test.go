@@ -37,7 +37,7 @@ func TestProviderAbbrev_KnownSlugs(t *testing.T) {
 		"gemini-cli":  "GC",
 		"cursor":      "Cu",
 		"copilot":     "Co",
-		"windsurf":    "WS",
+		"devin":       "WS",
 		"kiro":        "Ki",
 		"cline":       "Cl",
 		"roo-code":    "RC",
@@ -68,7 +68,7 @@ func TestProviderAbbrev_UnknownSlug(t *testing.T) {
 func TestAbbrevToSlug_RoundTrip(t *testing.T) {
 	t.Parallel()
 	slugs := []string{
-		"claude-code", "gemini-cli", "cursor", "copilot", "windsurf",
+		"claude-code", "gemini-cli", "cursor", "copilot", "devin",
 		"kiro", "cline", "roo-code", "amp", "opencode", "zed",
 	}
 	for _, slug := range slugs {
@@ -94,7 +94,7 @@ func TestProviderFullName_KnownSlugs(t *testing.T) {
 		"gemini-cli":  "Gemini CLI",
 		"cursor":      "Cursor",
 		"copilot":     "Copilot",
-		"windsurf":    "Windsurf",
+		"devin":       "Devin Desktop",
 		"kiro":        "Kiro",
 		"cline":       "Cline",
 		"roo-code":    "Roo Code",

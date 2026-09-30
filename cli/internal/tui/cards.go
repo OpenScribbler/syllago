@@ -431,8 +431,8 @@ func providerFullName(slug string) string {
 		return "Cursor"
 	case "copilot":
 		return "Copilot"
-	case "windsurf":
-		return "Windsurf"
+	case "devin":
+		return "Devin Desktop"
 	case "kiro":
 		return "Kiro"
 	case "cline":

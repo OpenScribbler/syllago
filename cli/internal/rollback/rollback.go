@@ -225,6 +225,7 @@ func rollbackPlacementWarning(pl installstore.Placement, err error) string {
 }
 
 func findProviderBySlug(slug string) *provider.Provider {
+	slug = provider.CanonicalSlug(slug)
 	for i := range provider.AllProviders {
 		if provider.AllProviders[i].Slug == slug {
 			return &provider.AllProviders[i]

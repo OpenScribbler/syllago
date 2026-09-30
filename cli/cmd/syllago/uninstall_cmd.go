@@ -59,6 +59,7 @@ func init() {
 func runUninstall(cmd *cobra.Command, args []string) error {
 	name := args[0]
 	fromSlug, _ := cmd.Flags().GetString("from")
+	fromSlug = provider.CanonicalSlug(fromSlug)
 	force, _ := cmd.Flags().GetBool("force")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	noInput, _ := cmd.Flags().GetBool("no-input")

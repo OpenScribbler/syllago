@@ -458,9 +458,9 @@ func TestCodexNamedArgsPreservedInBody(t *testing.T) {
 	assertContains(t, string(result2.Content), "$ISSUE_NUMBER")
 }
 
-// --- Windsurf commands ---
+// --- Devin commands ---
 
-func TestRenderWindsurfCommand(t *testing.T) {
+func TestRenderDevinCommand(t *testing.T) {
 	input := []byte("---\nname: review\ndescription: Review code changes\nallowed-tools:\n  - Read\n  - Grep\ncontext: fork\nagent: Explore\nmodel: opus\neffort: high\n---\n\nReview the staged changes and provide feedback.\n")
 
 	conv := &CommandsConverter{}
@@ -469,7 +469,7 @@ func TestRenderWindsurfCommand(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -492,7 +492,7 @@ func TestRenderWindsurfCommand(t *testing.T) {
 	assertContains(t, result.Filename, "review.md")
 }
 
-func TestRenderWindsurfCommandArgWarning(t *testing.T) {
+func TestRenderDevinCommandArgWarning(t *testing.T) {
 	input := []byte("---\nname: greet\n---\n\nGreet $ARGUMENTS warmly.\n")
 
 	conv := &CommandsConverter{}
@@ -501,18 +501,18 @@ func TestRenderWindsurfCommandArgWarning(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
 
 	if len(result.Warnings) == 0 {
-		t.Fatal("expected warning about $ARGUMENTS in Windsurf")
+		t.Fatal("expected warning about $ARGUMENTS in Devin")
 	}
-	assertContains(t, result.Warnings[0], "Windsurf workflows do not support argument placeholders")
+	assertContains(t, result.Warnings[0], "Devin workflows do not support argument placeholders")
 }
 
-func TestRenderWindsurfCommandNoName(t *testing.T) {
+func TestRenderDevinCommandNoName(t *testing.T) {
 	input := []byte("---\ndescription: A workflow\n---\n\nDo the thing.\n")
 
 	conv := &CommandsConverter{}
@@ -521,7 +521,7 @@ func TestRenderWindsurfCommandNoName(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}

@@ -25,7 +25,7 @@ const (
 	// gemini-cli, factory-droid.
 	hookStorageSharedJSON hookStorageModel = iota
 	// hookStorageDedicatedFile is a whole file that holds only hooks and can
-	// be written verbatim. windsurf.
+	// be written verbatim. devin.
 	hookStorageDedicatedFile
 	// hookStorageDirectory is a syllago-owned file inside a provider directory.
 	// The parent directory may contain user files, so only the owned file is
@@ -44,14 +44,14 @@ func hookStorageModelFor(slug string) (hookStorageModel, error) {
 		return hookStorageSharedJSON, nil
 	case "copilot-cli", "kiro", "pi":
 		return hookStorageDirectory, nil
-	case "windsurf":
-		// Deferred: windsurf's adapter fans one before_tool_execute hook out to
+	case "devin":
+		// Deferred: devin's adapter fans one before_tool_execute hook out to
 		// four split-events and only merges them back on decode when each has
-		// exactly one entry. A second windsurf hook breaks that precondition, so
+		// exactly one entry. A second devin hook breaks that precondition, so
 		// a hook's post-round-trip identity is not stable across installs —
 		// uninstall/status/orphans can't reliably match it. Needs a stable
 		// per-entry identity (a syllago marker), which is Phase 1b work.
-		return 0, fmt.Errorf("hook install for windsurf is not yet supported (split-event fan-out needs a stable per-entry identity)")
+		return 0, fmt.Errorf("hook install for devin is not yet supported (split-event fan-out needs a stable per-entry identity)")
 	default:
 		return 0, fmt.Errorf("hook install not supported for %s", slug)
 	}
@@ -73,10 +73,10 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 		return filepath.Join(base, ".config", "crush", "crush.json"), nil
 	case "claude-code", "cursor", "gemini-cli", "factory-droid":
 		return filepath.Join(base, prov.ConfigDir, "settings.json"), nil
-	case "windsurf":
+	case "devin":
 		// Deferred to Phase 1b — see hookStorageModelFor for why. The Phase 1b
 		// path will be base/.windsurf/hooks.json (dedicated file).
-		return "", fmt.Errorf("hook install for windsurf is not yet supported (split-event fan-out needs a stable per-entry identity)")
+		return "", fmt.Errorf("hook install for devin is not yet supported (split-event fan-out needs a stable per-entry identity)")
 	case "copilot-cli":
 		return filepath.Join(base, ".copilot", "hooks", "syllago-hooks.json"), nil
 	case "kiro":
@@ -144,7 +144,7 @@ func canonicalizeEvent(event, slug string) string {
 }
 
 // nativeEventFor returns the provider-native event key for tracking/dedup. When
-// the canonical event has no direct mapping for the provider (e.g. windsurf,
+// the canonical event has no direct mapping for the provider (e.g. devin,
 // whose adapter synthesizes split events), the canonical name is used as-is;
 // install/uninstall/status all compute it the same way, so lookups stay
 // consistent.
@@ -158,11 +158,11 @@ func nativeEventFor(canonEvent, slug string) string {
 // adapterSupportsEvent reports whether the provider's adapter can represent a
 // canonical event. Adapter capabilities are the canonical source of
 // truth for event support; this is broader than ProviderSupportsHookEvent
-// because it also recognizes providers (windsurf) whose adapter fans a single
+// because it also recognizes providers (devin) whose adapter fans a single
 // canonical event out to several provider-native split events.
 //
 // KNOWN, INTENTIONAL ASYMMETRY: direct `syllago install` gates hook events with
-// this adapter-capability check, so e.g. a windsurf before_tool_execute hook
+// this adapter-capability check, so e.g. a devin before_tool_execute hook
 // installs. Loadout Preview still gates with converter.ProviderSupportsHookEvent
 // (which does not see split-event support), so the same hook is reported
 // skip-unsupported inside a loadout. This is a UX inconsistency, not dead config
@@ -179,7 +179,7 @@ func adapterSupportsEvent(adapter converter.HookAdapter, canonEvent string) bool
 
 // hookIdentity hashes a hook's post-round-trip canonical identity
 // (event|matcher|command|name). Computed on the decoded form so it is stable
-// across lossy adapter transforms (e.g. windsurf wrapping a non-blocking
+// across lossy adapter transforms (e.g. devin wrapping a non-blocking
 // command in `(cmd) || true`) and across whole-file re-serialization when other
 // hooks are added or removed.
 func hookIdentity(h converter.CanonicalHook) string {

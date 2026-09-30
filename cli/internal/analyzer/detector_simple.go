@@ -31,21 +31,21 @@ func classifySimple(path, repoRoot, provider string, ct catalog.ContentType, con
 	}}, nil
 }
 
-// --- Windsurf ---
+// --- Devin ---
 
-// WindsurfDetector detects Windsurf content.
-type WindsurfDetector struct{}
+// DevinDetector detects Devin content.
+type DevinDetector struct{}
 
-func (d *WindsurfDetector) ProviderSlug() string { return "windsurf" }
+func (d *DevinDetector) ProviderSlug() string { return "devin" }
 
-func (d *WindsurfDetector) Patterns() []DetectionPattern {
+func (d *DevinDetector) Patterns() []DetectionPattern {
 	return []DetectionPattern{
 		{Glob: ".windsurfrules", ContentType: catalog.Rules, Confidence: 0.95},
 	}
 }
 
-func (d *WindsurfDetector) Classify(path string, repoRoot string) ([]*DetectedItem, error) {
-	return classifySimple(path, repoRoot, "windsurf", catalog.Rules, 0.95)
+func (d *DevinDetector) Classify(path string, repoRoot string) ([]*DetectedItem, error) {
+	return classifySimple(path, repoRoot, "devin", catalog.Rules, 0.95)
 }
 
 // --- Cline ---

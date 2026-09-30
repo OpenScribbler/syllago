@@ -312,7 +312,7 @@ var hookEventCategory = map[string]string{
 	"before_tool_selection": "model",
 	"task_resume":           "lifecycle",
 	"task_cancel":           "lifecycle",
-	// Events added for multi-provider coverage (kiro, cursor, windsurf, pi, opencode)
+	// Events added for multi-provider coverage (kiro, cursor, devin, pi, opencode)
 	"tool_use_failure":  "tool",
 	"file_changed":      "workspace",
 	"file_created":      "workspace",

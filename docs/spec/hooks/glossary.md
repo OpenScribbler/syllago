@@ -71,7 +71,7 @@ An AI coding tool that implements a hook system. Each provider is identified by 
 An opaque JSON object on a hook definition, keyed by provider slug, that holds provider-specific configuration with no canonical equivalent. Provider data is preserved during round-trip conversion and rendered only for the matching target provider.
 
 **provider slug**
-A unique string identifier for a provider. The canonical slugs are: `claude-code`, `gemini-cli`, `cursor`, `windsurf`, `vs-code-copilot`, `copilot-cli`, `kiro`, `opencode`.
+A unique string identifier for a provider. The canonical slugs are: `claude-code`, `gemini-cli`, `cursor`, `devin`, `vs-code-copilot`, `copilot-cli`, `kiro`, `opencode`.
 
 **provider-exclusive event**
 An event that exists in only one or two providers. Included in the event registry for lossless round-tripping but expected to be dropped or degraded during cross-provider conversion.
@@ -86,7 +86,7 @@ The process of decoding a hook from provider P into canonical format and encodin
 Two hook manifests are structurally equivalent when they have the same number of hooks, the same canonical event names, the same handler types, the same command strings, and the same matcher semantics. Field ordering, whitespace, and non-normative fields (such as `_comment`) are not significant for structural equivalence.
 
 **split-event provider**
-A provider that maps the canonical `before_tool_execute` event to multiple category-specific native events based on tool type. Cursor and Windsurf are split-event providers.
+A provider that maps the canonical `before_tool_execute` event to multiple category-specific native events based on tool type. Cursor and Devin Desktop are split-event providers.
 
 **tool vocabulary**
 The set of canonical tool names that abstract over provider-specific naming. Used in bare string matchers. Examples: `shell`, `file_read`, `file_write`, `file_edit`, `search`, `find`.

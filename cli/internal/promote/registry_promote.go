@@ -155,43 +155,47 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 		return nil // can't parse manifest — skip G4 check (G1 already passed)
 	}
 
-	// Determine target registry visibility.
+	// Determine target registry visibility from the merged global and
+	// project config, since registering a registry writes the global one.
 	targetVis := registry.VisibilityUnknown
-	cfg, err := config.Load(repoRoot)
-	if err == nil {
-		for _, r := range cfg.Registries {
-			if r.Name == registryName {
-				targetVis = r.Visibility
-				break
-			}
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(repoRoot)
+	for _, r := range config.Merge(globalCfg, projectCfg).Registries {
+		if r.Name == registryName {
+			targetVis = r.Visibility
+			break
 		}
 	}
 	if registry.IsPrivate(targetVis) {
 		return nil // publishing to private registry is always fine
 	}
 
-	// Resolve referenced items to catalog entries and check their taint.
+	// Resolve referenced items through a scan of the library, so every
+	// storage layout (directory or single-file items, provider directories
+	// under retired slugs) contributes the metadata the scanner attaches.
+	// A reference matches the item under any provider, because resolution
+	// falls back to the loadout's source provider and a privacy gate must
+	// err toward finding the private copy.
 	globalDir := catalog.GlobalContentDir()
+	var lib []catalog.ContentItem
+	if _, statErr := os.Stat(globalDir); statErr == nil {
+		libCat, scanErr := catalog.Scan(globalDir, globalDir)
+		if scanErr != nil {
+			return fmt.Errorf("scanning library to check loadout privacy: %w", scanErr)
+		}
+		lib = libCat.Items
+	}
 	var items []catalog.ContentItem
 	for ct, refs := range m.RefsByType() {
 		for _, ref := range refs {
-			itemDir := resolveItemDir(globalDir, ct, m.Provider, ref.Name)
-			meta, _ := metadata.Load(itemDir)
-			items = append(items, catalog.ContentItem{
-				Name: ref.Name,
-				Type: ct,
-				Meta: meta,
-			})
+			for _, it := range lib {
+				if it.Type != ct || it.Name != ref.Name {
+					continue
+				}
+				items = append(items, it)
+			}
 		}
 	}
 
 	return loadout.CheckLoadoutPublishGate(items, targetVis)
-}
-
-// resolveItemDir returns the library directory for an item.
-func resolveItemDir(globalDir string, ct catalog.ContentType, provider, name string) string {
-	if ct.IsUniversal() {
-		return filepath.Join(globalDir, string(ct), name)
-	}
-	return filepath.Join(globalDir, string(ct), provider, name)
 }

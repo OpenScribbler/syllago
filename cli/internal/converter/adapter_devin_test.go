@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestWindsurfAdapterDecode_Simple(t *testing.T) {
+func TestDevinAdapterDecode_Simple(t *testing.T) {
 	input := []byte(`{"hooks": {"pre_run_command": [{"command": "echo pre-run"}], "post_run_command": [{"command": "echo post-run"}]}}`)
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	hooks, err := adapter.Decode(input)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
@@ -55,7 +55,7 @@ func TestWindsurfAdapterDecode_Simple(t *testing.T) {
 	}
 }
 
-func TestWindsurfAdapterEncode_ShellMatcher(t *testing.T) {
+func TestDevinAdapterEncode_ShellMatcher(t *testing.T) {
 	matcherJSON, _ := json.Marshal("shell")
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -69,7 +69,7 @@ func TestWindsurfAdapterEncode_ShellMatcher(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -84,7 +84,7 @@ func TestWindsurfAdapterEncode_ShellMatcher(t *testing.T) {
 	assertContains(t, out, "echo check")
 }
 
-func TestWindsurfAdapterEncode_WildcardExpands(t *testing.T) {
+func TestDevinAdapterEncode_WildcardExpands(t *testing.T) {
 	// nil matcher → all 4 pre-events
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -97,7 +97,7 @@ func TestWindsurfAdapterEncode_WildcardExpands(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -110,7 +110,7 @@ func TestWindsurfAdapterEncode_WildcardExpands(t *testing.T) {
 	assertContains(t, out, "pre_mcp_tool_use")
 }
 
-func TestWindsurfAdapterDecode_WildcardMerges(t *testing.T) {
+func TestDevinAdapterDecode_WildcardMerges(t *testing.T) {
 	// All 4 pre-events with identical command → merged into 1 hook with nil matcher
 	input := []byte(`{
 		"hooks": {
@@ -121,7 +121,7 @@ func TestWindsurfAdapterDecode_WildcardMerges(t *testing.T) {
 		}
 	}`)
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	hooks, err := adapter.Decode(input)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
@@ -141,12 +141,12 @@ func TestWindsurfAdapterDecode_WildcardMerges(t *testing.T) {
 		t.Error("merged pre-hook should be blocking")
 	}
 	// Should have provider_data marking wildcard origin
-	if h.ProviderData == nil || h.ProviderData["windsurf"] == nil {
-		t.Fatal("expected provider_data[\"windsurf\"] with expanded_from")
+	if h.ProviderData == nil || h.ProviderData["devin"] == nil {
+		t.Fatal("expected provider_data[\"devin\"] with expanded_from")
 	}
 }
 
-func TestWindsurfAdapterDecode_PartialWildcardNotMerged(t *testing.T) {
+func TestDevinAdapterDecode_PartialWildcardNotMerged(t *testing.T) {
 	// Only 2 of 4 pre-events → NOT merged, stays as 2 separate hooks
 	input := []byte(`{
 		"hooks": {
@@ -155,7 +155,7 @@ func TestWindsurfAdapterDecode_PartialWildcardNotMerged(t *testing.T) {
 		}
 	}`)
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	hooks, err := adapter.Decode(input)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
@@ -173,7 +173,7 @@ func TestWindsurfAdapterDecode_PartialWildcardNotMerged(t *testing.T) {
 	}
 }
 
-func TestWindsurfAdapterEncode_TimeoutDroppedWithWarning(t *testing.T) {
+func TestDevinAdapterEncode_TimeoutDroppedWithWarning(t *testing.T) {
 	matcherJSON, _ := json.Marshal("shell")
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -187,7 +187,7 @@ func TestWindsurfAdapterEncode_TimeoutDroppedWithWarning(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -209,7 +209,7 @@ func TestWindsurfAdapterEncode_TimeoutDroppedWithWarning(t *testing.T) {
 	assertNotContains(t, string(encoded.Content), "timeout")
 }
 
-func TestWindsurfAdapterEncode_BlockingFalseWrapped(t *testing.T) {
+func TestDevinAdapterEncode_BlockingFalseWrapped(t *testing.T) {
 	matcherJSON, _ := json.Marshal("shell")
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -223,7 +223,7 @@ func TestWindsurfAdapterEncode_BlockingFalseWrapped(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -233,7 +233,7 @@ func TestWindsurfAdapterEncode_BlockingFalseWrapped(t *testing.T) {
 	assertContains(t, out, "|| true")
 }
 
-func TestWindsurfAdapterEncode_DirectMappedEvents(t *testing.T) {
+func TestDevinAdapterEncode_DirectMappedEvents(t *testing.T) {
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
 		Hooks: []CanonicalHook{
@@ -248,7 +248,7 @@ func TestWindsurfAdapterEncode_DirectMappedEvents(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -259,7 +259,7 @@ func TestWindsurfAdapterEncode_DirectMappedEvents(t *testing.T) {
 	assertContains(t, out, "pre_user_prompt")
 }
 
-func TestWindsurfAdapterEncode_CWDPreserved(t *testing.T) {
+func TestDevinAdapterEncode_CWDPreserved(t *testing.T) {
 	matcherJSON, _ := json.Marshal("shell")
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -273,7 +273,7 @@ func TestWindsurfAdapterEncode_CWDPreserved(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(hooks)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -284,7 +284,7 @@ func TestWindsurfAdapterEncode_CWDPreserved(t *testing.T) {
 	assertContains(t, out, "./scripts")
 }
 
-func TestWindsurfAdapterRoundTrip(t *testing.T) {
+func TestDevinAdapterRoundTrip(t *testing.T) {
 	matcherJSON, _ := json.Marshal("shell")
 	original := &CanonicalHooks{
 		Spec: SpecVersion,
@@ -298,7 +298,7 @@ func TestWindsurfAdapterRoundTrip(t *testing.T) {
 		},
 	}
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	encoded, err := adapter.Encode(original)
 	if err != nil {
 		t.Fatalf("Encode: %v", err)
@@ -310,32 +310,32 @@ func TestWindsurfAdapterRoundTrip(t *testing.T) {
 	}
 }
 
-func TestWindsurfAdapterCapabilities(t *testing.T) {
-	caps := AdapterFor("windsurf").Capabilities()
+func TestDevinAdapterCapabilities(t *testing.T) {
+	caps := AdapterFor("devin").Capabilities()
 	if !caps.SupportsMatchers {
-		t.Error("Windsurf should support matchers (via split-events)")
+		t.Error("Devin should support matchers (via split-events)")
 	}
 	if !caps.SupportsBlocking {
-		t.Error("Windsurf should support blocking")
+		t.Error("Devin should support blocking")
 	}
 	if !caps.SupportsCWD {
-		t.Error("Windsurf should support CWD")
+		t.Error("Devin should support CWD")
 	}
 	if caps.SupportsLLMHooks {
-		t.Error("Windsurf should not support LLM hooks")
+		t.Error("Devin should not support LLM hooks")
 	}
 	if caps.SupportsHTTPHooks {
-		t.Error("Windsurf should not support HTTP hooks")
+		t.Error("Devin should not support HTTP hooks")
 	}
 	if caps.TimeoutUnit != "" {
-		t.Errorf("Windsurf TimeoutUnit should be empty, got %q", caps.TimeoutUnit)
+		t.Errorf("Devin TimeoutUnit should be empty, got %q", caps.TimeoutUnit)
 	}
 }
 
-func TestWindsurfAdapterDecode_ShowOutputPreserved(t *testing.T) {
+func TestDevinAdapterDecode_ShowOutputPreserved(t *testing.T) {
 	input := []byte(`{"hooks": {"pre_run_command": [{"command": "echo check", "show_output": true}]}}`)
 
-	adapter := AdapterFor("windsurf")
+	adapter := AdapterFor("devin")
 	hooks, err := adapter.Decode(input)
 	if err != nil {
 		t.Fatalf("Decode: %v", err)
@@ -347,12 +347,12 @@ func TestWindsurfAdapterDecode_ShowOutputPreserved(t *testing.T) {
 	h := hooks.Hooks[0]
 
 	// show_output should be in provider_data
-	if h.ProviderData == nil || h.ProviderData["windsurf"] == nil {
-		t.Fatal("expected provider_data[\"windsurf\"] with show_output")
+	if h.ProviderData == nil || h.ProviderData["devin"] == nil {
+		t.Fatal("expected provider_data[\"devin\"] with show_output")
 	}
-	wsData, ok := h.ProviderData["windsurf"].(map[string]any)
+	wsData, ok := h.ProviderData["devin"].(map[string]any)
 	if !ok {
-		t.Fatalf("expected map[string]any, got %T", h.ProviderData["windsurf"])
+		t.Fatalf("expected map[string]any, got %T", h.ProviderData["devin"])
 	}
 	if wsData["show_output"] != true {
 		t.Errorf("expected show_output true, got %v", wsData["show_output"])

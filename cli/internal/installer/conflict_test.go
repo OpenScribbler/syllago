@@ -73,15 +73,15 @@ func TestDetectConflicts_SingleConflict(t *testing.T) {
 	}
 }
 
-// TestDetectConflicts_MultipleReaders: Codex installs, Gemini + Windsurf both read.
+// TestDetectConflicts_MultipleReaders: Codex installs, Gemini + Devin both read.
 // Should be one Conflict with two entries in AlsoReadBy.
 func TestDetectConflicts_MultipleReaders(t *testing.T) {
 	t.Parallel()
 	codex := stubInstaller("codex", agentsSkills())
 	gemini := stubReader("gemini-cli", filepath.Join(home, ".gemini", "skills"), agentsSkills())
-	windsurf := stubReader("windsurf", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
+	devin := stubReader("devin", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
 
-	conflicts := DetectConflicts([]provider.Provider{codex, gemini, windsurf}, catalog.Skills, home)
+	conflicts := DetectConflicts([]provider.Provider{codex, gemini, devin}, catalog.Skills, home)
 
 	if len(conflicts) != 1 {
 		t.Fatalf("expected 1 conflict, got %d", len(conflicts))
@@ -153,16 +153,16 @@ func TestApplyConflictResolution_SharedOnly(t *testing.T) {
 	t.Parallel()
 	codex := stubInstaller("codex", agentsSkills())
 	gemini := stubReader("gemini-cli", filepath.Join(home, ".gemini", "skills"), agentsSkills())
-	windsurf := stubReader("windsurf", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
+	devin := stubReader("devin", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
 	claudeCode := stubInstaller("claude-code", filepath.Join(home, ".claude", "skills"))
 
-	allProviders := []provider.Provider{codex, gemini, windsurf, claudeCode}
+	allProviders := []provider.Provider{codex, gemini, devin, claudeCode}
 	conflicts := DetectConflicts(allProviders, catalog.Skills, home)
 
 	result := ApplyConflictResolution(allProviders, conflicts, ResolutionSharedOnly)
 
 	got := slugs(result)
-	// Codex (installer) and ClaudeCode (not in conflict) stay; Gemini + Windsurf (readers) removed.
+	// Codex (installer) and ClaudeCode (not in conflict) stay; Gemini + Devin (readers) removed.
 	if !containsSlug(got, "codex") {
 		t.Errorf("SharedOnly: expected codex to be kept, got %v", got)
 	}
@@ -172,8 +172,8 @@ func TestApplyConflictResolution_SharedOnly(t *testing.T) {
 	if containsSlug(got, "gemini-cli") {
 		t.Errorf("SharedOnly: expected gemini-cli to be removed (reads shared path), got %v", got)
 	}
-	if containsSlug(got, "windsurf") {
-		t.Errorf("SharedOnly: expected windsurf to be removed (reads shared path), got %v", got)
+	if containsSlug(got, "devin") {
+		t.Errorf("SharedOnly: expected devin to be removed (reads shared path), got %v", got)
 	}
 }
 
@@ -183,10 +183,10 @@ func TestApplyConflictResolution_OwnDirsOnly(t *testing.T) {
 	t.Parallel()
 	codex := stubInstaller("codex", agentsSkills())
 	gemini := stubReader("gemini-cli", filepath.Join(home, ".gemini", "skills"), agentsSkills())
-	windsurf := stubReader("windsurf", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
+	devin := stubReader("devin", filepath.Join(home, ".codeium", "windsurf", "skills"), agentsSkills())
 	claudeCode := stubInstaller("claude-code", filepath.Join(home, ".claude", "skills"))
 
-	allProviders := []provider.Provider{codex, gemini, windsurf, claudeCode}
+	allProviders := []provider.Provider{codex, gemini, devin, claudeCode}
 	conflicts := DetectConflicts(allProviders, catalog.Skills, home)
 
 	result := ApplyConflictResolution(allProviders, conflicts, ResolutionOwnDirsOnly)
@@ -198,8 +198,8 @@ func TestApplyConflictResolution_OwnDirsOnly(t *testing.T) {
 	if !containsSlug(got, "gemini-cli") {
 		t.Errorf("OwnDirsOnly: expected gemini-cli to be kept, got %v", got)
 	}
-	if !containsSlug(got, "windsurf") {
-		t.Errorf("OwnDirsOnly: expected windsurf to be kept, got %v", got)
+	if !containsSlug(got, "devin") {
+		t.Errorf("OwnDirsOnly: expected devin to be kept, got %v", got)
 	}
 	if !containsSlug(got, "claude-code") {
 		t.Errorf("OwnDirsOnly: expected claude-code to be kept, got %v", got)

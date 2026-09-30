@@ -10,14 +10,14 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
-// TestWindsurfDetect: Windsurf is an Electron IDE. ~/.codeium/windsurf/ is
+// TestDevinDetect: Devin is an Electron IDE. ~/.codeium/windsurf/ is
 // shared with syllago install paths (skills/, global_workflows/), so trust
 // the windsurf binary on PATH or the Electron app-data dir.
-func TestWindsurfDetect(t *testing.T) {
+func TestDevinDetect(t *testing.T) {
 	t.Run("empty home + no binary", func(t *testing.T) {
 		home := t.TempDir()
 		scrubPATH(t)
-		if Windsurf.Detect(home) {
+		if Devin.Detect(home) {
 			t.Error("expected false on empty home with no windsurf binary")
 		}
 	})
@@ -28,7 +28,7 @@ func TestWindsurfDetect(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(home, ".codeium", "windsurf", "skills"), 0755); err != nil {
 			t.Fatal(err)
 		}
-		if Windsurf.Detect(home) {
+		if Devin.Detect(home) {
 			t.Error("expected false when ~/.codeium/windsurf/ contains only syllago content (regression for syllago-a6ibm)")
 		}
 	})
@@ -36,7 +36,7 @@ func TestWindsurfDetect(t *testing.T) {
 	t.Run("binary on PATH", func(t *testing.T) {
 		home := t.TempDir()
 		makeFakeBinary(t, "windsurf")
-		if !Windsurf.Detect(home) {
+		if !Devin.Detect(home) {
 			t.Error("expected true when windsurf binary is on PATH")
 		}
 	})
@@ -50,37 +50,37 @@ func TestWindsurfDetect(t *testing.T) {
 		if err := os.MkdirAll(appDataDir(home, "Windsurf"), 0755); err != nil {
 			t.Fatal(err)
 		}
-		if !Windsurf.Detect(home) {
+		if !Devin.Detect(home) {
 			t.Errorf("expected true when %s exists", appDataDir(home, "Windsurf"))
 		}
 	})
 }
 
-func TestWindsurfSupportsTypes(t *testing.T) {
+func TestDevinSupportsTypes(t *testing.T) {
 	t.Parallel()
 	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands} {
-		if !Windsurf.SupportsType(ct) {
-			t.Errorf("Windsurf.SupportsType(%s) = false, want true", ct)
+		if !Devin.SupportsType(ct) {
+			t.Errorf("Devin.SupportsType(%s) = false, want true", ct)
 		}
 	}
 	for _, ct := range []catalog.ContentType{catalog.Agents, catalog.Loadouts} {
-		if Windsurf.SupportsType(ct) {
-			t.Errorf("Windsurf.SupportsType(%s) = true, want false", ct)
+		if Devin.SupportsType(ct) {
+			t.Errorf("Devin.SupportsType(%s) = true, want false", ct)
 		}
 	}
 }
 
-func TestWindsurfCommandsSupport(t *testing.T) {
+func TestDevinCommandsSupport(t *testing.T) {
 	t.Parallel()
 
 	home := "/home/testuser"
-	installDir := Windsurf.InstallDir(home, catalog.Commands)
+	installDir := Devin.InstallDir(home, catalog.Commands)
 	wantInstall := filepath.Join(home, ".codeium", "windsurf", "global_workflows")
 	if installDir != wantInstall {
-		t.Errorf("Windsurf.InstallDir(Commands) = %q, want %q", installDir, wantInstall)
+		t.Errorf("Devin.InstallDir(Commands) = %q, want %q", installDir, wantInstall)
 	}
 
-	paths := Windsurf.DiscoveryPaths("/tmp/project", catalog.Commands)
+	paths := Devin.DiscoveryPaths("/tmp/project", catalog.Commands)
 	if len(paths) == 0 {
 		t.Fatal("expected at least one discovery path for Commands")
 	}
@@ -94,18 +94,18 @@ func TestWindsurfCommandsSupport(t *testing.T) {
 		t.Errorf("expected project discovery path ending in .windsurf/workflows, got: %v", paths)
 	}
 
-	if got := Windsurf.FileFormat(catalog.Commands); got != FormatMarkdown {
-		t.Errorf("Windsurf.FileFormat(Commands) = %q, want %q", got, FormatMarkdown)
+	if got := Devin.FileFormat(catalog.Commands); got != FormatMarkdown {
+		t.Errorf("Devin.FileFormat(Commands) = %q, want %q", got, FormatMarkdown)
 	}
 
-	if !Windsurf.SymlinkSupport[catalog.Commands] {
-		t.Errorf("Windsurf.SymlinkSupport[Commands] = false, want true")
+	if !Devin.SymlinkSupport[catalog.Commands] {
+		t.Errorf("Devin.SymlinkSupport[Commands] = false, want true")
 	}
 }
 
-func TestWindsurfEmitPath(t *testing.T) {
+func TestDevinEmitPath(t *testing.T) {
 	t.Parallel()
-	path := Windsurf.EmitPath("/tmp/project")
+	path := Devin.EmitPath("/tmp/project")
 	if path == "" {
 		t.Fatal("expected non-empty emit path")
 	}

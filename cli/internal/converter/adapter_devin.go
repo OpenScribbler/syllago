@@ -7,23 +7,23 @@ import (
 )
 
 func init() {
-	RegisterAdapter(&WindsurfAdapter{})
+	RegisterAdapter(&DevinAdapter{})
 }
 
-// WindsurfAdapter handles hooks for Windsurf (Codeium).
-// Windsurf uses a split-event model: instead of event+matcher, each tool category
+// DevinAdapter handles hooks for Devin (Codeium).
+// Devin uses a split-event model: instead of event+matcher, each tool category
 // gets its own event name (pre_run_command, pre_read_code, etc.). Encoding fans out
 // canonical before_tool_execute/after_tool_execute hooks into per-tool events;
 // decoding merges them back.
-type WindsurfAdapter struct{}
+type DevinAdapter struct{}
 
-func (a *WindsurfAdapter) ProviderSlug() string { return "windsurf" }
+func (a *DevinAdapter) ProviderSlug() string { return "devin" }
 
-func (a *WindsurfAdapter) FieldsToVerify() []string {
+func (a *DevinAdapter) FieldsToVerify() []string {
 	return []string{VerifyFieldEvent, VerifyFieldMatcher}
 }
 
-// --- Windsurf provider-native structs ---
+// --- Devin provider-native structs ---
 
 type wsHookEntry struct {
 	Command          string `json:"command"`
@@ -37,7 +37,7 @@ type wsHooksFile struct {
 
 // --- Split-event mappings ---
 
-// wsSplitEvents maps canonical matcher values to their Windsurf per-tool event names.
+// wsSplitEvents maps canonical matcher values to their Devin per-tool event names.
 // The bool selects pre (true) or post (false) variants.
 var wsSplitPre = map[string]string{
 	"shell":      "pre_run_command",
@@ -59,7 +59,7 @@ var wsSplitPost = map[string]string{
 var wsAllPre = []string{"pre_run_command", "pre_read_code", "pre_write_code", "pre_mcp_tool_use"}
 var wsAllPost = []string{"post_run_command", "post_read_code", "post_write_code", "post_mcp_tool_use"}
 
-// wsMatcherFromEvent derives a canonical matcher from a Windsurf split-event name.
+// wsMatcherFromEvent derives a canonical matcher from a Devin split-event name.
 func wsMatcherFromEvent(wsEvent string) string {
 	switch wsEvent {
 	case "pre_run_command", "post_run_command":
@@ -90,7 +90,7 @@ func wsIsSplitEvent(wsEvent string) bool {
 	return wsMatcherFromEvent(wsEvent) != ""
 }
 
-// wsEventsForMatcher returns the Windsurf split-event names for a canonical matcher.
+// wsEventsForMatcher returns the Devin split-event names for a canonical matcher.
 func wsEventsForMatcher(matcher json.RawMessage, pre bool) ([]string, error) {
 	splitMap := wsSplitPre
 	allEvents := wsAllPre
@@ -107,7 +107,7 @@ func wsEventsForMatcher(matcher json.RawMessage, pre bool) ([]string, error) {
 	// Try to unmarshal as string
 	var s string
 	if err := json.Unmarshal(matcher, &s); err != nil {
-		return nil, fmt.Errorf("windsurf split-event matcher must be a string, got: %s", string(matcher))
+		return nil, fmt.Errorf("devin split-event matcher must be a string, got: %s", string(matcher))
 	}
 
 	// Known matcher value → specific event
@@ -119,13 +119,13 @@ func wsEventsForMatcher(matcher json.RawMessage, pre bool) ([]string, error) {
 	return allEvents, nil
 }
 
-func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
+func (a *DevinAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 	var warnings []ConversionWarning
 	result := wsHooksFile{Hooks: make(map[string][]wsHookEntry)}
 
 	for _, hook := range hooks.Hooks {
 		// 1. Only command handlers supported
-		_, hWarnings, keep := TranslateHandlerType(hook.Handler, "windsurf", hook.Degradation)
+		_, hWarnings, keep := TranslateHandlerType(hook.Handler, "devin", hook.Degradation)
 		warnings = append(warnings, hWarnings...)
 		if !keep {
 			continue
@@ -135,7 +135,7 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 		if hook.Handler.Timeout > 0 {
 			warnings = append(warnings, ConversionWarning{
 				Severity:    "info",
-				Description: "windsurf does not support hook timeouts; timeout dropped",
+				Description: "devin does not support hook timeouts; timeout dropped",
 			})
 		}
 
@@ -143,7 +143,7 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 		if hook.Degradation != nil {
 			warnings = append(warnings, ConversionWarning{
 				Severity:    "info",
-				Description: "windsurf does not support degradation policies; degradation dropped",
+				Description: "devin does not support degradation policies; degradation dropped",
 			})
 		}
 
@@ -155,7 +155,7 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 
 		// 5. Restore show_output from provider_data
 		if hook.ProviderData != nil {
-			if wsData, ok := hook.ProviderData["windsurf"].(map[string]any); ok {
+			if wsData, ok := hook.ProviderData["devin"].(map[string]any); ok {
 				if so, ok := wsData["show_output"].(bool); ok && so {
 					entry.ShowOutput = true
 				}
@@ -170,14 +170,14 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 				entry.Command = "(" + entry.Command + ") || true"
 				warnings = append(warnings, ConversionWarning{
 					Severity:    "info",
-					Description: "windsurf pre-hooks are blocking by default; non-blocking hook wrapped with || true",
+					Description: "devin pre-hooks are blocking by default; non-blocking hook wrapped with || true",
 				})
 			}
 			events, err := wsEventsForMatcher(hook.Matcher, true)
 			if err != nil {
 				warnings = append(warnings, ConversionWarning{
 					Severity:    "warning",
-					Description: fmt.Sprintf("windsurf split-event: %v; hook skipped", err),
+					Description: fmt.Sprintf("devin split-event: %v; hook skipped", err),
 				})
 				continue
 			}
@@ -190,7 +190,7 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 			if err != nil {
 				warnings = append(warnings, ConversionWarning{
 					Severity:    "warning",
-					Description: fmt.Sprintf("windsurf split-event: %v; hook skipped", err),
+					Description: fmt.Sprintf("devin split-event: %v; hook skipped", err),
 				})
 				continue
 			}
@@ -200,11 +200,11 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 
 		default:
 			// Direct-mapped events (session_start, before_prompt, etc.)
-			nativeEvent, err := TranslateEventToProvider(hook.Event, "windsurf")
+			nativeEvent, err := TranslateEventToProvider(hook.Event, "devin")
 			if err != nil {
 				warnings = append(warnings, ConversionWarning{
 					Severity:    "warning",
-					Description: fmt.Sprintf("hook event %q not supported by windsurf; skipped", hook.Event),
+					Description: fmt.Sprintf("hook event %q not supported by devin; skipped", hook.Event),
 				})
 				continue
 			}
@@ -218,15 +218,15 @@ func (a *WindsurfAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) 
 	}
 	return &EncodedResult{
 		Content:  content,
-		Filename: "windsurf-hooks.json",
+		Filename: "devin-hooks.json",
 		Warnings: warnings,
 	}, nil
 }
 
-func (a *WindsurfAdapter) Decode(content []byte) (*CanonicalHooks, error) {
+func (a *DevinAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 	var file wsHooksFile
 	if err := json.Unmarshal(content, &file); err != nil {
-		return nil, fmt.Errorf("parsing windsurf hooks: %w", err)
+		return nil, fmt.Errorf("parsing devin hooks: %w", err)
 	}
 
 	ch := &CanonicalHooks{Spec: SpecVersion}
@@ -271,13 +271,13 @@ func (a *WindsurfAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 				},
 			}
 
-			// Preserve Windsurf-specific fields in provider_data
+			// Preserve Devin-specific fields in provider_data
 			if entry.ShowOutput || entry.WorkingDirectory != "" {
 				pd := map[string]any{}
 				if entry.ShowOutput {
 					pd["show_output"] = true
 				}
-				hook.ProviderData = map[string]any{"windsurf": pd}
+				hook.ProviderData = map[string]any{"devin": pd}
 			}
 
 			// Determine canonical event and matcher
@@ -296,7 +296,7 @@ func (a *WindsurfAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 				}
 			} else {
 				// Direct-mapped event
-				canonEvent, _ := TranslateEventFromProvider(wsEvent, "windsurf")
+				canonEvent, _ := TranslateEventFromProvider(wsEvent, "devin")
 				hook.Event = canonEvent
 			}
 
@@ -336,13 +336,13 @@ func tryMergeWildcard(hooks map[string][]wsHookEntry, events []string, canonEven
 			Command: cmd,
 		},
 		ProviderData: map[string]any{
-			"windsurf": map[string]any{
+			"devin": map[string]any{
 				"expanded_from": "wildcard",
 			},
 		},
 	}
 }
 
-func (a *WindsurfAdapter) Capabilities() ProviderCapabilities {
+func (a *DevinAdapter) Capabilities() ProviderCapabilities {
 	return providerHookCapabilities[a.ProviderSlug()]
 }

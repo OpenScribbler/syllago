@@ -201,7 +201,7 @@ var infoProvidersCmd = &cobra.Command{
 var infoProviderFormatsDir = filepath.Join("..", "docs", "provider-formats")
 
 func runInfoProvidersSlug(cmd *cobra.Command, args []string) error {
-	slug := args[0]
+	slug := provider.CanonicalSlug(args[0])
 
 	providers, trackingIssues, err := loadProviderFormatsDir(infoProviderFormatsDir)
 	if err != nil {
@@ -248,7 +248,7 @@ var infoFormatsCmd = &cobra.Command{
 			Providers []string `json:"providers"`
 		}
 		formats := []formatInfo{
-			{Format: "Markdown", Extension: ".md", Providers: []string{"claude-code", "windsurf", "codex", "gemini-cli"}},
+			{Format: "Markdown", Extension: ".md", Providers: []string{"claude-code", "devin", "codex", "gemini-cli"}},
 			{Format: "Cursor MDC", Extension: ".mdc", Providers: []string{"cursor"}},
 			{Format: "JSON", Extension: ".json", Providers: []string{"claude-code", "cursor"}},
 		}

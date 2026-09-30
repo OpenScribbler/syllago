@@ -39,7 +39,7 @@ Hook produces JSON output with fields beyond simple exit codes.
 | gemini-cli | `decision`, `systemMessage`, `hookSpecificOutput` | |
 | copilot-cli | `permissionDecision` only | Minimal |
 | cursor | `permission`, `userMessage`, `agentMessage` | |
-| windsurf | Not supported | Exit codes only |
+| devin    | Not supported | Exit codes only |
 | kiro | Undocumented | |
 | opencode | N/A (in-process) | Programmatic model; blocking works via thrown JavaScript exceptions rather than exit codes or structured output fields |
 | factory-droid | Same schema as codex: `continue`, `decision`, `suppressOutput`, `systemMessage`, `hookSpecificOutput`, `permissionDecision`, `additionalContext` | Closely aligned with claude-code |
@@ -167,7 +167,7 @@ Explicit working directory for hook execution.
 
 | Provider | Mechanism |
 |----------|-----------|
-| windsurf | `working_directory` field |
+| devin    | `working_directory` field |
 | copilot-cli | `cwd` field |
 | vs-code-copilot | `cwd` field |
 | All others | Not configurable (implementation-defined default) |
@@ -227,7 +227,7 @@ When the `degradation` field is absent or does not specify a strategy for a give
 The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `capmon generate` to refresh.
 
 <!-- GENERATED FROM provider-capabilities/*.yaml -->
-| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | devin    | zed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 <!-- END GENERATED -->

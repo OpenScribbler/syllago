@@ -113,8 +113,8 @@ func mcpConfigPathImpl(prov provider.Provider, repoRoot string) (string, error) 
 		// (copilot-cli, kiro, opencode, roo-code) and with cursor.go's
 		// DiscoveryPaths, which treats the project file as the primary source.
 		return filepath.Join(repoRoot, ".cursor", "mcp.json"), nil
-	case "windsurf":
-		// Windsurf only documents a global MCP config path; no project-local
+	case "devin":
+		// Devin only documents a global MCP config path; no project-local
 		// alternative exists per https://docs.windsurf.com/windsurf/cascade/mcp.
 		return filepath.Join(home, ".codeium", "windsurf", "mcp_config.json"), nil
 	}

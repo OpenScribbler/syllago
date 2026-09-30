@@ -16,7 +16,7 @@ var configCmd = &cobra.Command{
 	Long:  "Manage provider selection and preferences in .syllago/config.json.",
 	Example: `  syllago config list
   syllago config add cursor
-  syllago config remove windsurf`,
+  syllago config remove devin`,
 }
 
 var configListCmd = &cobra.Command{
@@ -72,7 +72,7 @@ var configAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		slug := args[0]
+		slug := provider.CanonicalSlug(args[0])
 		for _, p := range cfg.Providers {
 			if p == slug {
 				return output.NewStructuredError(output.ErrInputInvalid, fmt.Sprintf("provider %q already configured", slug), "Use 'syllago config list' to see current configuration")
@@ -101,7 +101,7 @@ var configAddCmd = &cobra.Command{
 var configRemoveCmd = &cobra.Command{
 	Use:     "remove <provider-slug>",
 	Short:   "Remove a provider from the configuration",
-	Example: `  syllago config remove windsurf`,
+	Example: `  syllago config remove devin`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		root, err := findProjectRoot()
@@ -112,7 +112,7 @@ var configRemoveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		slug := args[0]
+		slug := provider.CanonicalSlug(args[0])
 		var filtered []string
 		found := false
 		for _, p := range cfg.Providers {

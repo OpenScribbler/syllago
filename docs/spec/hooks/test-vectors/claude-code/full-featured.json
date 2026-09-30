@@ -1,10 +1,10 @@
 {
-  "_comment": "Expected Claude Code output for canonical/full-featured.json. Conversions: (1) before_tool_execute+shell -> PreToolUse with matcher 'Bash'; (2) before_tool_execute+mcp -> PreToolUse with matcher 'mcp__github__create_issue'; (3) session_start -> SessionStart with no matcher. Timeout stays in seconds. platform/cwd/env fields dropped (CC doesn't support — capabilities degrade with warn). provider_data.windsurf dropped (not target provider).",
+  "_comment": "Expected Claude Code output for canonical/full-featured.json. Conversions: (1) before_tool_execute+shell -> PreToolUse with matcher 'Bash'; (2) before_tool_execute+mcp -> PreToolUse with matcher 'mcp__github__create_issue'; (3) session_start -> SessionStart with no matcher. Timeout stays in seconds. platform/cwd/env fields dropped (CC doesn't support — capabilities degrade with warn). provider_data.devin dropped (not target provider).",
   "_warnings": [
     "Hook 1: 'platform' field dropped — Claude Code does not support per-OS command overrides (platform_commands capability, degradation: warn)",
     "Hook 1: 'cwd' field dropped — Claude Code does not support configurable working directory (configurable_cwd capability, degradation: warn)",
     "Hook 1: 'env' field dropped — Claude Code does not support custom environment variables (custom_env capability, degradation: warn)",
-    "Hook 1: provider_data.windsurf ignored — not target provider"
+    "Hook 1: provider_data.devin ignored — not target provider"
   ],
   "hooks": {
     "PreToolUse": [

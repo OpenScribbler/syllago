@@ -32,7 +32,7 @@ type Provider struct {
 
 ## Existing Provider Support Matrix
 
-| Type | Claude Code | Gemini CLI | Cursor | Windsurf | Codex | Copilot CLI |
+| Type | Claude Code | Gemini CLI | Cursor | Devin Desktop | Codex | Copilot CLI |
 |------|:-:|:-:|:-:|:-:|:-:|:-:|
 | Rules | Y | Y | Y | Y | Y | Y |
 | Skills | Y | Y | - | - | - | - |

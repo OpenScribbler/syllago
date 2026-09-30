@@ -34,6 +34,12 @@ type Provider struct {
 	// InstallDir returns the target directory for a given content type.
 	// Returns empty string if the provider doesn't support that content type.
 	InstallDir func(homeDir string, ct catalog.ContentType) string
+	// LegacyInstallDir returns a directory an earlier syllago release
+	// installed this content type into, or "" when there is none. Status and
+	// uninstall fall back to it when nothing sits at the current target, so
+	// items installed before a path move stay manageable. New installs never
+	// use it. Nil means the provider has no legacy paths.
+	LegacyInstallDir func(homeDir string, ct catalog.ContentType) string
 	// Detect returns true if the provider is installed on the system.
 	//
 	// Detect is advisory only. Callers must not use Detect() as a correctness
@@ -87,7 +93,7 @@ var AllProviders = []Provider{
 	ClaudeCode,
 	GeminiCLI,
 	Cursor,
-	Windsurf,
+	Devin,
 	Codex,
 	CopilotCLI,
 	Zed,

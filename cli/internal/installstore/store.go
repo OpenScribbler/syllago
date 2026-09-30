@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 const CurrentVersion = 1
@@ -124,6 +125,13 @@ func Load(path string) (*Store, error) {
 	}
 	if s.Records == nil {
 		s.Records = []Record{}
+	}
+	// Records written before a provider rename carry its retired slug.
+	for i := range s.Records {
+		for j := range s.Records[i].Placements {
+			pl := &s.Records[i].Placements[j]
+			pl.Provider, _ = provider.ResolveSlugAlias(pl.Provider)
+		}
 	}
 	s.path = path
 	return &s, nil

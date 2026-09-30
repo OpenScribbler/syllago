@@ -37,6 +37,7 @@ var configPathsShowCmd = &cobra.Command{
 		}
 
 		filterProvider, _ := cmd.Flags().GetString("provider")
+		filterProvider = provider.CanonicalSlug(filterProvider)
 
 		if len(cfg.ProviderPaths) == 0 {
 			if !output.JSON {
@@ -90,7 +91,7 @@ var configPathsSetCmd = &cobra.Command{
   syllago config paths set cursor --type rules --path ~/my-rules`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		slug := args[0]
+		slug := provider.CanonicalSlug(args[0])
 		baseDir, _ := cmd.Flags().GetString("base-dir")
 		typeName, _ := cmd.Flags().GetString("type")
 		pathValue, _ := cmd.Flags().GetString("path")
@@ -195,7 +196,7 @@ var configPathsClearCmd = &cobra.Command{
   syllago config paths clear cursor --type rules`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		slug := args[0]
+		slug := provider.CanonicalSlug(args[0])
 		typeName, _ := cmd.Flags().GetString("type")
 
 		cfg, err := config.LoadGlobal()

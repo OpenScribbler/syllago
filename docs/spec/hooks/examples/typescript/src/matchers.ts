@@ -23,7 +23,7 @@ export type ProviderSlug =
   | "claude-code"
   | "gemini-cli"
   | "cursor"
-  | "windsurf"
+  | "devin"
   | "copilot-cli"
   | "kiro"
   | "opencode";
@@ -57,7 +57,7 @@ export type ResolvedMatcher = string | null;
  * Providers with no equivalent tool (`--` in the spec table) are omitted from
  * the inner record — `resolveMatcher` returns `null` for those combinations.
  *
- * For split-event providers (cursor, windsurf) where a canonical tool maps to
+ * For split-event providers (cursor, devin) where a canonical tool maps to
  * a native event rather than a tool-name matcher, the entry is also omitted
  * because no matcher string exists to encode. The conversion pipeline handles
  * event-splitting separately during the encode stage (§7.3).
@@ -67,7 +67,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Bash",
     "gemini-cli": "run_shell_command",
     // cursor:  maps to event pre_run_terminal_cmd — no tool-name matcher
-    // windsurf: maps to event pre_run_command — no tool-name matcher
+    // devin: maps to event pre_run_command — no tool-name matcher
     "copilot-cli": "bash",
     kiro: "execute_bash",
     opencode: "bash",
@@ -76,7 +76,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Read",
     "gemini-cli": "read_file",
     cursor: "read_file",
-    // windsurf: maps to event pre_read_code — no tool-name matcher
+    // devin: maps to event pre_read_code — no tool-name matcher
     "copilot-cli": "view",
     kiro: "fs_read",
     opencode: "read",
@@ -85,7 +85,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Write",
     "gemini-cli": "write_file",
     cursor: "edit_file",
-    // windsurf: maps to event pre_write_code — no tool-name matcher
+    // devin: maps to event pre_write_code — no tool-name matcher
     "copilot-cli": "create",
     kiro: "fs_write",
     opencode: "write",
@@ -94,7 +94,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Edit",
     "gemini-cli": "replace",
     cursor: "edit_file",
-    // windsurf: maps to event pre_write_code — no tool-name matcher
+    // devin: maps to event pre_write_code — no tool-name matcher
     "copilot-cli": "edit",
     kiro: "fs_write",
     opencode: "edit",
@@ -103,7 +103,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Grep",
     "gemini-cli": "grep_search",
     cursor: "grep_search",
-    // windsurf: no equivalent
+    // devin: no equivalent
     "copilot-cli": "grep",
     kiro: "grep",
     opencode: "grep",
@@ -112,7 +112,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Glob",
     "gemini-cli": "glob",
     cursor: "file_search",
-    // windsurf: no equivalent
+    // devin: no equivalent
     "copilot-cli": "glob",
     kiro: "glob",
     opencode: "glob",
@@ -121,7 +121,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "WebSearch",
     "gemini-cli": "google_web_search",
     cursor: "web_search",
-    // windsurf:    no equivalent
+    // devin:    no equivalent
     // copilot-cli: no equivalent
     kiro: "web_search",
     // opencode: no equivalent
@@ -130,7 +130,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "WebFetch",
     "gemini-cli": "web_fetch",
     // cursor:   no equivalent
-    // windsurf: no equivalent
+    // devin: no equivalent
     "copilot-cli": "web_fetch",
     kiro: "web_fetch",
     // opencode: no equivalent
@@ -139,7 +139,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
     "claude-code": "Agent",
     // gemini-cli: no equivalent
     // cursor:     no equivalent
-    // windsurf:   no equivalent
+    // devin:   no equivalent
     "copilot-cli": "task",
     kiro: "use_subagent",
     // opencode: no equivalent
@@ -160,7 +160,7 @@ export const TOOL_VOCABULARY: Record<string, Partial<Record<ProviderSlug, string
  *   claude-code, kiro  →  mcp__<server>__<tool>
  *   gemini-cli         →  mcp_<server>_<tool>
  *   copilot-cli        →  <server>/<tool>
- *   cursor, windsurf   →  <server>__<tool>
+ *   cursor, devin   →  <server>__<tool>
  *
  * When `tool` is omitted the returned string is the server-only prefix that
  * the provider uses to match all tools on that server.
@@ -182,7 +182,7 @@ export function encodeMcpMatcher(
       return tool !== undefined ? `${server}/${tool}` : `${server}/`;
 
     case "cursor":
-    case "windsurf":
+    case "devin":
       return tool !== undefined ? `${server}__${tool}` : `${server}__`;
 
     case "opencode":
@@ -238,7 +238,7 @@ export function parseMcpString(
     }
 
     case "cursor":
-    case "windsurf": {
+    case "devin": {
       // Format: <server>__<tool>  (must not be an mcp__ prefixed string)
       if (native.startsWith("mcp__")) return null;
       const sep = native.indexOf("__");

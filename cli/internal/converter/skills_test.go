@@ -462,9 +462,9 @@ func TestKiroSkillCCFieldsAsProseNotes(t *testing.T) {
 
 // --- AllowedTools parsing ---
 
-// --- Windsurf skills ---
+// --- Devin skills ---
 
-func TestClaudeSkillToWindsurf(t *testing.T) {
+func TestClaudeSkillToDevin(t *testing.T) {
 	input := []byte("---\nname: Go Expert\ndescription: Go coding guidelines\nallowed-tools:\n  - Read\n  - Grep\nmodel: opus\ncontext: fork\n---\n\nUse idiomatic Go patterns.\n")
 
 	conv := &SkillsConverter{}
@@ -473,7 +473,7 @@ func TestClaudeSkillToWindsurf(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -486,19 +486,19 @@ func TestClaudeSkillToWindsurf(t *testing.T) {
 	assertNotContains(t, out, "allowed-tools:")
 	assertNotContains(t, out, "context: fork")
 	assertContains(t, out, "Tool restriction")
-	assertContains(t, out, "view_line_range")           // translated tool name for Windsurf
+	assertContains(t, out, "view_line_range")           // translated tool name for Devin
 	assertContains(t, out, "isolated context")          // context:fork prose
 	assertContains(t, out, "Designed for model: opus.") // model as prose note
 	assertContains(t, out, "syllago:converted")
 	assertEqual(t, "SKILL.md", result.Filename)
 }
 
-func TestWindsurfSkillCanonicalize(t *testing.T) {
-	// Windsurf SKILL.md with name and description frontmatter
+func TestDevinSkillCanonicalize(t *testing.T) {
+	// Devin SKILL.md with name and description frontmatter
 	input := []byte("---\nname: deploy-to-production\ndescription: Guides the deployment process\n---\n\n## Steps\n\n1. Run pre-deployment checks\n")
 
 	conv := &SkillsConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -509,19 +509,19 @@ func TestWindsurfSkillCanonicalize(t *testing.T) {
 	assertContains(t, out, "pre-deployment checks")
 }
 
-func TestWindsurfSkillRoundTrip(t *testing.T) {
+func TestDevinSkillRoundTrip(t *testing.T) {
 	input := []byte("---\nname: deploy-to-production\ndescription: Guides the deployment process\n---\n\n## Steps\n\n1. Run pre-deployment checks\n2. Build the release artifact\n")
 
 	conv := &SkillsConverter{}
 
-	// Windsurf -> canonical
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	// Devin -> canonical
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// canonical -> Windsurf
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	// canonical -> Devin
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -860,7 +860,7 @@ func TestSkillWithHooks_ToCursor_ActionableWarnings(t *testing.T) {
 	assertContains(t, warningText, ".cursor/settings.json")
 }
 
-func TestSkillWithHooks_ToWindsurf_ActionableWarnings(t *testing.T) {
+func TestSkillWithHooks_ToDevin_ActionableWarnings(t *testing.T) {
 	input := []byte("---\nname: linter\ndescription: Lint skill\nhooks:\n  PreToolUse:\n    - matcher: Bash\n      command: ./lint.sh\n---\n\nLint code.\n")
 
 	conv := &SkillsConverter{}
@@ -869,7 +869,7 @@ func TestSkillWithHooks_ToWindsurf_ActionableWarnings(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1067,7 +1067,7 @@ func TestSkillMetaFields_RenderGemini_NotInFrontmatter(t *testing.T) {
 	assertNotContains(t, out, "author: alice")
 }
 
-func TestSkillMetaFields_RenderWindsurf_NotInFrontmatter(t *testing.T) {
+func TestSkillMetaFields_RenderDevin_NotInFrontmatter(t *testing.T) {
 	input := []byte("---\nname: review\ndescription: Code review\nlicense: MIT\nmetadata:\n  author: alice\n---\n\nReview code.\n")
 
 	conv := &SkillsConverter{}
@@ -1076,7 +1076,7 @@ func TestSkillMetaFields_RenderWindsurf_NotInFrontmatter(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}

@@ -11,7 +11,7 @@ func TestMonolithicHint(t *testing.T) {
 		want string
 	}{
 		{"codex", "Codex prefers per-directory AGENTS.md files; consider installing per directory rather than as a single root file."},
-		{"windsurf", "Windsurf has a 6KB limit on this file; the file rules format (.windsurf/rules/) is recommended for non-trivial content."},
+		{"devin", "Devin has a 6KB limit on this file; the file rules format (.windsurf/rules/) is recommended for non-trivial content."},
 		{"claude-code", ""},
 	}
 	for _, tc := range cases {
@@ -34,7 +34,7 @@ func TestMonolithicFilenames(t *testing.T) {
 		{"gemini-cli", []string{"GEMINI.md"}},
 		{"cursor", []string{".cursorrules"}},
 		{"cline", []string{".clinerules"}},
-		{"windsurf", []string{".windsurfrules"}},
+		{"devin", []string{".windsurfrules"}},
 		{"unknown", nil},
 	}
 	for _, tc := range cases {

@@ -81,7 +81,9 @@ func isInteractiveImpl() bool {
 }
 
 // findProviderBySlug returns a pointer to the matching provider, or nil.
+// A retired slug resolves to its current provider with a deprecation warning.
 func findProviderBySlug(slug string) *provider.Provider {
+	slug = provider.CanonicalSlug(slug)
 	for i := range provider.AllProviders {
 		if provider.AllProviders[i].Slug == slug {
 			return &provider.AllProviders[i]
@@ -108,9 +110,10 @@ func findItemByPath(cat *catalog.Catalog, path string) (*catalog.ContentItem, er
 	case 3:
 		// Try type/provider/name first (provider-specific content).
 		typeName, providerOrType, name := parts[0], parts[1], parts[2]
+		providerSlug, _ := provider.ResolveSlugAlias(providerOrType)
 		for i := range cat.Items {
 			item := &cat.Items[i]
-			if string(item.Type) == typeName && item.Provider == providerOrType && item.Name == name {
+			if string(item.Type) == typeName && item.Provider == providerSlug && item.Name == name {
 				return item, nil
 			}
 		}

@@ -32,7 +32,7 @@ Last updated: 2026-04-17. Authoritative sources: `cli/internal/provider/*.go` (s
 | opencode         |   ✓   |   ~    |   ⚙    |    ✓     |  ✓  |   ✗   |
 | pi               |   ✓   |   ✓    |   ✗    |    ✓     |  ✗  |   ✓   |
 | roo-code         |   ✓   |   ✓    |   ✓    |    ◑     |  ✓  |   ✗   |
-| windsurf         |   ✓   |   ✓    |   ~    |    ~     |  ✓  |   ✓   |
+| devin            |   ✓   |   ✓    |   ~    |    ~     |  ✓  |   ✓   |
 | crush            |   ✓   |   ✓    |   ✗    |    ✗     |  ✓  |   ✗   |
 | zed              |   ✓   |   ✗    |   ⚙    |    ⚙     |  ✓  |   ✗   |
 
@@ -76,8 +76,8 @@ Supports rules (AGENTS.md), skills (`.pi/skills/`, `~/.pi/agent/skills/`), hooks
 ### roo-code
 Supports rules (.roo/rules/ with per-mode subdirs like .roo/rules-code/), skills, agents ("Custom Modes" in .roomodes), commands (.roo/commands/), MCP. **No hooks** — deliberately removed from Cline fork. Commands not yet in syllago Go code.
 
-### windsurf
-Supports rules (.windsurfrules + Cascade memories), skills, hooks (per-tool-category split events), MCP. Agents tracked for AGENTS.md convention only — no windsurf-native agent files. CLI commands are not user-definable.
+### devin
+Supports rules (.windsurfrules + Cascade memories), skills, hooks (per-tool-category split events), MCP. Agents tracked for AGENTS.md convention only — no devin-native agent files. CLI commands are not user-definable.
 
 ### crush
 Supports rules (AGENTS.md project only), skills (`.crush/skills/`, `~/.config/crush/skills/` — XDG-compliant), and MCP (`crush.json` with stdio/http/sse transports). No hooks (open issue charmbracelet/crush#2038). No agents, no commands.

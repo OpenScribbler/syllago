@@ -342,3 +342,141 @@ func TestCheckLoadoutItemTaint_BadManifest_Skips(t *testing.T) {
 		t.Fatalf("bad manifest should be skipped, got: %s", err)
 	}
 }
+
+func TestCheckLoadoutItemTaint_PrivateItemUnderRetiredSlug_Blocked(t *testing.T) {
+	root := t.TempDir()
+	now := time.Now()
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "community/loadouts", URL: "https://github.com/community/loadouts", Visibility: "public", VisibilityCheckedAt: &now},
+		},
+	}
+	os.MkdirAll(filepath.Join(root, ".syllago"), 0755)
+	config.Save(root, cfg)
+
+	// Create a loadout manifest referencing a rule
+	loadoutDir := t.TempDir()
+	os.MkdirAll(loadoutDir, 0755)
+	os.WriteFile(filepath.Join(loadoutDir, "loadout.yaml"), []byte(`kind: loadout
+version: 1
+provider: windsurf
+name: test-loadout
+description: test
+rules:
+  - name: private-rule
+`), 0644)
+
+	// The library item was saved under the retired slug's directory.
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	meta := &metadata.Meta{
+		ID:               "test-id",
+		Name:             "private-rule",
+		SourceRegistry:   "acme/internal",
+		SourceVisibility: "private",
+	}
+	metadata.Save(itemDir, meta)
+
+	item := catalog.ContentItem{
+		Name: "test-loadout",
+		Type: catalog.Loadouts,
+		Path: loadoutDir,
+	}
+
+	err := checkLoadoutItemTaint(item, "community/loadouts", root)
+	if err == nil {
+		t.Fatal("expected G4 to block loadout with private item targeting public registry")
+	}
+	if !strings.Contains(err.Error(), "cannot share loadout") {
+		t.Errorf("error should mention 'cannot share loadout', got: %s", err)
+	}
+}
+
+// setupG4 writes a public-registry config under root, points the library at a
+// fresh temp dir, and writes a loadout manifest with the given body. It
+// returns the library dir and the loadout item.
+func setupG4(t *testing.T, root, manifest string) (string, catalog.ContentItem) {
+	t.Helper()
+	now := time.Now()
+	os.MkdirAll(filepath.Join(root, ".syllago"), 0755)
+	config.Save(root, &config.Config{Registries: []config.Registry{
+		{Name: "community/loadouts", URL: "https://github.com/community/loadouts", Visibility: "public", VisibilityCheckedAt: &now},
+	}})
+	origCfg := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfg })
+	loadoutDir := t.TempDir()
+	os.WriteFile(filepath.Join(loadoutDir, "loadout.yaml"), []byte(manifest), 0644)
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+	return globalDir, catalog.ContentItem{Name: "test-loadout", Type: catalog.Loadouts, Path: loadoutDir}
+}
+
+var privateMeta = &metadata.Meta{ID: "test-id", Name: "private-rule", SourceRegistry: "acme/internal", SourceVisibility: "private"}
+
+func TestCheckLoadoutItemTaint_MultiProviderLoadout_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nproviders: [claude-code, windsurf]\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule\n")
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Private\n"), 0644)
+	metadata.Save(itemDir, privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "community/loadouts", root); err == nil {
+		t.Fatal("expected G4 to block a multi-provider loadout referencing private content")
+	}
+}
+
+func TestCheckLoadoutItemTaint_SingleFileItem_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nprovider: devin\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule.md\n")
+	provDir := filepath.Join(globalDir, "rules", "windsurf")
+	os.MkdirAll(provDir, 0755)
+	os.WriteFile(filepath.Join(provDir, "private-rule.md"), []byte("# Private\n"), 0644)
+	metadata.SaveProvider(provDir, "private-rule.md", privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "community/loadouts", root); err == nil {
+		t.Fatal("expected G4 to block a loadout referencing a private single-file item")
+	}
+}
+
+func TestCheckLoadoutItemTaint_GloballyRegisteredPublicRegistry_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nprovider: claude-code\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule\n")
+	// The destination is registered only in global config, as `registry add` does.
+	config.Save(root, &config.Config{})
+	now := time.Now()
+	if err := config.SaveGlobal(&config.Config{Registries: []config.Registry{
+		{Name: "global/public", URL: "https://github.com/global/public", Visibility: "public", VisibilityCheckedAt: &now},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	itemDir := filepath.Join(globalDir, "rules", "claude-code", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Private\n"), 0644)
+	metadata.Save(itemDir, privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "global/public", root); err == nil {
+		t.Fatal("expected G4 to block publishing private content to a globally registered public registry")
+	}
+}
+
+func TestCheckLoadoutItemTaint_SourceProviderFallback_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nprovider: devin\nproviders: [claude-code]\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule\n")
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Private\n"), 0644)
+	metadata.Save(itemDir, privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "community/loadouts", root); err == nil {
+		t.Fatal("expected G4 to block a reference that resolves through the source-provider fallback")
+	}
+}

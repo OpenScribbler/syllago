@@ -74,8 +74,8 @@ func TestFieldPreservation_RulesScoped(t *testing.T) {
 			filename: "rule.mdc",
 		},
 		{
-			name:     "to Windsurf",
-			target:   provider.Windsurf,
+			name:     "to Devin",
+			target:   provider.Devin,
 			contains: []string{"trigger: glob", "*.ts", "description: TypeScript conventions", "Use strict TypeScript"},
 			absent:   []string{"alwaysApply"},
 			filename: "rule.md",
@@ -158,8 +158,8 @@ func TestFieldPreservation_RulesAlwaysApply(t *testing.T) {
 			filename: "rule.mdc",
 		},
 		{
-			name:     "to Windsurf",
-			target:   provider.Windsurf,
+			name:     "to Devin",
+			target:   provider.Devin,
 			contains: []string{"trigger: always_on", "Follow these conventions"},
 			absent:   []string{"alwaysApply"},
 			filename: "rule.md",
@@ -404,7 +404,7 @@ func TestFieldPreservation_Skills(t *testing.T) {
 // and each target gets format-specific contains/absent assertions.
 //
 // Two distinct coping strategies are pinned:
-//   - "warnings-only" (cursor, windsurf, gemini-cli, copilot-cli, kiro): hooks
+//   - "warnings-only" (cursor, devin, gemini-cli, copilot-cli, kiro): hooks
 //     surface as Result.Warnings text; unsupported structured fields become
 //     prose notes inside a <!-- syllago:converted --> block.
 //   - "prose-embed" (amp, cline, roo-code, opencode): hooks are embedded as
@@ -541,21 +541,21 @@ func TestFieldPreservation_Skills_FanOut(t *testing.T) {
 			minWarns: 1,
 			filename: "SKILL.md",
 		},
-		// Windsurf — minimal frontmatter (name + description); translation path used.
+		// Devin — minimal frontmatter (name + description); translation path used.
 		{
-			name:   "to Windsurf",
-			target: provider.Windsurf,
+			name:   "to Devin",
+			target: provider.Devin,
 			contains: []string{
 				"name: code-review",
 				"description: Code review skill",
 				"Tool restriction",
-				"view_line_range", // Windsurf translation of file_read
-				"grep_search",     // Windsurf translation of search
-				"run_command",     // Windsurf translation of shell
+				"view_line_range", // Devin translation of file_read
+				"grep_search",     // Devin translation of search
+				"run_command",     // Devin translation of shell
 				"Review code for best practices",
 				"syllago:converted",
 			},
-			// Windsurf emits hook warnings but not prose; license/compatibility not in frontmatter.
+			// Devin emits hook warnings but not prose; license/compatibility not in frontmatter.
 			absent:   []string{"allowed-tools:", "echo check", "Hooks:", "license:", "compatibility:"},
 			minWarns: 1,
 			filename: "SKILL.md",
@@ -957,7 +957,7 @@ func TestFieldPreservation_MCPMixed(t *testing.T) {
 // CANONICALIZE — Provider-specific formats to canonical
 // =============================================================================
 
-func TestCanonicalize_WindsurfTriggerFormats(t *testing.T) {
+func TestCanonicalize_DevinTriggerFormats(t *testing.T) {
 	tests := []struct {
 		name         string
 		input        string
@@ -996,7 +996,7 @@ func TestCanonicalize_WindsurfTriggerFormats(t *testing.T) {
 	conv := &RulesConverter{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Canonicalize([]byte(tt.input), "windsurf")
+			result, err := conv.Canonicalize([]byte(tt.input), "devin")
 			if err != nil {
 				t.Fatalf("Canonicalize: %v", err)
 			}
@@ -1431,11 +1431,11 @@ func TestCrossProvider_CursorRulesToOpenCode(t *testing.T) {
 	assertContains(t, out, "*.js")
 }
 
-func TestCrossProvider_WindsurfRulesToRooCode(t *testing.T) {
+func TestCrossProvider_DevinRulesToRooCode(t *testing.T) {
 	input := []byte("---\ntrigger: glob\nglobs: \"*.rs\"\ndescription: Rust rules\n---\n\nUse clippy lints.\n")
 
 	conv := &RulesConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -2113,8 +2113,8 @@ func TestRoundTrip_MCPClineAutoApprove(t *testing.T) {
 	assertContains(t, backOut, "read_file")
 }
 
-func TestRoundTrip_RulesCursorWindsurfGlobs(t *testing.T) {
-	// Globs should survive Cursor → Windsurf → Cursor
+func TestRoundTrip_RulesCursorDevinGlobs(t *testing.T) {
+	// Globs should survive Cursor → Devin → Cursor
 	original := []byte("---\ndescription: TS rule\nalwaysApply: false\nglobs:\n    - \"*.ts\"\n    - \"*.tsx\"\n---\n\nStrict mode.\n")
 
 	conv := &RulesConverter{}
@@ -2123,14 +2123,14 @@ func TestRoundTrip_RulesCursorWindsurfGlobs(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	windsurfResult, err := conv.Render(canonical.Content, provider.Windsurf)
+	devinResult, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
-		t.Fatalf("Render to Windsurf: %v", err)
+		t.Fatalf("Render to Devin: %v", err)
 	}
 
-	backToCanonical, err := conv.Canonicalize(windsurfResult.Content, "windsurf")
+	backToCanonical, err := conv.Canonicalize(devinResult.Content, "devin")
 	if err != nil {
-		t.Fatalf("Canonicalize from Windsurf: %v", err)
+		t.Fatalf("Canonicalize from Devin: %v", err)
 	}
 
 	meta, body, err := parseCanonical(backToCanonical.Content)

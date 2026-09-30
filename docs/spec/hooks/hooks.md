@@ -150,7 +150,7 @@ Canonical provider slugs:
 | `claude-code` | Claude Code |
 | `gemini-cli` | Gemini CLI |
 | `cursor` | Cursor |
-| `windsurf` | Windsurf |
+| `devin` | Devin Desktop |
 | `vs-code-copilot` | VS Code Copilot |
 | `copilot-cli` | GitHub Copilot CLI |
 | `kiro` | Kiro |
@@ -201,7 +201,7 @@ Canonical provider slugs:
         "input_rewrite": "block"
       },
       "provider_data": {
-        "windsurf": {
+        "devin": {
           "show_output": true,
           "working_directory": "/opt/hooks"
         }
@@ -374,7 +374,7 @@ Implementations encode MCP matchers into provider-specific combined formats duri
 | claude-code, kiro | `mcp__<server>__<tool>` | `mcp__github__create_issue` |
 | gemini-cli | `mcp_<server>_<tool>` | `mcp_github_create_issue` |
 | copilot-cli | `<server>/<tool>` | `github/create_issue` |
-| cursor, windsurf | `<server>__<tool>` | `github__create_issue` |
+| cursor, devin    | `<server>__<tool>` | `github__create_issue` |
 
 ### 6.4 Array (OR)
 
@@ -419,7 +419,7 @@ During decode, the adapter MUST:
 3. Convert timeout values to seconds (the canonical unit).
 4. Preserve provider-specific fields with no canonical equivalent in `provider_data`.
 
-For split-event providers: the adapter MUST merge category-specific events into unified canonical events with appropriate matchers. For example, Windsurf's `pre_run_command` becomes `before_tool_execute` with `matcher: "shell"`.
+For split-event providers: the adapter MUST merge category-specific events into unified canonical events with appropriate matchers. For example, Devin Desktop's `pre_run_command` becomes `before_tool_execute` with `matcher: "shell"`.
 
 ### 7.2 Validate
 

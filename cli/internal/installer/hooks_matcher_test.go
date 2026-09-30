@@ -47,7 +47,7 @@ func TestInstallHook_TranslatesMatcher(t *testing.T) {
 		{provider.ClaudeCode, "PreToolUse", "Bash"},
 		{provider.GeminiCLI, "BeforeTool", "run_shell_command"},
 		{provider.Cursor, "PreToolUse", "run_terminal_cmd"},
-		// Windsurf is absent: it has no before_tool_execute mapping, so the
+		// Devin is absent: it has no before_tool_execute mapping, so the
 		// install is rejected outright — see
 		// TestInstallHook_RejectsUnsupportedEvent (syllago-xqlc1).
 	}

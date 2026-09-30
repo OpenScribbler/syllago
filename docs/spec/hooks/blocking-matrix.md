@@ -19,7 +19,7 @@ When a blocking hook returns exit code 2 (or `decision: "deny"`), the resulting 
 
 ## §2 Matrix
 
-| Event | claude-code | gemini-cli | cursor | windsurf | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
+| Event | claude-code | gemini-cli | cursor | devin    | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
 |-------|-------------|------------|--------|----------|-----------------|-------------|------|----------|---------------|-------|-------|
 | `before_tool_execute` | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent |
 | `after_tool_execute` | observe | prevent | observe | observe | observe | observe | observe | observe | observe | observe | observe |
@@ -51,7 +51,7 @@ This timing inversion is more severe than a capability gap: a blocking safety ho
 The following table is auto-generated from `docs/provider-capabilities/*.yaml`. Do not edit by hand — run `capmon generate` to refresh.
 
 <!-- GENERATED FROM provider-capabilities/*.yaml -->
-| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | windsurf | zed |
+| Canonical Event | amp | claude-code | cline | codex | copilot-cli | crush | cursor | factory-droid | gemini-cli | kiro | opencode | pi | roo-code | devin    | zed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 <!-- END GENERATED -->

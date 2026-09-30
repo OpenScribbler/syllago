@@ -231,7 +231,7 @@ Local-to-shared content promotion. Implements the `syllago share` workflow for c
 
 ### internal/provider/
 
-Provider detection and path resolution for all 15 supported providers (Claude Code, Cursor, Windsurf, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro, Amp, Factory Droid, Pi, Crush). `AllProviders` is the authoritative list. `DetectProvidersWithResolver()` checks default paths and custom overrides.
+Provider detection and path resolution for all 15 supported providers (Claude Code, Cursor, Devin Desktop, Codex, Gemini CLI, Copilot CLI, Cline, Roo Code, Zed, OpenCode, Kiro, Amp, Factory Droid, Pi, Crush). `AllProviders` is the authoritative list. `DetectProvidersWithResolver()` checks default paths and custom overrides.
 
 ### internal/registry/
 
@@ -296,7 +296,7 @@ workflow; the graduated mappings in `docs/provider-formats/` and
 Hub-and-spoke through syllago's canonical format:
 
 ```
-Cursor MDC ---+                +--- Windsurf rule
+Cursor MDC ---+                +--- Devin Desktop rule
 Gemini YAML --+--> [Canonical] +--> Kiro JSON
 TOML agent ---+                +--- Cline rule
 ```

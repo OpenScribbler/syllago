@@ -575,7 +575,7 @@ func TestGencapabilities_AllRealProviders(t *testing.T) {
 	wantProviders := []string{
 		"amp", "claude-code", "cline", "codex", "copilot-cli",
 		"cursor", "factory-droid", "gemini-cli", "kiro", "opencode",
-		"pi", "roo-code", "windsurf", "zed",
+		"pi", "roo-code", "devin", "zed",
 	}
 	for _, slug := range wantProviders {
 		if _, ok := m.Providers[slug]; !ok {

@@ -7,6 +7,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The Windsurf provider is now Devin Desktop, with slug `devin`.**
+  Windsurf was renamed Devin Desktop. The slug `windsurf` still resolves to
+  `devin` in flags, config files, and loadouts, and prints a deprecation
+  warning. Syllago will stop accepting `windsurf` in a future release. The
+  on-disk paths Devin Desktop reads, `.windsurf/`, `.windsurfrules`, and
+  `~/.codeium/windsurf/`, are unchanged. Global skills now install to
+  `~/.config/devin/skills/`, the Devin Desktop user skills directory; skills
+  installed to `~/.codeium/windsurf/skills/` by earlier releases still show
+  as installed and still uninstall. Library and registry content stored
+  under a `windsurf/` directory, or whose metadata names `windsurf` as its
+  source provider, is treated as `devin` without a warning.
+
 ### Fixed
 
 - **Unknown MOAT revocation reasons no longer reject the registry

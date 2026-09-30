@@ -38,9 +38,9 @@ func TestFrontmatterRegistry_Completeness(t *testing.T) {
 		"codex/skills": true,
 		// Agents: codex agents use TOML (not frontmatter in markdown)
 		"codex/agents": true,
-		// Commands: cline/windsurf/roo-code commands are plain markdown
+		// Commands: cline/devin/roo-code commands are plain markdown
 		"cline/commands":    true,
-		"windsurf/commands": true,
+		"devin/commands":    true,
 		"roo-code/commands": true,
 		// factory-droid, pi, crush use plain AGENTS.md for rules and plain
 		// markdown (no frontmatter) for commands/prompt templates.
@@ -99,7 +99,7 @@ func TestFrontmatterRegistry_FieldAccuracy(t *testing.T) {
 		// Rules
 		{catalog.Rules, "claude-code", []string{"paths"}, []string{"description", "alwaysApply"}},
 		{catalog.Rules, "cursor", []string{"description", "alwaysApply", "globs"}, nil},
-		{catalog.Rules, "windsurf", []string{"trigger", "description", "globs"}, nil},
+		{catalog.Rules, "devin", []string{"trigger", "description", "globs"}, nil},
 		{catalog.Rules, "kiro", []string{"inclusion", "fileMatchPattern", "name", "description"}, nil},
 		{catalog.Rules, "copilot-cli", []string{"applyTo"}, nil},
 		{catalog.Rules, "cline", []string{"paths"}, nil},
@@ -114,7 +114,7 @@ func TestFrontmatterRegistry_FieldAccuracy(t *testing.T) {
 		{catalog.Skills, "gemini-cli", []string{"name", "description"}, nil},
 		// NOTE: Expand these minimal assertions after inspecting the actual struct tags.
 		// These four are registered in 5b but were missing from the original checks table.
-		{catalog.Skills, "windsurf", []string{"name", "description"}, nil},
+		{catalog.Skills, "devin", []string{"name", "description"}, nil},
 		{catalog.Skills, "amp", []string{"name", "description"}, nil},
 		{catalog.Skills, "cline", []string{"name", "description"}, nil},
 		{catalog.Skills, "roo-code", []string{"name", "description"}, nil},

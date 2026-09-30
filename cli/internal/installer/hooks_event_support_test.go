@@ -43,9 +43,9 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 		prov  provider.Provider
 	}{
 		// Both cases use routed (Phase 1) providers so the reject comes from the
-		// event-support gate, not the Phase-1b storage-model rejection. windsurf
+		// event-support gate, not the Phase-1b storage-model rejection. devin
 		// is not used here: it is deferred to Phase 1b, so it rejects before the
-		// event gate (see TestInstallHook_Windsurf_DeferredToPhase1b).
+		// event gate (see TestInstallHook_Devin_DeferredToPhase1b).
 		//
 		// "PostToolUse" is claude-code's native name for after_tool_execute —
 		// crush supports only before_tool_execute, so it's a foreign/unreadable

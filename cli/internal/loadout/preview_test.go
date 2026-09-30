@@ -330,7 +330,7 @@ func TestPreview_RegularFileConflict(t *testing.T) {
 // TestPreview_HookUnsupportedEvent: a hook whose event the target provider
 // has no settings key for is planned as "skip-unsupported" instead of
 // "merge-hook", so Apply can gate on it (syllago-xqlc1). before_tool_execute
-// has no windsurf mapping — merging it would write dead config windsurf
+// has no devin mapping — merging it would write dead config devin
 // never reads.
 func TestPreview_HookUnsupportedEvent(t *testing.T) {
 	t.Parallel()
@@ -343,8 +343,8 @@ func TestPreview_HookUnsupportedEvent(t *testing.T) {
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	prov := provider.Provider{
-		Name: "Windsurf",
-		Slug: "windsurf",
+		Name: "Devin Desktop",
+		Slug: "devin",
 		InstallDir: func(home string, ct catalog.ContentType) string {
 			return "__json_merge__"
 		},
@@ -387,8 +387,8 @@ func TestPreview_HookInvalidEvent(t *testing.T) {
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	prov := provider.Provider{
-		Name: "Windsurf",
-		Slug: "windsurf",
+		Name: "Devin Desktop",
+		Slug: "devin",
 		InstallDir: func(home string, ct catalog.ContentType) string {
 			return "__json_merge__"
 		},

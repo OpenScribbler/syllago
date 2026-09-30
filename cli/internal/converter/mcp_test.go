@@ -924,9 +924,9 @@ func TestCursorMCPDropsGeminiFields(t *testing.T) {
 	}
 }
 
-// --- Windsurf MCP ---
+// --- Devin MCP ---
 
-func TestWindsurfMCPRender(t *testing.T) {
+func TestDevinMCPRender(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"github": {
@@ -944,7 +944,7 @@ func TestWindsurfMCPRender(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -969,8 +969,8 @@ func TestWindsurfMCPRender(t *testing.T) {
 	}
 }
 
-func TestWindsurfMCPCanonicalize(t *testing.T) {
-	// Windsurf uses mcp_config.json with mcpServers key
+func TestDevinMCPCanonicalize(t *testing.T) {
+	// Devin uses mcp_config.json with mcpServers key
 	input := []byte(`{
 		"mcpServers": {
 			"local": {
@@ -982,7 +982,7 @@ func TestWindsurfMCPCanonicalize(t *testing.T) {
 	}`)
 
 	conv := &MCPConverter{}
-	result, err := conv.Canonicalize(input, "windsurf")
+	result, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -994,8 +994,8 @@ func TestWindsurfMCPCanonicalize(t *testing.T) {
 	assertContains(t, out, "PORT")
 }
 
-func TestWindsurfMCPServerUrlNormalization(t *testing.T) {
-	// Windsurf uses serverUrl for HTTP transport
+func TestDevinMCPServerUrlNormalization(t *testing.T) {
+	// Devin uses serverUrl for HTTP transport
 	input := []byte(`{
 		"mcpServers": {
 			"remote-api": {
@@ -1006,7 +1006,7 @@ func TestWindsurfMCPServerUrlNormalization(t *testing.T) {
 	}`)
 
 	conv := &MCPConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -1018,7 +1018,7 @@ func TestWindsurfMCPServerUrlNormalization(t *testing.T) {
 	assertNotContains(t, out, "serverUrl")
 }
 
-func TestWindsurfMCPRoundTrip(t *testing.T) {
+func TestDevinMCPRoundTrip(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"github": {
@@ -1031,14 +1031,14 @@ func TestWindsurfMCPRoundTrip(t *testing.T) {
 
 	conv := &MCPConverter{}
 
-	// Windsurf -> canonical
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	// Devin -> canonical
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// canonical -> Windsurf
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	// canonical -> Devin
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1050,7 +1050,7 @@ func TestWindsurfMCPRoundTrip(t *testing.T) {
 	assertEqual(t, "mcp_config.json", result.Filename)
 }
 
-func TestWindsurfMCPServerUrlRoundTrip(t *testing.T) {
+func TestDevinMCPServerUrlRoundTrip(t *testing.T) {
 	// HTTP server with serverUrl should round-trip through canonical
 	input := []byte(`{
 		"mcpServers": {
@@ -1063,14 +1063,14 @@ func TestWindsurfMCPServerUrlRoundTrip(t *testing.T) {
 
 	conv := &MCPConverter{}
 
-	// Windsurf -> canonical
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	// Devin -> canonical
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	// canonical -> Windsurf
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	// canonical -> Devin
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1081,7 +1081,7 @@ func TestWindsurfMCPServerUrlRoundTrip(t *testing.T) {
 	assertContains(t, out, "Authorization")
 }
 
-func TestWindsurfMCPSSEUrl(t *testing.T) {
+func TestDevinMCPSSEUrl(t *testing.T) {
 	// SSE server with url field
 	input := []byte(`{
 		"mcpServers": {
@@ -1093,12 +1093,12 @@ func TestWindsurfMCPSSEUrl(t *testing.T) {
 
 	conv := &MCPConverter{}
 
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1109,7 +1109,7 @@ func TestWindsurfMCPSSEUrl(t *testing.T) {
 	assertContains(t, out, "sse.example.com")
 }
 
-func TestWindsurfMCPDropsGeminiFields(t *testing.T) {
+func TestDevinMCPDropsGeminiFields(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"server": {
@@ -1127,7 +1127,7 @@ func TestWindsurfMCPDropsGeminiFields(t *testing.T) {
 		t.Fatalf("Canonicalize: %v", err)
 	}
 
-	result, err := conv.Render(canonical.Content, provider.Windsurf)
+	result, err := conv.Render(canonical.Content, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1209,7 +1209,7 @@ func TestOAuthWarningForUnsupportedProvider(t *testing.T) {
 		provider.Cursor,
 		provider.Kiro,
 		provider.RooCode,
-		provider.Windsurf,
+		provider.Devin,
 	}
 
 	for _, prov := range warnProviders {
@@ -1407,7 +1407,7 @@ func TestMCPStreamableHTTPRoundTrip(t *testing.T) {
 	assertEqual(t, "Bearer tok", outCfg.MCPServers["remote"].Headers["Authorization"])
 }
 
-func TestWindsurfMCPCanonicalizeDisabledTools(t *testing.T) {
+func TestDevinMCPCanonicalizeDisabledTools(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"github": {
@@ -1419,7 +1419,7 @@ func TestWindsurfMCPCanonicalizeDisabledTools(t *testing.T) {
 	}`)
 
 	conv := &MCPConverter{}
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}
@@ -1476,7 +1476,7 @@ func TestKiroMCPRenderDisabledTools(t *testing.T) {
 	assertContains(t, out, "delete_repo")
 }
 
-func TestWindsurfMCPRenderDisabledTools(t *testing.T) {
+func TestDevinMCPRenderDisabledTools(t *testing.T) {
 	input := []byte(`{
 		"mcpServers": {
 			"github": {
@@ -1488,7 +1488,7 @@ func TestWindsurfMCPRenderDisabledTools(t *testing.T) {
 	}`)
 
 	conv := &MCPConverter{}
-	result, err := conv.Render(input, provider.Windsurf)
+	result, err := conv.Render(input, provider.Devin)
 	if err != nil {
 		t.Fatalf("Render: %v", err)
 	}
@@ -1555,7 +1555,7 @@ func TestClaudeMCPDropsDisabledTools(t *testing.T) {
 }
 
 func TestDisabledToolsRoundTripKiro(t *testing.T) {
-	// Windsurf → canonical → Kiro: disabledTools preserved
+	// Devin → canonical → Kiro: disabledTools preserved
 	input := []byte(`{
 		"mcpServers": {
 			"github": {
@@ -1568,7 +1568,7 @@ func TestDisabledToolsRoundTripKiro(t *testing.T) {
 
 	conv := &MCPConverter{}
 
-	canonical, err := conv.Canonicalize(input, "windsurf")
+	canonical, err := conv.Canonicalize(input, "devin")
 	if err != nil {
 		t.Fatalf("Canonicalize: %v", err)
 	}

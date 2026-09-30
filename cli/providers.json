@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-21T21:26:09Z",
+  "generatedAt": "2026-09-30T11:18:54Z",
   "syllagoVersion": "0.14.0",
   "providers": [
     {
@@ -594,8 +594,8 @@
       }
     },
     {
-      "name": "Windsurf",
-      "slug": "windsurf",
+      "name": "Devin Desktop",
+      "slug": "devin",
       "configDir": ".codeium/windsurf",
       "emitPath": "{project}/.windsurf/rules",
       "docsURL": "https://docs.windsurf.com",
@@ -693,7 +693,7 @@
           "supported": true,
           "fileFormat": "md",
           "installMethod": "filesystem",
-          "installPath": "{home}/.codeium/windsurf/skills",
+          "installPath": "{home}/.config/devin/skills",
           "symlinkSupport": true,
           "discoveryPaths": [
             "{project}/.windsurf/skills",

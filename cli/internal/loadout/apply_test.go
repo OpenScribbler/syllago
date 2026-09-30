@@ -428,8 +428,8 @@ func TestReadJSONFileOrEmpty(t *testing.T) {
 	})
 }
 
-// setupUnsupportedHookEnv builds a windsurf-targeted env with one rule that
-// works and one hook whose event (before_tool_execute) windsurf has no
+// setupUnsupportedHookEnv builds a devin-targeted env with one rule that
+// works and one hook whose event (before_tool_execute) devin has no
 // settings key for.
 func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, manifest *Manifest, cat *catalog.Catalog, prov provider.Provider) {
 	t.Helper()
@@ -438,11 +438,11 @@ func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, 
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
 	os.MkdirAll(filepath.Join(homeDir, ".codeium", "rules"), 0755)
 
-	ruleDir := filepath.Join(projectRoot, "content", "rules", "windsurf", "my-rule")
+	ruleDir := filepath.Join(projectRoot, "content", "rules", "devin", "my-rule")
 	os.MkdirAll(ruleDir, 0755)
 	os.WriteFile(filepath.Join(ruleDir, "rule.md"), []byte("# My Rule"), 0644)
 
-	hookDir := filepath.Join(projectRoot, "content", "hooks", "windsurf", "dead-hook")
+	hookDir := filepath.Join(projectRoot, "content", "hooks", "devin", "dead-hook")
 	os.MkdirAll(hookDir, 0755)
 	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
@@ -450,7 +450,7 @@ func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, 
 	manifest = &Manifest{
 		Kind:     "loadout",
 		Version:  1,
-		Provider: "windsurf",
+		Provider: "devin",
 		Name:     "test-loadout",
 		Rules:    []ItemRef{{Name: "my-rule"}},
 		Hooks:    []ItemRef{{Name: "dead-hook"}},
@@ -459,14 +459,14 @@ func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, 
 	cat = &catalog.Catalog{
 		RepoRoot: projectRoot,
 		Items: []catalog.ContentItem{
-			{Name: "my-rule", Type: catalog.Rules, Provider: "windsurf", Path: ruleDir},
-			{Name: "dead-hook", Type: catalog.Hooks, Provider: "windsurf", Path: hookDir},
+			{Name: "my-rule", Type: catalog.Rules, Provider: "devin", Path: ruleDir},
+			{Name: "dead-hook", Type: catalog.Hooks, Provider: "devin", Path: hookDir},
 		},
 	}
 
 	prov = provider.Provider{
-		Name:      "Windsurf",
-		Slug:      "windsurf",
+		Name:      "Devin Desktop",
+		Slug:      "devin",
 		ConfigDir: ".codeium",
 		InstallDir: func(home string, ct catalog.ContentType) string {
 			switch ct {

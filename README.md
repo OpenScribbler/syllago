@@ -132,7 +132,7 @@ For the full command reference, see [syllago.dev/using-syllago/cli-reference/](h
 | Factory Droid | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cursor | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Kiro | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Windsurf | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| Devin Desktop | ✅ | ✅ | — | ✅ | ✅ | ✅ |
 | Cline | ✅ | ✅ | — | ✅ | ✅ | ✅ |
 | OpenCode | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 | Roo Code | ✅ | ✅ | ✅ | ✅ | — | ✅ |
@@ -177,7 +177,7 @@ Cursor uses `globs` as a comma-separated string with `alwaysApply`. Claude Code 
 
 Try it yourself: `syllago convert ./my-rule.mdc --from cursor --to claude-code`
 
-For more conversion walkthroughs across providers (Windsurf, Copilot, Codex, Kiro, etc.), see [Format conversion](https://syllago.dev/using-syllago/format-conversion/).
+For more conversion walkthroughs across providers (Devin Desktop, Copilot, Codex, Kiro, etc.), see [Format conversion](https://syllago.dev/using-syllago/format-conversion/).
 
 ## Collections
 

@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
 )
 
@@ -74,7 +75,7 @@ func runLoadoutCreate(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(output.Writer, "Provider [%s]: ", providerSlug)
 	if scanner.Scan() {
 		if input := strings.TrimSpace(scanner.Text()); input != "" {
-			providerSlug = input
+			providerSlug = provider.CanonicalSlug(input)
 		}
 	}
 

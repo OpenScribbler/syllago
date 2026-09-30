@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-08-24T19:18:09Z",
+  "generatedAt": "2026-09-30T11:18:54Z",
   "syllagoVersion": "0.14.0",
   "commands": [
     {
@@ -587,7 +587,7 @@
         "remove"
       ],
       "seeAlso": [],
-      "examples": "  syllago config list\n  syllago config add cursor\n  syllago config remove windsurf",
+      "examples": "  syllago config list\n  syllago config add cursor\n  syllago config remove devin",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -1009,7 +1009,7 @@
         "config list",
         "config paths"
       ],
-      "examples": "  syllago config remove windsurf",
+      "examples": "  syllago config remove devin",
       "source": "cli/cmd/syllago/config_cmd.go"
     },
     {
@@ -1099,7 +1099,7 @@
       ],
       "subcommands": [],
       "seeAlso": [],
-      "examples": "  # Convert a Cursor rule to Claude Code format\n  syllago convert ./my-rule.mdc --from cursor --to claude-code\n\n  # Convert a library item to Windsurf format\n  syllago convert my-rule --to windsurf\n\n  # Convert and save to a file\n  syllago convert my-rule --to cursor --output ./cursor-rule.mdc\n\n  # Convert a Copilot instructions file to Cursor\n  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules",
+      "examples": "  # Convert a Cursor rule to Claude Code format\n  syllago convert ./my-rule.mdc --from cursor --to claude-code\n\n  # Convert a library item to Devin format\n  syllago convert my-rule --to devin\n\n  # Convert and save to a file\n  syllago convert my-rule --to cursor --output ./cursor-rule.mdc\n\n  # Convert a Copilot instructions file to Cursor\n  syllago convert ./.github/copilot-instructions.md --from copilot-cli --to cursor --type rules",
       "source": "cli/cmd/syllago/convert.go"
     },
     {

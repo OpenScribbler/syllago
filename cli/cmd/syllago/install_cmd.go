@@ -161,6 +161,7 @@ func validateOnModifiedFlag(value string) error {
 
 func runInstall(cmd *cobra.Command, args []string) error {
 	toSlug, _ := cmd.Flags().GetString("to")
+	toSlug = provider.CanonicalSlug(toSlug)
 	toAll, _ := cmd.Flags().GetBool("to-all")
 	typeFilter, _ := cmd.Flags().GetString("type")
 	methodStr, _ := cmd.Flags().GetString("method")

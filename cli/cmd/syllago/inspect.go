@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/spf13/cobra"
 	"github.com/tidwall/gjson"
 )
@@ -176,6 +177,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 
 	// --as <provider>: render the content in a provider's native format.
 	asSlug, _ := cmd.Flags().GetString("as")
+	asSlug = provider.CanonicalSlug(asSlug)
 	if asSlug != "" {
 		rendered, provName, err := renderAsProvider(*item, asSlug)
 		if err != nil {

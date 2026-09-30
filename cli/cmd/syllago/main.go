@@ -52,7 +52,7 @@ Workflow:
 
 Content lives in your global library (~/.syllago/content/) after adding.
 Syllago handles format conversion automatically — a Claude Code skill becomes
-a Kiro steering file, a Cursor rule becomes a Windsurf rule, etc.
+a Kiro steering file, a Cursor rule becomes a Devin rule, etc.
 
 Other useful commands:
   syllago convert      Convert content between provider formats

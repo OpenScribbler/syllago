@@ -3,9 +3,11 @@ package loadout
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
 func TestParse_Valid(t *testing.T) {
@@ -308,5 +310,26 @@ func TestRefsByType(t *testing.T) {
 	// Empty sections should not appear
 	if _, ok := refs[catalog.Hooks]; ok {
 		t.Error("hooks should not be in refs when empty")
+	}
+}
+
+func TestParse_RetiredProviderSlug(t *testing.T) {
+	_, stderr := output.SetForTest(t)
+
+	f := filepath.Join(t.TempDir(), "loadout.yaml")
+	os.WriteFile(f, []byte("kind: loadout\nversion: 1\nname: test\nprovider: windsurf\nproviders: [claude-code, windsurf]\n"), 0644)
+
+	m, err := Parse(f)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if m.Provider != "devin" {
+		t.Errorf("provider: got %q, want devin", m.Provider)
+	}
+	if len(m.Providers) != 2 || m.Providers[1] != "devin" {
+		t.Errorf("providers: got %v, want [claude-code devin]", m.Providers)
+	}
+	if !strings.Contains(stderr.String(), `provider "windsurf" was renamed to "devin"`) {
+		t.Errorf("expected deprecation warning, got stderr %q", stderr.String())
 	}
 }

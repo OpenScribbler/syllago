@@ -832,7 +832,7 @@ func providerAbbrev(slug string) string {
 		return "Cu"
 	case "copilot":
 		return "Co"
-	case "windsurf":
+	case "devin":
 		return "WS"
 	case "kiro":
 		return "Ki"
@@ -887,7 +887,7 @@ func abbrevToSlug(abbr string) string {
 	case "Co":
 		return "copilot"
 	case "WS":
-		return "windsurf"
+		return "devin"
 	case "Ki":
 		return "kiro"
 	case "Cl":

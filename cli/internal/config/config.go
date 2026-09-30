@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
+
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 const DirName = ".syllago"
@@ -303,7 +305,22 @@ func Load(projectRoot string) (*Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+	canonicalizeProviderSlugs(&cfg)
 	return &cfg, nil
+}
+
+// canonicalizeProviderSlugs rewrites retired provider slugs in cfg to their
+// current slugs, printing a deprecation warning for each one.
+func canonicalizeProviderSlugs(cfg *Config) {
+	for i, slug := range cfg.Providers {
+		cfg.Providers[i] = provider.CanonicalSlug(slug)
+	}
+	for slug, paths := range cfg.ProviderPaths {
+		if canonical := provider.CanonicalSlug(slug); canonical != slug {
+			delete(cfg.ProviderPaths, slug)
+			cfg.ProviderPaths[canonical] = paths
+		}
+	}
 }
 
 func Save(projectRoot string, cfg *Config) error {
@@ -388,6 +405,7 @@ func LoadFromPath(path string) (*Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+	canonicalizeProviderSlugs(&cfg)
 	return &cfg, nil
 }
 

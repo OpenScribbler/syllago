@@ -203,7 +203,7 @@ func TestApplyDiff_StagedMissing(t *testing.T) {
 
 // --- ProfileFor routing and error paths ---
 
-// Note: TestProfileFor_Windsurf and TestProfileFor_UnknownProvider
+// Note: TestProfileFor_Devin and TestProfileFor_UnknownProvider
 // already exist in profile_test.go — not duplicated here.
 
 // Test each profile's binary-not-found error path.

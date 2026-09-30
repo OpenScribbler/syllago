@@ -177,7 +177,7 @@ func TestGenproviders(t *testing.T) {
 				}
 
 				// Verify enrichment: hooks should have types and config location.
-				// Events may be empty for providers without event mappings (e.g. Windsurf, Codex).
+				// Events may be empty for providers without event mappings (e.g. Devin, Codex).
 				if ct == catalog.Hooks {
 					if len(jsonCap.HookTypes) == 0 {
 						t.Errorf("content[hooks].hookTypes is empty for %s", goProv.Slug)
@@ -354,20 +354,20 @@ func TestGenproviders_NonCCProviderEnrichment(t *testing.T) {
 		}
 	})
 
-	t.Run("windsurf-hooks-no-events", func(t *testing.T) {
-		prov := findProvider(t, manifest, "windsurf")
+	t.Run("devin-hooks-no-events", func(t *testing.T) {
+		prov := findProvider(t, manifest, "devin")
 
-		// Windsurf supports hooks but has no event mappings in HookEvents.
+		// Devin supports hooks but has no event mappings in HookEvents.
 		hooks := prov.Content["hooks"]
 		if !hooks.Supported {
-			t.Error("windsurf hooks.supported = false, want true")
+			t.Error("devin hooks.supported = false, want true")
 		}
 		// Should still have hookTypes and configLocation even without events.
 		if len(hooks.HookTypes) == 0 {
-			t.Error("windsurf hookTypes is empty")
+			t.Error("devin hookTypes is empty")
 		}
 		if hooks.ConfigLocation == "" {
-			t.Error("windsurf hooks.configLocation is empty")
+			t.Error("devin hooks.configLocation is empty")
 		}
 	})
 

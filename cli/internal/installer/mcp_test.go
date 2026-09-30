@@ -151,7 +151,7 @@ func TestMCPConfigPath_ProjectScoped(t *testing.T) {
 	}
 }
 
-// TestMCPConfigPath_HomeScoped covers Windsurf, whose MCP config lives at
+// TestMCPConfigPath_HomeScoped covers Devin, whose MCP config lives at
 // ~/.codeium/windsurf/mcp_config.json with no project-local alternative.
 // Unlike the project-scoped cases this one depends on os.UserHomeDir(), so
 // we assert via suffix rather than hard-coding a home path.
@@ -165,7 +165,7 @@ func TestMCPConfigPath_HomeScoped(t *testing.T) {
 		slug     string
 		wantPath string
 	}{
-		{"windsurf", filepath.Join(home, ".codeium", "windsurf", "mcp_config.json")},
+		{"devin", filepath.Join(home, ".codeium", "windsurf", "mcp_config.json")},
 	}
 
 	for _, tt := range tests {
@@ -272,10 +272,10 @@ func TestInstallMCP_Cursor_RootsConfigAndRecordAtProjectRoot(t *testing.T) {
 	}
 }
 
-// TestInstallMCP_Windsurf_ProductionPath exercises slug=windsurf without
-// the test seam. Windsurf's MCP config lives at the user's home dir, so the
+// TestInstallMCP_Devin_ProductionPath exercises slug=devin without
+// the test seam. Devin's MCP config lives at the user's home dir, so the
 // test has to HOME-swap to avoid polluting the real developer machine.
-func TestInstallMCP_Windsurf_ProductionPath(t *testing.T) {
+func TestInstallMCP_Devin_ProductionPath(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	fakeHome := filepath.Join(tmpDir, "home")
@@ -284,7 +284,7 @@ func TestInstallMCP_Windsurf_ProductionPath(t *testing.T) {
 	}
 	t.Setenv("HOME", fakeHome)
 
-	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	itemDir := filepath.Join(tmpDir, "devin-mcp")
 	if err := os.MkdirAll(itemDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -306,15 +306,15 @@ func TestInstallMCP_Windsurf_ProductionPath(t *testing.T) {
 	}
 
 	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
-	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+	prov := provider.Provider{Slug: "devin", Name: "Devin Desktop"}
 
 	if _, err := installMCP(item, prov, tmpDir); err != nil {
-		t.Fatalf("installMCP via real path: %v — regression; slug=windsurf no longer maps through mcpConfigPathImpl", err)
+		t.Fatalf("installMCP via real path: %v — regression; slug=devin no longer maps through mcpConfigPathImpl", err)
 	}
 
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
-		t.Fatalf("windsurf MCP config was not written at the canonical path %s: %v", cfgPath, err)
+		t.Fatalf("devin MCP config was not written at the canonical path %s: %v", cfgPath, err)
 	}
 	if got := gjson.GetBytes(data, "mcpServers.local-py.command").String(); got != "python" {
 		t.Errorf("mcpServers.local-py.command = %q, want python (merge via real path broke)", got)
@@ -1468,10 +1468,10 @@ func TestInstallMCP_PerServer_InvalidServerKey(t *testing.T) {
 	}
 }
 
-// --- Cursor and Windsurf MCP install (syllago-14usr) -------------------
+// --- Cursor and Devin MCP install (syllago-14usr) -------------------
 //
 // Prior coverage in mcp_test.go exercised Zed, Cline, OpenCode, Kiro,
-// Codex, and Amp install paths but nothing for Cursor or Windsurf — both
+// Codex, and Amp install paths but nothing for Cursor or Devin — both
 // of which declare MCP via JSONMergeSentinel in their provider records.
 // The test-quality audit flagged this as an install gap: a broken MCP
 // render for either provider would ship silently-wrong configs.
@@ -1487,7 +1487,7 @@ func TestInstallMCP_PerServer_InvalidServerKey(t *testing.T) {
 //     server name as syllago-installed, installMCP must merge cleanly
 //     over the existing entry.
 //
-// Note: Cursor and Windsurf are NOT currently handled by the
+// Note: Cursor and Devin are NOT currently handled by the
 // mcpConfigPathImpl switch — production would fail with "MCP config path
 // not defined". These tests use the existing mcpConfigPath test seam to
 // validate the merge/render logic in isolation; filling in the real
@@ -1664,15 +1664,15 @@ func TestInstallMCP_Cursor_AllowsOverwriteOfSyllagoManaged(t *testing.T) {
 	}
 }
 
-// TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema mirrors the
-// Cursor happy-path test but targets Windsurf's .windsurf/mcp_config.json
+// TestInstallMCP_Devin_MergesIntoMcpConfigJsonSchema mirrors the
+// Cursor happy-path test but targets Devin's .windsurf/mcp_config.json
 // (note the different filename). Same schema-level assertions: every
 // field must land on the expected JSON path rather than merely "appear
 // somewhere in the output bytes".
-func TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema(t *testing.T) {
+func TestInstallMCP_Devin_MergesIntoMcpConfigJsonSchema(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	itemDir := filepath.Join(tmpDir, "devin-mcp")
 	os.MkdirAll(itemDir, 0755)
 	configJSON, _ := json.Marshal(map[string]interface{}{
 		"command": "python",
@@ -1681,11 +1681,11 @@ func TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema(t *testing.T) {
 	})
 	os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644)
 
-	configFile := filepath.Join(tmpDir, "windsurf-mcp_config.json")
+	configFile := filepath.Join(tmpDir, "devin-mcp_config.json")
 	os.WriteFile(configFile, []byte("{}"), 0644)
 
 	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
-	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+	prov := provider.Provider{Slug: "devin", Name: "Devin Desktop"}
 
 	origPath := mcpConfigPath
 	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
@@ -1700,7 +1700,7 @@ func TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema(t *testing.T) {
 	data, _ := os.ReadFile(configFile)
 	got := gjson.GetBytes(data, "mcpServers.local-py")
 	if !got.Exists() {
-		t.Fatal("mcpServers.local-py not present after Windsurf install")
+		t.Fatal("mcpServers.local-py not present after Devin install")
 	}
 	if got := got.Get("command").String(); got != "python" {
 		t.Errorf("command = %q, want python", got)
@@ -1714,13 +1714,13 @@ func TestInstallMCP_Windsurf_MergesIntoMcpConfigJsonSchema(t *testing.T) {
 	}
 }
 
-// TestInstallMCP_Windsurf_RefusesConflictWithUserEntry mirrors the Cursor
-// H2 guard test against Windsurf's mcp_config.json shape. A user-owned
+// TestInstallMCP_Devin_RefusesConflictWithUserEntry mirrors the Cursor
+// H2 guard test against Devin's mcp_config.json shape. A user-owned
 // entry must block the install.
-func TestInstallMCP_Windsurf_RefusesConflictWithUserEntry(t *testing.T) {
+func TestInstallMCP_Devin_RefusesConflictWithUserEntry(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	itemDir := filepath.Join(tmpDir, "windsurf-mcp")
+	itemDir := filepath.Join(tmpDir, "devin-mcp")
 	os.MkdirAll(itemDir, 0755)
 	configJSON, _ := json.Marshal(map[string]interface{}{
 		"command": "node",
@@ -1728,12 +1728,12 @@ func TestInstallMCP_Windsurf_RefusesConflictWithUserEntry(t *testing.T) {
 	})
 	os.WriteFile(filepath.Join(itemDir, "config.json"), configJSON, 0644)
 
-	configFile := filepath.Join(tmpDir, "windsurf-mcp_config.json")
+	configFile := filepath.Join(tmpDir, "devin-mcp_config.json")
 	existing := `{"mcpServers":{"local-py":{"command":"python","args":["user-owned.py"]}}}`
 	os.WriteFile(configFile, []byte(existing), 0644)
 
 	item := catalog.ContentItem{Name: "local-py", Type: catalog.MCP, Path: itemDir}
-	prov := provider.Provider{Slug: "windsurf", Name: "Windsurf"}
+	prov := provider.Provider{Slug: "devin", Name: "Devin Desktop"}
 
 	origPath := mcpConfigPath
 	mcpConfigPath = func(p provider.Provider, repoRoot string) (string, error) {
@@ -1743,7 +1743,7 @@ func TestInstallMCP_Windsurf_RefusesConflictWithUserEntry(t *testing.T) {
 
 	_, err := installMCP(item, prov, tmpDir)
 	if err == nil {
-		t.Fatal("installMCP succeeded despite user-owned MCP entry — H2 guard failed for Windsurf")
+		t.Fatal("installMCP succeeded despite user-owned MCP entry — H2 guard failed for Devin")
 	}
 
 	data, _ := os.ReadFile(configFile)

@@ -373,3 +373,39 @@ func mustSymlink(t *testing.T, target, linkPath string) {
 		t.Fatalf("Symlink: %v", err)
 	}
 }
+
+func TestScanProviderLinks_LegacyInstallDirIncluded(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	root := filepath.Join(tmp, "root")
+	source := filepath.Join(root, "skills", "alpha")
+	installDir := filepath.Join(tmp, "install")
+	legacyDir := filepath.Join(tmp, "legacy")
+	currentLink := filepath.Join(installDir, "alpha")
+	legacyLink := filepath.Join(legacyDir, "alpha")
+	mustWriteFile(t, source, "skill")
+	mustSymlink(t, source, currentLink)
+	mustSymlink(t, source, legacyLink)
+
+	prov := linkScanProvider("test", map[catalog.ContentType]string{catalog.Skills: installDir})
+	prov.LegacyInstallDir = func(home string, ct catalog.ContentType) string {
+		if ct == catalog.Skills {
+			return legacyDir
+		}
+		return ""
+	}
+
+	links := ScanProviderLinks([]provider.Provider{prov}, tmp, []string{root})
+	var paths []string
+	for _, l := range links {
+		if l.Provider != "test" || l.ContentType != catalog.Skills {
+			t.Errorf("unexpected link attribution: %#v", l)
+		}
+		paths = append(paths, l.Path)
+	}
+	want := []string{currentLink, legacyLink}
+	if !reflect.DeepEqual(paths, want) {
+		t.Errorf("paths = %v, want %v", paths, want)
+	}
+}

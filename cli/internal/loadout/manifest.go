@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"gopkg.in/yaml.v3"
 )
 
@@ -70,6 +71,13 @@ func Parse(path string) (*Manifest, error) {
 	}
 	if !catalog.IsValidItemName(m.Name) {
 		return nil, fmt.Errorf("%s: invalid name %q — use only letters, numbers, hyphens, and underscores (no leading dash, max 100 chars)", path, m.Name)
+	}
+
+	if m.Provider != "" {
+		m.Provider = provider.CanonicalSlug(m.Provider)
+	}
+	for i, slug := range m.Providers {
+		m.Providers[i] = provider.CanonicalSlug(slug)
 	}
 
 	return &m, nil
