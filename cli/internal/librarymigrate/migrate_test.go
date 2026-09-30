@@ -172,3 +172,99 @@ func TestRun_BothFoldersWarnAndStayPut(t *testing.T) {
 		t.Errorf("warning = %q, want both paths", got)
 	}
 }
+
+func recordSymlink(t *testing.T, storePath, libPath, linkPath string) {
+	t.Helper()
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Upsert(installstore.Record{
+		Coord:       installstore.Coord{Type: "rules", Name: filepath.Base(libPath)},
+		LibraryPath: libPath,
+		Placements:  []installstore.Placement{{Provider: "claude-code", Mechanism: installstore.MechanismSymlink, Path: linkPath}},
+	})
+	if err := store.Save(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRun_RepointsRecordedLinkAtCustomPath(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	storePath := filepath.Join(tmp, "installs.json")
+	src := filepath.Join(lib, "rules", "windsurf", "r1")
+	write(t, filepath.Join(src, "rule.md"), "# r1\n")
+	link := filepath.Join(tmp, "custom", "r1")
+	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(src, link); err != nil {
+		t.Fatal(err)
+	}
+	recordSymlink(t, storePath, src, link)
+
+	if err := Run(lib, filepath.Join(tmp, "home"), storePath, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if target, err := os.Readlink(link); err != nil || target != filepath.Join(lib, "rules", "devin", "r1") {
+		t.Errorf("custom link target = %q, %v", target, err)
+	}
+}
+
+func TestRun_FailedRepointRestoresFolderAndLinks(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	storePath := filepath.Join(tmp, "installs.json")
+	oldDir := filepath.Join(lib, "rules", "windsurf")
+	write(t, filepath.Join(oldDir, "r1", "rule.md"), "# r1\n")
+	write(t, filepath.Join(oldDir, "r2", "rule.md"), "# r2\n")
+	okLink := filepath.Join(tmp, "ok", "r1")
+	lockedLink := filepath.Join(tmp, "locked", "r2")
+	for link, src := range map[string]string{okLink: filepath.Join(oldDir, "r1"), lockedLink: filepath.Join(oldDir, "r2")} {
+		if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(src, link); err != nil {
+			t.Fatal(err)
+		}
+		recordSymlink(t, storePath, src, link)
+	}
+	if err := os.Chmod(filepath.Dir(lockedLink), 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Dir(lockedLink), 0755) })
+
+	var out bytes.Buffer
+	if err := Run(lib, filepath.Join(tmp, "home"), storePath, &out); err == nil {
+		t.Fatal("expected an error when a link cannot be repointed")
+	}
+	if !exists(filepath.Join(oldDir, "r1", "rule.md")) || exists(filepath.Join(lib, "rules", "devin")) {
+		t.Error("folder was not restored")
+	}
+	for link, want := range map[string]string{okLink: filepath.Join(oldDir, "r1"), lockedLink: filepath.Join(oldDir, "r2")} {
+		if target, err := os.Readlink(link); err != nil || target != want {
+			t.Errorf("%s target = %q, %v; want %q", link, target, err, want)
+		}
+	}
+	if strings.Contains(out.String(), "notice:") {
+		t.Errorf("printed a notice for a failed move: %q", out.String())
+	}
+}
+
+func TestRun_FlatMCPServerNamedAfterSlugStays(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	write(t, filepath.Join(lib, "mcp", "windsurf", "config.json"), "{}\n")
+	write(t, filepath.Join(lib, "mcp", "windsurf", "extra", "config.json"), "{}\n")
+
+	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if !exists(filepath.Join(lib, "mcp", "windsurf", "config.json")) {
+		t.Error("flat MCP server named windsurf was moved")
+	}
+}

@@ -35,7 +35,6 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 	}
 
 	var errs []error
-	moved := map[string]string{} // old folder -> new folder
 	var movedNames []string
 	for _, prov := range provider.AllProviders {
 		for _, old := range catalog.RetiredProviderSlugs(prov.Slug) {
@@ -49,25 +48,12 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 					fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
 					continue
 				}
-				links := installer.ScanProviderLinks(provider.AllProviders, home, []string{oldDir})
-				if err := os.Rename(oldDir, newDir); err != nil {
+				if err := moveFolder(oldDir, newDir, home, storePath); err != nil {
 					errs = append(errs, err)
 					continue
 				}
-				moved[oldDir] = newDir
 				movedNames = append(movedNames, filepath.Join(string(ct), old)+" -> "+filepath.Join(string(ct), prov.Slug))
-				for _, link := range links {
-					if err := installer.CreateSymlink(movedPath(link.Target, moved), link.Path); err != nil {
-						errs = append(errs, fmt.Errorf("repointing %s: %w", link.Path, err))
-					}
-				}
 			}
-		}
-	}
-
-	if len(moved) > 0 {
-		if err := repointRecords(storePath, moved); err != nil {
-			errs = append(errs, err)
 		}
 	}
 
@@ -89,10 +75,10 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 
 // isProviderFolder reports whether dir is a provider folder of content type
 // ct. Provider-specific types keep every item under a provider folder. MCP
-// servers sit either directly under mcp/ or grouped by provider, so
-// mcp/<slug>/ counts only when it holds server directories, and not when it
-// is a server that happens to share the slug's name. Other universal types
-// have no provider folders.
+// servers sit either directly under mcp/ or grouped by provider, so, as in
+// the catalog scanner, mcp/<slug>/ counts only when it has no config.json of
+// its own and holds server directories that do. Other universal types have
+// no provider folders.
 func isProviderFolder(ct catalog.ContentType, dir string) bool {
 	info, err := os.Lstat(dir)
 	if err != nil || !info.IsDir() {
@@ -102,6 +88,9 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 		return true
 	}
 	if ct != catalog.MCP {
+		return false
+	}
+	if _, err := os.Stat(filepath.Join(dir, "config.json")); err == nil {
 		return false
 	}
 	entries, err := os.ReadDir(dir)
@@ -118,35 +107,88 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 	return false
 }
 
-// movedPath maps a path inside a moved folder to its new location.
-func movedPath(path string, moved map[string]string) string {
-	for oldDir, newDir := range moved {
-		if rel, err := filepath.Rel(oldDir, path); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return filepath.Join(newDir, rel)
-		}
-	}
-	return path
-}
-
-// repointRecords rewrites install-record library paths that pointed into a
-// moved folder.
-func repointRecords(storePath string, moved map[string]string) error {
+// moveFolder renames oldDir to newDir and repoints every symlink and
+// install record that referenced oldDir. The symlinks come from a scan of
+// the global provider directories plus the symlink placements the install
+// store recorded, which covers installs to configured or custom paths. If
+// any repointing fails, it restores the links it changed and renames the
+// folder back, so the next command retries from the same state instead of
+// finding a moved folder with stale links.
+func moveFolder(oldDir, newDir, home, storePath string) error {
 	store, err := installstore.Load(storePath)
 	if err != nil {
 		return err
 	}
+	links := map[string]string{} // link path -> old target
+	for _, l := range installer.ScanProviderLinks(provider.AllProviders, home, []string{oldDir}) {
+		links[l.Path] = l.Target
+	}
+	for _, rec := range store.Records {
+		for _, pl := range rec.Placements {
+			if pl.Mechanism != installstore.MechanismSymlink {
+				continue
+			}
+			if target, err := readLink(pl.Path); err == nil && within(target, oldDir) {
+				links[pl.Path] = target
+			}
+		}
+	}
+
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return err
+	}
+	var done []string
+	fail := func(err error) error {
+		for _, path := range done {
+			_ = installer.CreateSymlink(links[path], path)
+		}
+		if rbErr := os.Rename(newDir, oldDir); rbErr != nil {
+			return fmt.Errorf("%w; restoring %s also failed: %v", err, oldDir, rbErr)
+		}
+		return err
+	}
+	for path, target := range links {
+		if err := installer.CreateSymlink(rebase(target, oldDir, newDir), path); err != nil {
+			return fail(fmt.Errorf("repointing %s: %w", path, err))
+		}
+		done = append(done, path)
+	}
 	changed := false
 	for i := range store.Records {
 		rec := &store.Records[i]
-		if p := movedPath(rec.LibraryPath, moved); p != rec.LibraryPath {
-			rec.LibraryPath = p
+		if within(rec.LibraryPath, oldDir) {
+			rec.LibraryPath = rebase(rec.LibraryPath, oldDir, newDir)
 			changed = true
 		}
 	}
-	if !changed {
-		return nil
+	if changed {
+		if err := store.Save(); err != nil {
+			return fail(err)
+		}
 	}
-	return store.Save()
+	return nil
+}
+
+func readLink(path string) (string, error) {
+	target, err := os.Readlink(path)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return filepath.Clean(target), nil
+}
+
+func within(path, dir string) bool {
+	rel, err := filepath.Rel(dir, path)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// rebase maps path, which lies inside oldDir, to the same place in newDir.
+func rebase(path, oldDir, newDir string) string {
+	rel, _ := filepath.Rel(oldDir, path)
+	return filepath.Join(newDir, rel)
 }
 
 // rewriteLibraryFiles replaces retired provider slugs in the provider fields
