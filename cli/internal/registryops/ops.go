@@ -10,8 +10,9 @@
 // already imports registry (load_scan.go), and the orchestrator must import
 // moat — putting it in registry would create an import cycle.
 //
-// This package is the single implementer of the MOAT persistence contract
-// (registry config, manifest cache, and project lockfile).
+// This package implements the MOAT persistence contract (registry config,
+// manifest cache, and project lockfile) for the orchestrated sync and
+// remove flows.
 
 package registryops
 

@@ -346,8 +346,9 @@ func (l *Lockfile) AddRevokedHash(contentHash string) {
 // freshly-fetched manifest into revoked_hashes. Publisher-source
 // revocations are deliberately NOT written here — they use
 // warn-once-per-session semantics (spec §Revocation Mechanism) and must not
-// be promoted to a permanent hard-block. Unknown / absent source values fail
-// closed to "registry" via Revocation.EffectiveSource().
+// be promoted to a permanent hard-block. An absent source fails closed to
+// "registry" via Revocation.EffectiveSource(); ParseManifest rejects
+// unknown sources before they reach here.
 //
 // Spec v0.6.0 §Revocation Archival: this operation is
 // strictly additive. Any hash already present in revoked_hashes that is

@@ -200,12 +200,9 @@ type Registry struct {
 	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
 	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
 
-	// TrustedRoot is a forward-compat reservation. When
-	// populated, it names a filesystem path to a Sigstore trusted_root.json
-	// the verifier should use for THIS registry in preference to the bundled
-	// default. Slice 1 does not consume the field — the verifier always
-	// loads the bundled root — but the field must exist on-disk now so
-	// slice 2+ can wire it through without a config migration.
+	// TrustedRoot, when populated, names a filesystem path to a Sigstore
+	// trusted_root.json the verifier uses for THIS registry in preference
+	// to the bundled default. A --trusted-root flag outranks it.
 	//
 	// Empty string means "use bundled default." Values are treated as
 	// absolute filesystem paths; relative paths are not supported (they

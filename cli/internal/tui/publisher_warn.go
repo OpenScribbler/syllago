@@ -83,7 +83,7 @@ func publisherWarnBody(item catalog.ContentItem, rev *moat.RevocationRecord) str
 // enriched item is the only available source.
 func warnFieldsFrom(item catalog.ContentItem, rev *moat.RevocationRecord) (reason, issuer, detailsURL string) {
 	if rev != nil {
-		reason = rev.Reason
+		reason = moat.SanitizeForDisplay(rev.Reason)
 		detailsURL = rev.DetailsURL
 	}
 	if reason == "" {

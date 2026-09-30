@@ -113,7 +113,7 @@ func tierBelowPolicyMessage(name string, observed, min moat.TrustTier) string {
 func hardBlockMessage(name string, rev *moat.RevocationRecord) string {
 	reason := ""
 	if rev != nil {
-		reason = rev.Reason
+		reason = moat.SanitizeForDisplay(rev.Reason)
 	}
 	if reason == "" {
 		return fmt.Sprintf("Refused %q: registry has revoked this item", name)

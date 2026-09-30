@@ -255,7 +255,7 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 // settingsPathFor computes a provider's hook config path via the shared
 // installer.HookConfigPath resolver, honoring the
 // resolver's base dir override when configured. Returns an error for providers
-// whose hooks syllago cannot manage (directory-scoped/adapter-less).
+// that HookConfigPath has no hook file for.
 func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) (string, error) {
 	base := homeDir
 	if resolver != nil {

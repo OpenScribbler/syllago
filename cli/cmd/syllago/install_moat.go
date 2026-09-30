@@ -436,7 +436,7 @@ func resolveGateDecision(
 		rev := gate.Revocation
 		reason := ""
 		if rev != nil {
-			reason = rev.Reason
+			reason = moat.SanitizeForDisplay(rev.Reason)
 		}
 		return false, output.NewStructuredErrorDetail(
 			output.ErrMoatRevocationBlock,
@@ -449,7 +449,7 @@ func resolveGateDecision(
 		rev := gate.Revocation
 		reason := ""
 		if rev != nil {
-			reason = rev.Reason
+			reason = moat.SanitizeForDisplay(rev.Reason)
 		}
 		fmt.Fprintf(errW, "\nPublisher-source revocation for %q: %s\n", entry.Name, reason)
 		if !moatInstallInteractiveFn() {
