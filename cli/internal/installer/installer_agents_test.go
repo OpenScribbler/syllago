@@ -213,3 +213,56 @@ func TestInstallWithResolver_AgentRendersProviderFormat(t *testing.T) {
 		t.Errorf("devin agent not in devin format:\n%s", data)
 	}
 }
+
+// A Kiro CLI JSON original must not be copied into Kiro's .md agent file.
+func TestInstall_AgentSameProviderRendersWhenSourceFormatDiffers(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	item := writeLibraryAgent(t, tmp, canonicalAgent)
+	item.Meta = &metadata.Meta{SourceProvider: "kiro"}
+	srcDir := filepath.Join(item.Path, ".source")
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "reviewer.json"), []byte(`{"name":"reviewer","prompt":"json original"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	placement, err := Install(item, provider.Kiro, tmp, MethodCopy, "")
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if !strings.HasSuffix(placement.Path, "reviewer.md") {
+		t.Fatalf("path = %s, want reviewer.md", placement.Path)
+	}
+	data, err := os.ReadFile(placement.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.HasPrefix(strings.TrimSpace(string(data)), "{") {
+		t.Errorf("kiro .md agent holds the JSON original:\n%s", data)
+	}
+}
+
+// A rendered install replaces the destination rather than writing through it,
+// so a hard link back to the library file cannot rewrite the library.
+func TestInstall_AgentDoesNotWriteThroughHardLink(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	item := writeLibraryAgent(t, tmp, canonicalAgent)
+	libFile := filepath.Join(item.Path, "agent.md")
+	target := filepath.Join(tmp, ".gemini", "agents", "reviewer.md")
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(libFile, target); err != nil {
+		t.Skipf("hard links unsupported: %v", err)
+	}
+
+	if _, err := Install(item, provider.GeminiCLI, tmp, MethodCopy, ""); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if data, _ := os.ReadFile(libFile); string(data) != canonicalAgent {
+		t.Errorf("library file changed through hard link:\n%s", data)
+	}
+}

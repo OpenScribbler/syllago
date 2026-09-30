@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -487,7 +488,10 @@ func installAgent(item catalog.ContentItem, prov provider.Provider, targetPath s
 		}
 	}
 
-	if src := converter.SourceFilePath(item); src != "" && itemSourceProvider(item) == prov.Slug {
+	// Copy the original only when it is in the format prov reads from
+	// targetPath: a Kiro CLI JSON agent does not belong in a Kiro .md file.
+	src := converter.SourceFilePath(item)
+	if src != "" && itemSourceProvider(item) == prov.Slug && strings.HasSuffix(src, converter.AgentFileExt(prov.Slug)) {
 		return placement, CopyContent(src, targetPath)
 	}
 
@@ -519,10 +523,7 @@ func installAgent(item catalog.ContentItem, prov provider.Provider, targetPath s
 	if result.Content == nil {
 		return Placement{}, fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
 	}
-	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return Placement{}, err
-	}
-	return placement, os.WriteFile(targetPath, result.Content, 0644)
+	return placement, writeFileAtomic(targetPath, bytes.NewReader(result.Content))
 }
 
 // itemSourceProvider returns the provider slug item was imported from: the
