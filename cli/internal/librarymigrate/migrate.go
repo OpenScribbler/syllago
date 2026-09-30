@@ -158,7 +158,7 @@ func moveFolder(oldDir, newDir, home, storePath string) error {
 			_ = os.Remove(oldDir)
 		}
 		if rbErr := os.Rename(newDir, oldDir); rbErr != nil {
-			return fmt.Errorf("%w; restoring %s also failed: %v", err, oldDir, rbErr)
+			return fmt.Errorf("%w; restoring %s also failed: %w", err, oldDir, rbErr)
 		}
 		return err
 	}
