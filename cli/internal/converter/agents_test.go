@@ -1289,6 +1289,20 @@ func TestDevinAgentToolsAlias(t *testing.T) {
 	}
 }
 
+func TestDevinAgentEmptyAllowedToolsWarns(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: none\nallowed-tools: []\n---\n\nNo tools.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "empty allowed-tools") {
+		t.Errorf("Warnings = %v, want one empty allowed-tools warning", result.Warnings)
+	}
+}
+
 func TestDevinAgentRoundTrip(t *testing.T) {
 	t.Parallel()
 	input := []byte("---\nname: helper\ndescription: General helper\nmodel: sonnet\nallowed-tools:\n    - read\n    - exec\n---\n\nHelp with tasks.\n")

@@ -487,7 +487,7 @@ func TestDiscoverItemsAtPath_SingleFile(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	items := discoverItemsAtPath(srcPath)
+	items := discoverItemsAtPath(srcPath, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}
@@ -509,7 +509,7 @@ func TestDiscoverItemsAtPath_DirectoryWithFiles(t *testing.T) {
 		}
 	}
 
-	items := discoverItemsAtPath(dir)
+	items := discoverItemsAtPath(dir, "")
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
@@ -536,7 +536,7 @@ func TestDiscoverItemsAtPath_DirectoryWithSubdirs(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	items := discoverItemsAtPath(dir)
+	items := discoverItemsAtPath(dir, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}
@@ -560,7 +560,7 @@ func TestDiscoverItemsAtPath_SkipsHiddenEntries(t *testing.T) {
 	// Visible file should be found.
 	os.WriteFile(filepath.Join(dir, "visible.md"), []byte("visible"), 0644)
 
-	items := discoverItemsAtPath(dir)
+	items := discoverItemsAtPath(dir, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item (hidden skipped), got %d", len(items))
 	}
@@ -575,7 +575,7 @@ func TestDiscoverItemsAtPath_EmptySubdirSkipped(t *testing.T) {
 	// Empty subdirectory — no content file to find.
 	os.MkdirAll(filepath.Join(dir, "empty-skill"), 0755)
 
-	items := discoverItemsAtPath(dir)
+	items := discoverItemsAtPath(dir, "")
 	if len(items) != 0 {
 		t.Errorf("expected 0 items for empty subdir, got %d", len(items))
 	}
@@ -604,7 +604,7 @@ func TestDiscoverItemsAtPath_SymlinkToDir(t *testing.T) {
 		t.Fatalf("Symlink: %v", err)
 	}
 
-	items := discoverItemsAtPath(parent)
+	items := discoverItemsAtPath(parent, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item from symlink, got %d", len(items))
 	}
@@ -623,16 +623,42 @@ func TestFindContentFile_SkipsHidden(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, ".syllago.yaml"), []byte("id: test"), 0644)
 	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# Skill"), 0644)
 
-	got := findContentFile(dir)
+	got := findContentFile(dir, "")
 	if !strings.HasSuffix(got, "SKILL.md") {
 		t.Errorf("expected SKILL.md (not hidden .syllago.yaml), got %q", got)
+	}
+}
+
+func TestFindContentFile_PrefersDefinitionFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Readme"), 0644)
+	os.WriteFile(filepath.Join(dir, "agent.md"), []byte("# Agent"), 0644)
+
+	got := findContentFile(dir, catalog.Agents)
+	if filepath.Base(got) != "agent.md" {
+		t.Errorf("expected agent.md (not README.md), got %q", got)
+	}
+}
+
+func TestFindContentFile_PreferenceIsPerType(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "AGENT.md"), []byte("# Agent"), 0644)
+	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# Skill"), 0644)
+
+	if got := findContentFile(dir, catalog.Agents); filepath.Base(got) != "AGENT.md" {
+		t.Errorf("agents: expected AGENT.md, got %q", got)
+	}
+	if got := findContentFile(dir, catalog.Skills); filepath.Base(got) != "SKILL.md" {
+		t.Errorf("skills: expected SKILL.md, got %q", got)
 	}
 }
 
 func TestFindContentFile_EmptyDir(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	got := findContentFile(dir)
+	got := findContentFile(dir, "")
 	if got != "" {
 		t.Errorf("expected empty string for empty dir, got %q", got)
 	}
@@ -742,7 +768,7 @@ func TestDiscoverItemsAtPath_DirectoryWithSubdirs_SetsSourceDir(t *testing.T) {
 	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Skill"), 0644)
 	os.WriteFile(filepath.Join(skillDir, "workflows", "flow.md"), []byte("# Flow"), 0644)
 
-	items := discoverItemsAtPath(dir)
+	items := discoverItemsAtPath(dir, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}
@@ -757,7 +783,7 @@ func TestDiscoverItemsAtPath_SingleFile_EmptySourceDir(t *testing.T) {
 	srcPath := filepath.Join(dir, "rule.md")
 	os.WriteFile(srcPath, []byte("# Rule"), 0644)
 
-	items := discoverItemsAtPath(srcPath)
+	items := discoverItemsAtPath(srcPath, "")
 	if len(items) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(items))
 	}

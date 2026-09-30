@@ -930,11 +930,13 @@ var devinAgentToolNames = map[string]string{
 // warning.
 func canonicalizeDevinAgent(content []byte) (*Result, error) {
 	var da devinAgentMeta
+	var keys map[string]any
 	yamlBytes, body, ok := parse.SplitFrontmatter(content)
 	if ok {
 		if err := yaml.Unmarshal(yamlBytes, &da); err != nil {
 			return nil, fmt.Errorf("parsing Devin agent YAML frontmatter: %w", err)
 		}
+		_ = yaml.Unmarshal(yamlBytes, &keys)
 	}
 
 	tools := da.AllowedTools
@@ -967,6 +969,13 @@ func canonicalizeDevinAgent(content []byte) (*Result, error) {
 	res := &Result{Content: canonical, Filename: "agent.md"}
 	if da.MaxNesting > 0 {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("max-nesting (%d) has no canonical equivalent (dropped)", da.MaxNesting))
+	}
+	// An explicit empty list grants no tools, but canonical tools cannot
+	// express "none", so the converted agent falls back to all tools.
+	_, hasAllowed := keys["allowed-tools"]
+	_, hasTools := keys["tools"]
+	if len(tools) == 0 && (hasAllowed || hasTools) {
+		res.Warnings = append(res.Warnings, "empty allowed-tools (no tools) has no canonical equivalent; the converted agent is unrestricted")
 	}
 	return res, nil
 }
