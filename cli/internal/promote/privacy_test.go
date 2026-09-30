@@ -407,6 +407,9 @@ func setupG4(t *testing.T, root, manifest string) (string, catalog.ContentItem) 
 	config.Save(root, &config.Config{Registries: []config.Registry{
 		{Name: "community/loadouts", URL: "https://github.com/community/loadouts", Visibility: "public", VisibilityCheckedAt: &now},
 	}})
+	origCfg := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origCfg })
 	loadoutDir := t.TempDir()
 	os.WriteFile(filepath.Join(loadoutDir, "loadout.yaml"), []byte(manifest), 0644)
 	globalDir := t.TempDir()
@@ -441,5 +444,39 @@ func TestCheckLoadoutItemTaint_SingleFileItem_Blocked(t *testing.T) {
 
 	if err := checkLoadoutItemTaint(item, "community/loadouts", root); err == nil {
 		t.Fatal("expected G4 to block a loadout referencing a private single-file item")
+	}
+}
+
+func TestCheckLoadoutItemTaint_GloballyRegisteredPublicRegistry_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nprovider: claude-code\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule\n")
+	// The destination is registered only in global config, as `registry add` does.
+	config.Save(root, &config.Config{})
+	now := time.Now()
+	if err := config.SaveGlobal(&config.Config{Registries: []config.Registry{
+		{Name: "global/public", URL: "https://github.com/global/public", Visibility: "public", VisibilityCheckedAt: &now},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	itemDir := filepath.Join(globalDir, "rules", "claude-code", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Private\n"), 0644)
+	metadata.Save(itemDir, privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "global/public", root); err == nil {
+		t.Fatal("expected G4 to block publishing private content to a globally registered public registry")
+	}
+}
+
+func TestCheckLoadoutItemTaint_SourceProviderFallback_Blocked(t *testing.T) {
+	root := t.TempDir()
+	globalDir, item := setupG4(t, root, "kind: loadout\nversion: 1\nprovider: devin\nproviders: [claude-code]\nname: test-loadout\ndescription: test\nrules:\n  - name: private-rule\n")
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "rule.md"), []byte("# Private\n"), 0644)
+	metadata.Save(itemDir, privateMeta)
+
+	if err := checkLoadoutItemTaint(item, "community/loadouts", root); err == nil {
+		t.Fatal("expected G4 to block a reference that resolves through the source-provider fallback")
 	}
 }

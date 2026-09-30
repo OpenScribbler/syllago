@@ -155,15 +155,15 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 		return nil // can't parse manifest — skip G4 check (G1 already passed)
 	}
 
-	// Determine target registry visibility.
+	// Determine target registry visibility from the merged global and
+	// project config, since registering a registry writes the global one.
 	targetVis := registry.VisibilityUnknown
-	cfg, err := config.Load(repoRoot)
-	if err == nil {
-		for _, r := range cfg.Registries {
-			if r.Name == registryName {
-				targetVis = r.Visibility
-				break
-			}
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(repoRoot)
+	for _, r := range config.Merge(globalCfg, projectCfg).Registries {
+		if r.Name == registryName {
+			targetVis = r.Visibility
+			break
 		}
 	}
 	if registry.IsPrivate(targetVis) {
@@ -173,9 +173,9 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 	// Resolve referenced items through a scan of the library, so every
 	// storage layout (directory or single-file items, provider directories
 	// under retired slugs) contributes the metadata the scanner attaches.
-	// A provider-specific reference matches the item for every provider the
-	// loadout targets, or for any provider when it names none, because a
-	// privacy gate must err toward finding the private copy.
+	// A reference matches the item under any provider, because resolution
+	// falls back to the loadout's source provider and a privacy gate must
+	// err toward finding the private copy.
 	globalDir := catalog.GlobalContentDir()
 	var lib []catalog.ContentItem
 	if _, statErr := os.Stat(globalDir); statErr == nil {
@@ -185,18 +185,11 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 		}
 		lib = libCat.Items
 	}
-	targets := map[string]bool{}
-	for _, slug := range m.EffectiveProviders() {
-		targets[slug] = true
-	}
 	var items []catalog.ContentItem
 	for ct, refs := range m.RefsByType() {
 		for _, ref := range refs {
 			for _, it := range lib {
 				if it.Type != ct || it.Name != ref.Name {
-					continue
-				}
-				if !ct.IsUniversal() && len(targets) > 0 && !targets[it.Provider] {
 					continue
 				}
 				items = append(items, it)

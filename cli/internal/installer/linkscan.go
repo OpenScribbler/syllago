@@ -56,52 +56,12 @@ func ScanProviderLinks(providers []provider.Provider, home string, roots []strin
 			continue
 		}
 		for _, ct := range catalog.AllContentTypes() {
-			dir := prov.InstallDir(home, ct)
-			if dir == "" || dir == provider.JSONMergeSentinel || dir == provider.ProjectScopeSentinel {
-				continue
+			dirs := []string{prov.InstallDir(home, ct)}
+			if prov.LegacyInstallDir != nil {
+				dirs = append(dirs, prov.LegacyInstallDir(home, ct))
 			}
-
-			entries, err := os.ReadDir(dir)
-			if err != nil {
-				continue
-			}
-
-			for _, entry := range entries {
-				if entry.Type()&os.ModeSymlink == 0 {
-					continue
-				}
-
-				linkPath := filepath.Join(dir, entry.Name())
-				if absPath, err := filepath.Abs(linkPath); err == nil {
-					linkPath = absPath
-				} else {
-					linkPath = filepath.Clean(linkPath)
-				}
-				if seen[linkPath] {
-					continue
-				}
-
-				target, err := resolveSymlinkTarget(linkPath)
-				if err != nil {
-					continue
-				}
-				if !targetWithinAnyRoot(target, roots) {
-					continue
-				}
-
-				class := LinkHealthy
-				if _, err := os.Stat(linkPath); err != nil {
-					class = LinkBroken
-				}
-
-				links = append(links, ScannedLink{
-					Provider:    prov.Slug,
-					ContentType: ct,
-					Path:        linkPath,
-					Target:      target,
-					Class:       class,
-				})
-				seen[linkPath] = true
+			for _, dir := range dirs {
+				links = append(links, scanLinkDir(prov, ct, dir, roots, seen)...)
 			}
 		}
 	}
@@ -115,6 +75,57 @@ func ScanProviderLinks(providers []provider.Provider, home string, roots []strin
 		}
 		return links[i].Path < links[j].Path
 	})
+	return links
+}
+
+// scanLinkDir returns the symlinks in dir whose target resolves into roots,
+// skipping paths already in seen and recording the ones it returns.
+func scanLinkDir(prov provider.Provider, ct catalog.ContentType, dir string, roots []string, seen map[string]bool) []ScannedLink {
+	if dir == "" || dir == provider.JSONMergeSentinel || dir == provider.ProjectScopeSentinel {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var links []ScannedLink
+	for _, entry := range entries {
+		if entry.Type()&os.ModeSymlink == 0 {
+			continue
+		}
+
+		linkPath := filepath.Join(dir, entry.Name())
+		if absPath, err := filepath.Abs(linkPath); err == nil {
+			linkPath = absPath
+		} else {
+			linkPath = filepath.Clean(linkPath)
+		}
+		if seen[linkPath] {
+			continue
+		}
+
+		target, err := resolveSymlinkTarget(linkPath)
+		if err != nil {
+			continue
+		}
+		if !targetWithinAnyRoot(target, roots) {
+			continue
+		}
+
+		class := LinkHealthy
+		if _, err := os.Stat(linkPath); err != nil {
+			class = LinkBroken
+		}
+
+		links = append(links, ScannedLink{
+			Provider:    prov.Slug,
+			ContentType: ct,
+			Path:        linkPath,
+			Target:      target,
+			Class:       class,
+		})
+		seen[linkPath] = true
+	}
 	return links
 }
 
