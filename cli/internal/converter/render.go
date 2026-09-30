@@ -15,14 +15,18 @@ import (
 //	---
 //
 //	<body>
+//
+// When meta has no fields to emit, the document is the body alone.
 func renderFrontmatterDoc(meta any, body string) ([]byte, error) {
 	fm, err := renderFrontmatter(meta)
 	if err != nil {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	buf.Write(fm)
-	buf.WriteString("\n")
+	if len(fm) > 0 {
+		buf.Write(fm)
+		buf.WriteString("\n")
+	}
 	buf.WriteString(body)
 	buf.WriteString("\n")
 	return buf.Bytes(), nil

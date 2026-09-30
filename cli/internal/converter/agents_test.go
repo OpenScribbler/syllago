@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -1176,5 +1177,40 @@ func TestCursorAgentDefaultPermissionNoNote(t *testing.T) {
 		if strings.Contains(w, "permissionMode") {
 			t.Fatalf("unexpected permissionMode warning for 'default': %s", w)
 		}
+	}
+}
+
+// Canonical tools must not depend on Go map iteration order.
+func TestOpenCodeAgentCanonicalizeSortsTools(t *testing.T) {
+	input := []byte("---\nname: r\ntools:\n  write: true\n  bash: true\n  read: true\n  grep: true\n---\n\nBody.\n")
+	for i := 0; i < 20; i++ {
+		res, err := canonicalizeOpenCodeAgent(input)
+		if err != nil {
+			t.Fatalf("canonicalize: %v", err)
+		}
+		meta, _, err := parseAgentCanonical(res.Content)
+		if err != nil {
+			t.Fatalf("parse canonical: %v", err)
+		}
+		if !sort.StringsAreSorted(meta.Tools) {
+			t.Fatalf("tools not sorted: %v", meta.Tools)
+		}
+	}
+}
+
+// Library agents added from OpenCode are stored canonically, with tools as a
+// list. Re-canonicalizing that content as OpenCode must accept the list.
+func TestOpenCodeAgentCanonicalizeAcceptsCanonicalToolsList(t *testing.T) {
+	input := []byte("---\nname: r\ntools:\n    - Read\n    - Bash\n---\n\nBody.\n")
+	res, err := canonicalizeOpenCodeAgent(input)
+	if err != nil {
+		t.Fatalf("canonicalize canonical input: %v", err)
+	}
+	meta, _, err := parseAgentCanonical(res.Content)
+	if err != nil {
+		t.Fatalf("parse canonical: %v", err)
+	}
+	if strings.Join(meta.Tools, ",") != "Bash,Read" {
+		t.Errorf("tools = %v, want [Bash Read]", meta.Tools)
 	}
 }

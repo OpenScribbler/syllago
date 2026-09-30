@@ -3,6 +3,7 @@ package converter
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -72,13 +73,40 @@ type geminiAgentMeta struct {
 // opencodeAgentMeta is the subset of fields OpenCode supports in frontmatter.
 // OpenCode uses "steps" instead of "maxTurns" and tools as map[string]bool.
 type opencodeAgentMeta struct {
-	Name        string          `yaml:"name,omitempty"`
-	Description string          `yaml:"description,omitempty"`
-	Tools       map[string]bool `yaml:"tools,omitempty"`
-	Model       string          `yaml:"model,omitempty"`
-	Steps       int             `yaml:"steps,omitempty"`
-	Color       string          `yaml:"color,omitempty"`
-	Temperature float64         `yaml:"temperature,omitempty"`
+	Name        string        `yaml:"name,omitempty"`
+	Description string        `yaml:"description,omitempty"`
+	Tools       opencodeTools `yaml:"tools,omitempty"`
+	Model       string        `yaml:"model,omitempty"`
+	Steps       int           `yaml:"steps,omitempty"`
+	Color       string        `yaml:"color,omitempty"`
+	Temperature float64       `yaml:"temperature,omitempty"`
+}
+
+// opencodeTools is OpenCode's tools map. It also decodes a YAML list, which
+// is how canonical agents store tools: convert re-canonicalizes library
+// content with its source provider's parser, and an agent added from
+// OpenCode is stored in canonical form.
+type opencodeTools map[string]bool
+
+func (t *opencodeTools) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.SequenceNode {
+		var names []string
+		if err := n.Decode(&names); err != nil {
+			return err
+		}
+		m := make(opencodeTools, len(names))
+		for _, name := range names {
+			m[name] = true
+		}
+		*t = m
+		return nil
+	}
+	var m map[string]bool
+	if err := n.Decode(&m); err != nil {
+		return err
+	}
+	*t = m
+	return nil
 }
 
 // copilotAgentMeta is the subset of fields Copilot CLI supports.
@@ -598,13 +626,15 @@ func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
 		}
 	}
 
-	// Convert tools map[string]bool to canonical []string (only enabled tools)
+	// Convert tools map[string]bool to canonical []string (only enabled
+	// tools), sorted so the canonical output does not depend on map order.
 	var tools []string
 	for tool, enabled := range oc.Tools {
 		if enabled {
 			tools = append(tools, ReverseTranslateTool(tool, "opencode"))
 		}
 	}
+	sort.Strings(tools)
 
 	meta := AgentMeta{
 		Name:        oc.Name,

@@ -90,7 +90,10 @@ func TestCodexCommandToClaudeRoundTrip(t *testing.T) {
 
 	out := string(result.Content)
 	assertContains(t, out, "Review PR changes")
-	assertContains(t, out, "---")
+	// A Codex prompt carries no metadata, so the Claude command has no
+	// frontmatter block (and never an empty "{}" one).
+	assertNotContains(t, out, "---")
+	assertNotContains(t, out, "{}")
 }
 
 func TestArgumentPlaceholderTranslation(t *testing.T) {

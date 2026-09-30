@@ -280,3 +280,34 @@ func TestConvertFlagsRegistered(t *testing.T) {
 		}
 	}
 }
+
+// A library item added from OpenCode is stored in canonical form (tools as a
+// list) with source_provider: opencode. Convert must render that canonical
+// content, not re-parse it as OpenCode's tools map.
+func TestConvertOpenCodeSourcedAgentFromLibrary(t *testing.T) {
+	lib := t.TempDir()
+	agentDir := filepath.Join(lib, "agents", "reviewer")
+	os.MkdirAll(agentDir, 0755)
+	os.WriteFile(filepath.Join(agentDir, "agent.md"), []byte("---\nname: reviewer\ndescription: Reviews code\ntools:\n    - Bash\n    - Read\n---\n\nReview the diff.\n"), 0644)
+	os.WriteFile(filepath.Join(agentDir, ".syllago.yaml"), []byte("format_version: 1\nname: reviewer\ntype: agents\nsource_provider: opencode\nsource_format: md\n"), 0644)
+	withConvertLibrary(t, lib)
+	_, _ = output.SetForTest(t)
+
+	outFile := filepath.Join(t.TempDir(), "reviewer.md")
+	convertCmd.Flags().Set("to", "claude-code")
+	convertCmd.Flags().Set("output", outFile)
+	defer resetConvertFlags(t)
+
+	if err := convertCmd.RunE(convertCmd, []string{"reviewer"}); err != nil {
+		t.Fatalf("convert of an OpenCode-sourced library agent should succeed, got: %v", err)
+	}
+	data, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("reading output: %v", err)
+	}
+	for _, want := range []string{"- Bash", "- Read", "Review the diff."} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("output missing %q:\n%s", want, data)
+		}
+	}
+}
