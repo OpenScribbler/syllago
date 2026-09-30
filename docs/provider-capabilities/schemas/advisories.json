@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openscribbler.github.io/capmon/v1/schemas/advisories.json",
+  "$id": "https://openscribbler.github.io/capmon/v2/schemas/advisories.json",
   "schema_version": "1",
   "title": "Advisories correction channel",
   "description": "advisories.json: the correction channel for a major, regenerated on every deploy (the sole permitted post-freeze mutation). Launch-empty.",

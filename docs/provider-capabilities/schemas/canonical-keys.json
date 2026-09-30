@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://openscribbler.github.io/capmon/v1/schemas/canonical-keys.json",
+  "$id": "https://openscribbler.github.io/capmon/v2/schemas/canonical-keys.json",
   "schema_version": "1",
   "title": "Canonical-key registry document",
   "description": "spec/canonical-keys.json: the published key registry, content type -> key -> {description, type, spec_ref}.",

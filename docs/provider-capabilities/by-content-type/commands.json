@@ -17,6 +17,9 @@
       },
       "supported": true
     },
+    "devin": {
+      "supported": true
+    },
     "factory-droid": {
       "capabilities": {
         "argument_substitution": {
@@ -90,9 +93,6 @@
           "supported": true
         }
       },
-      "supported": true
-    },
-    "windsurf": {
       "supported": true
     }
   },
