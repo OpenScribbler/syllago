@@ -28,7 +28,9 @@ import (
 // ManifestSchemaVersion is the only schema version this client accepts.
 const ManifestSchemaVersion = 1
 
-// Revocation reasons — closed set per spec §Registry Manifest.
+// Known revocation reasons (spec §Registry Manifest). They inform display
+// only: the spec requires clients to accept unknown future reasons, which
+// revoke the item like any other and are shown verbatim.
 const (
 	RevocationReasonMalicious       = "malicious"
 	RevocationReasonCompromised     = "compromised"
@@ -42,14 +44,6 @@ const (
 	RevocationSourceRegistry  = "registry"
 	RevocationSourcePublisher = "publisher"
 )
-
-// validRevocationReasons is the closed set for validation.
-var validRevocationReasons = map[string]bool{
-	RevocationReasonMalicious:       true,
-	RevocationReasonCompromised:     true,
-	RevocationReasonDeprecated:      true,
-	RevocationReasonPolicyViolation: true,
-}
 
 // validRevocationSources is the closed set for validation.
 var validRevocationSources = map[string]bool{
@@ -80,7 +74,7 @@ type Manifest struct {
 
 // ContentEntry is one row in manifest.content[].
 //
-// PrivateRepo is per-item (ADR 0007 G-10, spec §Private Content Isolation):
+// PrivateRepo is per-item (spec §Private Content Isolation):
 // conforming clients MUST NOT infer an item's visibility from the registry
 // or the Syllago-side probe (`registry.Visibility*`). The registry-level
 // probe answers "is the git registry world-readable?"; the per-item
@@ -107,8 +101,8 @@ type ContentEntry struct {
 }
 
 // IsPrivate reports whether this specific item was declared as originating
-// from a private repository. This is the per-item contract required by
-// ADR 0007 G-10; callers MUST read this rather than inferring visibility
+// from a private repository. This is the per-item visibility contract;
+// callers MUST read this rather than inferring visibility
 // from the registry or from any attestation-level default. A nil receiver
 // returns false (treated as public) — avoids defensive nil checks at call
 // sites for the common case where `range m.Content` holds values.
@@ -148,7 +142,7 @@ func (t TrustTier) String() string {
 // Absence of rekor_log_index is the Unsigned signal; presence of both
 // rekor_log_index AND per-item signing_profile is the Dual-Attested signal.
 //
-// attestation_hash_mismatch downgrade (spec v0.6.0, ADR 0007 G-13): when
+// attestation_hash_mismatch downgrade (spec v0.6.0): when
 // the flag is true, the publisher's per-item attestation does not cover
 // the current content — the registry computed a different hash than the
 // one in moat-attestation.json. The Registry Action downgrades to Signed
@@ -173,8 +167,8 @@ func (c *ContentEntry) TrustTier() TrustTier {
 
 // HasPrivateContent reports whether any entry in content[] is declared
 // private. Install and sync flows use this to decide whether a bulk
-// operation requires explicit user confirmation (ADR 0007 G-10, spec
-// §Private Content Isolation). The check is per-item — if content[]
+// operation requires explicit user confirmation (spec §Private Content
+// Isolation). The check is per-item — if content[]
 // mixes private and public entries, this returns true so the prompt
 // can enumerate which items are private. A nil receiver or empty
 // content[] returns false.
@@ -210,7 +204,7 @@ func (m *Manifest) PrivateContent() []ContentEntry {
 // Revocation is one row in manifest.revocations[].
 type Revocation struct {
 	ContentHash string `json:"content_hash"`
-	Reason      string `json:"reason"` // malicious|compromised|deprecated|policy_violation
+	Reason      string `json:"reason"` // known: malicious|compromised|deprecated|policy_violation; others accepted
 	DetailsURL  string `json:"details_url"`
 	Source      string `json:"source,omitempty"` // registry|publisher (default: registry)
 }
@@ -233,7 +227,7 @@ func (r *Revocation) EffectiveSource() string {
 //   - all REQUIRED fields present and non-empty
 //   - content[].type in the closed set {skill, agent, rules, command}
 //   - (name, type) uniqueness within content[] — spec §Registry Manifest
-//   - revocations[].reason in the closed set
+//   - revocations[].reason present (unknown values are accepted)
 //   - revocations[].source if present in {registry, publisher}
 //   - Signed and Dual-Attested tiers have the required attestation fields
 //
@@ -346,9 +340,8 @@ func (r *Revocation) validate(idx int) error {
 	if _, _, err := ParseContentHash(r.ContentHash); err != nil {
 		return fmt.Errorf("manifest revocations[%d]: %w", idx, err)
 	}
-	if !validRevocationReasons[r.Reason] {
-		return fmt.Errorf("manifest revocations[%d]: reason %q not in closed set {malicious, compromised, deprecated, policy_violation}",
-			idx, r.Reason)
+	if r.Reason == "" {
+		return fmt.Errorf("manifest revocations[%d]: missing required field: reason", idx)
 	}
 	// details_url is REQUIRED for registry-source revocations, OPTIONAL for
 	// publisher-source. EffectiveSource handles the absent→registry default.

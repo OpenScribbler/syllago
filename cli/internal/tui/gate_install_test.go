@@ -484,3 +484,13 @@ func TestInstallGate_GateStateSurvivesWindowResize(t *testing.T) {
 		t.Error("expected pendingInstall preserved across resize")
 	}
 }
+
+// A registry may publish any revocation reason, so the reason is untrusted
+// text: escape sequences must not reach the terminal.
+func TestHardBlockMessage_SanitizesReason(t *testing.T) {
+	t.Parallel()
+	msg := hardBlockMessage("x", &moat.RevocationRecord{Reason: "bad\x1b[2Jcleared"})
+	if strings.ContainsRune(msg, 0x1b) {
+		t.Errorf("hardBlockMessage kept an escape byte: %q", msg)
+	}
+}

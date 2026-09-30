@@ -51,7 +51,7 @@ func (a *CrushAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 			continue
 		}
 
-		// 2. Check handler type against the degradation policy (ADR 0001)
+		// 2. Check handler type against the hook's degradation policy
 		_, hWarnings, keep := TranslateHandlerType(hook.Handler, "crush", hook.Degradation)
 		warnings = append(warnings, hWarnings...)
 		if !keep {

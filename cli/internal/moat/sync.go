@@ -1,6 +1,6 @@
 package moat
 
-// MOAT registry-sync orchestration (ADR 0007 Phase 2a).
+// MOAT registry-sync orchestration.
 //
 // Sync composes the lower-level primitives from Phase 1 into one end-to-end
 // flow that a caller (CLI command, installer hook, TUI action) can invoke
@@ -135,12 +135,12 @@ type SyncResult struct {
 	// RevocationsAdded counts newly-archived registry-source revocations.
 	// Zero on NotModified (no new manifest bytes to merge). Publisher-source
 	// revocations are intentionally excluded — they are warn-once-per-session
-	// per the two-tier contract (ADR 0007 G-8/G-17).
+	// per the two-tier revocation contract.
 	RevocationsAdded int
 
 	// PrivateContentCount is the number of ContentEntry rows with
 	// private_repo == true. Zero on NotModified. Surfaced for the private-
-	// content warning that precedes a bulk install (ADR 0007 G-10).
+	// content warning that precedes a bulk install.
 	PrivateContentCount int
 
 	// FetchedAt is the client-clock timestamp recorded for this sync. The

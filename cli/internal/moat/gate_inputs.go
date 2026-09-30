@@ -1,6 +1,6 @@
 package moat
 
-// TUI install-gate input aggregator (ADR 0007 Phase 2c, bead syllago-u0jna).
+// TUI install-gate input aggregator.
 //
 // The TUI drives installs from a catalog view that has already been enriched
 // via EnrichFromMOATManifests at rescan time. At dispatch (click Install),
@@ -46,7 +46,7 @@ import (
 // `len(gi.Manifests) == 0` as "skip the gate" without nil guards.
 type GateInputs struct {
 	// RevSet aggregates every MOAT registry's revocations. Passed verbatim
-	// to installer.PreInstallCheck so the two-tier contract (ADR 0007 G-8)
+	// to installer.PreInstallCheck so the two-tier revocation contract
 	// can be enforced against the freshest on-disk view.
 	RevSet *RevocationSet
 

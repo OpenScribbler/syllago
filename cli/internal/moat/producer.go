@@ -1,6 +1,6 @@
 package moat
 
-// MOAT catalog-enrichment producer (ADR 0007 Phase 2c, bead syllago-lqas0).
+// MOAT catalog-enrichment producer.
 //
 // This file is the PRODUCER side of the enrichment pipeline: it reads cached
 // MOAT manifests off the filesystem, feeds them to EnrichCatalog, and emits
@@ -11,8 +11,7 @@ package moat
 //
 // Trust boundary: enrich-time re-verifies the cached manifest against its
 // cached bundle once per (file-metadata) tuple per process, closing the
-// same-user local-write gap between syncs (ADR 0007 Addendum 1, bead
-// syllago-dwjcy). The first enrich call in a fresh `syllago` process runs
+// same-user local-write gap between syncs. The first enrich call in a fresh `syllago` process runs
 // full sigstore verification; subsequent calls hit a process-local memo
 // keyed on (manifest mtime+size, bundle mtime+size) and skip the crypto
 // work. File changes flip the key automatically. See
@@ -178,7 +177,7 @@ func EnrichFromMOATManifests(
 			continue
 		}
 
-		// Enrich-time verification (ADR 0007 Addendum 1). Re-verify the
+		// Enrich-time verification. Re-verify the
 		// cached manifest+bundle against the pinned signing profile,
 		// memoized per process to amortize the crypto cost across
 		// rescans. Unpinned profiles (SigningProfile nil or zero) cannot

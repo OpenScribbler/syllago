@@ -15,7 +15,7 @@ import (
 )
 
 // hookStorageModel classifies how a provider persists its hooks on disk.
-// ADR-0020 identifies three models.
+// There are three models.
 type hookStorageModel int
 
 const (
@@ -34,7 +34,7 @@ const (
 )
 
 // hookStorageModelFor classifies a provider's hook storage and reports whether
-// syllago can install its hooks in ADR-0020 Phase 1.
+// syllago can install its hooks.
 //
 // amp/codex have no adapter and are rejected by the caller before reaching
 // here.
@@ -51,13 +51,13 @@ func hookStorageModelFor(slug string) (hookStorageModel, error) {
 		// a hook's post-round-trip identity is not stable across installs —
 		// uninstall/status/orphans can't reliably match it. Needs a stable
 		// per-entry identity (a syllago marker), which is Phase 1b work.
-		return 0, fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
+		return 0, fmt.Errorf("hook install for windsurf is not yet supported (split-event fan-out needs a stable per-entry identity)")
 	default:
 		return 0, fmt.Errorf("hook install not supported for %s", slug)
 	}
 }
 
-// HookConfigPath resolves a provider's hook file per ADR-0020's path table,
+// HookConfigPath resolves a provider's hook file location,
 // rooted at base (a home directory or a resolver-supplied base dir). It is the
 // single source of truth for hook file locations — installer.hookSettingsPathImpl,
 // the loadout apply path, and orphan detection all route through it so no flow
@@ -76,7 +76,7 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 	case "windsurf":
 		// Deferred to Phase 1b — see hookStorageModelFor for why. The Phase 1b
 		// path will be base/.windsurf/hooks.json (dedicated file).
-		return "", fmt.Errorf("hook install for windsurf is not yet supported (pending ADR-0020 Phase 1b: split-event fan-out needs a stable per-entry identity)")
+		return "", fmt.Errorf("hook install for windsurf is not yet supported (split-event fan-out needs a stable per-entry identity)")
 	case "copilot-cli":
 		return filepath.Join(base, ".copilot", "hooks", "syllago-hooks.json"), nil
 	case "kiro":
@@ -156,7 +156,7 @@ func nativeEventFor(canonEvent, slug string) string {
 }
 
 // adapterSupportsEvent reports whether the provider's adapter can represent a
-// canonical event. Adapter capabilities are the ADR-0020 canonical source of
+// canonical event. Adapter capabilities are the canonical source of
 // truth for event support; this is broader than ProviderSupportsHookEvent
 // because it also recognizes providers (windsurf) whose adapter fans a single
 // canonical event out to several provider-native split events.
@@ -292,7 +292,7 @@ type ApplyHookResult struct {
 }
 
 // ApplyCanonicalHook merges one manifest hook into the provider's hook file at
-// path via the provider's HookAdapter (ADR-0020 Phase 1), preserving sibling
+// path via the provider's HookAdapter, preserving sibling
 // keys for shared-JSON providers. The path is caller-supplied so callers can
 // use their own resolver; resolvedCommand, when non-empty, overrides the hook's
 // handler command (callers resolve script/relative paths first).

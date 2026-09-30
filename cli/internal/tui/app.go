@@ -112,8 +112,8 @@ type App struct {
 	pendingRollback   *rollback.Plan
 
 	// MOAT install-gate state. moatSession persists for the TUI run so a
-	// publisher-warn acknowledgement survives rescans (ADR 0007 G-8 warn-
-	// once-per-session); rebuilding it on 'R' would re-prompt on every redraw.
+	// publisher-warn acknowledgement survives rescans (warn-once-per-
+	// session); rebuilding it on 'R' would re-prompt on every redraw.
 	// moatGate and moatLockfile are refreshed in rescanCatalog so they track
 	// the freshest manifest + lockfile. moatMinTier is the project's policy
 	// floor; defaults to TrustTierUnsigned (accept any tier) to match

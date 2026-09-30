@@ -1,8 +1,7 @@
 package main
 
-// MOAT registry-sync presentation adapter (ADR 0007 Phase 2a, bead syllago-gj7ad
-// for the original; bead syllago-nb5ed for the refactor that moved the
-// orchestrator into internal/registryops).
+// MOAT registry-sync presentation adapter. The orchestrator lives in
+// internal/registryops.
 //
 // This file is the TTY-owner for `syllago registry sync <name>` when the
 // registry is MOAT-backed. It composes registryops.SyncOne — the shared

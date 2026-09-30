@@ -1,6 +1,6 @@
 package installer
 
-// MOAT install-flow gate primitives (ADR 0007 Phase 2b, bead syllago-8iej2).
+// MOAT install-flow gate primitives.
 //
 // This file is the CLI-agnostic composer that threads the moat package's
 // building blocks onto the install pipeline in the order the spec requires:
@@ -10,10 +10,10 @@ package installer
 //	   install regardless of whether the current manifest still lists it.
 //	2. Live revocation check — RevocationSet/Session enforce the two-tier
 //	   contract on freshly-fetched manifests: registry-source → hard-block,
-//	   publisher-source → warn-once-per-session (ADR 0007 G-8).
+//	   publisher-source → warn-once-per-session.
 //	3. Trust-tier policy — caller-supplied minimum tier refuses items that
 //	   would drop the project below its configured floor. Computed from
-//	   ContentEntry.TrustTier(), which honors the G-13 attestation-hash-
+//	   ContentEntry.TrustTier(), which honors the attestation-hash-
 //	   mismatch downgrade.
 //	4. Private-content acknowledgement — ContentEntry.IsPrivate requires
 //	   explicit confirmation before install proceeds (G-10). The gate
@@ -189,7 +189,7 @@ func PreInstallCheck(
 	}
 
 	// 2. Live revocation from freshly-synced manifests. The two-tier
-	// contract (ADR 0007 G-8) branches on source: registry always blocks;
+	// contract branches on source: registry always blocks;
 	// publisher requires per-session acknowledgement.
 	if revSet != nil {
 		for _, r := range revSet.Lookup(entry.ContentHash) {

@@ -52,8 +52,8 @@ const (
 // owner/repo names that a transferee can re-register, but the GitHub OIDC
 // extensions at OIDs 1.3.6.1.4.1.57264.1.15 (repo) and .1.17 (owner) are
 // immutable numeric identifiers. When Issuer is the GitHub Actions issuer,
-// verifiers MUST compare both numeric IDs in addition to the SAN. See ADR
-// 0007 and the header of manifest_verify.go for why .12/.13 is wrong.
+// verifiers MUST compare both numeric IDs in addition to the SAN. See the
+// header of manifest_verify.go for why .12/.13 is wrong.
 type SigningProfile struct {
 	Issuer  string `json:"issuer"`
 	Subject string `json:"subject"`
@@ -122,8 +122,8 @@ var SupportedPayloadVersions = []int{CurrentPayloadVersion}
 
 // IsSupportedPayloadVersion reports whether v is an accepted canonical
 // payload `_version` value (in-grace or current, per the spec §Version
-// Transition rule). Intended as the ordering-step-2 gate described in
-// ADR 0007 G-14.
+// Transition rule). Intended as the version gate that runs second in the
+// spec §Ordering sequence.
 func IsSupportedPayloadVersion(v int) bool {
 	for _, s := range SupportedPayloadVersions {
 		if s == v {
@@ -141,7 +141,7 @@ func IsSupportedPayloadVersion(v int) bool {
 // MUST check the bool before using the bytes — a successful match against
 // an unsupported version is a signal to reject, not to repair.
 //
-// TOCTOU-safety (ADR 0007 G-14): this builder NEVER reads `_version` from
+// TOCTOU-safety: this builder NEVER reads `_version` from
 // the wire. Both inputs (v, contentHash) are client-controlled — either
 // hard-coded or taken from the lockfile/manifest entry the client already
 // decided to install. A grace-period-aware verifier iterates

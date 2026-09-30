@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -30,6 +31,9 @@ type InstallEntry struct {
 	PathTemplate string `yaml:"path_template" json:"path_template"`
 	Layout       string `yaml:"layout" json:"layout"`
 	Status       string `yaml:"status" json:"status"`
+	// OS limits the row to those operating systems (darwin, linux,
+	// windows); empty means the row applies on every OS.
+	OS []string `yaml:"os,omitempty" json:"os,omitempty"`
 }
 
 // InstallTarget is one resolved entry point (PROTOCOL §4.14 result row).
@@ -51,6 +55,13 @@ type InstallResolveInput struct {
 	ProjectRoot string
 	Scope       string
 	Entry       *InstallEntry
+	// OS is the target OS (darwin, linux, windows). It is required
+	// whenever a candidate row carries an os constraint.
+	OS string
+	// AppDataDir is what a leading <appdata> token resolves to (the
+	// Windows %APPDATA% directory). It is required only when a row that
+	// survives OS filtering carries the token.
+	AppDataDir string
 }
 
 type installMatrix map[string]map[string][]InstallEntry
@@ -132,11 +143,31 @@ func InstallEntryRows(provider, contentType string) ([]InstallEntry, error) {
 	return append([]InstallEntry(nil), rows...), nil
 }
 
+// FilterInstallRowsByOS keeps the rows that apply on targetOS, in their
+// published order (§6). A row without an os constraint applies everywhere.
+// Filtering comes before precedence and before every refusal, so a row for
+// another OS is never a location, for writing or for discovery.
+func FilterInstallRowsByOS(rows []InstallEntry, targetOS string) []InstallEntry {
+	var kept []InstallEntry
+	for _, row := range rows {
+		if len(row.OS) == 0 || slices.Contains(row.OS, targetOS) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// AppDataPrefix is the leading token of an application-data-anchored
+// template (§8.3). Only rows constrained to windows carry it.
+const AppDataPrefix = "<appdata>/"
+
 // installPlaceholderRe matches placeholder tokens in a path template. The
-// token set is closed (§8.1): `<content-name>` is the only member in 0.1.
+// token set is closed (§8.1): `<content-name>` anywhere, and `<appdata>` as
+// the leading segment only.
 var installPlaceholderRe = regexp.MustCompile(`<[^<>/]+>`)
 
 func unrecognizedInstallToken(template string) string {
+	template = strings.TrimPrefix(template, AppDataPrefix)
 	for _, token := range installPlaceholderRe.FindAllString(template, -1) {
 		if token != "<content-name>" {
 			return token
@@ -148,11 +179,13 @@ func unrecognizedInstallToken(template string) string {
 // resolveInstallPath anchors and substitutes one row (§8.3). Resolution is
 // byte-exact string assembly: no separator normalization, no Clean — a
 // trailing slash on a directory_of_files template survives.
-func resolveInstallPath(row InstallEntry, contentName, homeDir, projectRoot string) string {
+func resolveInstallPath(row InstallEntry, contentName, homeDir, appDataDir, projectRoot string) string {
 	path := row.PathTemplate
 	switch {
 	case strings.HasPrefix(path, "~/"):
 		path = homeDir + path[1:]
+	case strings.HasPrefix(path, AppDataPrefix):
+		path = strings.TrimRight(appDataDir, "/") + path[len("<appdata>"):]
 	case row.Scope == "managed":
 		// Managed templates are absolute and resolve verbatim.
 	default:
@@ -183,6 +216,17 @@ func ResolveInstallTargets(in InstallResolveInput) ([]InstallTarget, []Diagnosti
 			return nil, nil, err
 		}
 		rows = matrix[in.Provider][in.ContentType]
+	}
+
+	// §6 OS filtering precedes precedence and every §11 lane.
+	if in.OS == "" {
+		for _, row := range rows {
+			if len(row.OS) > 0 {
+				return nil, nil, fmt.Errorf("resolve install targets: rows for %s/%s are OS-constrained and no target OS was given", in.Provider, in.ContentType)
+			}
+		}
+	} else {
+		rows = FilterInstallRowsByOS(rows, in.OS)
 	}
 
 	// §6: absence is meaningful — no rows means refuse, never guess.
@@ -250,9 +294,12 @@ func ResolveInstallTargets(in InstallResolveInput) ([]InstallTarget, []Diagnosti
 			diags = append(diags, diag)
 			continue
 		}
+		if strings.HasPrefix(row.PathTemplate, AppDataPrefix) && in.AppDataDir == "" {
+			return nil, nil, fmt.Errorf("resolve install targets: %q needs an application-data directory and none was given", row.PathTemplate)
+		}
 		targets = append(targets, InstallTarget{
 			Scope:       row.Scope,
-			Path:        resolveInstallPath(row, name, in.HomeDir, in.ProjectRoot),
+			Path:        resolveInstallPath(row, name, in.HomeDir, in.AppDataDir, in.ProjectRoot),
 			Layout:      row.Layout,
 			Status:      row.Status,
 			WriteTarget: isWrite,

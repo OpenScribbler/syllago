@@ -1,6 +1,6 @@
 package tui
 
-// Publisher-warn install confirmation helpers (ADR 0007 G-8, bead syllago-u0jna).
+// Publisher-warn install confirmation helpers.
 //
 // Publisher-source revocations are the "warn-and-confirm" tier of the two-
 // tier revocation contract: unlike registry-source revocations (which hard-
@@ -25,7 +25,7 @@ import (
 
 // isPublisherRevoked reports whether an item carries a publisher-source
 // revocation. These items require operator acknowledgement before install
-// per ADR 0007 G-8 (the two-tier revocation contract: registry-source always
+// (the two-tier revocation contract: registry-source always
 // hard-blocks, publisher-source warns-and-confirms).
 //
 // Registry-source revocations are not surfaced here — those hard-block in
@@ -83,7 +83,7 @@ func publisherWarnBody(item catalog.ContentItem, rev *moat.RevocationRecord) str
 // enriched item is the only available source.
 func warnFieldsFrom(item catalog.ContentItem, rev *moat.RevocationRecord) (reason, issuer, detailsURL string) {
 	if rev != nil {
-		reason = rev.Reason
+		reason = moat.SanitizeForDisplay(rev.Reason)
 		detailsURL = rev.DetailsURL
 	}
 	if reason == "" {

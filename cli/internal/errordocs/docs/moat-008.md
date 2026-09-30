@@ -3,7 +3,7 @@
 Syllago refused to install a content item because the registry manifest — or a prior install recorded in your lockfile — said the item is revoked. MOAT defines two revocation flavors:
 
 - **Registry-source revocation** — the registry operator marked the item revoked in the current manifest. This is a hard block: syllago will not install revoked content, even interactively.
-- **Archival revocation (G-15)** — a prior install recorded the item, and your lockfile shows it was later superseded by a revoked manifest entry. Once archived as revoked, that exact `(registry, name, content_hash)` tuple can never be re-installed, even if a later manifest un-flags it.
+- **Archival revocation** — a prior install recorded the item, and your lockfile shows it was later superseded by a revoked manifest entry. Once archived as revoked, that exact `(registry, name, content_hash)` tuple can never be re-installed, even if a later manifest un-flags it.
 
 This is intentional. A registry operator who has issued a revocation is telling you "do not run this content." Syllago honors that without giving the caller a bypass, because the alternative — letting operators opt through revocations interactively — defeats the whole point of a revocation signal.
 

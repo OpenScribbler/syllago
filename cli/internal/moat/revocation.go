@@ -1,7 +1,7 @@
 // Package moat — revocation enforcement.
 //
 // MOAT registry manifests carry a revocations[] list. Revocation handling is a
-// two-tier contract (ADR 0007 G-8, spec §Revocation Mechanism):
+// two-tier contract (spec §Revocation Mechanism):
 //
 //   - source=registry  → HARD-BLOCK. Refuse to install or load. Non-zero exit.
 //   - source=publisher → WARN-ONCE-PER-SESSION. Require explicit confirmation
@@ -82,7 +82,7 @@ func NewRevocationSet() *RevocationSet {
 // registryURL is the URL the manifest was fetched from — surfaced as
 // `IssuingRegistryURL` on each resulting record. A nil manifest is a no-op.
 //
-// Source classification (ADR 0007 G-17, spec §Revocation Mechanism) branches
+// Source classification (spec §Revocation Mechanism) branches
 // on the explicit `source` field — never inferred from reason, details_url, or
 // any other context. Revocation.EffectiveSource() applies the "absent →
 // registry" fail-closed default. Unknown source values (programmatically

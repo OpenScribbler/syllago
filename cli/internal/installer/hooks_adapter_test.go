@@ -169,8 +169,8 @@ func TestInstallHook_Windsurf_DeferredToPhase1b(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error installing hook to windsurf (Phase 1b)")
 	}
-	if !strings.Contains(err.Error(), "Phase 1b") {
-		t.Errorf("error should reference Phase 1b, got: %v", err)
+	if !strings.Contains(err.Error(), "stable per-entry identity") {
+		t.Errorf("error should explain the missing per-entry identity, got: %v", err)
 	}
 	data, _ := os.ReadFile(settingsPath)
 	if gjson.GetBytes(data, "hooks").Exists() {

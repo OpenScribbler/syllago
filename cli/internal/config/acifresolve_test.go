@@ -97,7 +97,7 @@ func TestMatrixInstallDirVendoredRows(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := matrixInstallDir(tc.providerSlug, tc.ct, "/home/u")
+			got, ok := matrixInstallDir(tc.providerSlug, tc.ct, "/home/u", "linux", "")
 			if ok != tc.wantOK {
 				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
 			}
@@ -148,7 +148,7 @@ install_entry_points:
 	}
 	for _, tc := range tests {
 		t.Run(tc.providerSlug, func(t *testing.T) {
-			got, ok := matrixInstallDir(tc.providerSlug, catalog.Skills, "/home/u")
+			got, ok := matrixInstallDir(tc.providerSlug, catalog.Skills, "/home/u", "linux", "")
 			if ok != tc.wantOK {
 				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
 			}
@@ -158,7 +158,7 @@ install_entry_points:
 		})
 	}
 
-	got, ok := matrixInstallDir("valid-merged", catalog.Hooks, "/home/u")
+	got, ok := matrixInstallDir("valid-merged", catalog.Hooks, "/home/u", "linux", "")
 	if !ok || got != provider.JSONMergeSentinel {
 		t.Errorf("matrixInstallDir(valid-merged hooks) = %q, %v; want JSON merge sentinel, true", got, ok)
 	}
@@ -234,5 +234,41 @@ func TestResolverDefaultPreservesProjectScopeSentinel(t *testing.T) {
 	got := r.InstallDir(prov, catalog.Rules, "/home/u")
 	if got != provider.ProjectScopeSentinel {
 		t.Errorf("InstallDir = %q, want project scope sentinel", got)
+	}
+}
+
+func TestMatrixInstallDirFiltersByOS(t *testing.T) {
+	matrixPath := filepath.Join(t.TempDir(), "install-entry-points.yaml")
+	if err := os.WriteFile(matrixPath, []byte(`
+install_entry_points:
+  per-os:
+    skill:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/per-os/skills/<content-name>/", layout: directory_of_files, status: current}
+      - {scope: user, os: [windows], path_template: "<appdata>/per-os/skills/<content-name>/", layout: directory_of_files, status: current}
+      - {scope: user, path_template: "~/.per-os/skills/<content-name>/", layout: directory_of_files, status: current}
+`), 0644); err != nil {
+		t.Fatalf("write matrix fixture: %v", err)
+	}
+	t.Setenv(acif.InstallEntryPointsPathEnv, matrixPath)
+
+	tests := []struct {
+		name, goos, appData, want string
+	}{
+		{"linux takes its own row", "linux", "", "/home/u/.config/per-os/skills"},
+		{"darwin ignores appdata", "darwin", "/ignored", "/home/u/.config/per-os/skills"},
+		{"windows anchors to appdata", "windows", "D:/Roaming/u", filepath.Clean("D:/Roaming/u/per-os/skills")},
+		{"other OS keeps only unconstrained rows", "freebsd", "", "/home/u/.per-os/skills"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := matrixInstallDir("per-os", catalog.Skills, "/home/u", tc.goos, tc.appData)
+			if !ok || got != tc.want {
+				t.Errorf("matrixInstallDir = %q, %v; want %q, true", got, ok, tc.want)
+			}
+		})
+	}
+
+	if got, ok := matrixInstallDir("per-os", catalog.Skills, "/home/u", "windows", ""); ok {
+		t.Errorf("windows without APPDATA = %q, true; want fallback to the legacy directory", got)
 	}
 }
