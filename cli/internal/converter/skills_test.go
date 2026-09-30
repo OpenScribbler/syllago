@@ -1227,3 +1227,25 @@ func TestRenderAmpSkill(t *testing.T) {
 func joinWarnings(warnings []string) string {
 	return strings.Join(warnings, "\n")
 }
+
+// A skill with no frontmatter fields (e.g. a Kiro steering file imported as
+// a skill) must render as the bare body, never as an empty "---\n{}\n---"
+// block.
+func TestSkillRenderEmptyMetaOmitsFrontmatter(t *testing.T) {
+	conv := &SkillsConverter{}
+	canonical, err := conv.Canonicalize([]byte("# Security\n\nValidate input.\n"), "kiro")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	for _, prov := range []provider.Provider{provider.Kiro, provider.OpenCode} {
+		result, err := conv.Render(canonical.Content, prov)
+		if err != nil {
+			t.Fatalf("Render %s: %v", prov.Slug, err)
+		}
+		out := string(result.Content)
+		if strings.Contains(out, "{}") || strings.HasPrefix(out, "---") {
+			t.Errorf("%s: expected no frontmatter block, got:\n%s", prov.Slug, out)
+		}
+		assertContains(t, out, "# Security")
+	}
+}

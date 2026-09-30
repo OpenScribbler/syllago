@@ -3,6 +3,7 @@ package converter
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -589,22 +590,32 @@ func renderKiroAgent(meta AgentMeta, body string) (*Result, error) {
 
 // canonicalizeOpenCodeAgent parses an OpenCode agent .md file into canonical format.
 // OpenCode agents use "steps" instead of "maxTurns" and tools as map[string]bool.
+//
+// Content that is already canonical passes through unchanged. convert
+// re-canonicalizes library content with its source provider's parser, and
+// an agent added from OpenCode is stored canonically, so parsing it as
+// OpenCode would fail on the tools list and drop maxTurns.
 func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
 	var oc opencodeAgentMeta
 	yamlBytes, body, ok := parse.SplitFrontmatter(content)
 	if ok {
+		if isCanonicalAgentFrontmatter(yamlBytes) {
+			return &Result{Content: content, Filename: "agent.md"}, nil
+		}
 		if err := yaml.Unmarshal(yamlBytes, &oc); err != nil {
 			return nil, fmt.Errorf("parsing OpenCode agent YAML frontmatter: %w", err)
 		}
 	}
 
-	// Convert tools map[string]bool to canonical []string (only enabled tools)
+	// Convert tools map[string]bool to canonical []string (only enabled
+	// tools), sorted so the canonical output does not depend on map order.
 	var tools []string
 	for tool, enabled := range oc.Tools {
 		if enabled {
 			tools = append(tools, ReverseTranslateTool(tool, "opencode"))
 		}
 	}
+	sort.Strings(tools)
 
 	meta := AgentMeta{
 		Name:        oc.Name,
@@ -621,6 +632,20 @@ func canonicalizeOpenCodeAgent(content []byte) (*Result, error) {
 		return nil, err
 	}
 	return &Result{Content: canonical, Filename: "agent.md"}, nil
+}
+
+// isCanonicalAgentFrontmatter reports whether frontmatter uses canonical
+// agent keys that no OpenCode agent file has: tools as a list, or maxTurns.
+func isCanonicalAgentFrontmatter(yamlBytes []byte) bool {
+	var fm map[string]yaml.Node
+	if err := yaml.Unmarshal(yamlBytes, &fm); err != nil {
+		return false
+	}
+	if tools, ok := fm["tools"]; ok && tools.Kind == yaml.SequenceNode {
+		return true
+	}
+	_, ok := fm["maxTurns"]
+	return ok
 }
 
 // renderOpenCodeAgent renders a canonical agent to OpenCode's markdown format.

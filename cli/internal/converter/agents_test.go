@@ -1178,3 +1178,42 @@ func TestCursorAgentDefaultPermissionNoNote(t *testing.T) {
 		}
 	}
 }
+
+// Canonical tools list only enabled tools, and must not depend on Go map
+// iteration order.
+func TestOpenCodeAgentCanonicalizeSortsTools(t *testing.T) {
+	input := []byte("---\nname: r\ntools:\n  write: true\n  bash: true\n  edit: false\n  read: true\n  grep: true\n---\n\nBody.\n")
+	for i := 0; i < 20; i++ {
+		res, err := canonicalizeOpenCodeAgent(input)
+		if err != nil {
+			t.Fatalf("canonicalize: %v", err)
+		}
+		meta, _, err := parseAgentCanonical(res.Content)
+		if err != nil {
+			t.Fatalf("parse canonical: %v", err)
+		}
+		if got := strings.Join(meta.Tools, ","); got != "file_read,file_write,search,shell" {
+			t.Fatalf("tools = %s, want file_read,file_write,search,shell", got)
+		}
+	}
+}
+
+// Library agents added from OpenCode are stored canonically. Re-canonicalizing
+// that content as OpenCode must pass it through, keeping maxTurns.
+func TestOpenCodeAgentCanonicalizePassesCanonicalThrough(t *testing.T) {
+	input := []byte("---\nname: r\ntools:\n    - file_read\n    - shell\nmaxTurns: 7\n---\n\nBody.\n")
+	res, err := canonicalizeOpenCodeAgent(input)
+	if err != nil {
+		t.Fatalf("canonicalize canonical input: %v", err)
+	}
+	meta, _, err := parseAgentCanonical(res.Content)
+	if err != nil {
+		t.Fatalf("parse canonical: %v", err)
+	}
+	if got := strings.Join(meta.Tools, ","); got != "file_read,shell" {
+		t.Errorf("tools = %s, want file_read,shell", got)
+	}
+	if meta.MaxTurns != 7 {
+		t.Errorf("maxTurns = %d, want 7", meta.MaxTurns)
+	}
+}
