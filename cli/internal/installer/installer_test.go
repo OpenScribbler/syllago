@@ -1255,3 +1255,35 @@ func TestStatusString(t *testing.T) {
 		})
 	}
 }
+
+// A global skill installed at Devin's pre-rename skills directory still
+// reports as installed and can be uninstalled.
+func TestDevinLegacySkillsDirStatusAndUninstall(t *testing.T) {
+	tmp := t.TempDir()
+	repoRoot := filepath.Join(tmp, "repo")
+	t.Setenv("HOME", tmp)
+
+	sourcePath := filepath.Join(repoRoot, "skills", "old-skill")
+	os.MkdirAll(sourcePath, 0755)
+	item := catalog.ContentItem{Name: "old-skill", Type: catalog.Skills, Path: sourcePath}
+
+	legacyPath := filepath.Join(tmp, ".codeium", "windsurf", "skills", "old-skill")
+	os.MkdirAll(filepath.Dir(legacyPath), 0755)
+	if err := os.Symlink(sourcePath, legacyPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := CheckStatus(item, provider.Devin, repoRoot); got != StatusInstalled {
+		t.Errorf("CheckStatus = %v, want installed", got)
+	}
+	placement, err := Uninstall(item, provider.Devin, repoRoot)
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if placement.Path != legacyPath {
+		t.Errorf("placement path = %q, want %q", placement.Path, legacyPath)
+	}
+	if _, err := os.Lstat(legacyPath); !os.IsNotExist(err) {
+		t.Error("legacy skill symlink should be removed")
+	}
+}

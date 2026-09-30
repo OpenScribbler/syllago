@@ -27,6 +27,13 @@ var Devin = Provider{
 		}
 		return ""
 	},
+	LegacyInstallDir: func(homeDir string, ct catalog.ContentType) string {
+		// Releases before the Devin rename installed global skills here.
+		if ct == catalog.Skills {
+			return filepath.Join(homeDir, ".codeium", "windsurf", "skills")
+		}
+		return ""
+	},
 	Detect: func(homeDir string) bool {
 		// Advisory only — see Provider.Detect doc. ~/.codeium/windsurf/ is
 		// shared with syllago install paths (skills/, global_workflows/), so

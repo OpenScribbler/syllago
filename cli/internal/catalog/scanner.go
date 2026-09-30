@@ -351,7 +351,7 @@ func scanFromIndex(cat *Catalog, baseDir string, resolvedBase string, items []ma
 			Name:     mi.Name,
 			Type:     ct,
 			Path:     itemPath,
-			Provider: mi.Provider,
+			Provider: resolveProviderSlug(mi.Provider),
 			Library:  local,
 		}
 
@@ -693,7 +693,7 @@ func scanProviderSpecific(cat *Catalog, typeDir string, ct ContentType, entries 
 		}
 
 		providerDir := filepath.Join(typeDir, providerEntry.Name())
-		providerName := providerEntry.Name()
+		providerName := resolveProviderSlug(providerEntry.Name())
 
 		// Validate the provider directory stays within the registry boundary.
 		if err := validateRegistryPath(providerDir, resolvedBase); err != nil {
@@ -862,6 +862,7 @@ func applyMetaOverrides(item *ContentItem, meta *metadata.Meta) {
 		return
 	}
 
+	meta.SourceProvider = resolveProviderSlug(meta.SourceProvider)
 	if meta.Name != "" && item.DisplayName == "" {
 		item.DisplayName = meta.Name
 	}
@@ -1310,4 +1311,12 @@ func (c *Catalog) PrintWarnings() {
 	for _, w := range c.Warnings {
 		fmt.Fprintf(os.Stderr, "warning: %s\n", w)
 	}
+}
+
+// resolveProviderSlug silently maps a retired provider slug read from disk to
+// its current slug, so every consumer of the catalog sees one slug per
+// provider regardless of how old the content layout is.
+func resolveProviderSlug(slug string) string {
+	c, _ := ResolveProviderSlug(slug)
+	return c
 }

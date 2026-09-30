@@ -201,7 +201,7 @@ var infoProvidersCmd = &cobra.Command{
 var infoProviderFormatsDir = filepath.Join("..", "docs", "provider-formats")
 
 func runInfoProvidersSlug(cmd *cobra.Command, args []string) error {
-	slug := args[0]
+	slug := provider.CanonicalSlug(args[0])
 
 	providers, trackingIssues, err := loadProviderFormatsDir(infoProviderFormatsDir)
 	if err != nil {

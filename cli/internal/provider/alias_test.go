@@ -27,6 +27,9 @@ func TestCanonicalSlugWarnsOnAlias(t *testing.T) {
 	}
 
 	stderr.Reset()
+	if got := CanonicalSlug("windsurf"); got != "devin" || stderr.Len() != 0 {
+		t.Errorf("second CanonicalSlug(windsurf) = %q with stderr %q, want devin and no repeat warning", got, stderr.String())
+	}
 	if got := CanonicalSlug("devin"); got != "devin" || stderr.Len() != 0 {
 		t.Errorf("CanonicalSlug(devin) = %q with stderr %q, want devin and no warning", got, stderr.String())
 	}

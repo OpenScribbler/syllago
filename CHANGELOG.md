@@ -15,7 +15,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   warning. Syllago will stop accepting `windsurf` in a future release. The
   on-disk paths Devin Desktop reads, `.windsurf/`, `.windsurfrules`, and
   `~/.codeium/windsurf/`, are unchanged. Global skills now install to
-  `~/.config/devin/skills/`, the Devin Desktop user skills directory.
+  `~/.config/devin/skills/`, the Devin Desktop user skills directory; skills
+  installed to `~/.codeium/windsurf/skills/` by earlier releases still show
+  as installed and still uninstall. Library and registry content stored
+  under a `windsurf/` directory, or whose metadata names `windsurf` as its
+  source provider, is treated as `devin` without a warning.
 
 ### Fixed
 

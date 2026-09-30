@@ -150,6 +150,11 @@ func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if err != nil {
 		return StatusNotAvailable
 	}
+	if home, homeErr := os.UserHomeDir(); homeErr == nil {
+		if lp, _, ok := legacyTarget(item, prov, home, targetPath); ok {
+			targetPath = lp
+		}
+	}
 
 	allRoots := append([]string{repoRoot}, registryPaths...)
 	if IsSymlinkedToAny(targetPath, allRoots) {
@@ -196,6 +201,9 @@ func CheckStatusWithResolver(item catalog.ContentItem, prov provider.Provider, r
 		targetPath = filepath.Join(installDir, item.Name)
 	} else {
 		targetPath = filepath.Join(installDir, filepath.Base(item.Path))
+	}
+	if lp, _, ok := legacyTarget(item, prov, home, targetPath); ok {
+		targetPath = lp
 	}
 
 	allRoots := append([]string{repoRoot}, registryPaths...)
@@ -367,6 +375,15 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	if err != nil {
 		return Placement{}, err
 	}
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		return Placement{}, fmt.Errorf("getting home directory: %w", homeErr)
+	}
+	var resolver *config.PathResolver
+	installDir := resolver.InstallDir(prov, item.Type, home)
+	if lp, ld, ok := legacyTarget(item, prov, home, targetPath); ok {
+		targetPath, installDir = lp, ld
+	}
 
 	info, err := os.Lstat(targetPath)
 	if err != nil {
@@ -394,12 +411,6 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	if info.IsDir() {
 		// Verify targetPath is within the expected install directory to prevent
 		// path traversal attacks from removing arbitrary directories.
-		home, homeErr := os.UserHomeDir()
-		if homeErr != nil {
-			return Placement{}, fmt.Errorf("getting home directory: %w", homeErr)
-		}
-		var resolver *config.PathResolver
-		installDir := resolver.InstallDir(prov, item.Type, home)
 		rel, relErr := filepath.Rel(installDir, targetPath)
 		if relErr != nil || strings.HasPrefix(rel, "..") {
 			return Placement{}, fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)
@@ -408,6 +419,27 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 	}
 
 	return Placement{}, fmt.Errorf("unexpected file type at %s, remove manually", targetPath)
+}
+
+// legacyTarget returns the item's path under prov's legacy install directory
+// for its type, and that directory, when nothing exists at targetPath and
+// something exists at the legacy path.
+func legacyTarget(item catalog.ContentItem, prov provider.Provider, home, targetPath string) (string, string, bool) {
+	if prov.LegacyInstallDir == nil {
+		return "", "", false
+	}
+	if _, err := os.Lstat(targetPath); err == nil {
+		return "", "", false
+	}
+	dir := prov.LegacyInstallDir(home, item.Type)
+	if dir == "" {
+		return "", "", false
+	}
+	lp := filepath.Join(dir, filepath.Base(targetPath))
+	if _, err := os.Lstat(lp); err != nil {
+		return "", "", false
+	}
+	return lp, dir, true
 }
 
 func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {

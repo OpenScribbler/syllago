@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -240,5 +241,22 @@ func TestInfoDevBuild(t *testing.T) {
 	}
 	if ver != "(dev build)" {
 		t.Errorf("version = %q, want %q", ver, "(dev build)")
+	}
+}
+
+func TestInfoProvidersSlug_RetiredSlugResolves(t *testing.T) {
+	origDir := infoProviderFormatsDir
+	infoProviderFormatsDir = filepath.Join("..", "..", "..", "docs", "provider-formats")
+	t.Cleanup(func() { infoProviderFormatsDir = origDir })
+
+	stdout, stderr := output.SetForTest(t)
+	if err := infoProvidersCmd.RunE(infoProvidersCmd, []string{"windsurf"}); err != nil {
+		t.Fatalf("info providers windsurf failed: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "devin") {
+		t.Errorf("output missing devin, got:\n%s", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), `renamed to "devin"`) {
+		t.Errorf("stderr missing deprecation warning, got %q", stderr.String())
 	}
 }
