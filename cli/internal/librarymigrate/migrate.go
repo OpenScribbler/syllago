@@ -48,7 +48,7 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 					fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
 					continue
 				}
-				if err := moveFolder(oldDir, newDir, home, storePath); err != nil {
+				if err := moveFolder(oldDir, newDir, home, storePath, ct == catalog.Hooks); err != nil {
 					errs = append(errs, err)
 					continue
 				}
@@ -114,7 +114,14 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 // any repointing fails, it restores the links it changed and renames the
 // folder back, so the next command retries from the same state instead of
 // finding a moved folder with stale links.
-func moveFolder(oldDir, newDir, home, storePath string) error {
+//
+// With keepOldPath set, it leaves oldDir as a relative symlink to newDir.
+// Hooks need it: applying a loadout writes each hook's command into the
+// provider's settings as an absolute path inside the library item, and
+// those settings files live in project folders the migration cannot
+// enumerate. The catalog scanner skips symlinked provider folders, so the
+// link does not surface the items twice.
+func moveFolder(oldDir, newDir, home, storePath string, keepOldPath bool) error {
 	store, err := installstore.Load(storePath)
 	if err != nil {
 		return err
@@ -128,7 +135,11 @@ func moveFolder(oldDir, newDir, home, storePath string) error {
 			if pl.Mechanism != installstore.MechanismSymlink {
 				continue
 			}
-			if target, err := readLink(pl.Path); err == nil && within(target, oldDir) {
+			target, err := readLink(pl.Path)
+			if errors.Is(err, fs.ErrPermission) {
+				return fmt.Errorf("reading recorded link %s: %w", pl.Path, err)
+			}
+			if err == nil && within(target, oldDir) {
 				links[pl.Path] = target
 			}
 		}
@@ -138,9 +149,13 @@ func moveFolder(oldDir, newDir, home, storePath string) error {
 		return err
 	}
 	var done []string
+	linkedOld := false
 	fail := func(err error) error {
 		for _, path := range done {
 			_ = installer.CreateSymlink(links[path], path)
+		}
+		if linkedOld {
+			_ = os.Remove(oldDir)
 		}
 		if rbErr := os.Rename(newDir, oldDir); rbErr != nil {
 			return fmt.Errorf("%w; restoring %s also failed: %v", err, oldDir, rbErr)
@@ -152,6 +167,12 @@ func moveFolder(oldDir, newDir, home, storePath string) error {
 			return fail(fmt.Errorf("repointing %s: %w", path, err))
 		}
 		done = append(done, path)
+	}
+	if keepOldPath {
+		if err := os.Symlink(filepath.Base(newDir), oldDir); err != nil {
+			return fail(fmt.Errorf("linking %s to %s: %w", oldDir, newDir, err))
+		}
+		linkedOld = true
 	}
 	changed := false
 	for i := range store.Records {
@@ -198,7 +219,9 @@ func rebase(path, oldDir, newDir string) string {
 func rewriteLibraryFiles(libDir string) (int, error) {
 	count := 0
 	err := filepath.WalkDir(libDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		// A symlinked file may point outside the library, so only regular
+		// files are rewritten.
+		if err != nil || !d.Type().IsRegular() {
 			return nil
 		}
 		var fields func(root *yaml.Node) bool

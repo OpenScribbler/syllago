@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 )
 
@@ -266,5 +267,87 @@ func TestRun_FlatMCPServerNamedAfterSlugStays(t *testing.T) {
 	}
 	if !exists(filepath.Join(lib, "mcp", "windsurf", "config.json")) {
 		t.Error("flat MCP server named windsurf was moved")
+	}
+}
+
+func TestRun_UnreadableRecordedLinkStopsMove(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	storePath := filepath.Join(tmp, "installs.json")
+	src := filepath.Join(lib, "rules", "windsurf", "r1")
+	write(t, filepath.Join(src, "rule.md"), "body\n")
+	parent := filepath.Join(tmp, "locked")
+	link := filepath.Join(parent, "r1.md")
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(src, link); err != nil {
+		t.Fatal(err)
+	}
+	recordSymlink(t, storePath, src, link)
+	if err := os.Chmod(parent, 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(parent, 0755) })
+
+	if err := Run(lib, tmp, storePath, &bytes.Buffer{}); err == nil {
+		t.Fatal("expected an error for an unreadable recorded link")
+	}
+	if !exists(src) || exists(filepath.Join(lib, "rules", "devin")) {
+		t.Error("folder moved despite an unreadable recorded link")
+	}
+}
+
+func TestRun_HookFolderKeepsOldPathWorking(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	storePath := filepath.Join(tmp, "installs.json")
+	write(t, filepath.Join(lib, "hooks", "windsurf", "check", "hook.json"), `{"hooks":{"PostToolUse":[{"matcher":"Write","command":"./check.sh"}]}}`)
+	write(t, filepath.Join(lib, "hooks", "windsurf", "check", "check.sh"), "#!/bin/sh\n")
+	os.MkdirAll(filepath.Join(lib, "skills"), 0755)
+
+	if err := Run(lib, tmp, storePath, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if !exists(filepath.Join(lib, "hooks", "devin", "check", "hook.json")) {
+		t.Fatal("hook folder not moved")
+	}
+	// A loadout-applied hook command holds the old absolute script path.
+	if read(t, filepath.Join(lib, "hooks", "windsurf", "check", "check.sh")) != "#!/bin/sh\n" {
+		t.Error("old script path no longer resolves")
+	}
+
+	var out bytes.Buffer
+	if err := Run(lib, tmp, storePath, &out); err != nil || out.Len() != 0 {
+		t.Errorf("second run: err %v, printed %q", err, out.String())
+	}
+	cat, err := catalog.Scan(lib, lib)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := cat.CountByType()[catalog.Hooks]; n != 1 {
+		t.Errorf("scan found %d hooks, want 1", n)
+	}
+}
+
+func TestRun_SymlinkedMetadataOutsideLibraryUntouched(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	outside := filepath.Join(tmp, "outside.yaml")
+	body := "id: a\nname: r1\nsource_provider: windsurf\n"
+	write(t, outside, body)
+	write(t, filepath.Join(lib, "rules", "claude-code", "r1", "rule.md"), "body\n")
+	if err := os.Symlink(outside, filepath.Join(lib, "rules", "claude-code", "r1", ".syllago.yaml")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(t, outside); got != body {
+		t.Errorf("file outside the library rewritten to %q", got)
 	}
 }

@@ -21,8 +21,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   syllago renames each `windsurf/` folder in your library to `devin/`,
   repoints the global provider links and install records that referenced it, and
   rewrites `windsurf` to `devin` in the library's metadata and loadout
-  files, printing one notice line. If a library already has both folders,
-  syllago leaves them and warns with both paths. Registry and project
+  files, printing one notice line. `hooks/windsurf` stays behind as a link
+  to `hooks/devin`, because applied loadouts write hook commands that point
+  into that folder. If a library already has both folders, syllago leaves
+  them and warns with both paths. Registry and project
   content stored under `windsurf/` is read as `devin` without changes.
 
 ### Fixed
