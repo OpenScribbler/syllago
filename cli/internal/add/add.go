@@ -548,7 +548,7 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 		}
 
 		for _, p := range paths {
-			for _, raw := range discoverItemsAtPath(p) {
+			for _, raw := range discoverItemsAtPath(p, ct) {
 				dedupKey := string(ct) + "/" + raw.name
 				if seen[dedupKey] {
 					continue
@@ -582,7 +582,7 @@ type rawDiscoveredItem struct {
 // becomes an item: subdirectories use the directory name as item name and
 // locate the main content file inside; regular files use filename sans extension.
 // Symlinks are followed to determine whether targets are files or directories.
-func discoverItemsAtPath(path string) []rawDiscoveredItem {
+func discoverItemsAtPath(path string, ct catalog.ContentType) []rawDiscoveredItem {
 	info, err := os.Stat(path) // follows symlinks
 	if err != nil {
 		return nil
@@ -617,7 +617,7 @@ func discoverItemsAtPath(path string) []rawDiscoveredItem {
 
 		if fi.IsDir() {
 			// Directory-based item (e.g., skills/my-skill/).
-			contentFile := findContentFile(full)
+			contentFile := findContentFile(full, ct)
 			if contentFile == "" {
 				continue
 			}
@@ -638,12 +638,29 @@ func discoverItemsAtPath(path string) []rawDiscoveredItem {
 	return items
 }
 
-// findContentFile returns the path to the first non-hidden file in a directory.
-// This is the file that represents the item's content for hashing and adding.
-func findContentFile(dir string) string {
+// primaryContentFiles lists the definition file names a directory item of
+// each type may use, in the order a provider picks them when several are
+// present (Devin reads AGENT.md, then AGENTS.md, agent.md, agents.md).
+var primaryContentFiles = map[catalog.ContentType][]string{
+	catalog.Skills: {"SKILL.md"},
+	catalog.Agents: {"AGENT.md", "AGENTS.md", "agent.md", "agents.md"},
+}
+
+// findContentFile returns the path to the file that represents a directory
+// item's content for hashing and adding: the type's definition file when one
+// exists, otherwise the first non-hidden file. Sorted order alone would pick
+// a README.md over a lowercase agent.md.
+func findContentFile(dir string, ct catalog.ContentType) string {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return ""
+	}
+	for _, name := range primaryContentFiles[ct] {
+		for _, e := range entries {
+			if !e.IsDir() && e.Name() == name {
+				return filepath.Join(dir, name)
+			}
+		}
 	}
 	for _, e := range entries {
 		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
@@ -682,7 +699,7 @@ func DiscoverFromRegistry(regName, cloneDir, globalDir string) ([]DiscoveryItem,
 			if fi.IsDir() {
 				// Directory-walk case: ci.Path is the item directory.
 				// Find the primary content file within it.
-				primaryFile = findContentFile(ci.Path)
+				primaryFile = findContentFile(ci.Path, ci.Type)
 				if primaryFile == "" {
 					continue // no readable content file — skip
 				}

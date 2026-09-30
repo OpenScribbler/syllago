@@ -602,8 +602,23 @@
       "category": "standalone-app",
       "content": {
         "agents": {
-          "supported": false,
-          "symlinkSupport": false
+          "supported": true,
+          "fileFormat": "md",
+          "installMethod": "filesystem",
+          "installPath": "{home}/.config/devin/agents",
+          "symlinkSupport": true,
+          "discoveryPaths": [
+            "{project}/.devin/agents",
+            "{project}/.agents/agents"
+          ],
+          "frontmatterFields": [
+            "name",
+            "description",
+            "model",
+            "allowed-tools",
+            "tools",
+            "max-nesting"
+          ]
         },
         "commands": {
           "supported": true,

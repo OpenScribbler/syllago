@@ -35,11 +35,11 @@ type Provider struct {
 | Type | Claude Code | Gemini CLI | Cursor | Devin Desktop | Codex | Copilot CLI |
 |------|:-:|:-:|:-:|:-:|:-:|:-:|
 | Rules | Y | Y | Y | Y | Y | Y |
-| Skills | Y | Y | - | - | - | - |
-| Agents | Y | Y | - | - | - | Y |
-| Commands | Y | Y | - | - | Y | Y |
-| MCP | Y | Y | - | - | - | Y |
-| Hooks | Y | Y | - | - | - | Y |
+| Skills | Y | Y | Y | Y | Y | Y |
+| Agents | Y | Y | Y | Y | Y | Y |
+| Commands | Y | Y | - | Y | Y | Y |
+| MCP | Y | Y | Y | Y | Y | Y |
+| Hooks | Y | Y | Y | Y | Y | Y |
 
 ---
 

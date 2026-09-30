@@ -132,7 +132,7 @@ For the full command reference, see [syllago.dev/using-syllago/cli-reference/](h
 | Factory Droid | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cursor | ✅ | ✅ | ✅ | ✅ | ✅ | — |
 | Kiro | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Devin Desktop | ✅ | ✅ | — | ✅ | ✅ | ✅ |
+| Devin Desktop | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cline | ✅ | ✅ | — | ✅ | ✅ | ✅ |
 | OpenCode | ✅ | ✅ | ✅ | ✅ | — | ✅ |
 | Roo Code | ✅ | ✅ | ✅ | ✅ | — | ✅ |

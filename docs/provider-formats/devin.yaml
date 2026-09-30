@@ -407,19 +407,60 @@ content_types:
       implementations are written by arbitrary server authors.
 
   agents:
-    status: unsupported
-    sources: []
-    canonical_mappings: {}
-    provider_extensions: []
-    notes: >
-      Devin Desktop has no installable-agent harness. The AGENTS.md support documented at
-      https://docs.windsurf.com/windsurf/cascade/agents-md.md is a rules delivery
-      mechanism that piggybacks on the Rules engine — root-level AGENTS.md files are
-      always-on and subdirectory files are subtree-scoped, but these are not invocable
-      agents and have no structured definition, tool restrictions, or orchestration.
-      AGENTS.md recognition is represented under content_types.rules.cross_provider_recognition,
-      not as an agents-content-type. Reassess if Devin Desktop adds a dedicated custom-agent
-      format (equivalent to Cursor's .cursor/agents/ or Factory's custom droids).
+    status: supported
+    sources:
+      - uri: "https://docs.devin.ai/cli/subagents.md"
+        type: documentation
+        fetch_method: http
+        content_hash: "sha256:733edfce12b0d55de7e325e6354614926db00a1f707ce1d8ec16c83b64b17adc"
+        fetched_at: "2026-09-30T00:00:00Z"
+    canonical_mappings:
+      definition_format:
+        supported: true
+        mechanism: "Markdown file with YAML frontmatter (name, description, model, allowed-tools, max-nesting) followed by the subagent's system prompt, as agents/<name>.md or agents/<name>/AGENT.md (AGENTS.md, agent.md, agents.md also accepted)."
+        confidence: confirmed
+      tool_restrictions:
+        supported: true
+        provider_field: "allowed-tools"
+        mechanism: "allowed-tools frontmatter list (alias tools) restricts the tools a subagent can use, by Devin tool name (read, edit, write, grep, glob, exec, mcp__server__tool). ask_user_question is always withheld from subagents."
+        confidence: confirmed
+      invocation_patterns:
+        supported: true
+        mechanism: "The agent picks a profile by its description when spawning a subagent; the user can ask for a profile by name. Subagents run in the foreground or background."
+        confidence: confirmed
+      agent_scopes:
+        supported: true
+        mechanism: "Project scope at .devin/agents/ and .agents/agents/; user scope at ~/.config/devin/agents/ (Windows %APPDATA%\\devin\\agents\\)."
+        confidence: confirmed
+      model_selection:
+        supported: true
+        provider_field: "model"
+        mechanism: "model frontmatter field overrides the subagent model; the default is the router-selected subagent model, not the parent's."
+        confidence: confirmed
+      per_agent_mcp:
+        supported: false
+        mechanism: "No per-agent MCP server configuration is documented in the custom subagent frontmatter."
+        confidence: inferred
+      subagent_spawning:
+        supported: true
+        mechanism: "max-nesting frontmatter field lets a custom subagent spawn its own subagents up to that depth; nesting is disabled by default."
+        confidence: confirmed
+    provider_extensions:
+      - id: max_nesting
+        name: max-nesting frontmatter field
+        summary: "max-nesting sets how deep a custom subagent may spawn child subagents. The canonical agent format has no equivalent, so syllago drops it on import."
+        source_ref: "https://docs.devin.ai/cli/subagents.md"
+        graduation_candidate: false
+        conversion: dropped
+        provider_field: max-nesting
+      - id: directory_layout
+        name: Directory-form agent definitions
+        summary: "An agent can be a directory agents/<name>/AGENT.md instead of a flat agents/<name>.md file; the directory name becomes the profile identifier."
+        source_ref: "https://docs.devin.ai/cli/subagents.md"
+        graduation_candidate: false
+        conversion: preserved
+    loading_model: "Custom subagent profiles load from .devin/agents/ and .agents/agents/ in the project and from ~/.config/devin/agents/ (Windows %APPDATA%\\devin\\agents\\) for the user. The file or directory name is the profile identifier unless frontmatter sets name. When the agent spawns a subagent it chooses a profile by description; the user can also name one. Built-in subagent_explore and subagent_general profiles ship with the harness."
+    notes: "Custom subagents replace the earlier assessment that Devin Desktop had no installable-agent harness. AGENTS.md at a project root is still a rules file, represented under content_types.rules, not an agent definition."
 
   commands:
     status: supported

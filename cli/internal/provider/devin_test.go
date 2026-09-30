@@ -58,12 +58,12 @@ func TestDevinDetect(t *testing.T) {
 
 func TestDevinSupportsTypes(t *testing.T) {
 	t.Parallel()
-	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands} {
+	for _, ct := range []catalog.ContentType{catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands, catalog.Agents} {
 		if !Devin.SupportsType(ct) {
 			t.Errorf("Devin.SupportsType(%s) = false, want true", ct)
 		}
 	}
-	for _, ct := range []catalog.ContentType{catalog.Agents, catalog.Loadouts} {
+	for _, ct := range []catalog.ContentType{catalog.Loadouts} {
 		if Devin.SupportsType(ct) {
 			t.Errorf("Devin.SupportsType(%s) = true, want false", ct)
 		}
@@ -111,5 +111,30 @@ func TestDevinEmitPath(t *testing.T) {
 	}
 	if !strings.Contains(path, ".windsurf") {
 		t.Errorf("expected emit path containing .windsurf, got %q", path)
+	}
+}
+
+func TestDevinAgentsSupport(t *testing.T) {
+	t.Parallel()
+
+	home := "/home/testuser"
+	if got, want := Devin.InstallDir(home, catalog.Agents), filepath.Join(home, ".config", "devin", "agents"); got != want {
+		t.Errorf("Devin.InstallDir(Agents) = %q, want %q", got, want)
+	}
+	paths := Devin.DiscoveryPaths("/proj", catalog.Agents)
+	want := []string{filepath.Join("/proj", ".devin", "agents"), filepath.Join("/proj", ".agents", "agents")}
+	if len(paths) != len(want) {
+		t.Fatalf("Devin.DiscoveryPaths(Agents) = %v, want %v", paths, want)
+	}
+	for i := range want {
+		if paths[i] != want[i] {
+			t.Errorf("Devin.DiscoveryPaths(Agents)[%d] = %q, want %q", i, paths[i], want[i])
+		}
+	}
+	if !Devin.SymlinkSupport[catalog.Agents] {
+		t.Error("Devin.SymlinkSupport[Agents] = false, want true")
+	}
+	if got := Devin.FileFormat(catalog.Agents); got != FormatMarkdown {
+		t.Errorf("Devin.FileFormat(Agents) = %q, want %q", got, FormatMarkdown)
 	}
 }

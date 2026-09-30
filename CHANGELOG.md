@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Devin Desktop now supports agents.** Syllago installs agents to
+  `~/.config/devin/agents/` (`%APPDATA%\devin\agents\` on Windows) and
+  discovers them in a project's `.devin/agents/` and `.agents/agents/`.
+  Converting to Devin keeps `name`, `description`, and `model`, and writes
+  `tools` as Devin's `allowed-tools` using Devin's tool names (`read`,
+  `write`, `edit`, `exec`, `grep`, `glob`). Other agent fields become notes
+  in the agent body. Devin's `max-nesting` field has no equivalent in other
+  providers, so syllago drops it on import and warns.
+
 ### Changed
 
 - **The Windsurf provider is now Devin Desktop, with slug `devin`.**
