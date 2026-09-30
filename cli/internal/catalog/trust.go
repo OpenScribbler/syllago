@@ -1,6 +1,6 @@
 package catalog
 
-// Trust primitives (ADR 0007 AD-7, G-6).
+// Trust primitives.
 //
 // The catalog package owns the *presentation layer* for MOAT trust tiers.
 // The normative tier classification (Dual-Attested / Signed / Unsigned)
@@ -24,7 +24,7 @@ package catalog
 // TrustTier is the internal, normative classification of an item's trust
 // state. The zero value is TrustTierUnknown — applied to items that were
 // never sourced from a MOAT manifest (git registries, local content).
-// Once MOATClient lands (ADR 0007 AD-6), it sets this field during
+// Once MOATClient lands, it sets this field during
 // catalog scan by calling moat.ContentEntry.TrustTier() and mapping to
 // these values.
 type TrustTier int

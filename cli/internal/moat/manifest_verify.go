@@ -17,7 +17,7 @@ package moat
 //  5. Numeric-ID match (GitHub only): when Issuer is the GitHub Actions
 //     issuer, the cert's RepositoryID and RepositoryOwnerID OIDC
 //     extensions MUST match the pinned profile. This closes the
-//     repo-transfer forgery vector — see ADR 0007.
+//     repo-transfer forgery vector.
 //
 // Revocation is NOT checked in slice 1. The returned VerificationResult
 // exposes RevocationChecked=false explicitly so callers cannot collapse
@@ -44,7 +44,7 @@ import (
 )
 
 // Error codes. Stable strings so CI pipelines and structured logs can grep
-// on them. See ADR 0007 for the full taxonomy and reserved future codes.
+// on them.
 const (
 	CodeSigned             = "MOAT_SIGNED"
 	CodeUnsigned           = "MOAT_UNSIGNED"
@@ -63,8 +63,7 @@ const (
 //	.1.15 — SourceRepositoryIdentifier (numeric repository_id)
 //	.1.17 — SourceRepositoryOwnerIdentifier (numeric repository_owner_id)
 //
-// The panel discussion that produced ADR 0007 cited .1.12 and .1.13 as the
-// numeric IDs; those OIDs are actually SourceRepositoryURI and
+// An earlier design discussion cited .1.12 and .1.13 as the numeric IDs; those OIDs are actually SourceRepositoryURI and
 // SourceRepositoryDigest (both strings, both mutable). The correct numeric
 // OIDs per sigstore-go v1.1.4 and the Fulcio OID registry are .1.15/.1.17.
 // See: https://github.com/sigstore/fulcio/blob/main/docs/oid-info.md
@@ -90,8 +89,7 @@ type VerificationResult struct {
 
 // VerifyError carries a MOAT_* code alongside the underlying cause. Callers
 // use errors.As to inspect the code for structured error paths. The code
-// vocabulary is defined above; see ADR 0007 for the reserved-but-not-yet-used
-// codes.
+// vocabulary is defined above.
 type VerifyError struct {
 	Code    string
 	Message string

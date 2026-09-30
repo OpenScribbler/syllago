@@ -1,4 +1,4 @@
-// Package moat — non-interactive failure classification (ADR 0007 G-18).
+// Package moat — non-interactive failure classification.
 //
 // MOAT spec v0.6.0 §Revocation Mechanism defines four conditions under which
 // a conforming non-interactive client (CI/CD pipeline, fleet agent, headless

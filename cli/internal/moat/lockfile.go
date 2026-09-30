@@ -31,8 +31,6 @@ package moat
 //	initializes an empty map in that case so callers can write the
 //	`fetched_at` timestamp on the next successful manifest fetch
 //	without the lockfile going through an explicit migration.
-//
-// See ADR 0007 G-7.
 
 import (
 	"crypto/sha256"
@@ -131,8 +129,8 @@ func NullAttestationBundle() json.RawMessage { return nullRaw }
 // AddEntry is the only mutation path for entries[] because it enforces
 // the pre-write hash invariant.
 //
-// RevokedHashes is append-only by contract (spec v0.6.0 §Revocation,
-// ADR 0007 G-15): registries MAY prune revocation entries after ≥180 days,
+// RevokedHashes is append-only by contract (spec v0.6.0 §Revocation):
+// registries MAY prune revocation entries after ≥180 days,
 // and once a hash has been added the lockfile becomes the authoritative
 // hard-block record. A revocation that later disappears from the manifest
 // MUST NOT cause the entry to be removed — silent pruning would let a
@@ -309,11 +307,11 @@ func (l *Lockfile) SetRegistryFetchedAt(registryURL string, t time.Time) {
 //   - Entries[] are installed-item rows. Uninstalling a registry's clone
 //     does not remove the items the user already chose to install; those
 //     stay until the user runs `syllago uninstall` per item.
-//   - RevokedHashes is append-only by spec §Revocation Archival
-//     (ADR 0007 G-15). Once a hash is hard-blocked it stays that way for
+//   - RevokedHashes is append-only by spec §Revocation Archival.
+//     Once a hash is hard-blocked it stays that way for
 //     the life of the project, even if the registry that contributed the
 //     revocation is later removed. Pruning would let a user "un-revoke"
-//     content by removing+re-adding the registry, defeating G-15.
+//     content by removing+re-adding the registry.
 //
 // No-op on a nil receiver, nil Registries map, or unknown URI.
 func (l *Lockfile) PruneRegistry(manifestURI string) {
@@ -334,10 +332,9 @@ func (l *Lockfile) IsRevoked(contentHash string) bool {
 }
 
 // AddRevokedHash appends a hash to revoked_hashes if not already present.
-// De-duplication is safe because the spec (v0.6.0 §Revocation, ADR 0007
-// G-15) says "entries MUST NOT be silently removed" — this function never
-// removes, and adding a duplicate would bloat the file without changing
-// semantics.
+// De-duplication is safe because the spec (v0.6.0 §Revocation) says
+// "entries MUST NOT be silently removed" — this function never removes, and
+// adding a duplicate would bloat the file without changing semantics.
 func (l *Lockfile) AddRevokedHash(contentHash string) {
 	if l.IsRevoked(contentHash) {
 		return
@@ -348,12 +345,12 @@ func (l *Lockfile) AddRevokedHash(contentHash string) {
 // SyncRegistryRevocations merges the registry-source revocations from a
 // freshly-fetched manifest into revoked_hashes. Publisher-source
 // revocations are deliberately NOT written here — they use
-// warn-once-per-session semantics (ADR 0007 G-8, spec §Revocation
-// Mechanism) and must not be promoted to a permanent hard-block. Unknown
-// / absent source values fail closed to "registry" via
-// Revocation.EffectiveSource().
+// warn-once-per-session semantics (spec §Revocation Mechanism) and must not
+// be promoted to a permanent hard-block. An absent source fails closed to
+// "registry" via Revocation.EffectiveSource(); ParseManifest rejects
+// unknown sources before they reach here.
 //
-// Spec v0.6.0 §Revocation Archival (ADR 0007 G-15): this operation is
+// Spec v0.6.0 §Revocation Archival: this operation is
 // strictly additive. Any hash already present in revoked_hashes that is
 // absent from m.Revocations MUST remain — once a registry prunes a
 // revocation (permitted after ≥180 days), the lockfile becomes the

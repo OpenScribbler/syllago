@@ -1,7 +1,7 @@
 package moat
 
 // VerifyAttestationItem is the production per-item Rekor verification entry
-// point (ADR 0007 G-5). Unlike the spike path in verify.go's VerifyItem, this
+// point. Unlike the spike path in verify.go's VerifyItem, this
 // function enforces the full trust chain:
 //
 //  1. Rekor entry shape (hashedrekord v0.0.1) and LogIndex match.
@@ -24,7 +24,7 @@ package moat
 //     RepositoryID / RepositoryOwnerID. Closes the repo-transfer forgery
 //     vector. See manifest_verify.go for the OID correction history.
 //
-// Verification ordering (ADR 0007 G-14, spec §Ordering):
+// Verification ordering (spec §Ordering):
 //
 //   1. content_hash first — the sha256 comparison at step 2 below is anchored
 //      on CanonicalPayloadFor(item.ContentHash), where item.ContentHash is a
@@ -231,8 +231,8 @@ func VerifyAttestationItem(
 			"fulcio chain verification", err)
 	}
 
-	// Identity match — exact-equality against pinned profile. Slice 1 does
-	// not honor the regex fields; ADR 0007 defers that to slice 2+.
+	// Identity match — exact-equality against pinned profile. The regex
+	// fields are not honored yet.
 	issuer, subject, err := extractIdentity(cert)
 	if err != nil {
 		return VerificationResult{}, verifyError(CodeInvalid,

@@ -6,7 +6,7 @@
 //
 // The fetch layer below is the bytes-typed sibling of moat.Fetcher
 // (cli/internal/moat/fetch.go). It is deliberately new code following that
-// pattern rather than a generalization of it — see ADR 0016: moat.Fetcher's
+// pattern rather than a generalization of it: moat.Fetcher's
 // parse step is registry-manifest-specific and MOAT is pinned to "no
 // behavior change".
 package capfeed

@@ -28,7 +28,11 @@ func acifContentType(ct catalog.ContentType) string {
 	}
 }
 
-func matrixInstallDir(providerSlug string, ct catalog.ContentType, homeDir string) (string, bool) {
+// matrixInstallDir returns the install directory the ACIF matrix gives for
+// the first current user-scope row that applies on goos. appDataDir is what
+// a leading <appdata> token expands to (%APPDATA% on Windows); those rows
+// are windows-only, so OS filtering removes them everywhere else.
+func matrixInstallDir(providerSlug string, ct catalog.ContentType, homeDir, goos, appDataDir string) (string, bool) {
 	contentType := acifContentType(ct)
 	if contentType == "" {
 		return "", false
@@ -38,7 +42,7 @@ func matrixInstallDir(providerSlug string, ct catalog.ContentType, homeDir strin
 	if err != nil {
 		return "", false
 	}
-	for _, row := range rows {
+	for _, row := range acif.FilterInstallRowsByOS(rows, goos) {
 		if row.Status != "current" || row.Scope != "user" {
 			continue
 		}
@@ -48,15 +52,23 @@ func matrixInstallDir(providerSlug string, ct catalog.ContentType, homeDir strin
 			}
 			return provider.JSONMergeSentinel, true
 		}
-		return matrixTemplateDir(row.PathTemplate, homeDir)
+		return matrixTemplateDir(row.PathTemplate, homeDir, appDataDir)
 	}
 	return "", false
 }
 
-func matrixTemplateDir(pathTemplate, homeDir string) (string, bool) {
+func matrixTemplateDir(pathTemplate, homeDir, appDataDir string) (string, bool) {
 	resolved := pathTemplate
-	if strings.HasPrefix(resolved, "~/") {
+	switch {
+	case strings.HasPrefix(resolved, "~/"):
 		resolved = homeDir + resolved[1:]
+	case strings.HasPrefix(resolved, acif.AppDataPrefix):
+		// An unset %APPDATA% leaves nothing to anchor to; the caller falls
+		// back to the provider's own install directory.
+		if appDataDir == "" {
+			return "", false
+		}
+		resolved = strings.TrimRight(appDataDir, `/\`) + "/" + resolved[len(acif.AppDataPrefix):]
 	}
 
 	trimmed := strings.TrimRight(resolved, "/")

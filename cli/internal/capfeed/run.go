@@ -116,7 +116,7 @@ func Run(ctx context.Context, opts Options) (*Summary, error) {
 		return nil, fmt.Errorf("provenance verification failed (writing nothing): %w", err)
 	}
 
-	// generated_at is trusted only now, after verification (ADR 0012).
+	// generated_at is trusted only now, after verification.
 	if err := CheckFreshness(idx.GeneratedAt, now(), idx.MaxStalenessHours); err != nil {
 		return nil, err
 	}

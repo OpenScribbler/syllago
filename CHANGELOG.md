@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Unknown MOAT revocation reasons no longer reject the registry
+  manifest.** Syllago refused a whole manifest when a revocation carried a
+  reason outside `malicious`, `compromised`, `deprecated`, and
+  `policy_violation`. The MOAT spec requires clients to accept unknown
+  reasons, so syllago now treats such an item as revoked and shows the
+  reason as written. A revocation with no reason is still rejected.
+
 ### Removed
 
 - **`docs/provider-sources/` removed.** Provider source manifests are owned

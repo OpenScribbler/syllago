@@ -550,9 +550,9 @@ func TestParseManifest_RevocationValidation(t *testing.T) {
 			wantErrSubs: "content_hash",
 		},
 		{
-			name:        "unknown_reason",
-			rev:         `{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "reason": "vibes", "details_url": "https://x/1"}`,
-			wantErrSubs: "closed set",
+			name:        "missing_reason",
+			rev:         `{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "details_url": "https://x/1"}`,
+			wantErrSubs: "reason",
 		},
 		{
 			name:        "missing_details_url_registry_source",
@@ -578,6 +578,24 @@ func TestParseManifest_RevocationValidation(t *testing.T) {
 				t.Errorf("error = %q; want substring %q", err, tt.wantErrSubs)
 			}
 		})
+	}
+}
+
+// TestParseManifest_UnknownRevocationReasonAccepted pins the spec rule that
+// clients accept unknown future reasons: the manifest parses and the
+// revocation keeps its reason verbatim.
+func TestParseManifest_UnknownRevocationReasonAccepted(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(strings.Replace(minimalManifestJSON,
+		`"revocations": []`,
+		`"revocations": [{"content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "reason": "license_dispute", "details_url": "https://x/1"}]`, 1))
+	m, err := ParseManifest(data)
+	if err != nil {
+		t.Fatalf("unknown reason rejected the manifest: %v", err)
+	}
+	if len(m.Revocations) != 1 || m.Revocations[0].Reason != "license_dispute" {
+		t.Errorf("revocations = %+v; want one entry with reason license_dispute", m.Revocations)
 	}
 }
 

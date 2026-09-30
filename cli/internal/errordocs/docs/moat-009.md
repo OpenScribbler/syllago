@@ -8,13 +8,13 @@ Syllago refused to install a content item because its resolved MOAT trust tier i
 
 When the caller (CLI flag, config policy, or programmatic installer) sets a minimum tier, syllago will refuse any item whose resolved tier falls below it. Unlike MOAT_008, this is not a registry-operator signal — it's your own policy floor rejecting an otherwise valid install.
 
-Tier resolution is defensive: if attestation verification silently fails (G-13 `attestation_hash_mismatch`), syllago downgrades the effective tier rather than promoting unverified content. So an item the registry labels DUAL-ATTESTED can still be treated as SIGNED at gate time, which may fall below your policy floor.
+Tier resolution is defensive: if attestation verification silently fails (`attestation_hash_mismatch`), syllago downgrades the effective tier rather than promoting unverified content. So an item the registry labels DUAL-ATTESTED can still be treated as SIGNED at gate time, which may fall below your policy floor.
 
 ## Common Causes
 
 - You set `--min-tier DUAL_ATTESTED` but the item carries only a registry-level signature, no in-toto attestation on the source artifact.
 - You set `--min-tier SIGNED` but the registry has no manifest yet (tier resolved as UNSIGNED).
-- An attestation exists but its subject digest does not match the manifest's `content_hash` — G-13 downgrade kicked in and demoted the effective tier.
+- An attestation exists but its subject digest does not match the manifest's `content_hash` — the `attestation_hash_mismatch` downgrade kicked in and demoted the effective tier.
 - Your organization-wide policy file enforces a tier floor that this registry's items do not meet.
 
 ## How to Fix

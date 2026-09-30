@@ -1,6 +1,6 @@
 package main
 
-// Signing-identity resolution for `syllago registry add` (ADR 0007 slice-2b).
+// Signing-identity resolution for `syllago registry add`.
 //
 // The goal: every MOAT registry must pin a signing identity at add-time. The
 // three acceptable paths, in precedence order:
@@ -119,8 +119,8 @@ func resolveSigningProfile(gitURL string, flags signingFlagSet) (*signingResolut
 // profileFromFlags validates the --signing-* flag set and constructs a
 // config.SigningProfile. Returns MOAT_IDENTITY_INVALID when flags are
 // incomplete. Non-GitHub issuers do not require numeric IDs; the GitHub
-// Actions issuer requires BOTH repository_id and repository_owner_id per
-// ADR 0007.
+// Actions issuer requires BOTH repository_id and repository_owner_id, which
+// bind the signature to immutable repo and owner identifiers.
 func profileFromFlags(flags signingFlagSet) (*config.SigningProfile, error) {
 	issuer := flags.Issuer
 	if issuer == "" {

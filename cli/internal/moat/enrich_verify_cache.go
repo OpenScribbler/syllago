@@ -1,7 +1,6 @@
 package moat
 
 // Process-local verification cache for enrich-time manifest re-verify.
-// See ADR 0007 Addendum 1 (bead syllago-dwjcy) for the full rationale.
 //
 // The cache's purpose is to close the same-user local-write gap between
 // `syllago registry sync` runs without paying the full sigstore cost on
@@ -22,8 +21,8 @@ package moat
 // file) pair per `syllago` process, memoize the result in a package-local
 // map, and invalidate the entry whenever either file's mtime or size
 // changes. A fresh process always re-verifies — the cache is intentionally
-// not persisted (see ADR 0007 Addendum 1 §Cache scope for why persisting
-// would recreate the MAC-protected-state problem the spec rejects).
+// not persisted, because persisting it would recreate the MAC-protected
+// local state the spec rejects (spec §Lockfile Integrity).
 //
 // Cache key choice: (manifestPath, manifestMtime, manifestSize,
 // bundleMtime, bundleSize) rather than a content hash. Hashing on every

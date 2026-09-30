@@ -106,14 +106,14 @@ func rawMatrixInstallDir(providerSlug string, ct catalog.ContentType, homeDir st
 	if err != nil {
 		return "", false, err
 	}
-	for _, row := range rows {
+	for _, row := range acif.FilterInstallRowsByOS(rows, "linux") {
 		if row.Status != "current" || row.Scope != "user" {
 			continue
 		}
 		if row.Layout == "merged_into_shared_file" {
 			return provider.JSONMergeSentinel, true, nil
 		}
-		dir, ok := matrixTemplateDir(row.PathTemplate, homeDir)
+		dir, ok := matrixTemplateDir(row.PathTemplate, homeDir, "")
 		if !ok {
 			return "", true, nil
 		}

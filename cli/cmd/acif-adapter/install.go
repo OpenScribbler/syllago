@@ -15,6 +15,8 @@ type resolveInstallTargetsInput struct {
 	ProjectRoot string             `json:"project_root"`
 	Scope       string             `json:"scope"`
 	Entry       *acif.InstallEntry `json:"entry"`
+	OS          string             `json:"os"`
+	AppDataDir  string             `json:"appdata_dir"`
 }
 
 // handleResolveInstallTargets implements PROTOCOL op 4.14 over
@@ -33,6 +35,8 @@ func handleResolveInstallTargets(raw json.RawMessage) any {
 		ProjectRoot: input.ProjectRoot,
 		Scope:       input.Scope,
 		Entry:       input.Entry,
+		OS:          input.OS,
+		AppDataDir:  input.AppDataDir,
 	})
 	if err != nil {
 		var reject *acif.RejectError

@@ -78,10 +78,9 @@ func IsMOATEmittable(ct catalog.ContentType) bool {
 // types as ignorable per spec (the type namespace is reserved for future
 // extension).
 //
-// .moat/publisher.yml override (Tier 2 discovery) is NOT covered here — a
-// follow-up bead should add that lookup so non-canonical layouts can be
-// installed. Until then, install only succeeds for items at the canonical
-// path.
+// .moat/publisher.yml (Tier 2 discovery), which supplements canonical-
+// directory discovery, is NOT covered here. Until that lookup lands, install
+// only succeeds for items at the canonical path.
 func CategoryDirForMOATType(typeStr string) (string, bool) {
 	switch typeStr {
 	case "command":

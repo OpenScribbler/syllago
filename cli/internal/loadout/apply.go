@@ -253,9 +253,9 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 }
 
 // settingsPathFor computes a provider's hook config path via the shared
-// installer.HookConfigPath resolver (ADR-0020 path table), honoring the
+// installer.HookConfigPath resolver, honoring the
 // resolver's base dir override when configured. Returns an error for providers
-// whose hooks syllago cannot manage in Phase 1 (directory-scoped/adapter-less).
+// that HookConfigPath has no hook file for.
 func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.PathResolver) (string, error) {
 	base := homeDir
 	if resolver != nil {
@@ -267,7 +267,7 @@ func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.Pa
 }
 
 // applyHook reads a hook JSON file and merges it into the provider's hook
-// config via the provider's converter.HookAdapter (ADR-0020 Phase 1). It
+// config via the provider's converter.HookAdapter. It
 // resolves relative command paths first, then delegates the
 // encode/merge/identity work to installer.ApplyCanonicalHook, recording the
 // result under the loadout's source tag.

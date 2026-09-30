@@ -1,6 +1,6 @@
 package moat
 
-// Catalog enrichment helpers (ADR 0007 Phase 2, bead syllago-kvf66).
+// Catalog enrichment helpers.
 //
 // Two narrow helpers that bridge a freshly-synced Manifest to the catalog
 // package's ContentItem view. The moat package owns these because moat

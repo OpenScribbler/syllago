@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -51,7 +53,7 @@ func (r *PathResolver) InstallDir(prov provider.Provider, ct catalog.ContentType
 	if legacy == provider.ProjectScopeSentinel {
 		return legacy
 	}
-	if dir, ok := matrixInstallDir(prov.Slug, ct, homeDir); ok {
+	if dir, ok := matrixInstallDir(prov.Slug, ct, homeDir, runtime.GOOS, os.Getenv("APPDATA")); ok {
 		return dir
 	}
 	return legacy

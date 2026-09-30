@@ -1,6 +1,6 @@
 package moat
 
-// Bundled allowlist of known-good signing identities per ADR 0007 slice-2a.
+// Bundled allowlist of known-good signing identities.
 //
 // The allowlist exists so syllago can verify its own meta-registry (and
 // future "trusted" registries) with zero configuration at first run — no
@@ -26,8 +26,8 @@ package moat
 //      (or subject_regex), and numeric repository_id / repository_owner_id.
 //      The numeric IDs come from `gh api repos/OWNER/REPO --jq '.id, .owner.id'`.
 //   2. Run the tests — malformed JSON is a hard failure at first use.
-//   3. Cross-reference the addition from ADR 0007 and the docs page named in
-//      slice-2b's error text.
+//   3. Cross-reference the addition from the docs page named in the
+//      `registry add` signing-identity error text.
 
 import (
 	_ "embed"
@@ -172,9 +172,9 @@ func parseSigningIdentities(data []byte) (map[string]*AllowlistEntry, error) {
 				return nil, fmt.Errorf("entry %d (%s): issuer_regex invalid: %w", i, key, err)
 			}
 		}
-		// GitHub Actions issuer requires numeric-ID binding per ADR 0007 —
+		// GitHub Actions issuer requires numeric-ID binding —
 		// refusing allowlist entries without it closes the repo-transfer
-		// forgery vector before slice-2b can write the profile to config.
+		// forgery vector before `registry add` can write the profile to config.
 		if e.Profile.Issuer == GitHubActionsIssuer {
 			if e.Profile.RepositoryID == "" || e.Profile.RepositoryOwnerID == "" {
 				return nil, fmt.Errorf("entry %d (%s): GitHub Actions issuer requires repository_id and repository_owner_id", i, key)
