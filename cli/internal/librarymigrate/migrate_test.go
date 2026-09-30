@@ -108,8 +108,8 @@ func TestRun_MigratesRetiredSlugOnce(t *testing.T) {
 		t.Errorf("want one notice line, got %q", out.String())
 	}
 	for _, p := range []string{"rules/windsurf", "mcp/windsurf", "loadouts/windsurf"} {
-		if exists(filepath.Join(lib, p)) {
-			t.Errorf("%s still exists", p)
+		if target, err := os.Readlink(filepath.Join(lib, p)); err != nil || target != "devin" {
+			t.Errorf("%s is not a link to devin: %q, %v", p, target, err)
 		}
 	}
 	if !exists(filepath.Join(lib, "skills", "windsurf", "SKILL.md")) {
@@ -301,7 +301,7 @@ func TestRun_UnreadableRecordedLinkStopsMove(t *testing.T) {
 	}
 }
 
-func TestRun_HookFolderKeepsOldPathWorking(t *testing.T) {
+func TestRun_OldPathKeepsResolving(t *testing.T) {
 	tmp := t.TempDir()
 	lib := filepath.Join(tmp, "content")
 	storePath := filepath.Join(tmp, "installs.json")
@@ -349,5 +349,31 @@ func TestRun_SymlinkedMetadataOutsideLibraryUntouched(t *testing.T) {
 	}
 	if got := read(t, outside); got != body {
 		t.Errorf("file outside the library rewritten to %q", got)
+	}
+}
+
+func TestRun_UnrecordedProjectLinkKeepsResolving(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	src := filepath.Join(lib, "rules", "windsurf", "r1")
+	write(t, filepath.Join(src, "rule.md"), "body\n")
+	// A loadout applied with --base-dir records this link only in the
+	// project's install records, which the migration never sees.
+	link := filepath.Join(tmp, "project", ".devin", "rules", "r1.md")
+	if err := os.MkdirAll(filepath.Dir(link), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(src, "rule.md"), link); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if !exists(filepath.Join(lib, "rules", "devin", "r1", "rule.md")) {
+		t.Fatal("rule folder not moved")
+	}
+	if got := read(t, link); got != "body\n" {
+		t.Errorf("project link reads %q", got)
 	}
 }

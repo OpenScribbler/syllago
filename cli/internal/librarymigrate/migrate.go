@@ -21,9 +21,9 @@ import (
 )
 
 // Run migrates the library at libDir away from retired provider slugs. It
-// renames each <type>/<retired>/ folder to <type>/<current>/ when no
-// <type>/<current>/ sibling exists, repoints the provider-directory
-// symlinks under home and the install records in storePath that referenced
+// moves each <type>/<retired>/ folder to <type>/<current>/, leaving a link
+// at the old path, when no <type>/<current>/ sibling exists, repoints the
+// provider-directory symlinks under home and the install records in storePath that referenced
 // the old folder, and rewrites retired slugs in the library's metadata and
 // loadout files. When both folders exist it leaves them and warns. It
 // writes one notice line to w when it changes anything, and does nothing
@@ -48,7 +48,7 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 					fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
 					continue
 				}
-				if err := moveFolder(oldDir, newDir, home, storePath, ct == catalog.Hooks); err != nil {
+				if err := moveFolder(oldDir, newDir, home, storePath); err != nil {
 					errs = append(errs, err)
 					continue
 				}
@@ -115,13 +115,13 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 // folder back, so the next command retries from the same state instead of
 // finding a moved folder with stale links.
 //
-// With keepOldPath set, it leaves oldDir as a relative symlink to newDir.
-// Hooks need it: applying a loadout writes each hook's command into the
-// provider's settings as an absolute path inside the library item, and
-// those settings files live in project folders the migration cannot
-// enumerate. The catalog scanner skips symlinked provider folders, so the
-// link does not surface the items twice.
-func moveFolder(oldDir, newDir, home, storePath string, keepOldPath bool) error {
+// It then leaves oldDir as a relative symlink to newDir. Applied loadouts
+// record their links, and write hook commands as absolute paths into the
+// library, in each project's own install records, which the migration
+// cannot enumerate; the link keeps those paths resolving. The catalog
+// scanner skips symlinked provider folders, so the items do not appear
+// twice.
+func moveFolder(oldDir, newDir, home, storePath string) error {
 	store, err := installstore.Load(storePath)
 	if err != nil {
 		return err
@@ -168,12 +168,10 @@ func moveFolder(oldDir, newDir, home, storePath string, keepOldPath bool) error 
 		}
 		done = append(done, path)
 	}
-	if keepOldPath {
-		if err := os.Symlink(filepath.Base(newDir), oldDir); err != nil {
-			return fail(fmt.Errorf("linking %s to %s: %w", oldDir, newDir, err))
-		}
-		linkedOld = true
+	if err := os.Symlink(filepath.Base(newDir), oldDir); err != nil {
+		return fail(fmt.Errorf("linking %s to %s: %w", oldDir, newDir, err))
 	}
+	linkedOld = true
 	changed := false
 	for i := range store.Records {
 		rec := &store.Records[i]
