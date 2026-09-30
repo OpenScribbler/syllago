@@ -32,7 +32,7 @@ const (
 // §Registry Signing + G-4). Name/operator changes in the manifest do NOT
 // require re-approval; only this pair does.
 //
-// Per ADR 0007 the profile grew numeric-ID fields (RepositoryID,
+// The profile carries numeric-ID fields (RepositoryID,
 // RepositoryOwnerID) to bind GitHub-issued signatures to immutable owner/repo
 // identifiers, closing the repo-transfer forgery vector. Old configs captured
 // before these fields existed deserialize with empty strings and continue to
@@ -76,7 +76,7 @@ func (s SigningProfile) IsZero() bool {
 // (issuer, subject, repository_id, repository_owner_id) must match. A profile
 // that pinned the numeric IDs and a profile that didn't are NOT equal even if
 // the issuer+subject line up — bumping from TOFU to pinned-ID is a
-// re-approval event per ADR 0007.
+// re-approval event.
 //
 // ProfileVersion and the regex fields do not participate in equality: they
 // are schema metadata and relaxation knobs, not identity.
@@ -107,7 +107,7 @@ func (s SigningProfile) Equal(other SigningProfile) bool {
 //     omit, pinned may not relax" rule. Pinned-set + wire-empty is fine
 //     (pinned strictness wins; the cert verifier still binds the pinned IDs
 //     against the cert's OIDC extensions, so repo-transfer forgery is still
-//     caught). Pinned-empty + wire-set IS a re-approval event per ADR 0007 —
+//     caught). Pinned-empty + wire-set IS a re-approval event —
 //     the publisher tightened the binding and the user's TOFU consent did
 //     not cover the new constraint. Both set + different also fails.
 //
@@ -200,7 +200,7 @@ type Registry struct {
 	Visibility          string     `json:"visibility,omitempty"`            // "public", "private", "unknown"
 	VisibilityCheckedAt *time.Time `json:"visibility_checked_at,omitempty"` // for TTL cache (re-probe after 1 hour)
 
-	// TrustedRoot is a forward-compat reservation per ADR 0007. When
+	// TrustedRoot is a forward-compat reservation. When
 	// populated, it names a filesystem path to a Sigstore trusted_root.json
 	// the verifier should use for THIS registry in preference to the bundled
 	// default. Slice 1 does not consume the field — the verifier always

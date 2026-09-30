@@ -30,7 +30,7 @@ func computeGroupHash(matcherGroup []byte) string {
 var hookSettingsPath = hookSettingsPathImpl
 
 // hookSettingsPathImpl resolves a provider's hook file rooted at the user's
-// home directory, via the shared HookConfigPath resolver (ADR-0020 path table).
+// home directory, via the shared HookConfigPath resolver.
 func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -51,7 +51,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return Placement{}, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
 	}
 
-	// ADR-0020: install through the provider's HookAdapter. No adapter (amp,
+	// Install through the provider's HookAdapter. No adapter (amp,
 	// codex) means the hook cannot be serialized — reject rather than write
 	// config the provider never reads.
 	adapter := converter.AdapterFor(prov.Slug)
@@ -72,7 +72,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	canonHook.Event = canonEvent
 
 	// Event-support gate: reject events the adapter cannot represent. Adapter
-	// capabilities are ADR-0020's source of truth (they see windsurf's
+	// capabilities are the source of truth (they see windsurf's
 	// split-event support, which ProviderSupportsHookEvent misses).
 	if !adapterSupportsEvent(adapter, canonEvent) {
 		return Placement{}, fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)

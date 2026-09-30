@@ -12,7 +12,7 @@ import (
 
 // DefaultMaxStalenessHours applies when the feed omits max_staleness_hours.
 // The published contract's value is 48; the feed is authoritative when it
-// says otherwise (heartbeat semantics, capmon ADR 0012).
+// says otherwise (heartbeat semantics).
 const DefaultMaxStalenessHours = 48
 
 // Index is the tolerantly-decoded v1/index.json. Unknown fields at every

@@ -10,7 +10,7 @@ package main
 // and health checks key on, and it must be stable before any other moat
 // surface can depend on it.
 //
-// Exit codes (per ADR 0007):
+// Exit codes:
 //   0  fresh
 //   1  warn / escalated  (verification still proceeds but warn operator)
 //   2  expired / missing / corrupt  (verification must refuse to proceed)
@@ -104,8 +104,8 @@ func runMoatTrustStatus(stdout, stderr io.Writer, now time.Time, asJSON bool) (m
 // writeTrustStatusHuman renders the status as key=value lines, one per
 // field. This format is deliberately machine-parseable (awk/grep) without
 // being JSON — a middle ground that humans can read at a glance and scripts
-// can extract from without jq. The `moat.trusted_root=bundled` line per
-// ADR 0007 is the primary audit breadcrumb.
+// can extract from without jq. The `moat.trusted_root=bundled` line is the
+// primary audit breadcrumb.
 func writeTrustStatusHuman(w io.Writer, info moat.TrustedRootInfo) {
 	fmt.Fprintf(w, "moat.trusted_root=%s\n", info.Source)
 	if !info.IssuedAt.IsZero() {

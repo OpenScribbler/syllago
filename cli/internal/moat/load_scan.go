@@ -1,6 +1,6 @@
 package moat
 
-// Load-and-scan orchestration (ADR 0007 Phase 2c, bead syllago-nmjrm).
+// Load-and-scan orchestration.
 //
 // Every live-catalog consumer (TUI rescan, `syllago list`, `syllago
 // inspect`, `syllago doctor`) needs the same preamble: merge configs

@@ -1,8 +1,9 @@
 package capfeed
 
-// Fail-closed SLSA provenance verification for the Capability Feed
-// (ADR 0015). GitHub's attestations API serves Sigstore v0.3-family bundles
-// containing DSSE envelopes with in-toto SLSA provenance statements;
+// Fail-closed SLSA provenance verification for the Capability Feed, using
+// sigstore-go's bundle verifier rather than hand-rolled Rekor checks.
+// GitHub's attestations API serves Sigstore v0.3-family bundles containing
+// DSSE envelopes with in-toto SLSA provenance statements;
 // sigstore-go verifies these natively through the same verifier-construction
 // pattern as moat.VerifyManifest (cli/internal/moat/manifest_verify.go).
 // MOAT itself has no DSSE handling and gains none — this file is the

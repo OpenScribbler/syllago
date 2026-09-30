@@ -2,8 +2,9 @@
 // fail-closed and mirrors it into docs/provider-capabilities/.
 //
 // Not shipped to end users — invoked from .github/workflows/capmon-pull.yml
-// and locally via `go run ./cmd/capmon-pull` (syllago-sign precedent,
-// ADR 0017). Never added to build-all, release artifacts, or commands.json.
+// and locally via `go run ./cmd/capmon-pull`, following the syllago-sign
+// precedent of a separate main package. Never added to build-all, release
+// artifacts, or commands.json.
 package main
 
 import (

@@ -10,8 +10,8 @@
 // already imports registry (load_scan.go), and the orchestrator must import
 // moat — putting it in registry would create an import cycle.
 //
-// See ADR 0007 (MOAT) for the persistence contract; this package is the
-// single implementer of it.
+// This package is the single implementer of the MOAT persistence contract
+// (registry config, manifest cache, and project lockfile).
 
 package registryops
 
@@ -37,7 +37,7 @@ type SyncOpts struct {
 
 	// LockfileRoot is the directory whose .syllago/moat-lockfile.json the
 	// orchestrator should load and save. Caller-supplied because this is
-	// project-scoped state per ADR 0007 §Lockfile and the orchestrator must
+	// project-scoped state and the orchestrator must
 	// not assume cwd or pick its own root.
 	LockfileRoot string
 

@@ -1,6 +1,6 @@
 package tui
 
-// Private-repo install confirmation helpers (ADR 0007 G-10, bead syllago-u0jna).
+// Private-repo install confirmation helpers.
 //
 // Private content (content_entry.private_repo=true in the manifest) requires
 // explicit operator acknowledgement before install because the visibility

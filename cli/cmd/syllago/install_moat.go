@@ -1,7 +1,6 @@
 package main
 
-// MOAT registry-sourced install dispatcher (ADR 0007 Phase 2, bead
-// syllago-elvv3 — first slice of parent bead syllago-svdwc).
+// MOAT registry-sourced install dispatcher.
 //
 // Scope of this slice:
 //
@@ -76,8 +75,8 @@ var moatInstallPromptFn = defaultMoatInstallPrompt
 // helper.
 var moatInstallInteractiveFn = func() bool { return isInteractive() }
 
-// moatInstallMinTier is the policy floor the install gate enforces. ADR
-// 0007 leaves the knob up to the operator; until a CLI/config surface
+// moatInstallMinTier is the policy floor the install gate enforces. The
+// floor is an operator choice; until a CLI/config surface
 // lands this defaults to TrustTierUnsigned (accept any tier). Tests
 // override to exercise TierBelowPolicy.
 var moatInstallMinTier = moat.TrustTierUnsigned
@@ -442,7 +441,7 @@ func resolveGateDecision(
 		return false, output.NewStructuredErrorDetail(
 			output.ErrMoatRevocationBlock,
 			fmt.Sprintf("registry-source revocation refuses install of %q", entry.Name),
-			"Registry-source revocations are permanent (ADR 0007 G-15). Contact the publisher or choose an alternative item.",
+			"Registry-source revocations are permanent. Contact the publisher or choose an alternative item.",
 			"reason="+reason,
 		)
 

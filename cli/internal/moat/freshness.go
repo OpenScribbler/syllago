@@ -1,6 +1,6 @@
 // Package moat — manifest freshness / staleness enforcement.
 //
-// MOAT spec §Freshness Guarantee (v0.6.0, ADR 0007 G-9):
+// MOAT spec §Freshness Guarantee (v0.6.0):
 //
 //   - Default staleness threshold is 72 hours. The value was 24h in pre-0.6.0
 //     drafts; the 72h landed explicitly to survive a weekend (Friday 6pm →

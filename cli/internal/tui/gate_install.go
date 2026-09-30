@@ -1,6 +1,6 @@
 package tui
 
-// TUI install-gate adapter (ADR 0007 Phase 2c, bead syllago-u0jna).
+// TUI install-gate adapter.
 //
 // Mirrors cmd/syllago/install_moat.go:resolveGateDecision but maps each
 // MOATGateDecision to TUI primitives (modals + toasts) instead of stderr +
@@ -107,8 +107,8 @@ func tierBelowPolicyMessage(name string, observed, min moat.TrustTier) string {
 }
 
 // hardBlockMessage renders a user-facing toast string for the
-// MOATGateHardBlock branch. Registry-source revocations are permanent per
-// ADR 0007 G-15 — a modal would be deceptive since confirm cannot override
+// MOATGateHardBlock branch. Registry-source revocations are permanent — a
+// modal would be deceptive since confirm cannot override
 // a registry block.
 func hardBlockMessage(name string, rev *moat.RevocationRecord) string {
 	reason := ""

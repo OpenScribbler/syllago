@@ -1,6 +1,6 @@
 package moat
 
-// Bundled Sigstore trusted root + staleness policy per ADR 0007 D1.
+// Bundled Sigstore trusted root + staleness policy.
 //
 // The trusted root (Fulcio CA bundle + Rekor public keys + timestamp
 // authorities) is committed as a versioned asset and embedded at build time
@@ -46,7 +46,7 @@ var bundledTrustedRoot []byte
 // signal, so we don't consult the filesystem.
 const TrustedRootIssuedAtISO = "2026-04-17"
 
-// Staleness thresholds per ADR 0007 D1. Durations measured in whole days
+// Staleness thresholds. Durations measured in whole days
 // from TrustedRootIssuedAtISO to wall-clock now.
 const (
 	TrustedRootFreshDays     = 90
@@ -78,9 +78,8 @@ const (
 	TrustedRootStatusCorrupt
 )
 
-// String renders the status for logs and human output. Operational vocabulary
-// per ADR 0007: the slice-1 three-state output is signed / unsigned / invalid,
-// but the trust root status is its own vocabulary tracking calendar freshness.
+// String renders the status for logs and human output. Manifest trust output
+// is signed / unsigned / invalid, but the trust root status is its own vocabulary tracking calendar freshness.
 func (s TrustedRootStatus) String() string {
 	switch s {
 	case TrustedRootStatusFresh:
@@ -170,7 +169,7 @@ func daysBetween(start, end time.Time) int {
 }
 
 // ExitCodeForStatus maps a TrustedRootStatus to the `moat trust status`
-// exit code. Stable contract per ADR 0007: 0 fresh, 1 warn/escalated,
+// exit code. Stable contract: 0 fresh, 1 warn/escalated,
 // 2 expired/missing/corrupt. CI pipelines grep on these — do not reshape.
 func ExitCodeForStatus(s TrustedRootStatus) int {
 	switch s {

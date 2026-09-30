@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// CheckFreshness enforces the feed's heartbeat contract (capmon ADR 0012):
+// CheckFreshness enforces the feed's heartbeat contract:
 // a feed whose generated_at is older than maxStalenessHours is stale and
 // must not be acted on — the caller keeps last-known-good and exits red.
 // The limit comes from the verified index itself (max_staleness_hours);

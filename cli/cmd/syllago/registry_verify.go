@@ -1,8 +1,7 @@
 package main
 
-// Registry manifest verification gate for `syllago add --from <registry>`
-// (ADR 0007 slice-2c). This is where the slice-1 VerifyManifest primitive
-// finally sees real user traffic.
+// Registry manifest verification gate for `syllago add --from <registry>`.
+// This is where the VerifyManifest primitive sees real user traffic.
 //
 // The gate sits at the boundary where registry content transitions into the
 // user's library. Verifying here means every path that reads from a
@@ -20,9 +19,9 @@ package main
 //     e. VerifyManifest returns any other *VerifyError → MOAT_004.
 //     f. Success → emit "signed" trust label, proceed.
 //
-// Operational vocabulary (per ADR 0007): three-state trust label is
-// signed / unsigned / invalid. The word "verified" is reserved for when
-// revocation checking lands in slice 3.
+// Operational vocabulary: three-state trust label is signed / unsigned /
+// invalid. The word "verified" is reserved for when manifest verification
+// also checks revocation.
 
 import (
 	"errors"
@@ -72,7 +71,7 @@ type verifyOutcome struct {
 var verifyManifestFn = moat.VerifyManifest
 
 // verifyTrustedRootFn returns the trusted-root info to use for a given
-// registry, CLI override, and wall-clock. Precedence per ADR 0007 slice 2d:
+// registry, CLI override, and wall-clock. Precedence:
 //  1. override != "" (the --trusted-root CLI flag) wins over everything.
 //  2. reg.TrustedRoot is used if set.
 //  3. Fall back to the bundled root.
@@ -320,7 +319,7 @@ func emitTrustLabel(outcome *verifyOutcome, regName string) {
 
 // emitTrustedRootPathInfo writes an auditor-visible marker naming the
 // operator-supplied trusted_root.json in effect. Emitted to stderr in the
-// stable key=value form specified by ADR 0007 D1, so CI pipelines can grep
+// stable key=value form so CI pipelines can grep
 // on it. Silent when the bundled root is in use — that's the default case
 // and spamming it would train operators to ignore the line.
 func emitTrustedRootPathInfo(regName string, source moat.TrustedRootSource, path string) {

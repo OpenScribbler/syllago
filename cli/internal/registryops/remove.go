@@ -5,7 +5,7 @@ package registryops
 //
 // Before extraction the TUI's doRegistryRemoveCmd carried a project-local
 // fallback (config.Load on contentRoot/projectRoot) that was dead code after
-// the registries-are-global decision (2026-04-24, ADR via syllago-fhtxa).
+// registries became global-only (2026-04-24).
 // The CLI's registryRemoveCmd was already global-only; both surfaces now go
 // through this single function so neither can drift back to layered logic.
 //
@@ -34,8 +34,8 @@ package registryops
 // lockfile.entries[] (the user's installed-item ledger — uninstalling a
 // registry's clone does not retroactively uninstall items the user already
 // chose to install) or lockfile.revoked_hashes[] (append-only by spec
-// §Revocation Archival, ADR 0007 G-15 — pruning would let a user
-// "un-revoke" content by remove+re-add, defeating G-15).
+// §Revocation Archival — pruning would let a user "un-revoke" content by
+// remove+re-add).
 
 import (
 	"errors"

@@ -1,6 +1,6 @@
 package moat
 
-// Operator-provided trusted root loader per ADR 0007 slice 2d.
+// Operator-provided trusted root loader.
 //
 // Enterprise/air-gapped deployments may pin a specific Sigstore trusted_root.json
 // per registry (via config.Registry.TrustedRoot) or per invocation (via the

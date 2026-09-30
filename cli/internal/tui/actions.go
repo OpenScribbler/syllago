@@ -848,9 +848,9 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 // resolveGateDecision) so all 5 decisions are surfaced at wizard time:
 //   - Proceed: straight through to doInstallCmd.
 //   - HardBlock: error toast, no modal — registry-source revocations are
-//     permanent per ADR 0007 G-15 and cannot be operator-overridden.
-//   - PublisherWarn: stash install + open confirm modal (G-8).
-//   - PrivatePrompt: stash install + open confirm modal (G-10).
+//     permanent and cannot be operator-overridden.
+//   - PublisherWarn: stash install + open confirm modal.
+//   - PrivatePrompt: stash install + open confirm modal.
 //   - TierBelowPolicy: error toast, no modal — tier cannot be upgraded
 //     interactively; only the publisher can.
 //

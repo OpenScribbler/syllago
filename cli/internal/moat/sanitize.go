@@ -1,7 +1,7 @@
 package moat
 
-// Display-string sanitization for publisher-controlled fields (MOAT Phase 2c,
-// ADR 0007 §Trust Surfacing).
+// Display-string sanitization for publisher-controlled fields surfaced in
+// trust UI.
 //
 // Revocation reasons, details URLs, and publisher identities flow from
 // attacker-controlled inputs (a malicious publisher can stuff ANSI escapes,
