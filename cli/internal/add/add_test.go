@@ -440,6 +440,42 @@ func TestAddItems_MDSource_NoPreservation(t *testing.T) {
 	}
 }
 
+// A re-add must not leave the previous provider's original in .source/:
+// installs copy .source/ verbatim when the target matches source_provider.
+func TestAddItems_ReAddClearsStaleSource(t *testing.T) {
+	t.Parallel()
+	globalDir := t.TempDir()
+	srcDir := t.TempDir()
+	tomlPath := filepath.Join(srcDir, "code-reviewer.toml")
+	jsonPath := filepath.Join(srcDir, "code-reviewer.json")
+	mdPath := filepath.Join(srcDir, "code-reviewer.md")
+	for p, body := range map[string]string{tomlPath: "name = \"x\"", jsonPath: "{}", mdPath: "# Agent"} {
+		if err := os.WriteFile(p, []byte(body), 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	sourceDir := filepath.Join(globalDir, "agents", "code-reviewer", ".source")
+	add := func(path, prov string) {
+		t.Helper()
+		items := []DiscoveryItem{{Name: "code-reviewer", Type: catalog.Agents, Path: path, Status: StatusNew}}
+		if r := AddItems(items, AddOptions{Provider: prov, Force: true}, globalDir, nil, "test"); r[0].Status == AddStatusError {
+			t.Fatalf("add from %s: %v", prov, r[0].Error)
+		}
+	}
+
+	add(tomlPath, "codex")
+	add(jsonPath, "kiro")
+	entries, err := os.ReadDir(sourceDir)
+	if err != nil || len(entries) != 1 || entries[0].Name() != "code-reviewer.json" {
+		t.Fatalf(".source/ after json re-add = %v (err %v), want only code-reviewer.json", entries, err)
+	}
+
+	add(mdPath, "gemini-cli")
+	if _, err := os.Stat(sourceDir); !os.IsNotExist(err) {
+		t.Errorf("expected .source/ removed after .md re-add, stat err = %v", err)
+	}
+}
+
 func TestAddItems_UniversalType_NoProviderDir(t *testing.T) {
 	t.Parallel()
 	globalDir := t.TempDir()
