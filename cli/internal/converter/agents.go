@@ -16,6 +16,7 @@ func init() {
 	Register(&AgentsConverter{})
 	RegisterFrontmatter(catalog.Agents, "claude-code", AgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "cursor", cursorAgentMeta{})
+	RegisterFrontmatter(catalog.Agents, "devin", devinAgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "gemini-cli", geminiAgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "copilot-cli", copilotAgentMeta{})
 	RegisterFrontmatter(catalog.Agents, "opencode", opencodeAgentMeta{})
@@ -113,6 +114,9 @@ func (c *AgentsConverter) Canonicalize(content []byte, sourceProvider string) (*
 	if sourceProvider == "cursor" {
 		return canonicalizeCursorAgent(content)
 	}
+	if sourceProvider == "devin" {
+		return canonicalizeDevinAgent(content)
+	}
 	if sourceProvider == "opencode" {
 		return canonicalizeOpenCodeAgent(content)
 	}
@@ -163,6 +167,8 @@ func (c *AgentsConverter) Render(content []byte, target provider.Provider) (*Res
 		return renderCodexAgents(meta, body)
 	case "cursor":
 		return renderCursorAgent(meta, body)
+	case "devin":
+		return renderDevinAgent(meta, body)
 	default:
 		// Claude Code — full frontmatter preserved
 		return renderClaudeAgent(meta, body)
@@ -886,6 +892,177 @@ func renderCursorAgent(meta AgentMeta, body string) (*Result, error) {
 	}
 
 	res, err := renderWithFrontmatter(cm, outBody, slugify(agentName)+".md")
+	if err != nil {
+		return nil, err
+	}
+	res.Warnings = warnings
+	return res, nil
+}
+
+// --- Devin agents ---
+
+// devinAgentMeta is the Devin custom subagent frontmatter format
+// (agents/<name>.md or agents/<name>/AGENT.md under .devin/, .agents/, or
+// ~/.config/devin/). tools is an accepted alias of allowed-tools.
+type devinAgentMeta struct {
+	Name         string   `yaml:"name,omitempty"`
+	Description  string   `yaml:"description,omitempty"`
+	Model        string   `yaml:"model,omitempty"`
+	AllowedTools []string `yaml:"allowed-tools,omitempty"`
+	Tools        []string `yaml:"tools,omitempty"`
+	MaxNesting   int      `yaml:"max-nesting,omitempty"`
+}
+
+// devinAgentToolNames maps canonical tool names to the tool names Devin
+// subagents use in allowed-tools. These are the Devin CLI names, not the
+// Cascade names in ToolNames["..."]["devin"], which hook matchers use.
+var devinAgentToolNames = map[string]string{
+	"file_read":  "read",
+	"file_write": "write",
+	"file_edit":  "edit",
+	"shell":      "exec",
+	"find":       "glob",
+	"search":     "grep",
+}
+
+// canonicalizeDevinAgent parses a Devin subagent .md file into canonical
+// format. max-nesting has no canonical equivalent and is dropped with a
+// warning.
+func canonicalizeDevinAgent(content []byte) (*Result, error) {
+	var da devinAgentMeta
+	yamlBytes, body, ok := parse.SplitFrontmatter(content)
+	if ok {
+		if err := yaml.Unmarshal(yamlBytes, &da); err != nil {
+			return nil, fmt.Errorf("parsing Devin agent YAML frontmatter: %w", err)
+		}
+	}
+
+	tools := da.AllowedTools
+	if len(tools) == 0 {
+		tools = da.Tools
+	}
+	var canonicalTools []string
+	for _, tool := range tools {
+		mapped := tool
+		for canonical, devinName := range devinAgentToolNames {
+			if devinName == tool {
+				mapped = canonical
+				break
+			}
+		}
+		canonicalTools = append(canonicalTools, mapped)
+	}
+
+	meta := AgentMeta{
+		Name:        da.Name,
+		Description: da.Description,
+		Model:       da.Model,
+		Tools:       canonicalTools,
+	}
+
+	canonical, err := buildAgentCanonical(meta, body)
+	if err != nil {
+		return nil, err
+	}
+	res := &Result{Content: canonical, Filename: "agent.md"}
+	if da.MaxNesting > 0 {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("max-nesting (%d) has no canonical equivalent (dropped)", da.MaxNesting))
+	}
+	return res, nil
+}
+
+// renderDevinAgent renders a canonical agent to Devin's subagent .md format.
+// Devin supports: name, description, model, allowed-tools. Other canonical
+// fields are embedded as prose conversion notes.
+func renderDevinAgent(meta AgentMeta, body string) (*Result, error) {
+	var warnings []string
+	cleanBody := StripConversionNotes(body)
+
+	dm := devinAgentMeta{
+		Name:        meta.Name,
+		Description: meta.Description,
+		Model:       meta.Model,
+	}
+	var unmapped []string
+	for _, tool := range meta.Tools {
+		if devinName, ok := devinAgentToolNames[tool]; ok {
+			dm.AllowedTools = append(dm.AllowedTools, devinName)
+			continue
+		}
+		// MCP tools use the same mcp__server__tool form in Devin.
+		if !strings.HasPrefix(tool, "mcp__") {
+			unmapped = append(unmapped, tool)
+		}
+		dm.AllowedTools = append(dm.AllowedTools, tool)
+	}
+	if len(unmapped) > 0 {
+		warnings = append(warnings, fmt.Sprintf("tools with no known Devin name passed through unchanged: %s", strings.Join(unmapped, ", ")))
+	}
+
+	var notes []string
+	if len(meta.DisallowedTools) > 0 {
+		notes = append(notes, fmt.Sprintf("**Do not use:** %s tools.", strings.Join(meta.DisallowedTools, ", ")))
+	}
+	switch meta.PermissionMode {
+	case "", "default":
+		// No note needed.
+	case "plan":
+		notes = append(notes, "Operate in read-only exploration mode.")
+	case "acceptEdits":
+		notes = append(notes, "Auto-approve file edits.")
+	case "dontAsk":
+		notes = append(notes, "Run without asking for confirmation on any operation.")
+	case "bypassPermissions":
+		notes = append(notes, "Bypass all permission checks. Full autonomous mode.")
+	default:
+		notes = append(notes, fmt.Sprintf("Permission mode: %s.", meta.PermissionMode))
+	}
+	if meta.MaxTurns > 0 {
+		notes = append(notes, fmt.Sprintf("Limit to %d turns.", meta.MaxTurns))
+	}
+	if len(meta.Skills) > 0 {
+		notes = append(notes, fmt.Sprintf("Preload these skills: %s.", strings.Join(meta.Skills, ", ")))
+	}
+	if len(meta.MCPServers) > 0 {
+		notes = append(notes, fmt.Sprintf("Expected MCP servers: %s.", strings.Join(meta.MCPServers, ", ")))
+	}
+	if meta.Memory != "" {
+		notes = append(notes, fmt.Sprintf("Use persistent memory scope: %s.", meta.Memory))
+	}
+	if meta.Background {
+		notes = append(notes, "Run as a background agent.")
+	}
+	if meta.Isolation == "worktree" {
+		notes = append(notes, "Work in a separate git worktree.")
+	}
+	if meta.Effort != "" {
+		notes = append(notes, fmt.Sprintf("Effort level: %s.", meta.Effort))
+	}
+	if meta.Hooks != nil {
+		notes = append(notes, "Agent has hooks configured (not portable).")
+	}
+	if meta.Color != "" {
+		notes = append(notes, fmt.Sprintf("Agent color: %s.", meta.Color))
+	}
+
+	outBody := cleanBody
+	if len(notes) > 0 {
+		outBody = AppendNotes(outBody, BuildConversionNotes("claude-code", notes))
+	}
+
+	if meta.MaxTurns > 0 {
+		warnings = append(warnings, fmt.Sprintf("maxTurns (%d) not supported by Devin (embedded as prose)", meta.MaxTurns))
+	}
+	if meta.PermissionMode != "" && meta.PermissionMode != "default" {
+		warnings = append(warnings, fmt.Sprintf("permissionMode (%q) not supported by Devin (embedded as prose)", meta.PermissionMode))
+	}
+
+	agentName := meta.Name
+	if agentName == "" {
+		agentName = "agent"
+	}
+
+	res, err := renderWithFrontmatter(dm, outBody, slugify(agentName)+".md")
 	if err != nil {
 		return nil, err
 	}

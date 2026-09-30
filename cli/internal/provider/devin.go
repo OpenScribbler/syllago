@@ -24,6 +24,8 @@ var Devin = Provider{
 			return JSONMergeSentinel
 		case catalog.Commands:
 			return filepath.Join(base, "global_workflows")
+		case catalog.Agents:
+			return filepath.Join(homeDir, ".config", "devin", "agents")
 		}
 		return ""
 	},
@@ -54,6 +56,11 @@ var Devin = Provider{
 				filepath.Join(projectRoot, ".windsurf", "skills"),
 				filepath.Join(projectRoot, ".agents", "skills"),
 			}
+		case catalog.Agents:
+			return []string{
+				filepath.Join(projectRoot, ".devin", "agents"),
+				filepath.Join(projectRoot, ".agents", "agents"),
+			}
 		case catalog.Commands:
 			// Workflows live at .windsurf/workflows/ (project) and ~/.codeium/windsurf/global_workflows (global).
 			paths := []string{filepath.Join(projectRoot, ".windsurf", "workflows")}
@@ -78,7 +85,7 @@ var Devin = Provider{
 	},
 	SupportsType: func(ct catalog.ContentType) bool {
 		switch ct {
-		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands:
+		case catalog.Rules, catalog.Skills, catalog.Hooks, catalog.MCP, catalog.Commands, catalog.Agents:
 			return true
 		default:
 			return false
@@ -87,7 +94,8 @@ var Devin = Provider{
 	SymlinkSupport: map[catalog.ContentType]bool{
 		catalog.Rules:    true,
 		catalog.Skills:   true,
-		catalog.Commands: true,  // File-based workflows
+		catalog.Commands: true, // File-based workflows
+		catalog.Agents:   true,
 		catalog.Hooks:    false, // JSON merge
 		catalog.MCP:      false, // JSON merge
 	},

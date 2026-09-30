@@ -691,6 +691,7 @@ func TestAgentAcrossAllNewProviders(t *testing.T) {
 		{"copilot-cli", provider.CopilotCLI},
 		{"gemini-cli", provider.GeminiCLI},
 		{"cursor", provider.Cursor},
+		{"devin", provider.Devin},
 	}
 
 	for _, tt := range targets {
@@ -1215,5 +1216,128 @@ func TestOpenCodeAgentCanonicalizePassesCanonicalThrough(t *testing.T) {
 	}
 	if meta.MaxTurns != 7 {
 		t.Errorf("maxTurns = %d, want 7", meta.MaxTurns)
+	}
+}
+
+// --- Devin agents ---
+
+func TestClaudeAgentToDevin(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: Explorer\ndescription: Codebase explorer\ntools:\n  - Read\n  - Grep\n  - Bash\n  - mcp__github__list_issues\nmodel: sonnet\nmaxTurns: 30\npermissionMode: plan\n---\n\nExplore the codebase and summarize.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: Explorer")
+	assertContains(t, out, "description: Codebase explorer")
+	assertContains(t, out, "model: sonnet")
+	assertContains(t, out, "allowed-tools:\n    - read\n    - grep\n    - exec\n    - mcp__github__list_issues\n")
+	assertNotContains(t, out, "\ntools:")
+	assertNotContains(t, out, "max-nesting")
+	assertContains(t, out, "Limit to 30 turns")
+	assertContains(t, out, "read-only exploration mode")
+	assertContains(t, out, "Explore the codebase and summarize.")
+	assertEqual(t, "explorer.md", result.Filename)
+	if len(result.Warnings) != 2 {
+		t.Errorf("Warnings = %v, want maxTurns and permissionMode warnings", result.Warnings)
+	}
+}
+
+func TestDevinAgentCanonicalize(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: reviewer\ndescription: Reviews code changes\nmodel: sonnet\nallowed-tools:\n  - read\n  - grep\n  - glob\n  - exec\n  - edit\n  - write\nmax-nesting: 3\n---\n\nReview the diff.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	out := string(result.Content)
+	assertContains(t, out, "name: reviewer")
+	assertContains(t, out, "description: Reviews code changes")
+	assertContains(t, out, "model: sonnet")
+	assertContains(t, out, "tools:\n    - file_read\n    - search\n    - find\n    - shell\n    - file_edit\n    - file_write\n")
+	assertNotContains(t, out, "allowed-tools")
+	assertNotContains(t, out, "nesting")
+	assertContains(t, out, "Review the diff.")
+	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "max-nesting") {
+		t.Errorf("Warnings = %v, want one max-nesting warning", result.Warnings)
+	}
+}
+
+func TestDevinAgentToolsAlias(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: runner\ntools:\n  - exec\n---\n\nRun tests.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize(input, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	assertContains(t, string(result.Content), "tools:\n    - shell\n")
+	if len(result.Warnings) != 0 {
+		t.Errorf("Warnings = %v, want none", result.Warnings)
+	}
+}
+
+func TestDevinAgentRoundTrip(t *testing.T) {
+	t.Parallel()
+	input := []byte("---\nname: helper\ndescription: General helper\nmodel: sonnet\nallowed-tools:\n    - read\n    - exec\n---\n\nHelp with tasks.\n")
+
+	conv := &AgentsConverter{}
+	canonical, err := conv.Canonicalize(input, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	assertEqual(t, string(input), string(result.Content))
+	assertEqual(t, "helper.md", result.Filename)
+	if len(result.Warnings) != 0 {
+		t.Errorf("Warnings = %v, want none", result.Warnings)
+	}
+}
+
+func TestDevinAgentNoFrontmatter(t *testing.T) {
+	t.Parallel()
+	conv := &AgentsConverter{}
+	result, err := conv.Canonicalize([]byte("Just a plain agent with instructions.\n"), "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	assertContains(t, string(result.Content), "Just a plain agent with instructions.")
+
+	rendered, err := conv.Render(result.Content, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	assertEqual(t, "agent.md", rendered.Filename)
+	assertContains(t, string(rendered.Content), "Just a plain agent with instructions.")
+}
+
+func TestDevinAgentUnmappedToolWarns(t *testing.T) {
+	t.Parallel()
+	canonical := []byte("---\nname: web\ntools:\n    - web_search\n---\n\nSearch.\n")
+
+	conv := &AgentsConverter{}
+	result, err := conv.Render(canonical, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	assertContains(t, string(result.Content), "- web_search")
+	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "web_search") {
+		t.Errorf("Warnings = %v, want one web_search warning", result.Warnings)
 	}
 }
