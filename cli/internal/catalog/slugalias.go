@@ -14,3 +14,16 @@ func ResolveProviderSlug(slug string) (canonical string, aliased bool) {
 	}
 	return slug, false
 }
+
+// RetiredProviderSlugs returns the retired slugs that resolve to slug, for
+// callers that must find content still stored under an old provider
+// directory.
+func RetiredProviderSlugs(slug string) []string {
+	var out []string
+	for old, current := range providerSlugAliases {
+		if current == slug {
+			out = append(out, old)
+		}
+	}
+	return out
+}

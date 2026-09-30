@@ -175,8 +175,14 @@ func checkLoadoutItemTaint(item catalog.ContentItem, registryName, repoRoot stri
 	var items []catalog.ContentItem
 	for ct, refs := range m.RefsByType() {
 		for _, ref := range refs {
-			itemDir := resolveItemDir(globalDir, ct, m.Provider, ref.Name)
-			meta, _ := metadata.Load(itemDir)
+			// Content saved before a provider rename still sits under the
+			// retired slug's directory, while m.Provider holds the current one.
+			var meta *metadata.Meta
+			for _, slug := range append([]string{m.Provider}, catalog.RetiredProviderSlugs(m.Provider)...) {
+				if meta, _ = metadata.Load(resolveItemDir(globalDir, ct, slug, ref.Name)); meta != nil {
+					break
+				}
+			}
 			items = append(items, catalog.ContentItem{
 				Name: ref.Name,
 				Type: ct,

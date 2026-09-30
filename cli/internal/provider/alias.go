@@ -3,6 +3,7 @@ package provider
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -18,7 +19,8 @@ func ResolveSlugAlias(slug string) (canonical string, aliased bool) {
 // aliasWarnings records which retired slugs have already been warned about
 // on which writer, so one command that meets a retired slug in several flags
 // or config fields warns once. Keying on the writer lets each test that
-// installs its own stderr see the warning afresh.
+// installs its own stderr see the warning afresh. A writer whose type is not
+// comparable cannot be a map key, so it gets the warning every time.
 var (
 	aliasWarnMu   sync.Mutex
 	aliasWarnings = map[aliasWarnKey]bool{}
@@ -39,10 +41,14 @@ func CanonicalSlug(slug string) string {
 	}
 	aliasWarnMu.Lock()
 	defer aliasWarnMu.Unlock()
-	key := aliasWarnKey{output.ErrWriter, slug}
-	if !aliasWarnings[key] {
+	w := output.ErrWriter
+	if w != nil && reflect.TypeOf(w).Comparable() {
+		key := aliasWarnKey{w, slug}
+		if aliasWarnings[key] {
+			return canonical
+		}
 		aliasWarnings[key] = true
-		fmt.Fprintf(output.ErrWriter, "warning: provider %q was renamed to %q; use %q instead\n", slug, canonical, canonical)
 	}
+	fmt.Fprintf(output.ErrWriter, "warning: provider %q was renamed to %q; use %q instead\n", slug, canonical, canonical)
 	return canonical
 }

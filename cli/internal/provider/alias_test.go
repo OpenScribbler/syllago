@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -32,5 +33,22 @@ func TestCanonicalSlugWarnsOnAlias(t *testing.T) {
 	}
 	if got := CanonicalSlug("devin"); got != "devin" || stderr.Len() != 0 {
 		t.Errorf("CanonicalSlug(devin) = %q with stderr %q, want devin and no warning", got, stderr.String())
+	}
+}
+
+// funcWriter has a non-comparable dynamic type, so it cannot key the
+// warning-dedupe map.
+type funcWriter func([]byte)
+
+func (f funcWriter) Write(p []byte) (int, error) { f(p); return len(p), nil }
+
+func TestCanonicalSlugNonComparableWriter(t *testing.T) {
+	output.SetForTest(t)
+	var got []string
+	output.ErrWriter = funcWriter(func(p []byte) { got = append(got, string(p)) })
+	CanonicalSlug("windsurf")
+	CanonicalSlug("windsurf")
+	if len(got) != 2 || !strings.Contains(got[0], "renamed to") {
+		t.Errorf("warnings = %q, want the warning on each call", got)
 	}
 }

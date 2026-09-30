@@ -342,3 +342,57 @@ func TestCheckLoadoutItemTaint_BadManifest_Skips(t *testing.T) {
 		t.Fatalf("bad manifest should be skipped, got: %s", err)
 	}
 }
+
+func TestCheckLoadoutItemTaint_PrivateItemUnderRetiredSlug_Blocked(t *testing.T) {
+	root := t.TempDir()
+	now := time.Now()
+	cfg := &config.Config{
+		Registries: []config.Registry{
+			{Name: "community/loadouts", URL: "https://github.com/community/loadouts", Visibility: "public", VisibilityCheckedAt: &now},
+		},
+	}
+	os.MkdirAll(filepath.Join(root, ".syllago"), 0755)
+	config.Save(root, cfg)
+
+	// Create a loadout manifest referencing a rule
+	loadoutDir := t.TempDir()
+	os.MkdirAll(loadoutDir, 0755)
+	os.WriteFile(filepath.Join(loadoutDir, "loadout.yaml"), []byte(`kind: loadout
+version: 1
+provider: windsurf
+name: test-loadout
+description: test
+rules:
+  - name: private-rule
+`), 0644)
+
+	// The library item was saved under the retired slug's directory.
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	itemDir := filepath.Join(globalDir, "rules", "windsurf", "private-rule")
+	os.MkdirAll(itemDir, 0755)
+	meta := &metadata.Meta{
+		ID:               "test-id",
+		Name:             "private-rule",
+		SourceRegistry:   "acme/internal",
+		SourceVisibility: "private",
+	}
+	metadata.Save(itemDir, meta)
+
+	item := catalog.ContentItem{
+		Name: "test-loadout",
+		Type: catalog.Loadouts,
+		Path: loadoutDir,
+	}
+
+	err := checkLoadoutItemTaint(item, "community/loadouts", root)
+	if err == nil {
+		t.Fatal("expected G4 to block loadout with private item targeting public registry")
+	}
+	if !strings.Contains(err.Error(), "cannot share loadout") {
+		t.Errorf("error should mention 'cannot share loadout', got: %s", err)
+	}
+}

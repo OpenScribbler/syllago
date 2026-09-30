@@ -183,6 +183,7 @@ func TestFindItemByPath(t *testing.T) {
 	cat := &catalog.Catalog{
 		Items: []catalog.ContentItem{
 			{Type: catalog.Rules, Provider: "claude-code", Name: "rule-a"},
+			{Type: catalog.Rules, Provider: "devin", Name: "rule-d"},
 			{Type: catalog.Skills, Name: "skill-b"},
 			{Type: catalog.Hooks, Registry: "acme", Name: "hook-c"},
 		},
@@ -201,6 +202,14 @@ func TestFindItemByPath(t *testing.T) {
 		got, err := findItemByPath(cat, "rules/claude-code/rule-a")
 		if err != nil || got == nil || got.Name != "rule-a" {
 			t.Fatalf("got (%v, %v), want rule-a", got, err)
+		}
+	})
+
+	t.Run("three-part path through a retired provider slug", func(t *testing.T) {
+		t.Parallel()
+		got, err := findItemByPath(cat, "rules/windsurf/rule-d")
+		if err != nil || got == nil || got.Name != "rule-d" {
+			t.Fatalf("got (%v, %v), want rule-d", got, err)
 		}
 	})
 
