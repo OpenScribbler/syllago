@@ -11,8 +11,12 @@
 # never against spec prose (CHANGE-PROCESS.md, source-of-truth rule).
 #
 # Row model ([ACIF-INSTALL] §6): scope ∈ {user, project, managed};
-# path_template in the closed §8 grammar (`<content-name>` is the only
-# placeholder; `~/` = user home; otherwise project-root-relative);
+# optional os, a sorted set over {darwin, linux, windows} (absent = every
+# OS; resolution keeps only rows matching the target OS);
+# path_template in the closed §8 grammar (placeholders `<content-name>`
+# and, on windows-only rows as the leading segment, `<appdata>`; `~/` =
+# user home; managed templates are absolute; otherwise
+# project-root-relative);
 # layout ∈ {single_file, directory_of_files, merged_into_shared_file};
 # status ∈ {current, superseded} — superseded rows are retained, never
 # deleted. List order within a (provider, content type) is normative
@@ -26,6 +30,11 @@
 # "Row-data amendments"): land on observation, supersede, never delete.
 # Grammar/enum changes are Class C. Providers are keyed by the slugs the
 # normative appendices already use ([ACIF-HOOK] Appendix A/B columns).
+# A vendor rename re-keys a provider's rows under the same lane; it is
+# not an observation about any location, so rows carry across unchanged
+# (a provider MAY keep its former name inside a path template). A rename
+# appears here as one key leaving and another arriving — read it as a
+# rename, never as a retirement plus an unrelated addition.
 
 install_entry_points:
   amp:
@@ -129,6 +138,66 @@ install_entry_points:
     skill:
       - {scope: user, path_template: "~/.cursor/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
       - {scope: project, path_template: ".cursor/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
+  devin:
+    agent:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/devin/agents/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, os: [windows], path_template: "<appdata>/devin/agents/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/agents/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".agents/agents/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+    command:
+      - {scope: user, path_template: "~/.codeium/windsurf/global_workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Devin/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/devin/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Devin/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+    hook:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/devin/config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, os: [windows], path_template: "<appdata>/devin/config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.codeium/windsurf/hooks.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.codeium/hooks.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/hooks.v1.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/hooks.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".windsurf/hooks.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+    mcp_config:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/devin/mcp_config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, os: [windows], path_template: "<appdata>/devin/mcp_config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/mcp_config.json", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+    rule:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/devin/AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, os: [windows], path_template: "<appdata>/devin/AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.devin/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.devin/global_rules.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.codeium/windsurf/memories/global_rules.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/global_rules.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".windsurfrules", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: "AGENTS.md", layout: merged_into_shared_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Devin/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/devin/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Devin/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+    skill:
+      - {scope: user, os: [darwin, linux], path_template: "~/.config/devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, os: [windows], path_template: "<appdata>/devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.codeium/windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Devin/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [darwin], path_template: "/Library/Application Support/Windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [linux], path_template: "/etc/windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
+      - {scope: managed, os: [windows], path_template: "C:/ProgramData/Windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "docs.devin.ai 2026-09 verification"}
   factory-droid:
     agent:
       - {scope: user, path_template: "~/.factory/droids/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
@@ -215,16 +284,4 @@ install_entry_points:
       - {scope: user, path_template: "~/.roo/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
       - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
       - {scope: project, path_template: ".roo/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
-      - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
-  windsurf:
-    command:
-      - {scope: user, path_template: "~/.codeium/windsurf/global_workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
-      - {scope: project, path_template: ".windsurf/workflows/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
-    rule:
-      - {scope: project, path_template: ".windsurf/rules/<content-name>.md", layout: single_file, status: current, as_of: "syllago 2026-07 survey"}
-      - {scope: project, path_template: ".windsurfrules", layout: merged_into_shared_file, status: current, as_of: "syllago 2026-07 survey"}
-    skill:
-      - {scope: user, path_template: "~/.codeium/windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
-      - {scope: user, path_template: "~/.agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
-      - {scope: project, path_template: ".windsurf/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}
       - {scope: project, path_template: ".agents/skills/<content-name>/", layout: directory_of_files, status: current, as_of: "syllago 2026-07 survey"}

@@ -231,3 +231,53 @@ func TestResolveInstallTargets_Anchors(t *testing.T) {
 		t.Errorf("managed targets = %+v, want %+v", managedTargets, wantManaged)
 	}
 }
+
+// TV-INSTALL-g: OS selection — rows filter to the target OS before
+// precedence, an <appdata> row anchors to the supplied directory, and a
+// list that filtering empties refuses with no_entry_point.
+func TestResolveInstallTargets_OSSelection(t *testing.T) {
+	t.Parallel()
+
+	linux, _ := resolveOK(t, InstallResolveInput{
+		Provider: "devin", ContentType: "rule", ContentName: "style", OS: "linux",
+		HomeDir: "/home/u", ProjectRoot: "/p", Scope: "user",
+	})
+	windows, _ := resolveOK(t, InstallResolveInput{
+		Provider: "devin", ContentType: "rule", ContentName: "style", OS: "windows",
+		HomeDir: "C:/Users/u", AppDataDir: "D:/Roaming/u", ProjectRoot: "C:/p", Scope: "user",
+	})
+	if linux[0].Path != "/home/u/.config/devin/AGENTS.md" || !linux[0].WriteTarget {
+		t.Errorf("linux write target = %+v", linux[0])
+	}
+	if windows[0].Path != "D:/Roaming/u/devin/AGENTS.md" || !windows[0].WriteTarget {
+		t.Errorf("windows write target = %+v", windows[0])
+	}
+	if len(linux) != len(windows) {
+		t.Errorf("linux has %d targets, windows %d; each OS should see one user row per location", len(linux), len(windows))
+	}
+
+	windowsOnly := &InstallEntry{Scope: "managed", OS: []string{"windows"},
+		PathTemplate: "C:/ProgramData/Acme/hooks.json", Layout: "merged_into_shared_file", Status: "current"}
+	for _, scope := range []string{"", "managed"} {
+		reject := resolveReject(t, InstallResolveInput{
+			Provider: "claude-code", ContentType: "hook", ContentName: "guard", OS: "linux",
+			HomeDir: "/h", ProjectRoot: "/p", Scope: scope, Entry: windowsOnly,
+		})
+		if reject.ID != "acif.install.no_entry_point" {
+			t.Errorf("scope %q: reject = %s, want acif.install.no_entry_point", scope, reject.ID)
+		}
+	}
+
+	if _, _, err := ResolveInstallTargets(InstallResolveInput{
+		Provider: "devin", ContentType: "rule", ContentName: "style",
+		HomeDir: "/home/u", ProjectRoot: "/p",
+	}); err == nil {
+		t.Error("OS-constrained rows with no target OS resolved; want an error")
+	}
+	if _, _, err := ResolveInstallTargets(InstallResolveInput{
+		Provider: "devin", ContentType: "rule", ContentName: "style", OS: "windows",
+		HomeDir: "C:/Users/u", ProjectRoot: "C:/p", Scope: "user",
+	}); err == nil {
+		t.Error("<appdata> row with no application-data directory resolved; want an error")
+	}
+}
