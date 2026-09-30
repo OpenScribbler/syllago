@@ -13,6 +13,8 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/librarymigrate"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -107,6 +109,7 @@ func init() {
 			}
 		}
 
+		migrateLibrary()
 		return nil
 	}
 
@@ -547,4 +550,21 @@ func ensureUpToDate() {
 	execErr := execSelf(os.Args)
 	// Only reached if Exec fails
 	fmt.Fprintf(os.Stderr, "Restart failed: %s\n", execErr)
+}
+
+// migrateLibrary moves library content stored under a retired provider slug
+// to the current slug before any command reads the library. A failure only
+// warns, because the catalog still reads unmigrated content.
+func migrateLibrary() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	storePath, err := installstore.DefaultPath()
+	if err != nil {
+		return
+	}
+	if err := librarymigrate.Run(catalog.GlobalContentDir(), home, storePath, output.ErrWriter); err != nil {
+		fmt.Fprintf(output.ErrWriter, "warning: migrating library to renamed provider slugs: %s\n", err)
+	}
 }

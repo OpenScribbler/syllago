@@ -110,7 +110,7 @@ func findItemByPath(cat *catalog.Catalog, path string) (*catalog.ContentItem, er
 	case 3:
 		// Try type/provider/name first (provider-specific content).
 		typeName, providerOrType, name := parts[0], parts[1], parts[2]
-		providerSlug, _ := provider.ResolveSlugAlias(providerOrType)
+		providerSlug := provider.CanonicalSlug(providerOrType)
 		for i := range cat.Items {
 			item := &cat.Items[i]
 			if string(item.Type) == typeName && item.Provider == providerSlug && item.Name == name {
