@@ -40,7 +40,6 @@ reviews/
 # Working docs — ignore all except design specs and the hook spec
 docs/*
 .capmon-cache/
-!docs/adr/
 !docs/spec/
 !docs/guides/
 !docs/provider-capabilities/

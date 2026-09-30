@@ -70,11 +70,7 @@
     "What residual references remain to the deleted cli/internal/capmon package or the old docs/provider-capabilities generator — in the Makefile, CI workflows, docs, or Go code — as of the current HEAD?"
   ],
   "adrs": {
-    "drafted": [
-      ".ship/capmon-pull/adr/0015-bundle-based-sigstore-go-verifier-vs-manual-hashedrekord-ver.md",
-      ".ship/capmon-pull/adr/0016-new-conditional-get-fetch-code-vs-generalizing-moat-fetcher.md",
-      ".ship/capmon-pull/adr/0017-separate-main-package-vs-hidden-prefixed-subcommand.md"
-    ]
+    "drafted": true
   },
   "prUrl": "https://github.com/OpenScribbler/syllago/pull/487",
   "execution": {

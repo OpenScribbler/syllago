@@ -61,7 +61,7 @@ Syllago is the reference implementation of MOAT (Model for Origin, Attestation, 
 - **Explicit flags** — `--signing-identity <workflow-san> --signing-repository-id <id> --signing-repository-owner-id <id>`. Operator records the pin in the commit that runs `registry add`.
 - **Hard fail** — if MOAT was requested or implied by partial flags but neither path provides a complete identity, `MOAT_001 IDENTITY_UNPINNED` blocks the add. There is no Trust-On-First-Use path by design.
 
-**Trusted-root staleness cliff:** the bundled Sigstore trusted root has a 365-day cliff (per ADR 0007). Once expired, `MOAT_005` blocks verification until the binary is updated or `--trusted-root` is supplied.
+**Trusted-root staleness cliff:** the bundled Sigstore trusted root has a 365-day cliff. Once expired, `MOAT_005` blocks verification until the binary is updated or `--trusted-root` is supplied.
 
 **Revocation:** registries and publishers can be revoked archivally (in the bundled list) or live (via the registry source). Reasons: `malicious`, `compromised`, `deprecated`, `policy_violation`. Blocked installs surface `MOAT_008`.
 

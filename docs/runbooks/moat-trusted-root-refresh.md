@@ -2,7 +2,6 @@
 
 **Owner:** MOAT maintainers (current reviewers of `cli/internal/moat/**`).
 **Cadence:** Every 9 months, or sooner if `.github/workflows/moat-trusted-root-check.yml` opens a refresh issue.
-**Related:** [ADR 0007](../adr/0007-moat-g3-slice-1-scope.md) (staleness policy).
 
 ---
 
@@ -10,7 +9,7 @@
 
 Syllago ships a Sigstore trusted root (Fulcio CA + Rekor public keys + timestamp authorities) as a bundled asset (`cli/internal/moat/trusted_root.json`). `VerifyManifest` uses those bytes for every signed-registry verify.
 
-The Sigstore public-good instance rotates keys every 6–12 months. Once the bundled root falls behind a rotation, verification against newly-signed manifests fails silently. ADR 0007 D1 therefore encodes a calendar-age policy:
+The Sigstore public-good instance rotates keys every 6–12 months. Once the bundled root falls behind a rotation, verification against newly-signed manifests fails silently. The trusted-root loader therefore encodes a calendar-age policy:
 
 | Age (days) | Status      | Exit | CLI behavior                  |
 |------------|-------------|------|-------------------------------|
@@ -104,7 +103,7 @@ jq -r '.certificateAuthorities[].validFor.end' cli/internal/moat/trusted_root.js
 # Compare against issued_at + 365 days.
 ```
 
-If a CA expires within the 365-day window, shorten the staleness cliff in `cli/internal/moat/trusted_root_loader.go` (`TrustedRootEscalatedDays`) and update ADR 0007.
+If a CA expires within the 365-day window, shorten the staleness cliff in `cli/internal/moat/trusted_root_loader.go` (`TrustedRootEscalatedDays`).
 
 ### 6. Commit, PR, merge
 

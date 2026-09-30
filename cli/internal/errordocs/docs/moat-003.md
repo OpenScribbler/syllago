@@ -1,6 +1,6 @@
 ## What This Means
 
-Syllago fetched a MOAT registry's manifest and signing bundle, but the certificate on that bundle did not match the `signing_profile` you pinned for this registry. The most common cause is that the pinned `repository_id` or `repository_owner_id` does not match the numeric IDs baked into the GitHub OIDC certificate — exactly the repo-transfer scenario ADR 0007 exists to catch.
+Syllago fetched a MOAT registry's manifest and signing bundle, but the certificate on that bundle did not match the `signing_profile` you pinned for this registry. The most common cause is that the pinned `repository_id` or `repository_owner_id` does not match the numeric IDs baked into the GitHub OIDC certificate — exactly the repo-transfer scenario numeric-ID pinning exists to catch.
 
 Syllago refuses to proceed on any mismatch because the whole point of pinning the numeric IDs is to make repo-rename / repo-transfer attacks impossible: the SAN subject string can be re-registered by an attacker who takes over the owner/repo name, but the numeric IDs cannot.
 

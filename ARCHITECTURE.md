@@ -4,7 +4,7 @@
 
 Syllago is a CLI and TUI for managing AI coding tool content (rules, skills, agents, hooks, MCP configs, commands, loadouts) across providers. Built in Go using the Cobra CLI framework and Bubble Tea TUI framework. All provider conversions go through syllago's own canonical format as a hub.
 
-The codebase is organized into three layers: the entry-point binaries (`cli/cmd/`), the internal packages (`cli/internal/`) that implement the business logic, and the spec documents (`docs/spec/`) that define provider-neutral interchange formats. Significant architectural choices are recorded as ADRs in [`docs/adr/`](docs/adr/) — see [`docs/adr/INDEX.md`](docs/adr/INDEX.md) before modifying files in a listed scope.
+The codebase is organized into three layers: the entry-point binaries (`cli/cmd/`), the internal packages (`cli/internal/`) that implement the business logic, and the spec documents (`docs/spec/`) that define provider-neutral interchange formats.
 
 ## Container Diagram
 
@@ -155,7 +155,7 @@ Content discovery and addition. Used by both `syllago add` and the TUI import wi
 
 ### internal/analyzer/
 
-Content type detection with confidence scoring. ADR 0002 (strict) defines this as the hub; ADR 0004 (strict) requires hooks and MCP to always route to user confirmation regardless of confidence. ADR 0005 (advisory) defines tie-breaking precedence: syllago-namespaced > named providers > top-level.
+Content type detection with confidence scoring, structured as a hub. Hooks and MCP always route to user confirmation regardless of confidence. Tie-breaking precedence: syllago-namespaced > named providers > top-level.
 
 ### internal/audit/
 
@@ -163,7 +163,7 @@ Structured JSON audit logging for content and hook lifecycle events. Two files; 
 
 ### internal/catalog/
 
-Content scanning, indexing, and querying. The source of truth for what is in the library. Provides `Scan()` (project), `ScanWithGlobalAndRegistries()` (merged), and query methods by type, name, and source. Includes `PrimaryFileName()` and `ReadFileContent()` for file-level access. Manifest-first scanner path is governed by ADRs 0003 and 0006 (both strict).
+Content scanning, indexing, and querying. The source of truth for what is in the library. Provides `Scan()` (project), `ScanWithGlobalAndRegistries()` (merged), and query methods by type, name, and source. Includes `PrimaryFileName()` and `ReadFileContent()` for file-level access. The scanner is manifest-first: a manifest with an `items` key is authoritative, and an empty `items: []` means zero items rather than a directory scan.
 
 ### internal/config/
 
@@ -175,7 +175,7 @@ Canonical enum values for `.syllago.yaml` metadata fields. Single-file package c
 
 ### internal/converter/
 
-Hub-and-spoke format conversion. All conversions go: source format → canonical → target format. Never converts directly between two non-canonical providers. Handles MDC (Cursor), TOML (Codex agents), JSON (Kiro), and YAML (OpenCode) edge cases. ADR 0001 (strict) governs hook degradation enforcement during conversion.
+Hub-and-spoke format conversion. All conversions go: source format → canonical → target format. Never converts directly between two non-canonical providers. Handles MDC (Cursor), TOML (Codex agents), JSON (Kiro), and YAML (OpenCode) edge cases. Hook adapters check each handler against its degradation strategy (block, warn, exclude) and report dropped hooks as warnings.
 
 ### internal/discover/
 
@@ -211,7 +211,7 @@ Content metadata parsing. Reads `.syllago.yaml`, `SKILL.md`, and `AGENT.md` file
 
 ### internal/moat/
 
-Reference implementation of [MOAT](https://github.com/OpenScribbler/moat). Verifies registry and per-item content via Sigstore cosign bundles, Rekor inclusion proofs, and GitHub OIDC numeric-ID pinning (`repository_id`, `repository_owner_id`). Three trust tiers (`DUAL-ATTESTED`, `SIGNED`, `UNSIGNED`) defined in `lockfile.go`. Bundled trusted root in `trusted_root.json` with a 365-day staleness cliff (ADR 0007, strict). Bundled allowlist in `signing_identities.json` for well-known signing identities. Revocation supported archivally (in the bundled list) and live (via the registry source). Error codes `MOAT_001` through `MOAT_009` defined in `cli/internal/output/errors.go`.
+Reference implementation of [MOAT](https://github.com/OpenScribbler/moat). Verifies registry and per-item content via Sigstore cosign bundles, Rekor inclusion proofs, and GitHub OIDC numeric-ID pinning (`repository_id`, `repository_owner_id`). Three trust tiers (`DUAL-ATTESTED`, `SIGNED`, `UNSIGNED`) defined in `lockfile.go`. Bundled trusted root in `trusted_root.json` with a 365-day staleness cliff. Bundled allowlist in `signing_identities.json` for well-known signing identities. Revocation supported archivally (in the bundled list) and live (via the registry source). Error codes `MOAT_001` through `MOAT_009` defined in `cli/internal/output/errors.go`.
 
 ### internal/moatinstall/
 
@@ -325,7 +325,6 @@ Drafting:
 - `installed.json` tracks all installed items for clean uninstall.
 - Tests: table-driven with `t.Run()`, `t.TempDir()` for fixtures, no mocking library (hand-crafted stubs).
 - Golden files for TUI visual regression; regenerate with `go test ./internal/tui/ -update-golden`.
-- ADRs in `docs/adr/` govern architectural choices in their declared scope. Strict ADRs block commits via the pre-commit hook; advisory ADRs warn.
 
 ## Development Workflow
 

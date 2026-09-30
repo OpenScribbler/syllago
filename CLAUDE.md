@@ -34,10 +34,6 @@ cd cli && go test ./internal/tui/ -update-golden
 - Go conventions: see `cli/CLAUDE.md`
 - TUI component patterns: see `cli/internal/tui/CLAUDE.md`
 
-## Architectural Decisions
-
-Active ADRs are indexed in `docs/adr/INDEX.md`. Before modifying files listed in an ADR's scope, read the full ADR to understand the rationale. Hooks will remind you when you touch scoped files — `strict` ADRs block commits, `advisory` ADRs warn.
-
 ## Testing Requirements
 
 Every behavioral code change must include tests. Coverage target is **80% on core logic packages** (converter, installer, catalog, loadout, moat, analyzer). Thin command wiring, print-only functions, and stubs are explicitly exempt — never write a test whose only purpose is to raise a coverage number.

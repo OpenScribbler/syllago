@@ -1,6 +1,6 @@
 ## What This Means
 
-Syllago refused to install a content item because its resolved MOAT trust tier is below the caller-configured minimum. MOAT defines three trust tiers (ADR 0007):
+Syllago refused to install a content item because its resolved MOAT trust tier is below the caller-configured minimum. MOAT defines three trust tiers:
 
 - **UNSIGNED** — no manifest, or the item is not attested. Lowest trust.
 - **SIGNED** — the registry manifest entry is signed by an identity you pinned, and the signature verifies. Medium trust.

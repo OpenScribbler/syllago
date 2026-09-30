@@ -106,10 +106,6 @@ Some files in the repo are generated and CI fails if they're stale:
 - After provider changes: the same target also regenerates `providers.json`.
 - After adding telemetry properties: `cd cli && make gendocs` updates `telemetry.json`. The drift-detection test `TestGentelemetry_CatalogMatchesEnrichCalls` will fail if you forget.
 
-### Architectural decisions
-
-Significant architectural choices are recorded as ADRs in [`docs/adr/`](docs/adr/). [`docs/adr/INDEX.md`](docs/adr/INDEX.md) is the index. Strict-enforcement ADRs block commits that touch their scoped files; advisory ADRs warn. Read the relevant ADR before modifying files in its scope.
-
 ### Code of Conduct
 
 Contributors are expected to follow our [Code of Conduct](CODE_OF_CONDUCT.md).

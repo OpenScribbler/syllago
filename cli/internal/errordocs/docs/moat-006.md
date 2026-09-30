@@ -32,7 +32,7 @@ Pick one of the following, depending on whether you expect this registry to be s
    ```
 
    That drops back to legacy git-only mode with no verification.
-3. **The manifest lives at a URL, not in the repo.** Wire the manifest URI into config (slice 3+ feature — track progress in ADR 0007 follow-ups).
+3. **The manifest lives at a URL, not in the repo.** Add-time verification reads only a manifest committed to the checkout, so a URL-hosted manifest cannot satisfy this check yet.
 
 ## Example Output
 
