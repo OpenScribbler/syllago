@@ -106,7 +106,7 @@ var Devin = Provider{
 		return nil
 	},
 	ConfigLocations: map[catalog.ContentType]string{
-		catalog.Hooks: ".windsurf/hooks.json",
+		catalog.Hooks: ".devin/hooks.v1.json",
 		catalog.MCP:   ".windsurf/mcp_config.json",
 	},
 	MCPTransports: []string{"stdio", "sse"},

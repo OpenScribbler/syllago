@@ -61,7 +61,10 @@ var knownHookEventNames = map[string]bool{
 	"postToolUseFailure":  true,
 	"afterFileEdit":       true,
 
-	// Devin native
+	// Devin native (other Devin events share Claude Code's names)
+	"PostCompaction": true,
+
+	// Windsurf Cascade native — legacy hook files still found in projects
 	"pre_user_prompt":                       true,
 	"post_cascade_response":                 true,
 	"post_setup_worktree":                   true,

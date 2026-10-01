@@ -54,14 +54,15 @@ func TestTranslateTool(t *testing.T) {
 		{"search to Cursor", "search", "cursor", "grep_search"},
 		{"web_search to Cursor", "web_search", "cursor", "web_search"},
 		// Devin
-		{"file_read to Devin", "file_read", "devin", "view_line_range"},
-		{"file_write to Devin", "file_write", "devin", "write_to_file"},
-		{"file_edit to Devin", "file_edit", "devin", "edit_file"},
-		{"shell to Devin", "shell", "devin", "run_command"},
-		{"find to Devin", "find", "devin", "find_by_name"},
-		{"search to Devin", "search", "devin", "grep_search"},
-		{"web_search to Devin", "web_search", "devin", "search_web"},
-		{"web_fetch to Devin", "web_fetch", "devin", "read_url_content"},
+		{"file_read to Devin", "file_read", "devin", "read"},
+		{"file_write to Devin", "file_write", "devin", "write"},
+		{"file_edit to Devin", "file_edit", "devin", "edit"},
+		{"shell to Devin", "shell", "devin", "exec"},
+		{"find to Devin", "find", "devin", "glob"},
+		{"search to Devin", "search", "devin", "grep"},
+		{"web_search to Devin (no mapping)", "web_search", "devin", "web_search"},
+		{"web_fetch to Devin", "web_fetch", "devin", "webfetch"},
+		{"agent to Devin", "agent", "devin", "run_subagent"},
 		// Codex
 		{"file_read to Codex", "file_read", "codex", "read_file"},
 		{"file_write to Codex", "file_write", "codex", "apply_patch"},
@@ -97,7 +98,7 @@ func TestTranslateTool(t *testing.T) {
 		{"notebook_read to Gemini (no mapping)", "notebook_read", "gemini-cli", "notebook_read"},
 		{"kill_shell to Gemini (no mapping)", "kill_shell", "gemini-cli", "kill_shell"},
 		{"list_dir to Cursor (no mapping)", "list_dir", "cursor", "list_dir"},
-		{"notebook_read to Devin (no mapping)", "notebook_read", "devin", "notebook_read"},
+		{"notebook_read to Devin", "notebook_read", "devin", "notebook_read"},
 		{"kill_shell to Codex (no mapping)", "kill_shell", "codex", "kill_shell"},
 		{"skill to Gemini (no mapping)", "skill", "gemini-cli", "skill"},
 		{"ask_user to Gemini (no mapping)", "ask_user", "gemini-cli", "ask_user"},
@@ -166,10 +167,15 @@ func TestTranslateHookEvent(t *testing.T) {
 		{"tool_use_failure to Copilot", "tool_use_failure", "copilot-cli", "errorOccurred", true},
 		{"tool_use_failure to Gemini (unsupported)", "tool_use_failure", "gemini-cli", "tool_use_failure", false},
 		// Devin events
-		{"session_start to Devin", "session_start", "devin", "session_start", true},
-		{"session_end to Devin", "session_end", "devin", "session_end", true},
-		{"before_prompt to Devin", "before_prompt", "devin", "pre_user_prompt", true},
-		{"agent_stop to Devin", "agent_stop", "devin", "post_cascade_response", true},
+		{"before_tool_execute to Devin", "before_tool_execute", "devin", "PreToolUse", true},
+		{"after_tool_execute to Devin", "after_tool_execute", "devin", "PostToolUse", true},
+		{"session_start to Devin", "session_start", "devin", "SessionStart", true},
+		{"session_end to Devin", "session_end", "devin", "SessionEnd", true},
+		{"before_prompt to Devin", "before_prompt", "devin", "UserPromptSubmit", true},
+		{"agent_stop to Devin", "agent_stop", "devin", "Stop", true},
+		{"permission_request to Devin", "permission_request", "devin", "PermissionRequest", true},
+		{"after_compact to Devin", "after_compact", "devin", "PostCompaction", true},
+		{"worktree_create to Devin (unsupported)", "worktree_create", "devin", "worktree_create", false},
 		// Opencode events
 		{"before_tool_execute to Opencode", "before_tool_execute", "opencode", "tool.execute.before", true},
 		{"after_tool_execute to Opencode", "after_tool_execute", "opencode", "tool.execute.after", true},
@@ -229,8 +235,9 @@ func TestReverseTranslateHookEvent(t *testing.T) {
 		{"Opencode tool.execute.before", "tool.execute.before", "opencode", "before_tool_execute"},
 		{"Opencode session.created", "session.created", "opencode", "session_start"},
 		// Devin reverse
-		{"Devin pre_user_prompt", "pre_user_prompt", "devin", "before_prompt"},
-		{"Devin post_cascade_response", "post_cascade_response", "devin", "agent_stop"},
+		{"Devin PreToolUse", "PreToolUse", "devin", "before_tool_execute"},
+		{"Devin UserPromptSubmit", "UserPromptSubmit", "devin", "before_prompt"},
+		{"Devin PostCompaction", "PostCompaction", "devin", "after_compact"},
 		// Cursor extended reverse
 		{"Cursor beforeAgentResponse", "beforeAgentResponse", "cursor", "before_model"},
 		{"Cursor afterAgentResponse", "afterAgentResponse", "cursor", "after_model"},
@@ -286,7 +293,7 @@ func TestToolNamesWebFetch(t *testing.T) {
 		"kiro":        "web_fetch",
 		"opencode":    "webfetch",
 		"zed":         "fetch",
-		"devin":       "read_url_content",
+		"devin":       "webfetch",
 	}
 	for prov, want := range expected {
 		got, exists := wf[prov]
@@ -387,14 +394,14 @@ func TestReverseTranslateTool_NewProviders(t *testing.T) {
 		{"Cursor grep_search", "grep_search", "cursor", "search"},
 		{"Cursor web_search", "web_search", "cursor", "web_search"},
 		// Devin
-		{"Devin view_line_range", "view_line_range", "devin", "file_read"},
-		{"Devin write_to_file", "write_to_file", "devin", "file_write"},
-		{"Devin edit_file", "edit_file", "devin", "file_edit"},
-		{"Devin run_command", "run_command", "devin", "shell"},
-		{"Devin find_by_name", "find_by_name", "devin", "find"},
-		{"Devin grep_search", "grep_search", "devin", "search"},
-		{"Devin search_web", "search_web", "devin", "web_search"},
-		{"Devin read_url_content", "read_url_content", "devin", "web_fetch"},
+		{"Devin read", "read", "devin", "file_read"},
+		{"Devin write", "write", "devin", "file_write"},
+		{"Devin edit", "edit", "devin", "file_edit"},
+		{"Devin exec", "exec", "devin", "shell"},
+		{"Devin glob", "glob", "devin", "find"},
+		{"Devin grep", "grep", "devin", "search"},
+		{"Devin webfetch", "webfetch", "devin", "web_fetch"},
+		{"Devin run_subagent", "run_subagent", "devin", "agent"},
 		// Codex
 		{"Codex read_file", "read_file", "codex", "file_read"},
 		{"Codex apply_patch", "apply_patch", "codex", "file_edit"},
@@ -523,7 +530,7 @@ func TestIsValidHookEvent(t *testing.T) {
 		{"file_created", true},
 		{"tool_use_failure", true},
 		{"tool.execute.before", true}, // Opencode
-		{"pre_user_prompt", true},     // Devin
+		{"PostCompaction", true},      // Devin
 		{"File Save", true},           // Kiro
 		// Invalid names
 		{"", false},
@@ -561,7 +568,8 @@ func TestTranslateMCPToolName(t *testing.T) {
 		{"Cline to Claude", "github__search_repos", "cline", "claude-code", "mcp__github__search_repos"},
 		{"RooCode to Claude", "github__search_repos", "roo-code", "claude-code", "mcp__github__search_repos"},
 		{"Cursor to Claude", "github__search_repos", "cursor", "claude-code", "mcp__github__search_repos"},
-		{"Devin to Claude", "github__search_repos", "devin", "claude-code", "mcp__github__search_repos"},
+		{"Devin to Claude", "mcp__github__search_repos", "devin", "claude-code", "mcp__github__search_repos"},
+		{"Devin to Gemini", "mcp__github__search_repos", "devin", "gemini-cli", "mcp_github_search_repos"},
 		// Zed colon format
 		{"Zed to Claude", "mcp:github:search_repos", "zed", "claude-code", "mcp__github__search_repos"},
 		{"Claude to Zed", "mcp__github__search_repos", "claude-code", "zed", "mcp:github:search_repos"},
@@ -575,7 +583,8 @@ func TestTranslateMCPToolName(t *testing.T) {
 		{"Claude to Cline", "mcp__github__search_repos", "claude-code", "cline", "github__search_repos"},
 		{"Claude to RooCode", "mcp__github__search_repos", "claude-code", "roo-code", "github__search_repos"},
 		{"Claude to Cursor", "mcp__github__search_repos", "claude-code", "cursor", "github__search_repos"},
-		{"Claude to Devin", "mcp__github__search_repos", "claude-code", "devin", "github__search_repos"},
+		{"Claude to Devin", "mcp__github__search_repos", "claude-code", "devin", "mcp__github__search_repos"},
+		{"Cursor to Devin", "github__search_repos", "cursor", "devin", "mcp__github__search_repos"},
 		// Cross-provider
 		{"Gemini to OpenCode", "mcp_github_search_repos", "gemini-cli", "opencode", "github__search_repos"},
 		{"Copilot to Zed", "github/search_repos", "copilot-cli", "zed", "mcp:github:search_repos"},
@@ -737,28 +746,15 @@ func TestToolmap_PiEvents(t *testing.T) {
 	}
 }
 
-func TestToolmap_DevinSplitEventsAbsent(t *testing.T) {
-	// before_tool_execute and after_tool_execute must NOT have devin entries
-	// (Devin uses split-event logic in its adapter, not direct toolmap entries)
+func TestToolmap_DevinDroppedEvents(t *testing.T) {
+	// The Windsurf-era Cascade events (post_setup_worktree,
+	// post_cascade_response_with_transcript) are gone from Devin's
+	// Claude Code-shaped hook format.
 	t.Parallel()
-	for _, canonical := range []string{"before_tool_execute", "after_tool_execute"} {
-		_, ok := TranslateHookEvent(canonical, "devin")
-		if ok {
-			t.Errorf("devin must not have a toolmap entry for %q (uses split-event logic)", canonical)
+	for _, canonical := range []string{"worktree_create", "transcript_export"} {
+		if got, ok := TranslateHookEvent(canonical, "devin"); ok {
+			t.Errorf("TranslateHookEvent(%q, devin) = %q/true, want unsupported", canonical, got)
 		}
-	}
-}
-
-func TestToolmap_DevinSpecificEvents(t *testing.T) {
-	t.Parallel()
-	// Devin-specific events
-	got, ok := TranslateHookEvent("worktree_create", "devin")
-	if !ok || got != "post_setup_worktree" {
-		t.Errorf("TranslateHookEvent(worktree_create, devin) = %q/%v, want post_setup_worktree/true", got, ok)
-	}
-	got, ok = TranslateHookEvent("transcript_export", "devin")
-	if !ok || got != "post_cascade_response_with_transcript" {
-		t.Errorf("TranslateHookEvent(transcript_export, devin) = %q/%v, want post_cascade_response_with_transcript/true", got, ok)
 	}
 }
 
@@ -813,12 +809,12 @@ func TestProviderSupportsHookEvent(t *testing.T) {
 		want  bool
 	}{
 		{"canonical with mapping", "before_tool_execute", "claude-code", true},
-		{"canonical without mapping", "before_tool_execute", "devin", false},
+		{"canonical without mapping", "worktree_create", "devin", false},
 		{"canonical without mapping for crush", "session_end", "crush", false},
 		{"own native name", "PreToolUse", "claude-code", true},
-		{"own native name devin", "pre_user_prompt", "devin", true},
+		{"own native name devin", "PostCompaction", "devin", true},
 		{"own native name crush", "PreToolUse", "crush", true},
-		{"another provider's native name", "PreToolUse", "devin", false},
+		{"another provider's native name", "BeforeTool", "devin", false},
 		{"another provider's native name gemini", "BeforeTool", "claude-code", false},
 		{"unknown event", "not_a_real_event", "claude-code", false},
 		{"unknown provider slug", "before_tool_execute", "no-such-provider", false},

@@ -930,18 +930,6 @@ type devinAgentMeta struct {
 	MaxNesting   int      `yaml:"max-nesting,omitempty"`
 }
 
-// devinAgentToolNames maps canonical tool names to the tool names Devin
-// subagents use in allowed-tools. These are the Devin CLI names, not the
-// Cascade names in ToolNames["..."]["devin"], which hook matchers use.
-var devinAgentToolNames = map[string]string{
-	"file_read":  "read",
-	"file_write": "write",
-	"file_edit":  "edit",
-	"shell":      "exec",
-	"find":       "glob",
-	"search":     "grep",
-}
-
 // canonicalizeDevinAgent parses a Devin subagent .md file into canonical
 // format. max-nesting has no canonical equivalent and is dropped with a
 // warning.
@@ -962,14 +950,7 @@ func canonicalizeDevinAgent(content []byte) (*Result, error) {
 	}
 	var canonicalTools []string
 	for _, tool := range tools {
-		mapped := tool
-		for canonical, devinName := range devinAgentToolNames {
-			if devinName == tool {
-				mapped = canonical
-				break
-			}
-		}
-		canonicalTools = append(canonicalTools, mapped)
+		canonicalTools = append(canonicalTools, ReverseTranslateTool(tool, "devin"))
 	}
 
 	meta := AgentMeta{
@@ -1011,7 +992,8 @@ func renderDevinAgent(meta AgentMeta, body string) (*Result, error) {
 	}
 	var unmapped []string
 	for _, tool := range meta.Tools {
-		if devinName, ok := devinAgentToolNames[tool]; ok {
+		// Subagent allowed-tools and hook matchers use the same Devin tool names.
+		if devinName, ok := ToolNames[tool]["devin"]; ok {
 			dm.AllowedTools = append(dm.AllowedTools, devinName)
 			continue
 		}

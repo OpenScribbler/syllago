@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-09-30T23:14:02Z",
+  "generatedAt": "2026-10-01T23:40:00Z",
   "syllagoVersion": "0.14.0",
   "providers": [
     {
@@ -638,40 +638,50 @@
           "symlinkSupport": false,
           "hookEvents": [
             {
+              "canonical": "after_compact",
+              "nativeName": "PostCompaction",
+              "category": "context"
+            },
+            {
+              "canonical": "after_tool_execute",
+              "nativeName": "PostToolUse",
+              "category": "tool"
+            },
+            {
               "canonical": "agent_stop",
-              "nativeName": "post_cascade_response",
+              "nativeName": "Stop",
               "category": "lifecycle"
             },
             {
               "canonical": "before_prompt",
-              "nativeName": "pre_user_prompt",
+              "nativeName": "UserPromptSubmit",
               "category": "lifecycle"
             },
             {
+              "canonical": "before_tool_execute",
+              "nativeName": "PreToolUse",
+              "category": "tool"
+            },
+            {
+              "canonical": "permission_request",
+              "nativeName": "PermissionRequest",
+              "category": "security"
+            },
+            {
               "canonical": "session_end",
-              "nativeName": "session_end",
+              "nativeName": "SessionEnd",
               "category": "lifecycle"
             },
             {
               "canonical": "session_start",
-              "nativeName": "session_start",
+              "nativeName": "SessionStart",
               "category": "lifecycle"
-            },
-            {
-              "canonical": "transcript_export",
-              "nativeName": "post_cascade_response_with_transcript",
-              "category": "output"
-            },
-            {
-              "canonical": "worktree_create",
-              "nativeName": "post_setup_worktree",
-              "category": "workspace"
             }
           ],
           "hookTypes": [
             "command"
           ],
-          "configLocation": ".windsurf/hooks.json"
+          "configLocation": ".devin/hooks.v1.json"
         },
         "loadouts": {
           "supported": false,

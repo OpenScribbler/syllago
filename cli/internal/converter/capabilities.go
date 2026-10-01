@@ -104,14 +104,14 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 	},
 	"devin": {
 		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end",
-			"worktree_create", "transcript_export",
+			"before_tool_execute", "after_tool_execute", "permission_request",
+			"before_prompt", "agent_stop", "after_compact",
+			"session_start", "session_end",
 		},
-		SupportsMatchers: true,
-		SupportsBlocking: true,
-		SupportsCWD:      true,
-		TimeoutUnit:      "",
+		SupportsMatchers:         true,
+		SupportsStructuredOutput: true, // decision, updatedInput, additionalContext
+		SupportsBlocking:         true,
+		TimeoutUnit:              "seconds",
 	},
 	"vs-code-copilot": {
 		Events: []string{

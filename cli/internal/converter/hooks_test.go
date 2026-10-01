@@ -1705,3 +1705,54 @@ func stringContains(s, substr string) bool {
 	}
 	return false
 }
+
+// TestClaudeHooksDevinRoundTrip covers the convert path: Devin uses Claude
+// Code's event names but its own tool names and second-based timeouts.
+func TestClaudeHooksDevinRoundTrip(t *testing.T) {
+	input := []byte(`{
+		"hooks": {
+			"PreToolUse": [
+				{
+					"matcher": "Bash",
+					"hooks": [
+						{"type": "command", "command": "echo checking", "timeout": 5000}
+					]
+				}
+			]
+		}
+	}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+
+	result, err := conv.Render(canonical.Content, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	group := gjson.GetBytes(result.Content, "hooks.PreToolUse.0")
+	if got := group.Get("matcher").String(); got != "exec" {
+		t.Errorf("matcher: got %q, want exec; output: %s", got, result.Content)
+	}
+	if got := group.Get("hooks.0.timeout").Int(); got != 5 {
+		t.Errorf("timeout: got %d, want 5 (seconds); output: %s", got, result.Content)
+	}
+
+	back, err := conv.Canonicalize(result.Content, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize devin: %v", err)
+	}
+	cc, err := conv.Render(back.Content, provider.ClaudeCode)
+	if err != nil {
+		t.Fatalf("Render claude-code: %v", err)
+	}
+	ccGroup := gjson.GetBytes(cc.Content, "hooks.PreToolUse.0")
+	if got := ccGroup.Get("matcher").String(); got != "Bash" {
+		t.Errorf("round-trip matcher: got %q, want Bash", got)
+	}
+	if got := ccGroup.Get("hooks.0.timeout").Int(); got != 5000 {
+		t.Errorf("round-trip timeout: got %d, want 5000 (ms)", got)
+	}
+}

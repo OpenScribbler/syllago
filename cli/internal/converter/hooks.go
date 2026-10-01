@@ -240,13 +240,8 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		// Cursor hooks use CC-style event names (mapped via HookEvents).
 		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
 		return canonicalizeStandardHooks(content, sourceProvider)
-	case "devin":
-		// Devin uses per-tool-category events (pre_read_code, etc.) — structural
-		// mismatch with generic PreToolUse+matcher. Standard canonicalization is a
-		// best-effort pass-through. TODO: implement proper Devin event mapping.
-		return canonicalizeStandardHooks(content, sourceProvider)
 	default:
-		// Claude Code and Gemini CLI share the same structure, just different event/tool names
+		// Claude Code, Gemini CLI, and Devin share the same structure, just different event/tool names
 		return canonicalizeStandardHooks(content, sourceProvider)
 	}
 }
@@ -316,13 +311,8 @@ func (c *HooksConverter) Render(content []byte, target provider.Provider) (*Resu
 		// Cursor uses CC-style event names (PreToolUse, etc.) mapped via HookEvents.
 		// TODO: support Cursor-specific fields.
 		return renderStandardHooks(cfg, target.Slug, mode)
-	case "devin":
-		// Devin uses per-tool-category events (pre_read_code, pre_write_code, etc.)
-		// instead of generic PreToolUse+matcher. This structural mismatch means event-level
-		// translation may not be accurate. TODO: implement Devin-specific event mapping.
-		return renderStandardHooks(cfg, target.Slug, mode)
 	default:
-		// Claude Code and Gemini CLI
+		// Claude Code, Gemini CLI, and Devin
 		return renderStandardHooks(cfg, target.Slug, mode)
 	}
 }
@@ -342,13 +332,11 @@ func canonicalizeStandardHooks(content []byte, sourceProvider string) (*Result, 
 
 		var canonicalMatchers []hookMatcher
 		for _, m := range matchers {
-			// Convert hook timeouts from provider ms to canonical seconds
+			// Convert hook timeouts from the provider's unit to canonical seconds
 			hooks := make([]HookEntry, len(m.Hooks))
 			copy(hooks, m.Hooks)
 			for i := range hooks {
-				if hooks[i].Timeout > 0 {
-					hooks[i].Timeout = hooks[i].Timeout / 1000
-				}
+				hooks[i].Timeout = TranslateTimeoutFromProvider(hooks[i].Timeout, sourceProvider)
 			}
 			cm := hookMatcher{
 				Matcher: m.Matcher,
@@ -504,7 +492,7 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 							kept = append(kept, HookEntry{
 								Type:          "command",
 								Command:       "./" + scriptName,
-								Timeout:       30000, // LLM calls need more time (ms)
+								Timeout:       TranslateTimeoutToProvider(30, targetSlug), // LLM calls need more time
 								StatusMessage: fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Type),
 							})
 							warnings = append(warnings, fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Type, scriptName))
@@ -518,11 +506,9 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 					continue
 				}
 
-				// Convert canonical seconds to provider milliseconds
+				// Convert canonical seconds to the provider's unit
 				rendered := h
-				if rendered.Timeout > 0 {
-					rendered.Timeout = rendered.Timeout * 1000
-				}
+				rendered.Timeout = TranslateTimeoutToProvider(rendered.Timeout, targetSlug)
 				kept = append(kept, rendered)
 			}
 			tm.Hooks = kept

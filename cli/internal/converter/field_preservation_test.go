@@ -549,9 +549,8 @@ func TestFieldPreservation_Skills_FanOut(t *testing.T) {
 				"name: code-review",
 				"description: Code review skill",
 				"Tool restriction",
-				"view_line_range", // Devin translation of file_read
-				"grep_search",     // Devin translation of search
-				"run_command",     // Devin translation of shell
+				"Use only read, grep tools.", // Devin translations of file_read, search
+				"Do not use:** exec tools.",  // Devin translation of shell
 				"Review code for best practices",
 				"syllago:converted",
 			},

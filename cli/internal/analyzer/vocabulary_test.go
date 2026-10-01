@@ -40,7 +40,8 @@ func TestKnownHookEventNames_CrossProvider(t *testing.T) {
 	providers := map[string][]string{
 		"claude-code": {"PreToolUse", "PostToolUse", "SessionStart", "SessionEnd"},
 		"gemini":      {"BeforeTool", "AfterTool", "BeforeAgent", "AfterAgent"},
-		"devin":       {"pre_user_prompt", "post_cascade_response"},
+		"devin":       {"PreToolUse", "PostCompaction"},
+		"windsurf":    {"pre_user_prompt", "post_cascade_response"},
 		"copilot":     {"preToolUse", "postToolUse", "sessionStart"},
 		"opencode":    {"tool.execute.before", "tool.execute.after"},
 		"cursor":      {"beforeAgentResponse", "afterAgentResponse"},

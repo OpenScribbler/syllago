@@ -47,8 +47,8 @@ func TranslateTimeoutToProvider(seconds int, slug string) int {
 		return 0
 	}
 	switch slug {
-	case "copilot-cli", "crush":
-		return seconds // Copilot and Crush use seconds natively
+	case "copilot-cli", "crush", "devin":
+		return seconds // Copilot, Crush, and Devin use seconds natively
 	default:
 		return seconds * 1000 // CC, Gemini, Cursor, Kiro all use milliseconds
 	}
@@ -61,8 +61,8 @@ func TranslateTimeoutFromProvider(value int, slug string) int {
 		return 0
 	}
 	switch slug {
-	case "copilot-cli", "crush":
-		return value // Copilot and Crush already in seconds
+	case "copilot-cli", "crush", "devin":
+		return value // Copilot, Crush, and Devin already in seconds
 	default:
 		return value / 1000 // CC, Gemini, Cursor, Kiro use milliseconds
 	}
