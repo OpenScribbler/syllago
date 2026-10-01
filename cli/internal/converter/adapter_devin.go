@@ -79,9 +79,9 @@ func (a *DevinAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, slug)
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := regexMatcherString(translatedMatcher, slug)
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		entry := devinHookEntry{

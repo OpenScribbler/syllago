@@ -40,6 +40,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Hooks that match a list of tools now match only those tools.** A
+  canonical hook whose matcher is an array, such as `["shell",
+  "file_write"]`, was written to Claude Code, Gemini CLI, Factory Droid,
+  and Devin Desktop with an empty matcher, so it fired on every tool.
+  These providers now get a regex alternation (`Bash|Write`), as Crush
+  already did.
 - **Devin Desktop hooks now use Devin's current hook format.** Devin
   replaced the Windsurf Cascade events (`pre_run_command`,
   `post_cascade_response`, and the rest) with Claude Code-style events

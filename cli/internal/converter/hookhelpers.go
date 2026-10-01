@@ -156,6 +156,28 @@ func TranslateMatcherToProvider(matcher json.RawMessage, slug string) (json.RawM
 	}}
 }
 
+// regexMatcherString renders a translated matcher for a provider whose matcher
+// field is a regex. An array becomes an alternation, because a canonical array
+// matches when any element matches.
+func regexMatcherString(m json.RawMessage, slug string) (string, []ConversionWarning) {
+	if len(m) == 0 {
+		return "", nil
+	}
+	var s string
+	if json.Unmarshal(m, &s) == nil {
+		return s, nil
+	}
+	var parts []string
+	if json.Unmarshal(m, &parts) == nil {
+		return strings.Join(parts, "|"), nil
+	}
+	return "", []ConversionWarning{{
+		Severity:    "warning",
+		Capability:  "matcher",
+		Description: fmt.Sprintf("matcher shape not representable as a %s regex; hook will match all tools", slug),
+	}}
+}
+
 // TranslateMatcherFromProvider translates a provider-native matcher to canonical format.
 // Provider-native MCP tool name strings are detected and promoted to canonical MCP objects.
 func TranslateMatcherFromProvider(matcher json.RawMessage, slug string) (json.RawMessage, []ConversionWarning) {

@@ -273,3 +273,19 @@ func hasWarningContaining(warnings []ConversionWarning, substr string) bool {
 	}
 	return false
 }
+
+func TestDevinAdapterEncode_ArrayMatcherBecomesAlternation(t *testing.T) {
+	// A canonical array must not collapse to "", which Devin treats as match-all.
+	hooks := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{Event: "before_tool_execute", Matcher: json.RawMessage(`["shell","file_write"]`), Blocking: true, Handler: HookHandler{Type: "command", Command: "echo guard"}},
+		},
+	}
+
+	encoded, err := AdapterFor("devin").Encode(hooks)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	assertEqual(t, "exec|write", gjson.GetBytes(encoded.Content, "hooks.PreToolUse.0.matcher").String())
+}
