@@ -39,7 +39,7 @@ Hook produces JSON output with fields beyond simple exit codes.
 | gemini-cli | `decision`, `systemMessage`, `hookSpecificOutput` | |
 | copilot-cli | `permissionDecision` only | Minimal |
 | cursor | `permission`, `userMessage`, `agentMessage` | |
-| devin    | Not supported | Exit codes only |
+| devin    | `decision`, `updatedInput`, `additionalContext` | |
 | kiro | Undocumented | |
 | opencode | N/A (in-process) | Programmatic model; blocking works via thrown JavaScript exceptions rather than exit codes or structured output fields |
 | factory-droid | Same schema as codex: `continue`, `decision`, `suppressOutput`, `systemMessage`, `hookSpecificOutput`, `permissionDecision`, `additionalContext` | Closely aligned with claude-code |
@@ -71,6 +71,7 @@ Hook modifies tool arguments before execution. **This is a safety-critical capab
 | gemini-cli | `hookSpecificOutput.tool_input` — note: gemini-cli uses `tool_input`, not `updatedInput`. Claude Code and gemini-cli diverge here. |
 | codex | `hookSpecificOutput.updatedInput` |
 | opencode | Mutable `output.args` in plugin |
+| devin | `updatedInput` in hook JSON output |
 | All others | Not supported |
 
 **Default degradation:** `block`. When the target provider does not support input rewriting, the adapter MUST generate a hook that blocks the action entirely (exit code 2) rather than allowing unmodified input through. This prevents a false sense of security. Hook authors MAY override to `warn` or `exclude` via the `degradation` field when the rewrite is cosmetic rather than safety-critical.
@@ -167,7 +168,6 @@ Explicit working directory for hook execution.
 
 | Provider | Mechanism |
 |----------|-----------|
-| devin    | `working_directory` field |
 | copilot-cli | `cwd` field |
 | vs-code-copilot | `cwd` field |
 | All others | Not configurable (implementation-defined default) |

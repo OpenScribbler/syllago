@@ -32,7 +32,7 @@ Extended events have partial provider support. They appear in the event registry
 | Event | Description |
 |-------|-------------|
 | `before_compact` | Fires before context window compression. |
-| `after_compact` | Fires after context window compression completes. Currently claude-code only; included in §2 for anticipated adoption. |
+| `after_compact` | Fires after context window compression completes. Currently supported by claude-code and devin. |
 | `notification` | Non-blocking system notification (e.g., permission prompts, status updates). |
 | `error_occurred` | Fires when the agent encounters an error. |
 | `tool_use_failure` | Fires when a tool invocation fails. Distinct from `after_tool_execute` in that it signals an error, not a successful completion. |
@@ -64,8 +64,6 @@ Provider-exclusive events exist in only one provider. They are included in the r
 | `before_task` | Fires before a spec task executes. | Kiro |
 | `after_task` | Fires after a spec task completes. | Kiro |
 | `manual_trigger` | Fires when a hook is manually triggered by the user (not tied to an agent lifecycle event). | Kiro |
-| `windsurf_transcript_response` | Post-response event that provides a `transcript_path` (JSONL file) with the full response. Enterprise compliance variant of `agent_stop`. | Devin Desktop |
-| `windsurf_worktree_setup` | Fires after worktree creation; has `worktree_path` and `root_workspace_path` fields. | Devin Desktop |
 | `opencode_command_before` | Fires before a shell command executes (OpenCode plugin system). | OpenCode |
 | `opencode_command_after` | Fires after a shell command executes. | OpenCode |
 | `opencode_chat_params` | Fires before an LLM API call; allows modifying LLM request parameters. | OpenCode |
@@ -83,12 +81,12 @@ The following table maps canonical event names to provider-native names. Adapter
 
 | Canonical | claude-code | gemini-cli | cursor | devin    | vs-code-copilot | copilot-cli | kiro | opencode | factory-droid | codex | cline |
 |-----------|-------------|------------|--------|----------|-----------------|-------------|------|----------|---------------|-------|-------|
-| `before_tool_execute` | PreToolUse | BeforeTool | beforeShellExecution / beforeMCPExecution / beforeReadFile | pre_read_code / pre_write_code / pre_run_command / pre_mcp_tool_use | PreToolUse | preToolUse | preToolUse | tool.execute.before | PreToolUse | PreToolUse | PreToolUse |
-| `after_tool_execute` | PostToolUse | AfterTool | afterShellExecution / afterMCPExecution / afterFileEdit | post_read_code / post_write_code / post_run_command / post_mcp_tool_use | PostToolUse | postToolUse | postToolUse | tool.execute.after | PostToolUse | PostToolUse | PostToolUse |
-| `session_start` | SessionStart | SessionStart | sessionStart | -- | SessionStart | sessionStart | -- | session.created | SessionStart | SessionStart | TaskStart / TaskResume (merged) |
-| `session_end` | SessionEnd | SessionEnd | sessionEnd | -- | -- | sessionEnd | -- | session.deleted | SessionEnd | -- | TaskCancel (partial) |
-| `before_prompt` | UserPromptSubmit | BeforeAgent | beforeSubmitPrompt | pre_user_prompt | UserPromptSubmit | userPromptSubmitted | userPromptSubmit | -- | UserPromptSubmit | UserPromptSubmit | UserPromptSubmit |
-| `agent_stop` | Stop | AfterAgent | stop | post_cascade_response | Stop | -- | Agent Stop | session.idle | Stop | Stop | TaskComplete |
+| `before_tool_execute` | PreToolUse | BeforeTool | beforeShellExecution / beforeMCPExecution / beforeReadFile | PreToolUse | PreToolUse | preToolUse | preToolUse | tool.execute.before | PreToolUse | PreToolUse | PreToolUse |
+| `after_tool_execute` | PostToolUse | AfterTool | afterShellExecution / afterMCPExecution / afterFileEdit | PostToolUse | PostToolUse | postToolUse | postToolUse | tool.execute.after | PostToolUse | PostToolUse | PostToolUse |
+| `session_start` | SessionStart | SessionStart | sessionStart | SessionStart | SessionStart | sessionStart | -- | session.created | SessionStart | SessionStart | TaskStart / TaskResume (merged) |
+| `session_end` | SessionEnd | SessionEnd | sessionEnd | SessionEnd | -- | sessionEnd | -- | session.deleted | SessionEnd | -- | TaskCancel (partial) |
+| `before_prompt` | UserPromptSubmit | BeforeAgent | beforeSubmitPrompt | UserPromptSubmit | UserPromptSubmit | userPromptSubmitted | userPromptSubmit | -- | UserPromptSubmit | UserPromptSubmit | UserPromptSubmit |
+| `agent_stop` | Stop | AfterAgent | stop | Stop | Stop | -- | Agent Stop | session.idle | Stop | Stop | TaskComplete |
 | `before_compact` | PreCompact | PreCompress | -- | -- | PreCompact | -- | -- | experimental.session.compacting | PreCompact | -- | PreCompact |
 | `notification` | Notification | Notification | -- | -- | -- | -- | -- | -- | -- | -- | Notification |
 | `error_occurred` | StopFailure | -- | -- | -- | -- | errorOccurred | -- | session.error | -- | -- | -- |
@@ -96,7 +94,7 @@ The following table maps canonical event names to provider-native names. Adapter
 | `file_changed` | FileChanged | -- | afterFileEdit | -- | -- | -- | File Save | file.edited | -- | -- | -- |
 | `subagent_start` | SubagentStart | -- | subagentStart | -- | SubagentStart | -- | -- | -- | SubagentStart | -- | -- |
 | `subagent_stop` | SubagentStop | -- | subagentStop | -- | SubagentStop | -- | -- | -- | SubagentStop | -- | -- |
-| `permission_request` | PermissionRequest | -- | -- | -- | -- | -- | -- | permission.asked | -- | -- | -- |
+| `permission_request` | PermissionRequest | -- | -- | PermissionRequest | -- | -- | -- | permission.asked | -- | -- | -- |
 | `before_model` | -- | BeforeModel | beforeAgentResponse | -- | -- | -- | -- | -- | -- | -- | -- |
 | `after_model` | -- | AfterModel | afterAgentResponse | -- | -- | -- | -- | -- | -- | -- | -- |
 | `before_tool_selection` | -- | BeforeToolSelection | beforeToolSelection | -- | -- | -- | -- | -- | -- | -- | -- |
@@ -111,12 +109,10 @@ The following table maps canonical event names to provider-native names. Adapter
 | `task_completed` | TaskCompleted | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | `teammate_idle` | TeammateIdle | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | `cwd_changed` | CwdChanged | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| `after_compact` | PostCompact | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| `after_compact` | PostCompact | -- | -- | PostCompaction | -- | -- | -- | -- | -- | -- | -- |
 | `elicitation` | Elicitation | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | `elicitation_result` | ElicitationResult | -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | `manual_trigger` | -- | -- | -- | -- | -- | -- | Manual Trigger | -- | -- | -- | -- |
-| `windsurf_transcript_response` | -- | -- | -- | post_cascade_response_with_transcript | -- | -- | -- | -- | -- | -- | -- |
-| `windsurf_worktree_setup` | -- | -- | -- | post_setup_worktree | -- | -- | -- | -- | -- | -- | -- |
 | `opencode_command_before` | -- | -- | -- | -- | -- | -- | -- | command.execute.before | -- | -- | -- |
 | `opencode_command_after` | -- | -- | -- | -- | -- | -- | -- | command.execute.after | -- | -- | -- |
 | `opencode_chat_params` | -- | -- | -- | -- | -- | -- | -- | chat.params | -- | -- | -- |
@@ -130,7 +126,7 @@ The following table maps canonical event names to provider-native names. Adapter
 
 A `--` indicates the provider does not support that event. When encoding a hook for a provider that does not support its event, the adapter MUST apply the degradation strategy (Section 11).
 
-**Split-event providers:** Cursor and Devin Desktop map a single `before_tool_execute` event to multiple provider-native events based on the matcher. When encoding for these providers, adapters MUST inspect the `matcher` field to select the correct native event. When decoding from these providers, adapters MUST merge split events into `before_tool_execute` with an appropriate matcher.
+**Split-event providers:** Cursor maps a single `before_tool_execute` event to multiple provider-native events based on the matcher. When encoding for split-event providers, adapters MUST inspect the `matcher` field to select the correct native event. When decoding from these providers, adapters MUST merge split events into `before_tool_execute` with an appropriate matcher.
 
 **Footnotes:**
 

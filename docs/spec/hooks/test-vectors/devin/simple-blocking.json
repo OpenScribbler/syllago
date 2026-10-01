@@ -1,13 +1,16 @@
 {
-  "_comment": "Expected Devin Desktop output for canonical/simple-blocking.json. Devin Desktop is a split-event provider: before_tool_execute + matcher 'shell' maps directly to the pre_run_command event. Devin Desktop hooks use arrays per event key. Timeout is dropped (Devin Desktop does not support configurable timeouts). Blocking is implicit via exit code 2, not a field.",
-  "_warnings": [
-    "Hook 1: timeout field dropped — Devin Desktop does not support configurable timeouts",
-    "Hook 1: blocking field dropped — Devin Desktop blocking is implicit via exit code 2 on pre-events"
-  ],
+  "_comment": "Expected Devin Desktop output for canonical/simple-blocking.json. Devin Desktop uses a Claude Code-shaped format with its own tool names: event before_tool_execute -> PreToolUse, matcher 'shell' -> 'exec', timeout stays in seconds, command preserved as-is. Blocking is implicit: Devin PreToolUse hooks block on exit code 2. Devin hooks live under the 'hooks' key of ~/.config/devin/config.json or .devin/config.json, or as a bare hooks object in .devin/hooks.v1.json.",
   "hooks": {
-    "pre_run_command": [
+    "PreToolUse": [
       {
-        "command": "./safety-check.sh"
+        "matcher": "exec",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./safety-check.sh",
+            "timeout": 10
+          }
+        ]
       }
     ]
   }

@@ -1,54 +1,52 @@
 {
-  "_comment": "Expected Devin Desktop output for canonical/multi-event.json. Devin Desktop split-event mapping: (1) before_tool_execute + ['shell','file_write'] splits into pre_run_command (shell) and pre_write_code (file_write); (2) after_tool_execute wildcard splits into all four post-events (post_read_code, post_write_code, post_run_command, post_mcp_tool_use); (3) before_prompt -> pre_user_prompt; (4) agent_stop -> post_cascade_response (closest equivalent). Unlike Cursor, Devin Desktop has pre_write_code for before-events on file writes, so the timing semantics are preserved.",
-  "_warnings": [
-    "Hook 1: array matcher split into separate Devin Desktop events — 'shell' maps to pre_run_command, 'file_write' maps to pre_write_code",
-    "Hook 1: timeout field dropped — Devin Desktop does not support configurable timeouts",
-    "Hook 2: after_tool_execute wildcard expanded to all four Devin Desktop post-events — hook command is duplicated across post_read_code, post_write_code, post_run_command, post_mcp_tool_use",
-    "Hook 2: timeout field dropped — Devin Desktop does not support configurable timeouts",
-    "Hook 3: before_prompt blocking=true mapped to pre_user_prompt — Devin Desktop treats pre_user_prompt as blocking-capable (blocking intent preserved)",
-    "Hook 3: timeout field dropped — Devin Desktop does not support configurable timeouts",
-    "Hook 4: agent_stop mapped to post_cascade_response — semantic approximation (post_cascade_response fires after each response, not only when the agent stops)",
-    "Hook 4: timeout field dropped — Devin Desktop does not support configurable timeouts"
-  ],
+  "_comment": "Expected Devin Desktop output for canonical/multi-event.json. Conversions: (1) before_tool_execute + array ['shell','file_write'] -> PreToolUse with regex alternation matcher 'exec|write'; (2) after_tool_execute + wildcard -> PostToolUse with empty matcher; (3) before_prompt -> UserPromptSubmit; (4) agent_stop -> Stop. All timeouts stay in seconds.",
   "hooks": {
-    "pre_run_command": [
+    "PreToolUse": [
       {
-        "command": "./audit-dangerous-ops.sh"
+        "matcher": "exec|write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./audit-dangerous-ops.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
-    "pre_write_code": [
+    "PostToolUse": [
       {
-        "command": "./audit-dangerous-ops.sh"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./log-tool-usage.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
-    "post_read_code": [
+    "UserPromptSubmit": [
       {
-        "command": "./log-tool-usage.sh"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./redact-pii.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
-    "post_write_code": [
+    "Stop": [
       {
-        "command": "./log-tool-usage.sh"
-      }
-    ],
-    "post_run_command": [
-      {
-        "command": "./log-tool-usage.sh"
-      }
-    ],
-    "post_mcp_tool_use": [
-      {
-        "command": "./log-tool-usage.sh"
-      }
-    ],
-    "pre_user_prompt": [
-      {
-        "command": "./redact-pii.sh"
-      }
-    ],
-    "post_cascade_response": [
-      {
-        "command": "./cleanup.sh"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./cleanup.sh",
+            "timeout": 15
+          }
+        ]
       }
     ]
   }

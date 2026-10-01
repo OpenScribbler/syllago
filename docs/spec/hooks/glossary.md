@@ -86,7 +86,7 @@ The process of decoding a hook from provider P into canonical format and encodin
 Two hook manifests are structurally equivalent when they have the same number of hooks, the same canonical event names, the same handler types, the same command strings, and the same matcher semantics. Field ordering, whitespace, and non-normative fields (such as `_comment`) are not significant for structural equivalence.
 
 **split-event provider**
-A provider that maps the canonical `before_tool_execute` event to multiple category-specific native events based on tool type. Cursor and Devin Desktop are split-event providers.
+A provider that maps the canonical `before_tool_execute` event to multiple category-specific native events based on tool type. Cursor is a split-event provider.
 
 **tool vocabulary**
 The set of canonical tool names that abstract over provider-specific naming. Used in bare string matchers. Examples: `shell`, `file_read`, `file_write`, `file_edit`, `search`, `find`.

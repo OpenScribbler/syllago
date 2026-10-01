@@ -15,7 +15,7 @@ import (
 var hookConfigHints = map[string]string{
 	"gemini-cli":  ".gemini/settings.json hooks section",
 	"cursor":      ".cursor/settings.json hooks section",
-	"devin":       ".windsurf/hooks.json",
+	"devin":       ".devin/hooks.v1.json",
 	"copilot-cli": ".github/hooks/ directory",
 	"kiro":        ".kiro/ hooks agent file",
 	"codex":       ".codex/hooks.json",

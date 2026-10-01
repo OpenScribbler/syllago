@@ -23,11 +23,11 @@ When a blocking hook returns exit code 2 (or `decision: "deny"`), the resulting 
 |-------|-------------|------------|--------|----------|-----------------|-------------|------|----------|---------------|-------|-------|
 | `before_tool_execute` | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent | prevent |
 | `after_tool_execute` | observe | prevent | observe | observe | observe | observe | observe | observe | observe | observe | observe |
-| `session_start` | observe | observe | prevent† | -- | observe | observe | observe | observe | observe | observe | prevent |
-| `session_end` | observe | observe | observe | -- | -- | observe | observe | -- | observe | -- | observe |
+| `session_start` | observe | observe | prevent† | observe | observe | observe | observe | observe | observe | observe | prevent |
+| `session_end` | observe | observe | observe | observe | -- | observe | observe | -- | observe | -- | observe |
 | `before_prompt` | prevent | prevent | prevent | prevent | prevent | observe | observe | -- | prevent | prevent | prevent |
 | `agent_stop` | retry | retry | observe | observe | retry | observe | observe | observe | retry | retry | observe |
-| `permission_request` | prevent | -- | -- | -- | -- | -- | -- | prevent | -- | -- | -- |
+| `permission_request` | prevent | -- | -- | prevent | -- | -- | -- | prevent | -- | -- | -- |
 
 A `--` indicates the provider does not support the event (same as the Event Name Mapping table).
 

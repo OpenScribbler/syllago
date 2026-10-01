@@ -881,7 +881,7 @@ func TestSkillWithHooks_ToDevin_ActionableWarnings(t *testing.T) {
 	assertContains(t, warningText, "linter")
 	assertContains(t, warningText, "PreToolUse")
 	assertContains(t, warningText, "./lint.sh")
-	assertContains(t, warningText, ".windsurf/hooks.json")
+	assertContains(t, warningText, ".devin/hooks.v1.json")
 }
 
 func TestSkillWithHooks_ToKiro_ActionableWarnings(t *testing.T) {

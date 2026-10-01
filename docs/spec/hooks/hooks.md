@@ -201,9 +201,8 @@ Canonical provider slugs:
         "input_rewrite": "block"
       },
       "provider_data": {
-        "devin": {
-          "show_output": true,
-          "working_directory": "/opt/hooks"
+        "kiro": {
+          "cache_ttl_seconds": 60
         }
       }
     },
@@ -371,10 +370,10 @@ Implementations encode MCP matchers into provider-specific combined formats duri
 
 | Provider | Combined Format | Example |
 |----------|----------------|---------|
-| claude-code, kiro | `mcp__<server>__<tool>` | `mcp__github__create_issue` |
+| claude-code, kiro, devin | `mcp__<server>__<tool>` | `mcp__github__create_issue` |
 | gemini-cli | `mcp_<server>_<tool>` | `mcp_github_create_issue` |
 | copilot-cli | `<server>/<tool>` | `github/create_issue` |
-| cursor, devin    | `<server>__<tool>` | `github__create_issue` |
+| cursor | `<server>__<tool>` | `github__create_issue` |
 
 ### 6.4 Array (OR)
 
@@ -419,7 +418,7 @@ During decode, the adapter MUST:
 3. Convert timeout values to seconds (the canonical unit).
 4. Preserve provider-specific fields with no canonical equivalent in `provider_data`.
 
-For split-event providers: the adapter MUST merge category-specific events into unified canonical events with appropriate matchers. For example, Devin Desktop's `pre_run_command` becomes `before_tool_execute` with `matcher: "shell"`.
+For split-event providers: the adapter MUST merge category-specific events into unified canonical events with appropriate matchers. For example, Cursor's `beforeShellExecution` becomes `before_tool_execute` with `matcher: "shell"`.
 
 ### 7.2 Validate
 
