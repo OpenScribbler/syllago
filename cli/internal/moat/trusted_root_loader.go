@@ -44,7 +44,7 @@ var bundledTrustedRoot []byte
 // Must match the commit date of the trusted_root.json update. Drift
 // between this constant and the file mtime is a process bug, not a trust
 // signal, so we don't consult the filesystem.
-const TrustedRootIssuedAtISO = "2026-04-17"
+const TrustedRootIssuedAtISO = "2026-10-01"
 
 // Staleness thresholds. Durations measured in whole days
 // from TrustedRootIssuedAtISO to wall-clock now.
