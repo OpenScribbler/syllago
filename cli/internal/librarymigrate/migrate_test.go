@@ -415,6 +415,8 @@ func TestRun_NothingToMigrateSkipsInstallLock(t *testing.T) {
 	tmp := t.TempDir()
 	lib := filepath.Join(tmp, "content")
 	write(t, filepath.Join(lib, "rules", "claude-code", "r1", ".syllago.yaml"), "id: a\nsource_provider: claude-code\n")
+	// Already migrated, but its source path still names the retired slug.
+	write(t, filepath.Join(lib, "rules", "devin", "r2", ".syllago.yaml"), "id: b\nsource:\n    provider: devin\n    path: /proj/.windsurfrules\n")
 	holdInstallLock(t)
 	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), io.Discard); err != nil {
 		t.Fatalf("a library with no retired slug should not wait on the lock: %v", err)

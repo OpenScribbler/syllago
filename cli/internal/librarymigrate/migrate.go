@@ -276,7 +276,7 @@ func rewriteYAML(path string, fields func(root *yaml.Node) bool, takeLock func()
 	if err != nil {
 		return false, err
 	}
-	if !mentionsRetiredSlug(data) {
+	if doc := rewrittenDoc(data, fields); doc == nil {
 		return false, nil
 	}
 	// Take the lock, then re-read, so the rewrite starts from the file as
@@ -287,22 +287,13 @@ func rewriteYAML(path string, fields func(root *yaml.Node) bool, takeLock func()
 	if data, err = os.ReadFile(path); err != nil {
 		return false, err
 	}
-	if !mentionsRetiredSlug(data) {
-		return false, nil
-	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return false, nil
-	}
-	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return false, nil
-	}
-	if !fields(doc.Content[0]) {
+	doc := rewrittenDoc(data, fields)
+	if doc == nil {
 		return false, nil
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
-	if err := enc.Encode(&doc); err != nil {
+	if err := enc.Encode(doc); err != nil {
 		return false, fmt.Errorf("encoding %s: %w", path, err)
 	}
 	if err := enc.Close(); err != nil {
@@ -316,6 +307,28 @@ func rewriteYAML(path string, fields func(root *yaml.Node) bool, takeLock func()
 		return false, err
 	}
 	return true, nil
+}
+
+// rewrittenDoc parses data and applies fields to its top-level mapping. It
+// returns nil when the file needs no change, including when it does not
+// parse. A retired slug can sit in a field fields leaves alone, such as a
+// source path ending in .windsurfrules, so the substring filter alone does
+// not mean there is work.
+func rewrittenDoc(data []byte, fields func(root *yaml.Node) bool) *yaml.Node {
+	if !mentionsRetiredSlug(data) {
+		return nil
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil
+	}
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil
+	}
+	if !fields(doc.Content[0]) {
+		return nil
+	}
+	return &doc
 }
 
 // mentionsRetiredSlug is a cheap filter that skips parsing files that
