@@ -148,9 +148,15 @@ test_merge_existing_gemini_config() {
     }
   },
   "hooks": {
-    "pretool": [
+    "BeforeTool": [
       {
-        "command": "echo user-gemini-hook"
+        "matcher": "read_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo user-gemini-hook"
+          }
+        ]
       }
     ]
   }
@@ -170,7 +176,7 @@ SETTINGS
     "existing Gemini hook should survive merge"
 
   # Verify loadout hooks were added
-  assert_contains "$settings" "PreToolUse" \
+  assert_contains "$settings" "BeforeTool" \
     "loadout hooks should be merged into settings.json"
 
   # Remove and verify restore
