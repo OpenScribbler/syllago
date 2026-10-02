@@ -2,8 +2,8 @@
   "spec": "hooks/0.1",
   "hooks": [
     {
-      "event": "PreToolUse",
-      "matcher": "Bash",
+      "event": "before_tool_execute",
+      "matcher": "shell",
       "handler": {
         "type": "command",
         "command": "echo smoke-test-hook"
