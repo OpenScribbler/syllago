@@ -47,8 +47,8 @@ func TranslateTimeoutToProvider(seconds int, slug string) int {
 		return 0
 	}
 	switch slug {
-	case "copilot-cli", "crush":
-		return seconds // Copilot and Crush use seconds natively
+	case "copilot-cli", "crush", "devin":
+		return seconds // Copilot, Crush, and Devin use seconds natively
 	default:
 		return seconds * 1000 // CC, Gemini, Cursor, Kiro all use milliseconds
 	}
@@ -61,8 +61,8 @@ func TranslateTimeoutFromProvider(value int, slug string) int {
 		return 0
 	}
 	switch slug {
-	case "copilot-cli", "crush":
-		return value // Copilot and Crush already in seconds
+	case "copilot-cli", "crush", "devin":
+		return value // Copilot, Crush, and Devin already in seconds
 	default:
 		return value / 1000 // CC, Gemini, Cursor, Kiro use milliseconds
 	}
@@ -156,6 +156,37 @@ func TranslateMatcherToProvider(matcher json.RawMessage, slug string) (json.RawM
 	}}
 }
 
+// regexMatcherString renders a translated matcher for a provider whose matcher
+// field is a regex. An array becomes an alternation, because a canonical array
+// matches when any element matches.
+func regexMatcherString(m json.RawMessage, slug string) (string, []ConversionWarning) {
+	if len(m) == 0 {
+		return "", nil
+	}
+	var s string
+	if json.Unmarshal(m, &s) == nil {
+		return s, nil
+	}
+	var parts []string
+	if json.Unmarshal(m, &parts) == nil {
+		return strings.Join(parts, "|"), nil
+	}
+	return "", []ConversionWarning{{
+		Severity:    "warning",
+		Capability:  "matcher",
+		Description: fmt.Sprintf("matcher shape not representable as a %s regex; hook will match all tools", slug),
+	}}
+}
+
+func hasMCPToolName(names []string, slug string) bool {
+	for _, name := range names {
+		if server, _ := parseMCPToolName(name, slug); server != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // TranslateMatcherFromProvider translates a provider-native matcher to canonical format.
 // Provider-native MCP tool name strings are detected and promoted to canonical MCP objects.
 func TranslateMatcherFromProvider(matcher json.RawMessage, slug string) (json.RawMessage, []ConversionWarning) {
@@ -166,6 +197,18 @@ func TranslateMatcherFromProvider(matcher json.RawMessage, slug string) (json.Ra
 	// Try bare string
 	var s string
 	if json.Unmarshal(matcher, &s) == nil {
+		// An alternation containing an MCP tool name becomes an array, so each
+		// part translates on its own instead of the whole string parsing as
+		// one MCP tool.
+		if parts := strings.Split(s, "|"); len(parts) > 1 && hasMCPToolName(parts, slug) {
+			arr := make([]json.RawMessage, len(parts))
+			for i, part := range parts {
+				raw, _ := json.Marshal(part)
+				arr[i], _ = TranslateMatcherFromProvider(raw, slug)
+			}
+			result, _ := json.Marshal(arr)
+			return result, nil
+		}
 		// Check if it's an MCP-format string
 		server, tool := parseMCPToolName(s, slug)
 		if server != "" {

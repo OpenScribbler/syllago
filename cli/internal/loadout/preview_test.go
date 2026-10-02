@@ -329,7 +329,7 @@ func TestPreview_RegularFileConflict(t *testing.T) {
 
 // TestPreview_HookUnsupportedEvent: a hook whose event the target provider
 // has no settings key for is planned as "skip-unsupported" instead of
-// "merge-hook", so Apply can gate on it (syllago-xqlc1). before_tool_execute
+// "merge-hook", so Apply can gate on it (syllago-xqlc1). worktree_create
 // has no devin mapping — merging it would write dead config devin
 // never reads.
 func TestPreview_HookUnsupportedEvent(t *testing.T) {
@@ -339,7 +339,7 @@ func TestPreview_HookUnsupportedEvent(t *testing.T) {
 
 	hookDir := filepath.Join(repoRoot, "hooks", "dead-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo hi"}}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"worktree_create","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	prov := provider.Provider{
@@ -366,7 +366,7 @@ func TestPreview_HookUnsupportedEvent(t *testing.T) {
 	if actions[0].Action != "skip-unsupported" {
 		t.Errorf("expected skip-unsupported, got %s", actions[0].Action)
 	}
-	if !strings.Contains(actions[0].Problem, "before_tool_execute") {
+	if !strings.Contains(actions[0].Problem, "worktree_create") {
 		t.Errorf("problem should name the event, got %q", actions[0].Problem)
 	}
 }

@@ -42,16 +42,12 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 		event string
 		prov  provider.Provider
 	}{
-		// Both cases use routed (Phase 1) providers so the reject comes from the
-		// event-support gate, not the Phase-1b storage-model rejection. devin
-		// is not used here: it is deferred to Phase 1b, so it rejects before the
-		// event gate (see TestInstallHook_Devin_DeferredToPhase1b).
-		//
 		// "PostToolUse" is claude-code's native name for after_tool_execute —
 		// crush supports only before_tool_execute, so it's a foreign/unreadable
 		// event for crush.
 		{"another provider's native name", "PostToolUse", provider.Crush},
 		{"canonical event unmapped for crush", "session_end", provider.Crush},
+		{"canonical event unmapped for devin", "worktree_create", provider.Devin},
 	}
 
 	for _, tt := range tests {

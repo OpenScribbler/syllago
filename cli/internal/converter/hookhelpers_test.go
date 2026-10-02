@@ -226,6 +226,46 @@ func TestTranslateMatcherToProvider_Array(t *testing.T) {
 	}
 }
 
+func TestRegexMatcherString(t *testing.T) {
+	tests := []struct {
+		name     string
+		matcher  json.RawMessage
+		want     string
+		wantWarn bool
+	}{
+		{"empty", nil, "", false},
+		{"bare string", json.RawMessage(`"Bash"`), "Bash", false},
+		{"array becomes alternation", json.RawMessage(`["Bash","Read"]`), "Bash|Read", false},
+		{"unrepresentable shape warns", json.RawMessage(`[{"x":1}]`), "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, warnings := regexMatcherString(tt.matcher, "claude-code")
+			assertEqual(t, tt.want, got)
+			if (len(warnings) > 0) != tt.wantWarn {
+				t.Errorf("warnings: got %v, wantWarn %v", warnings, tt.wantWarn)
+			}
+		})
+	}
+}
+
+// Regression: an array matcher used to encode as "" (match all tools).
+func TestClaudeCodeAdapterEncode_ArrayMatcherBecomesAlternation(t *testing.T) {
+	hooks := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{Event: "before_tool_execute", Matcher: json.RawMessage(`["shell","file_write"]`), Blocking: true, Handler: HookHandler{Type: "command", Command: "echo guard"}},
+		},
+	}
+	encoded, err := AdapterFor("claude-code").Encode(hooks)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	if !strings.Contains(string(encoded.Content), `"matcher": "Bash|Write"`) && !strings.Contains(string(encoded.Content), `"matcher":"Bash|Write"`) {
+		t.Errorf("expected matcher Bash|Write, got: %s", encoded.Content)
+	}
+}
+
 func TestTranslateMatcherToProvider_NilMatcher(t *testing.T) {
 	result, warnings := TranslateMatcherToProvider(nil, "claude-code")
 	if result != nil {

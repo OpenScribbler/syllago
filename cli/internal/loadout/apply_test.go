@@ -429,7 +429,7 @@ func TestReadJSONFileOrEmpty(t *testing.T) {
 }
 
 // setupUnsupportedHookEnv builds a devin-targeted env with one rule that
-// works and one hook whose event (before_tool_execute) devin has no
+// works and one hook whose event (worktree_create) devin has no
 // settings key for.
 func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, manifest *Manifest, cat *catalog.Catalog, prov provider.Provider) {
 	t.Helper()
@@ -444,7 +444,7 @@ func setupUnsupportedHookEnv(t *testing.T) (homeDir string, projectRoot string, 
 
 	hookDir := filepath.Join(projectRoot, "content", "hooks", "devin", "dead-hook")
 	os.MkdirAll(hookDir, 0755)
-	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo hi"}}]}`
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"worktree_create","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644)
 
 	manifest = &Manifest{
@@ -504,7 +504,7 @@ func TestApply_UnsupportedHook_FailsWithoutSkipFlag(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error applying loadout with unsupported hook event")
 	}
-	if !strings.Contains(err.Error(), "dead-hook") || !strings.Contains(err.Error(), "before_tool_execute") {
+	if !strings.Contains(err.Error(), "dead-hook") || !strings.Contains(err.Error(), "worktree_create") {
 		t.Errorf("error should name the hook and event, got: %v", err)
 	}
 

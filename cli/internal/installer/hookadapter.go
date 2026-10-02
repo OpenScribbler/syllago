@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -15,18 +16,15 @@ import (
 )
 
 // hookStorageModel classifies how a provider persists its hooks on disk.
-// There are three models.
+// There are two models.
 type hookStorageModel int
 
 const (
 	// hookStorageSharedJSON is a shared config file whose top-level `hooks`
 	// key must be merged, never overwritten (sibling keys like permissions,
-	// env, and MCP servers must survive). claude-code, crush, cursor,
+	// env, and MCP servers must survive). claude-code, crush, cursor, devin,
 	// gemini-cli, factory-droid.
 	hookStorageSharedJSON hookStorageModel = iota
-	// hookStorageDedicatedFile is a whole file that holds only hooks and can
-	// be written verbatim. devin.
-	hookStorageDedicatedFile
 	// hookStorageDirectory is a syllago-owned file inside a provider directory.
 	// The parent directory may contain user files, so only the owned file is
 	// read or written, and content is adapter output that may be non-JSON.
@@ -40,18 +38,10 @@ const (
 // here.
 func hookStorageModelFor(slug string) (hookStorageModel, error) {
 	switch slug {
-	case "claude-code", "crush", "cursor", "gemini-cli", "factory-droid":
+	case "claude-code", "crush", "cursor", "devin", "gemini-cli", "factory-droid":
 		return hookStorageSharedJSON, nil
 	case "copilot-cli", "kiro", "pi":
 		return hookStorageDirectory, nil
-	case "devin":
-		// Deferred: devin's adapter fans one before_tool_execute hook out to
-		// four split-events and only merges them back on decode when each has
-		// exactly one entry. A second devin hook breaks that precondition, so
-		// a hook's post-round-trip identity is not stable across installs —
-		// uninstall/status/orphans can't reliably match it. Needs a stable
-		// per-entry identity (a syllago marker), which is Phase 1b work.
-		return 0, fmt.Errorf("hook install for devin is not yet supported (split-event fan-out needs a stable per-entry identity)")
 	default:
 		return 0, fmt.Errorf("hook install not supported for %s", slug)
 	}
@@ -74,9 +64,7 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 	case "claude-code", "cursor", "gemini-cli", "factory-droid":
 		return filepath.Join(base, prov.ConfigDir, "settings.json"), nil
 	case "devin":
-		// Deferred to Phase 1b — see hookStorageModelFor for why. The Phase 1b
-		// path will be base/.windsurf/hooks.json (dedicated file).
-		return "", fmt.Errorf("hook install for devin is not yet supported (split-event fan-out needs a stable per-entry identity)")
+		return devinHookConfigPathFor(runtime.GOOS, base), nil
 	case "copilot-cli":
 		return filepath.Join(base, ".copilot", "hooks", "syllago-hooks.json"), nil
 	case "kiro":
@@ -86,6 +74,19 @@ func HookConfigPath(prov provider.Provider, base string) (string, error) {
 	default:
 		return "", fmt.Errorf("hook install not supported for %s", prov.Slug)
 	}
+}
+
+// devinHookConfigPathFor returns Devin's user config file, which holds hooks
+// under its `hooks` key alongside other settings: %APPDATA%\devin\config.json
+// on Windows and ~/.config/devin/config.json elsewhere. The Windows path is
+// rooted at base rather than read from %APPDATA% so a resolver base-dir
+// override still applies. Separated from HookConfigPath so tests cover both
+// branches on any platform.
+func devinHookConfigPathFor(goos, base string) string {
+	if goos == "windows" {
+		return filepath.Join(base, "AppData", "Roaming", "devin", "config.json")
+	}
+	return filepath.Join(base, ".config", "devin", "config.json")
 }
 
 // manifestHookToCanonical converts a spec Manifest hook into the enhanced
@@ -144,10 +145,9 @@ func canonicalizeEvent(event, slug string) string {
 }
 
 // nativeEventFor returns the provider-native event key for tracking/dedup. When
-// the canonical event has no direct mapping for the provider (e.g. devin,
-// whose adapter synthesizes split events), the canonical name is used as-is;
-// install/uninstall/status all compute it the same way, so lookups stay
-// consistent.
+// the canonical event has no direct mapping for the provider, the canonical
+// name is used as-is; install/uninstall/status all compute it the same way, so
+// lookups stay consistent.
 func nativeEventFor(canonEvent, slug string) string {
 	if nv, ok := converter.TranslateHookEvent(canonEvent, slug); ok {
 		return nv
@@ -157,17 +157,9 @@ func nativeEventFor(canonEvent, slug string) string {
 
 // adapterSupportsEvent reports whether the provider's adapter can represent a
 // canonical event. Adapter capabilities are the canonical source of
-// truth for event support; this is broader than ProviderSupportsHookEvent
-// because it also recognizes providers (devin) whose adapter fans a single
-// canonical event out to several provider-native split events.
-//
-// KNOWN, INTENTIONAL ASYMMETRY: direct `syllago install` gates hook events with
-// this adapter-capability check, so e.g. a devin before_tool_execute hook
-// installs. Loadout Preview still gates with converter.ProviderSupportsHookEvent
-// (which does not see split-event support), so the same hook is reported
-// skip-unsupported inside a loadout. This is a UX inconsistency, not dead config
-// — nothing wrong ever gets written. Reconciling Preview onto adapter
-// capabilities is deferred follow-up; do not "fix" it by loosening Preview here.
+// truth for event support. Loadout Preview gates with
+// converter.ProviderSupportsHookEvent instead, which reads HookEvents; the two
+// agree as long as every adapter event has a HookEvents mapping.
 func adapterSupportsEvent(adapter converter.HookAdapter, canonEvent string) bool {
 	for _, e := range adapter.Capabilities().Events {
 		if e == canonEvent {
@@ -179,9 +171,9 @@ func adapterSupportsEvent(adapter converter.HookAdapter, canonEvent string) bool
 
 // hookIdentity hashes a hook's post-round-trip canonical identity
 // (event|matcher|command|name). Computed on the decoded form so it is stable
-// across lossy adapter transforms (e.g. devin wrapping a non-blocking
-// command in `(cmd) || true`) and across whole-file re-serialization when other
-// hooks are added or removed.
+// across lossy adapter transforms (e.g. devin dropping fields it has no slot
+// for) and across whole-file re-serialization when other hooks are added or
+// removed.
 func hookIdentity(h converter.CanonicalHook) string {
 	sum := sha256.Sum256([]byte(h.Event + "|" + string(h.Matcher) + "|" + h.Handler.Command + "|" + h.Name))
 	return hex.EncodeToString(sum[:])
@@ -250,13 +242,10 @@ func decodeExistingHooks(model hookStorageModel, adapter converter.HookAdapter, 
 // the routed providers model the fields syllago writes.
 
 // writeHookFile persists an adapter's encoded hooks according to the storage
-// model. Dedicated-file and directory providers get the whole encoded file;
+// model. Directory providers get the whole encoded file;
 // shared-JSON providers get only the encoded `hooks` object merged into the
 // real file, preserving every non-hook key.
 func writeHookFile(model hookStorageModel, path string, encoded []byte) error {
-	if model == hookStorageDedicatedFile {
-		return writeJSONFile(path, encoded)
-	}
 	if model == hookStorageDirectory {
 		// writeJSONFile is content-agnostic despite its name: it creates the
 		// parent directory, picks home-aware permissions, and writes atomically

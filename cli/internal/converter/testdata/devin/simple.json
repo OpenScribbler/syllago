@@ -1,1 +1,13 @@
-{"hooks": {"pre_run_command": [{"command": "echo pre-run"}], "post_run_command": [{"command": "echo post-run"}]}}
+{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "exec", "hooks": [{"type": "command", "command": "./guard.sh", "timeout": 10}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "mcp__github__create_issue", "hooks": [{"type": "command", "command": "./audit.sh"}]}
+    ],
+    "PostCompaction": [
+      {"matcher": "", "hooks": [{"command": "./compacted.sh"}]}
+    ]
+  }
+}

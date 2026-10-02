@@ -29,7 +29,7 @@ Pre-read file access control. The `beforeReadFile` event lets hooks gate file re
 
 ## Devin Desktop
 
-Enterprise deployment infrastructure. Cloud dashboard hook management, MDM deployment (Jamf, Intune, Ansible), immutable system-level hooks, and a three-tier priority system (system > user > workspace) support organizational policy enforcement at scale. Transcript access hooks enable compliance auditing.
+Claude Code compatibility. Devin Desktop uses Claude Code's hook shape (event, matcher group, hook entries) and by default also reads Claude Code's hook files, which users can disable. `PreToolUse` hooks always have veto power, and structured output supports `decision`, `updatedInput`, and `additionalContext`.
 
 ## OpenCode
 

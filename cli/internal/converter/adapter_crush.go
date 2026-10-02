@@ -3,7 +3,6 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 func init() {
@@ -87,7 +86,7 @@ func (a *CrushAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "crush")
 			warnings = append(warnings, mWarnings...)
-			s, sWarnings := crushMatcherString(translatedMatcher)
+			s, sWarnings := regexMatcherString(translatedMatcher, "crush")
 			matcherStr = s
 			warnings = append(warnings, sWarnings...)
 		}
@@ -110,29 +109,6 @@ func (a *CrushAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		Filename: "crush.json",
 		Warnings: warnings,
 	}, nil
-}
-
-// crushMatcherString renders a translated matcher as a crush regex string.
-// Crush matchers are a single regex tested against the tool name, so array
-// matchers join as an alternation. Shapes that can't be represented (e.g.
-// nested objects) drop to match-all with a warning rather than silently.
-func crushMatcherString(m json.RawMessage) (string, []ConversionWarning) {
-	if len(m) == 0 {
-		return "", nil
-	}
-	var s string
-	if json.Unmarshal(m, &s) == nil {
-		return s, nil
-	}
-	var parts []string
-	if json.Unmarshal(m, &parts) == nil {
-		return strings.Join(parts, "|"), nil
-	}
-	return "", []ConversionWarning{{
-		Severity:    "warning",
-		Capability:  "matcher",
-		Description: "matcher shape not representable as a crush regex; hook will match all tools",
-	}}
 }
 
 func (a *CrushAdapter) Decode(content []byte) (*CanonicalHooks, error) {

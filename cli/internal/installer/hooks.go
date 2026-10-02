@@ -72,8 +72,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	canonHook.Event = canonEvent
 
 	// Event-support gate: reject events the adapter cannot represent. Adapter
-	// capabilities are the source of truth (they see devin's
-	// split-event support, which ProviderSupportsHookEvent misses).
+	// capabilities are the source of truth.
 	if !adapterSupportsEvent(adapter, canonEvent) {
 		return Placement{}, fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
 	}

@@ -2,6 +2,29 @@
 
 All notable changes to the Hook Interchange Format Specification.
 
+## [core] Unreleased
+
+Devin Desktop replaced the Windsurf Cascade split-event hook format with a Claude Code-shaped format: event → matcher groups → hook entries carrying `type`, `command`, and `timeout` (seconds), in `~/.config/devin/config.json`, `.devin/config.json`, or `.devin/hooks.v1.json`.
+
+### Breaking Changes
+
+- [events §3, §4] Removed `windsurf_transcript_response` and `windsurf_worktree_setup`. Their native events (`post_cascade_response_with_transcript`, `post_setup_worktree`) no longer exist, and no other provider supports them.
+- [tools §2, hooks §6.3] devin MCP format: `<server>__<tool>` → `mcp__<server>__<tool>`
+
+### Changed
+
+- [events §4] devin mappings: `before_tool_execute` → `PreToolUse`, `after_tool_execute` → `PostToolUse`, `before_prompt` → `UserPromptSubmit`, `agent_stop` → `Stop`; added `session_start` → `SessionStart`, `session_end` → `SessionEnd`, `permission_request` → `PermissionRequest`, `after_compact` → `PostCompaction`
+- [events §4, tools §1, glossary, hooks §7.1] devin is no longer a split-event provider; Cursor is the only one
+- [tools §1] devin tool names: `exec`, `read`, `write`, `edit`, `grep`, `glob`, `webfetch`, `run_subagent`; `web_search` has no devin equivalent
+- [blocking-matrix §2] devin `session_start` and `session_end`: `--` → `observe`; `permission_request`: `--` → `prevent`
+- [capabilities §1.1] devin `structured_output`: "Not supported" → `decision`, `updatedInput`, `additionalContext`
+- [capabilities §1.2] Added devin `input_rewrite` support (`updatedInput`)
+- [capabilities §1.8] Removed devin `configurable_cwd` (`working_directory` no longer exists)
+- [hooks §3.8] Full example `provider_data` uses kiro `cache_ttl_seconds` in place of the removed devin `show_output` and `working_directory` fields
+- [provider-strengths] Rewrote the Devin Desktop entry for the new format
+- [examples] TypeScript and Python matchers use devin tool names and the `mcp__<server>__<tool>` format
+- [test-vectors] Regenerated all four `devin/` vectors in the new format; `degradation-input-rewrite.json` no longer degrades, because devin supports `input_rewrite`
+
 ## [core] 0.3.0 — 2026-04-08
 
 ### Breaking Changes

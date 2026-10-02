@@ -75,9 +75,9 @@ func (a *GeminiCLIAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error)
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "gemini-cli")
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := regexMatcherString(translatedMatcher, "gemini-cli")
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> Gemini milliseconds)

@@ -21,15 +21,13 @@ from typing import Any
 
 # Maps canonical tool name → provider slug → provider-native tool name.
 # A None value means the provider has no equivalent tool for that canonical
-# name. Split-event providers (cursor, devin) carry event-level notes in
-# parentheses in the spec table; those entries are omitted here because they
-# are handled at the encode layer (event mapping), not as matcher strings.
+# name.
 TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
     "shell": {
         "claude-code": "Bash",
         "gemini-cli": "run_shell_command",
         "cursor": "run_terminal_cmd",
-        "devin": None,   # split-event: maps to pre_run_command event, not a matcher
+        "devin": "exec",
         "copilot-cli": "bash",
         "kiro": "execute_bash",
         "opencode": "bash",
@@ -38,7 +36,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Read",
         "gemini-cli": "read_file",
         "cursor": "read_file",
-        "devin": None,   # split-event: maps to pre_read_code event
+        "devin": "read",
         "copilot-cli": "view",
         "kiro": "fs_read",
         "opencode": "read",
@@ -47,7 +45,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Write",
         "gemini-cli": "write_file",
         "cursor": "edit_file",
-        "devin": None,   # split-event: maps to pre_write_code event
+        "devin": "write",
         "copilot-cli": "create",
         "kiro": "fs_write",
         "opencode": "write",
@@ -56,7 +54,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Edit",
         "gemini-cli": "replace",
         "cursor": "edit_file",
-        "devin": None,   # split-event: maps to pre_write_code event
+        "devin": "edit",
         "copilot-cli": "edit",
         "kiro": "fs_write",
         "opencode": "edit",
@@ -65,7 +63,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Grep",
         "gemini-cli": "grep_search",
         "cursor": "grep_search",
-        "devin": None,
+        "devin": "grep",
         "copilot-cli": "grep",
         "kiro": "grep",
         "opencode": "grep",
@@ -74,7 +72,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Glob",
         "gemini-cli": "glob",
         "cursor": "file_search",
-        "devin": None,
+        "devin": "glob",
         "copilot-cli": "glob",
         "kiro": "glob",
         "opencode": "glob",
@@ -92,7 +90,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "WebFetch",
         "gemini-cli": "web_fetch",
         "cursor": None,
-        "devin": None,
+        "devin": "webfetch",
         "copilot-cli": "web_fetch",
         "kiro": "web_fetch",
         "opencode": None,
@@ -101,7 +99,7 @@ TOOL_VOCABULARY: dict[str, dict[str, str | None]] = {
         "claude-code": "Agent",
         "gemini-cli": None,
         "cursor": None,
-        "devin": None,
+        "devin": "run_subagent",
         "copilot-cli": "task",
         "kiro": "use_subagent",
         "opencode": None,
@@ -142,10 +140,10 @@ _MCP_FORMAT_GROUPS: dict[str, str] = {
 _MCP_PROVIDER_FORMAT: dict[str, str] = {
     "claude-code":  "double_underscore_prefix",   # mcp__<server>__<tool>
     "kiro":         "double_underscore_prefix",
+    "devin":        "double_underscore_prefix",
     "gemini-cli":   "single_underscore_prefix",   # mcp_<server>_<tool>
     "copilot-cli":  "slash",                       # <server>/<tool>
     "cursor":       "double_underscore",           # <server>__<tool>
-    "devin":     "double_underscore",
     # opencode not present in tools.md §2; falls through to pass-through
 }
 

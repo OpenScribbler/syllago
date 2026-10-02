@@ -486,9 +486,9 @@ func TestClaudeSkillToDevin(t *testing.T) {
 	assertNotContains(t, out, "allowed-tools:")
 	assertNotContains(t, out, "context: fork")
 	assertContains(t, out, "Tool restriction")
-	assertContains(t, out, "view_line_range")           // translated tool name for Devin
-	assertContains(t, out, "isolated context")          // context:fork prose
-	assertContains(t, out, "Designed for model: opus.") // model as prose note
+	assertContains(t, out, "Use only read, grep tools.") // translated tool names for Devin
+	assertContains(t, out, "isolated context")           // context:fork prose
+	assertContains(t, out, "Designed for model: opus.")  // model as prose note
 	assertContains(t, out, "syllago:converted")
 	assertEqual(t, "SKILL.md", result.Filename)
 }
@@ -881,7 +881,7 @@ func TestSkillWithHooks_ToDevin_ActionableWarnings(t *testing.T) {
 	assertContains(t, warningText, "linter")
 	assertContains(t, warningText, "PreToolUse")
 	assertContains(t, warningText, "./lint.sh")
-	assertContains(t, warningText, ".windsurf/hooks.json")
+	assertContains(t, warningText, ".devin/hooks.v1.json")
 }
 
 func TestSkillWithHooks_ToKiro_ActionableWarnings(t *testing.T) {

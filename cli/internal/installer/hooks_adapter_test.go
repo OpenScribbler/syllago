@@ -45,6 +45,7 @@ func TestInstallHook_Adapter_SharedJSON_RoundTrip(t *testing.T) {
 		provider.GeminiCLI,
 		provider.FactoryDroid,
 		provider.Crush,
+		provider.Devin,
 	}
 
 	for _, prov := range providers {
@@ -116,6 +117,15 @@ func TestInstallHook_Adapter_PreservesSiblings(t *testing.T) {
 			},
 		},
 		{
+			// ~/.config/devin/config.json also holds Devin's own settings.
+			prov: provider.Devin,
+			seed: `{"permissions":{"allow":["exec"]},"model":"swe-1.5"}`,
+			siblingOK: func(data []byte) bool {
+				return gjson.GetBytes(data, "permissions.allow.0").String() == "exec" &&
+					gjson.GetBytes(data, "model").String() == "swe-1.5"
+			},
+		},
+		{
 			prov: provider.Crush,
 			seed: `{"mcp":{"existing":{"command":"keep-me"}}}`,
 			siblingOK: func(data []byte) bool {
@@ -151,51 +161,50 @@ func TestInstallHook_Adapter_PreservesSiblings(t *testing.T) {
 	}
 }
 
-// TestInstallHook_Devin_DeferredToPhase1b: devin is deferred to Phase 1b.
-// Its adapter fans one before_tool_execute hook out to four split-events and
-// only merges them back when each has exactly one entry, so a hook's
-// post-round-trip identity is not stable once a second devin hook exists —
-// uninstall/status/orphans can't reliably match it. Until Phase 1b adds a
-// stable per-entry identity, installing a devin hook must reject and write
-// nothing.
-func TestInstallHook_Devin_DeferredToPhase1b(t *testing.T) {
-	item, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "shell", "echo hi")
+// TestInstallHook_Devin_NativeShape checks the bytes Devin reads: the
+// Claude Code-shaped event -> matcher group -> entries layout with Devin's
+// own tool names, and entries that carry only type and command.
+func TestInstallHook_Devin_NativeShape(t *testing.T) {
+	item, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "file_edit", "echo hi")
 
 	settingsPath := filepath.Join(t.TempDir(), "config.json")
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	_, err := installHook(item, provider.Devin, projectRoot)
-	if err == nil {
-		t.Fatal("expected error installing hook to devin (Phase 1b)")
-	}
-	if !strings.Contains(err.Error(), "stable per-entry identity") {
-		t.Errorf("error should explain the missing per-entry identity, got: %v", err)
+	if _, err := installHook(item, provider.Devin, projectRoot); err != nil {
+		t.Fatalf("installHook: %v", err)
 	}
 	data, _ := os.ReadFile(settingsPath)
-	if gjson.GetBytes(data, "hooks").Exists() {
-		t.Errorf("no hook should have been written, got: %s", data)
+	group := gjson.GetBytes(data, "hooks.PreToolUse.0")
+	if got := group.Get("matcher").String(); got != "edit" {
+		t.Errorf("matcher: got %q, want %q", got, "edit")
+	}
+	entry := group.Get("hooks.0")
+	if entry.Get("type").String() != "command" || entry.Get("command").String() != "echo hi" {
+		t.Errorf("entry: got %s, want type=command command=echo hi", entry.Raw)
+	}
+	if entry.Get("name").Exists() || entry.Get("timeout").Exists() {
+		t.Errorf("entry should carry only type and command, got %s", entry.Raw)
 	}
 }
 
-// TestWriteHookFile_DedicatedMode covers the dedicated-file write branch
-// directly. That branch is Phase 1b infrastructure (no Phase 1 provider routes
-// to it), so this keeps it exercised without a routed provider: it must write
-// the encoded content verbatim as the whole file.
-func TestWriteHookFile_DedicatedMode(t *testing.T) {
+func TestDevinHookConfigPathFor(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join(t.TempDir(), "hooks.json")
-	encoded := []byte(`{"hooks":{"pre_run_command":[{"command":"echo hi"}]}}`)
-
-	if err := writeHookFile(hookStorageDedicatedFile, path, encoded); err != nil {
-		t.Fatalf("writeHookFile: %v", err)
+	base := filepath.Join("home", "u")
+	tests := []struct {
+		goos string
+		want string
+	}{
+		{"linux", filepath.Join(base, ".config", "devin", "config.json")},
+		{"darwin", filepath.Join(base, ".config", "devin", "config.json")},
+		{"windows", filepath.Join(base, "AppData", "Roaming", "devin", "config.json")},
 	}
-	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading written file: %v", err)
-	}
-	if string(got) != string(encoded) {
-		t.Errorf("dedicated write should be verbatim:\n got  %s\n want %s", got, encoded)
+	for _, tt := range tests {
+		t.Run(tt.goos, func(t *testing.T) {
+			if got := devinHookConfigPathFor(tt.goos, base); got != tt.want {
+				t.Errorf("devinHookConfigPathFor(%q) = %q, want %q", tt.goos, got, tt.want)
+			}
+		})
 	}
 }
 

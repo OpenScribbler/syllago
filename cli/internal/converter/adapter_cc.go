@@ -93,9 +93,9 @@ func (a *ClaudeCodeAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "claude-code")
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := regexMatcherString(translatedMatcher, "claude-code")
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> CC milliseconds)

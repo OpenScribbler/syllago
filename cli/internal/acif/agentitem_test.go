@@ -20,6 +20,7 @@ func TestAgentToolNamesAppendixARow(t *testing.T) {
 		"codex":           "spawn_agent",
 		"kiro":            "use_subagent",
 		"factory-droid":   "Task",
+		"devin":           "run_subagent",
 	}
 	if !reflect.DeepEqual(converter.ToolNames["agent"], want) {
 		t.Fatalf("converter.ToolNames[agent] = %#v, want %#v", converter.ToolNames["agent"], want)
@@ -29,7 +30,7 @@ func TestAgentToolNamesAppendixARow(t *testing.T) {
 func TestAgentTranslationAndDerivedCapabilities(t *testing.T) {
 	t.Parallel()
 
-	spellings := []string{"Agent", "task", "spawn_agent", "use_subagent", "Task"}
+	spellings := []string{"Agent", "task", "spawn_agent", "use_subagent", "Task", "run_subagent"}
 	for _, spelling := range spellings {
 		spelling := spelling
 		t.Run(spelling, func(t *testing.T) {

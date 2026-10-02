@@ -52,9 +52,9 @@ func (a *FactoryDroidAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, err
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, slug)
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := regexMatcherString(translatedMatcher, slug)
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		timeoutMs := TranslateTimeoutToProvider(handler.Timeout, slug)

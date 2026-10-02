@@ -40,6 +40,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Hooks that match a list of tools now match only those tools.** A
+  canonical hook whose matcher is an array, such as `["shell",
+  "file_write"]`, was written to Claude Code, Gemini CLI, Factory Droid,
+  and Devin Desktop with an empty matcher, so it fired on every tool.
+  These providers now get a regex alternation (`Bash|Write`), as Crush
+  already did.
+- **Devin Desktop hooks now use Devin's current hook format.** Devin
+  replaced the Windsurf Cascade events (`pre_run_command`,
+  `post_cascade_response`, and the rest) with Claude Code-style events
+  (`PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `SessionStart`,
+  `SessionEnd`, `PermissionRequest`, `PostCompaction`) that use Devin's own
+  tool names in matchers (`exec`, `read`, `edit`) and timeouts in seconds.
+  `syllago install --to devin` now merges hooks into
+  `~/.config/devin/config.json` (`%APPDATA%\devin\config.json` on Windows)
+  and leaves the file's other settings alone; earlier releases refused to
+  install Devin hooks. `syllago convert` emits the new format, with entries
+  limited to `type`, `command`, and `timeout`, reads a project's bare
+  `.devin/hooks.v1.json`, and writes MCP tool matchers as
+  `mcp__<server>__<tool>`. Devin no longer has worktree-setup
+  or transcript hooks, so hooks on those events are skipped with a warning.
+
 - **Unknown MOAT revocation reasons no longer reject the registry
   manifest.** Syllago refused a whole manifest when a revocation carried a
   reason outside `malicious`, `compromised`, `deprecated`, and
