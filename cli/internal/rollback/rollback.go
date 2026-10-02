@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
@@ -100,7 +101,10 @@ func checkPlanCurrent(plan *Plan) error {
 	if err != nil {
 		return err
 	}
-	if rec.Previous == nil || rec.LibraryPath != plan.LibraryPath || !samePrevious(*rec.Previous, plan.Prev) {
+	// The placements count too: the TUI reapplies plan.Placements, so a
+	// provider added after planning would keep the newer content.
+	if rec.Previous == nil || rec.LibraryPath != plan.LibraryPath || !samePrevious(*rec.Previous, plan.Prev) ||
+		!slices.EqualFunc(rec.Placements, plan.Placements, samePlacement) {
 		return output.NewStructuredError(
 			output.ErrInstallConflict,
 			fmt.Sprintf("rollback point for %s/%s changed since it was planned", coord.Type, coord.Name),
@@ -113,6 +117,11 @@ func checkPlanCurrent(plan *Plan) error {
 func samePrevious(a, b installstore.PreviousVersion) bool {
 	return a.SourceSHA == b.SourceSHA && a.ContentHash == b.ContentHash &&
 		a.CopyPath == b.CopyPath && a.ReplacedAt.Equal(b.ReplacedAt)
+}
+
+func samePlacement(a, b installstore.Placement) bool {
+	return a.Provider == b.Provider && a.Mechanism == b.Mechanism && a.Path == b.Path &&
+		a.Key == b.Key && a.Scope == b.Scope && a.InstalledAt.Equal(b.InstalledAt)
 }
 
 func noInstallRecordError(c installstore.Coord) error {

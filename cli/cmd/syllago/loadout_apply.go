@@ -60,6 +60,30 @@ func init() {
 func runLoadoutApply(cmd *cobra.Command, args []string) error {
 	refreshInstallEntryPointsForInstall()
 
+	tryMode, _ := cmd.Flags().GetBool("try")
+	keepMode, _ := cmd.Flags().GetBool("keep")
+	mode := "preview"
+	if tryMode && keepMode {
+		return output.NewStructuredError(output.ErrInputConflict, "--try and --keep are mutually exclusive", "Use one or the other")
+	}
+	if keepMode {
+		mode = "keep"
+	} else if tryMode {
+		mode = "try"
+	}
+
+	// Try and keep hold the install lock for the whole command, from the
+	// catalog scan and manifest read through every provider's apply, so
+	// they act on the loadout and active-loadout state as they stand under
+	// the lock. Preview only reads.
+	if mode == "try" || mode == "keep" {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return err
+		}
+		defer release()
+	}
+
 	projectRoot, _ := findProjectRoot()
 	checkAndWarnStaleSnapshot(projectRoot)
 
@@ -136,30 +160,8 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredErrorDetail(output.ErrLoadoutParse, "parsing loadout", "Check loadout.yaml syntax", err.Error())
 	}
 
-	// Determine mode
-	tryMode, _ := cmd.Flags().GetBool("try")
-	keepMode, _ := cmd.Flags().GetBool("keep")
-
-	mode := "preview"
-	if tryMode && keepMode {
-		return output.NewStructuredError(output.ErrInputConflict, "--try and --keep are mutually exclusive", "Use one or the other")
-	}
-	if keepMode {
-		mode = "keep"
-	} else if tryMode {
-		mode = "try"
-	}
-
-	// For try/keep modes, check for existing active snapshot. The install
-	// lock is held from this check through every provider's apply, so a
-	// second apply cannot pass the same check. Preview only reads.
+	// For try/keep modes, check for existing active snapshot.
 	if mode == "try" || mode == "keep" {
-		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
-		if err != nil {
-			return err
-		}
-		defer release()
-
 		_, _, snapErr := snapshot.Load(projectRoot)
 		if snapErr == nil {
 			// A snapshot exists — loadout is already active

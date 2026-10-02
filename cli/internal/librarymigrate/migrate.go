@@ -59,18 +59,14 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 			for _, ct := range catalog.AllContentTypes() {
 				oldDir := filepath.Join(libDir, string(ct), old)
 				newDir := filepath.Join(libDir, string(ct), prov.Slug)
-				if !isProviderFolder(ct, oldDir) {
+				if !isProviderFolder(ct, oldDir) || bothFolders(w, oldDir, newDir) {
 					continue
 				}
 				if err := takeLock(); err != nil {
 					return err
 				}
 				// Re-check under the lock: another process may have moved it.
-				if !isProviderFolder(ct, oldDir) {
-					continue
-				}
-				if _, err := os.Lstat(newDir); err == nil {
-					fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
+				if !isProviderFolder(ct, oldDir) || bothFolders(w, oldDir, newDir) {
 					continue
 				}
 				if err := moveFolder(oldDir, newDir, home, storePath); err != nil {
@@ -96,6 +92,17 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		fmt.Fprintf(w, "notice: migrated library content to renamed provider slugs: %s\n", strings.Join(parts, "; "))
 	}
 	return errors.Join(errs...)
+}
+
+// bothFolders reports whether newDir already exists beside oldDir, and warns
+// when it does. Migration leaves that case for the user, so it is checked
+// before taking the lock as well as under it.
+func bothFolders(w io.Writer, oldDir, newDir string) bool {
+	if _, err := os.Lstat(newDir); err != nil {
+		return false
+	}
+	fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
+	return true
 }
 
 // isProviderFolder reports whether dir is a provider folder of content type

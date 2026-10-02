@@ -252,3 +252,59 @@ func TestRestoreRefusesPlanWhoseRollbackPointChanged(t *testing.T) {
 		t.Fatalf("library content = %q, want B restored", got)
 	}
 }
+
+func TestRestoreRefusesPlanWhosePlacementsChanged(t *testing.T) {
+	configDir := t.TempDir()
+	withConfigDir(t, configDir)
+	storePath := filepath.Join(configDir, "installs.json")
+
+	libraryPath := filepath.Join(t.TempDir(), "canary-skill")
+	if err := os.MkdirAll(libraryPath, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "SKILL.md"), []byte("# B\n"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	prevDir := filepath.Join(t.TempDir(), "prev")
+	if err := os.MkdirAll(prevDir, 0755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(prevDir, "SKILL.md"), []byte("# A\n"), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	coord := installstore.Coord{Registry: "test-reg", Type: string(catalog.Skills), Name: "canary-skill"}
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	place := func(provider string, at time.Time) {
+		t.Helper()
+		if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
+			Provider:  provider,
+			Mechanism: installstore.MechanismSymlink,
+			Path:      filepath.Join(t.TempDir(), "canary-skill"),
+		}, installstore.InstallMeta{}, at); err != nil {
+			t.Fatalf("RecordInstallMeta: %v", err)
+		}
+	}
+	place("claude-code", now)
+	if err := installstore.RecordUpdate(storePath, coord, libraryPath, "sha-b", prevDir, now.Add(time.Hour)); err != nil {
+		t.Fatalf("RecordUpdate: %v", err)
+	}
+
+	item := catalog.ContentItem{Name: "canary-skill", Type: catalog.Skills, Meta: &metadata.Meta{SourceRegistry: "test-reg"}}
+	plan, err := PlanFor(item)
+	if err != nil {
+		t.Fatalf("PlanFor: %v", err)
+	}
+
+	// Another provider installs the item after the plan was shown.
+	place("gemini-cli", now.Add(2*time.Hour))
+
+	err = Restore(plan, "test")
+	if err == nil || !strings.Contains(err.Error(), "changed since it was planned") {
+		t.Fatalf("Restore error = %v, want stale-plan refusal", err)
+	}
+	got, _ := os.ReadFile(filepath.Join(libraryPath, "SKILL.md"))
+	if string(got) != "# B\n" {
+		t.Fatalf("library content = %q, want it untouched", got)
+	}
+}

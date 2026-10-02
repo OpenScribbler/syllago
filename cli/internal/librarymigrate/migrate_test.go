@@ -446,3 +446,18 @@ func TestRun_FolderMoveWaitsForInstallLock(t *testing.T) {
 		t.Error("folder moved without the lock")
 	}
 }
+
+func TestRun_BothFoldersWarnsWithoutInstallLock(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	write(t, filepath.Join(lib, "rules", "windsurf", "r1", "rule.md"), "# r1\n")
+	write(t, filepath.Join(lib, "rules", "devin", "r2", "rule.md"), "# r2\n")
+	holdInstallLock(t)
+	var out bytes.Buffer
+	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), &out); err != nil {
+		t.Fatalf("a warn-only migration should not wait on the lock: %v", err)
+	}
+	if !strings.Contains(out.String(), "library has both") {
+		t.Errorf("missing both-folders warning: %q", out.String())
+	}
+}

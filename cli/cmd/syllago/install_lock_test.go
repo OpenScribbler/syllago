@@ -50,6 +50,18 @@ func TestRunLoadoutApply_KeepWaitsForInstallLock(t *testing.T) {
 	requireLockedError(t, loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"demo"}))
 }
 
+// The lock comes before the catalog scan, so an apply never acts on a
+// loadout it read before another writer finished.
+func TestRunLoadoutApply_KeepTakesInstallLockBeforeReadingLoadout(t *testing.T) {
+	setupLoadoutApplyRepo(t, "demo", "claude-code", nil)
+	output.SetForTest(t)
+	holdInstallLock(t)
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	defer resetLoadoutApplyFlags()
+
+	requireLockedError(t, loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"not-yet-read"}))
+}
+
 func TestRunLoadoutApply_PreviewRunsWhileInstallLockHeld(t *testing.T) {
 	root := setupLoadoutApplyRepo(t, "demo", "claude-code", map[string][]string{"rules": {"demo-rule"}})
 	output.SetForTest(t)
