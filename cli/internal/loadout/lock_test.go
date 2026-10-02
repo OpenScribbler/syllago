@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
@@ -49,4 +50,12 @@ func TestRemoveWaitsForInstallLock(t *testing.T) {
 	holdInstallLock(t)
 	_, err := Remove(RemoveOptions{ProjectRoot: t.TempDir()})
 	requireLocked(t, err)
+}
+
+func TestApplyPreviewSkipsInstallLock(t *testing.T) {
+	holdInstallLock(t)
+	_, err := Apply(&Manifest{}, &catalog.Catalog{}, stubProviderForPreview("claude-code"), ApplyOptions{ProjectRoot: t.TempDir(), HomeDir: t.TempDir(), Mode: "preview"})
+	if err != nil {
+		t.Fatalf("preview with lock held: %v", err)
+	}
 }

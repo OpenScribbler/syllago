@@ -75,11 +75,15 @@ type ApplyResult struct {
 //   - The SessionEnd hook injected for "try" mode is NOT recorded in installed.json --
 //     it lives only in the backed-up settings.json and gets reverted with the snapshot.
 func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) (*ApplyResult, error) {
-	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
-	if err != nil {
-		return nil, err
+	// Preview only reads, so it never waits on the install lock. Every other
+	// mode takes it before resolving, so the plan it acts on stays current.
+	if opts.Mode != "preview" {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return nil, err
+		}
+		defer release()
 	}
-	defer release()
 
 	if opts.HomeDir == "" {
 		home, err := os.UserHomeDir()
