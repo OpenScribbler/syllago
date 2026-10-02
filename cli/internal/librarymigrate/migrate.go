@@ -35,6 +35,23 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		return nil
 	}
 
+	// The install lock is taken only once there is work, so a library with
+	// nothing to migrate never waits on another syllago process.
+	var release func()
+	takeLock := func() error {
+		if release != nil {
+			return nil
+		}
+		var err error
+		release, err = syllagolock.Acquire(syllagolock.DefaultTimeout)
+		return err
+	}
+	defer func() {
+		if release != nil {
+			release()
+		}
+	}()
+
 	var errs []error
 	var movedNames []string
 	for _, prov := range provider.AllProviders {
@@ -42,6 +59,13 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 			for _, ct := range catalog.AllContentTypes() {
 				oldDir := filepath.Join(libDir, string(ct), old)
 				newDir := filepath.Join(libDir, string(ct), prov.Slug)
+				if !isProviderFolder(ct, oldDir) {
+					continue
+				}
+				if err := takeLock(); err != nil {
+					return err
+				}
+				// Re-check under the lock: another process may have moved it.
 				if !isProviderFolder(ct, oldDir) {
 					continue
 				}
@@ -58,7 +82,7 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		}
 	}
 
-	rewritten, err := rewriteLibraryFiles(libDir)
+	rewritten, err := rewriteLibraryFiles(libDir, takeLock)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -123,12 +147,6 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 // scanner skips symlinked provider folders, so the items do not appear
 // twice.
 func moveFolder(oldDir, newDir, home, storePath string) error {
-	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
-	if err != nil {
-		return err
-	}
-	defer release()
-
 	store, err := installstore.Load(storePath)
 	if err != nil {
 		return err
@@ -221,7 +239,7 @@ func rebase(path, oldDir, newDir string) string {
 // of every metadata and loadout file in the library, and returns how many
 // files it changed. A file it cannot parse is left alone; the catalog scan
 // reports it.
-func rewriteLibraryFiles(libDir string) (int, error) {
+func rewriteLibraryFiles(libDir string, takeLock func() error) (int, error) {
 	count := 0
 	err := filepath.WalkDir(libDir, func(path string, d fs.DirEntry, err error) error {
 		// A symlinked file may point outside the library, so only regular
@@ -239,7 +257,7 @@ func rewriteLibraryFiles(libDir string) (int, error) {
 		default:
 			return nil
 		}
-		changed, err := rewriteYAML(path, fields)
+		changed, err := rewriteYAML(path, fields, takeLock)
 		if err != nil {
 			return err
 		}
@@ -253,9 +271,20 @@ func rewriteLibraryFiles(libDir string) (int, error) {
 
 // rewriteYAML applies fields to the top-level mapping of the YAML file at
 // path and writes the file back when fields reports a change.
-func rewriteYAML(path string, fields func(root *yaml.Node) bool) (bool, error) {
+func rewriteYAML(path string, fields func(root *yaml.Node) bool, takeLock func() error) (bool, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
+		return false, err
+	}
+	if !mentionsRetiredSlug(data) {
+		return false, nil
+	}
+	// Take the lock, then re-read, so the rewrite starts from the file as
+	// it stands under the lock rather than from the unlocked read.
+	if err := takeLock(); err != nil {
+		return false, err
+	}
+	if data, err = os.ReadFile(path); err != nil {
 		return false, err
 	}
 	if !mentionsRetiredSlug(data) {

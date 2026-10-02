@@ -2,13 +2,19 @@ package librarymigrate
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 func write(t *testing.T, path, content string) {
@@ -375,5 +381,66 @@ func TestRun_UnrecordedProjectLinkKeepsResolving(t *testing.T) {
 	}
 	if got := read(t, link); got != "body\n" {
 		t.Errorf("project link reads %q", got)
+	}
+}
+
+// holdInstallLock points the lock at a temp global dir, shortens the wait,
+// and holds the lock for the rest of the test.
+func holdInstallLock(t *testing.T) {
+	t.Helper()
+	origDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	origTimeout := syllagolock.DefaultTimeout
+	syllagolock.DefaultTimeout = 50 * time.Millisecond
+	release, err := syllagolock.Acquire(time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		release()
+		syllagolock.DefaultTimeout = origTimeout
+		config.GlobalDirOverride = origDir
+	})
+}
+
+func requireLocked(t *testing.T, err error) {
+	t.Helper()
+	var se output.StructuredError
+	if !errors.As(err, &se) || se.Code != output.ErrSystemLocked {
+		t.Fatalf("error = %v, want %s", err, output.ErrSystemLocked)
+	}
+}
+
+func TestRun_NothingToMigrateSkipsInstallLock(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	write(t, filepath.Join(lib, "rules", "claude-code", "r1", ".syllago.yaml"), "id: a\nsource_provider: claude-code\n")
+	holdInstallLock(t)
+	if err := Run(lib, tmp, filepath.Join(tmp, "installs.json"), io.Discard); err != nil {
+		t.Fatalf("a library with no retired slug should not wait on the lock: %v", err)
+	}
+}
+
+func TestRun_MetadataRewriteWaitsForInstallLock(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	meta := "id: a\nsource_provider: windsurf\n"
+	path := filepath.Join(lib, "skills", "sk", ".syllago.yaml")
+	write(t, path, meta)
+	holdInstallLock(t)
+	requireLocked(t, Run(lib, tmp, filepath.Join(tmp, "installs.json"), io.Discard))
+	if got := read(t, path); got != meta {
+		t.Errorf("metadata rewritten without the lock: %q", got)
+	}
+}
+
+func TestRun_FolderMoveWaitsForInstallLock(t *testing.T) {
+	tmp := t.TempDir()
+	lib := filepath.Join(tmp, "content")
+	write(t, filepath.Join(lib, "rules", "windsurf", "r1", "rule.md"), "# r1\n")
+	holdInstallLock(t)
+	requireLocked(t, Run(lib, tmp, filepath.Join(tmp, "installs.json"), io.Discard))
+	if !exists(filepath.Join(lib, "rules", "windsurf", "r1", "rule.md")) || exists(filepath.Join(lib, "rules", "devin")) {
+		t.Error("folder moved without the lock")
 	}
 }

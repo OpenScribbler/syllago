@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -149,8 +150,16 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		mode = "try"
 	}
 
-	// For try/keep modes, check for existing active snapshot
+	// For try/keep modes, check for existing active snapshot. The install
+	// lock is held from this check through every provider's apply, so a
+	// second apply cannot pass the same check. Preview only reads.
 	if mode == "try" || mode == "keep" {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return err
+		}
+		defer release()
+
 		_, _, snapErr := snapshot.Load(projectRoot)
 		if snapErr == nil {
 			// A snapshot exists — loadout is already active
