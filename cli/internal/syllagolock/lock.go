@@ -68,12 +68,12 @@ func acquireAt(path string, timeout time.Duration) (func(), error) {
 			break
 		}
 		if !errors.Is(err, errWouldBlock) {
-			f.Close()
+			_ = f.Close()
 			<-inProcess
 			return nil, output.NewStructuredErrorDetail(output.ErrSystemIO, "could not take the install lock", "Check permissions on the syllago directory", err.Error())
 		}
 		if time.Now().After(deadline) {
-			f.Close()
+			_ = f.Close()
 			<-inProcess
 			return nil, busyError()
 		}
