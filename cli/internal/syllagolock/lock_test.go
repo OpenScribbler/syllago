@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -113,6 +114,9 @@ func TestReleaseTwiceIsSafeAndFreesLock(t *testing.T) {
 }
 
 func TestAcquireUnwritableDirReturnsIOError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows ignores directory permission bits")
+	}
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores directory permissions")
 	}
@@ -155,7 +159,13 @@ func TestAcquireTimesOutWhileOtherProcessHolds(t *testing.T) {
 	dir := useTempGlobalDir(t)
 	path := filepath.Join(dir, fileName)
 
-	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperHoldLock$")
+	// os.Executable, not os.Args[0]: Windows refuses to exec a relative
+	// path found in the current directory.
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(self, "-test.run=^TestHelperHoldLock$")
 	cmd.Env = append(os.Environ(), "SYLLAGOLOCK_HELPER_PATH="+path)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
