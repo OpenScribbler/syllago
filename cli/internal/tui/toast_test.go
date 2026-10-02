@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"encoding/base64"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -475,5 +477,46 @@ func TestEditSave_DirectoryItem(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "My Skill") {
 		t.Error("metadata file should contain the display name")
+	}
+}
+
+func TestToast_ViewDetails(t *testing.T) {
+	tm := newToastModel()
+	tm.PushDetails("Installed \"hook\" to Claude Code", []string{
+		"note: copying instead of symlinking",
+		"MEDIUM [hook.json] permission change (chmod) (scanner=builtin)",
+		"security warning: Hook \"hook\" references executable script files.",
+		"warning: dropped field",
+		"warning: dropped another field",
+	}, toastWarning)
+	requireGolden(t, "toast-warning-details", normalizeSnapshot(tm.View()))
+}
+
+func TestToast_CopyIncludesDetails(t *testing.T) {
+	tm := newToastModel()
+	tm.PushDetails("Install failed: blocked", []string{"HIGH curl"}, toastError)
+	_, cmd := tm.HandleKey(keyRune('c'))
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	orig := os.Stdout
+	os.Stdout = w
+	// tea.Batch collapses to the clipboard write alone when nothing is queued.
+	if batch, ok := cmd().(tea.BatchMsg); ok {
+		for _, c := range batch {
+			if c != nil {
+				c()
+			}
+		}
+	}
+	os.Stdout = orig
+	w.Close()
+	raw, _ := io.ReadAll(r)
+
+	want := base64.StdEncoding.EncodeToString([]byte("Install failed: blocked\nHIGH curl"))
+	if !strings.Contains(string(raw), want) {
+		t.Errorf("clipboard write %q should carry message and details (%q)", raw, want)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
@@ -306,5 +307,39 @@ func TestRestoreRefusesPlanWhosePlacementsChanged(t *testing.T) {
 	got, _ := os.ReadFile(filepath.Join(libraryPath, "SKILL.md"))
 	if string(got) != "# B\n" {
 		t.Fatalf("library content = %q, want it untouched", got)
+	}
+}
+
+// A reinstalled hook's scanner findings come back as rollback warnings, since
+// the installer no longer prints them.
+func TestReapplyPlacementsReportsInstallNotices(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".claude", "settings.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	hookDir := filepath.Join(projectRoot, "hooks", "chmodder")
+	if err := os.MkdirAll(hookDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"chmod 755 build.sh"}}]}`
+	if err := os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(hookJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "chmodder", Type: catalog.Hooks, Path: hookDir}
+	placements := []installstore.Placement{{Provider: "claude-code", Mechanism: installstore.MechanismHookMerge}}
+	if _, err := installer.Install(item, *findProviderBySlug("claude-code"), projectRoot, installer.MethodSymlink, "", installer.ScanOptions{}); err != nil {
+		t.Fatalf("install hook: %v", err)
+	}
+
+	_, warnings := ReapplyPlacements(item, placements, Options{ProjectRoot: projectRoot})
+
+	want := string(installstore.MechanismHookMerge) + " placement for claude-code: MEDIUM [hook.json] permission change (chmod) (scanner=builtin)"
+	if len(warnings) != 1 || warnings[0] != want {
+		t.Errorf("warnings = %q, want [%q]", warnings, want)
 	}
 }

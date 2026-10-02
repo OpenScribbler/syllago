@@ -28,11 +28,17 @@ const (
 	warningDismiss = 5 * time.Second
 )
 
-// toastEntry is a single queued notification.
+// toastEntry is a single queued notification. details are extra lines shown
+// under the message, such as the notices an install returned.
 type toastEntry struct {
 	message string
+	details []string
 	level   toastLevel
 }
+
+// maxToastDetails caps the detail lines a toast renders; the rest collapse
+// into a "+N more" line.
+const maxToastDetails = 3
 
 // toastTickMsg fires when the current toast's auto-dismiss timer expires.
 type toastTickMsg struct {
@@ -57,7 +63,12 @@ func newToastModel() toastModel {
 // Push adds a toast to the queue. Shows immediately if not visible. Drops the
 // oldest non-error toast when the queue exceeds maxVisibleToasts.
 func (t *toastModel) Push(msg string, level toastLevel) tea.Cmd {
-	t.queue = append(t.queue, toastEntry{message: msg, level: level})
+	return t.PushDetails(msg, nil, level)
+}
+
+// PushDetails is Push with detail lines rendered under the message.
+func (t *toastModel) PushDetails(msg string, details []string, level toastLevel) tea.Cmd {
+	t.queue = append(t.queue, toastEntry{message: msg, details: details, level: level})
 	// Drop oldest non-error toasts when over the limit.
 	for len(t.queue) > maxVisibleToasts {
 		dropped := false
@@ -149,7 +160,7 @@ func (t *toastModel) HandleKey(msg tea.KeyMsg) (consumed bool, cmd tea.Cmd) {
 	case "c":
 		if cur.level == toastError {
 			// Copy message to clipboard (best-effort, no error handling needed)
-			return true, t.copyAndDismiss(cur.message)
+			return true, t.copyAndDismiss(strings.Join(append([]string{cur.message}, cur.details...), "\n"))
 		}
 	}
 	return false, nil
@@ -257,6 +268,19 @@ func (t toastModel) renderOne(entry toastEntry) string {
 	firstLine := msgText + strings.Repeat(" ", gap) + closeBtn
 
 	content := firstLine
+
+	detailStyle := lipgloss.NewStyle().Foreground(mutedColor)
+	maxDetailW := innerWidth - 2 // indent(2)
+	for i, d := range entry.details {
+		if i == maxToastDetails {
+			content += "\n" + detailStyle.Render(fmt.Sprintf("  +%d more", len(entry.details)-i))
+			break
+		}
+		if len([]rune(d)) > maxDetailW {
+			d = string([]rune(d)[:maxDetailW-1]) + "…"
+		}
+		content += "\n" + detailStyle.Render("  "+d)
+	}
 
 	if entry.level == toastError {
 		hint := lipgloss.NewStyle().Foreground(mutedColor).Faint(true).Render("  [esc] dismiss · [c] copy")

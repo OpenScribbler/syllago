@@ -62,13 +62,13 @@ func TestInstall_AgentRendersProviderFormat(t *testing.T) {
 			item := writeLibraryAgent(t, tmp, canonicalAgent)
 
 			for _, method := range []InstallMethod{MethodSymlink, MethodCopy} {
-				placement, err := Install(item, tt.prov, tmp, method, "")
+				placement, err := Install(item, tt.prov, tmp, method, "", ScanOptions{})
 				if err != nil {
-					t.Fatalf("Install(%s): %v", method, err)
+					t.Fatalf("Install(%s, ScanOptions{}): %v", method, err)
 				}
 				wantPath := filepath.Join(tmp, tt.rel)
 				if placement.Path != wantPath || placement.Mechanism != MechanismCopy {
-					t.Fatalf("Install(%s) placement = %s %s, want copy %s", method, placement.Mechanism, placement.Path, wantPath)
+					t.Fatalf("Install(%s, ScanOptions{}) placement = %s %s, want copy %s", method, placement.Mechanism, placement.Path, wantPath)
 				}
 				info, err := os.Lstat(wantPath)
 				if err != nil {
@@ -112,7 +112,7 @@ func TestInstall_AgentAddedWithoutType(t *testing.T) {
 	item := writeLibraryAgent(t, tmp, "---\nname: reviewer\ndescription: Reviews code\ntools:\n  - Read\n  - Bash\n---\n\nReview.\n")
 	item.Meta = &metadata.Meta{SourceProvider: "claude-code"}
 
-	placement, err := Install(item, provider.Devin, tmp, MethodSymlink, "")
+	placement, err := Install(item, provider.Devin, tmp, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestInstall_AgentSameProviderCopiesSource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	placement, err := Install(item, provider.Codex, tmp, MethodSymlink, "")
+	placement, err := Install(item, provider.Codex, tmp, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestInstall_AgentReplacesLegacySymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Install(item, provider.ClaudeCode, tmp, MethodSymlink, ""); err != nil {
+	if _, err := Install(item, provider.ClaudeCode, tmp, MethodSymlink, "", ScanOptions{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	info, err := os.Lstat(target)
@@ -188,7 +188,7 @@ func TestInstall_AgentRefusesForeignSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := Install(item, provider.ClaudeCode, tmp, MethodSymlink, ""); err == nil {
+	if _, err := Install(item, provider.ClaudeCode, tmp, MethodSymlink, "", ScanOptions{}); err == nil {
 		t.Fatal("Install through a foreign symlink succeeded, want error")
 	}
 	if _, err := os.Stat(foreign); !os.IsNotExist(err) {
@@ -201,7 +201,7 @@ func TestInstallWithResolver_AgentRendersProviderFormat(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	item := writeLibraryAgent(t, tmp, canonicalAgent)
 
-	placement, err := InstallWithResolver(item, provider.Devin, tmp, MethodSymlink, config.NewResolver(nil, ""))
+	placement, err := InstallWithResolver(item, provider.Devin, tmp, MethodSymlink, config.NewResolver(nil, ""), ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestInstall_AgentSameProviderRendersWhenSourceFormatDiffers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	placement, err := Install(item, provider.Kiro, tmp, MethodCopy, "")
+	placement, err := Install(item, provider.Kiro, tmp, MethodCopy, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestInstall_AgentDoesNotWriteThroughHardLink(t *testing.T) {
 		t.Skipf("hard links unsupported: %v", err)
 	}
 
-	if _, err := Install(item, provider.GeminiCLI, tmp, MethodCopy, ""); err != nil {
+	if _, err := Install(item, provider.GeminiCLI, tmp, MethodCopy, "", ScanOptions{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 	if data, _ := os.ReadFile(libFile); string(data) != canonicalAgent {

@@ -254,7 +254,7 @@ func TestInstall_SymlinkMethod(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	placement, err := Install(item, prov, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, prov, repoRoot, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestInstall_CopyMethod(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	placement, err := Install(item, prov, repoRoot, MethodCopy, "")
+	placement, err := Install(item, prov, repoRoot, MethodCopy, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install copy: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestInstall_WithBaseDir(t *testing.T) {
 		Path: sourcePath,
 	}
 
-	placement, err := Install(item, prov, repoRoot, MethodSymlink, baseDir)
+	placement, err := Install(item, prov, repoRoot, MethodSymlink, baseDir, ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install with baseDir: %v", err)
 	}
@@ -353,7 +353,7 @@ func TestInstall_UnsupportedTypeReturnsError(t *testing.T) {
 		Path: "/repo/commands/test/cmd",
 	}
 
-	_, err := Install(item, prov, "/repo", MethodSymlink, "/home/user")
+	_, err := Install(item, prov, "/repo", MethodSymlink, "/home/user", ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error for unsupported type")
 	}
@@ -689,7 +689,7 @@ func TestInstallWithRenderTo(t *testing.T) {
 		t.Fatal("no converter registered for rules")
 	}
 
-	desc, err := installWithRenderTo(item, cursorProv, conv, targetDir)
+	desc, _, err := installWithRenderTo(item, cursorProv, conv, targetDir)
 	if err != nil {
 		t.Fatalf("installWithRenderTo: %v", err)
 	}
@@ -730,7 +730,7 @@ func TestInstallWithRenderTo_NoContentFile(t *testing.T) {
 		t.Fatal("no converter registered for rules")
 	}
 
-	_, err := installWithRenderTo(item, cursorProv, conv, filepath.Join(tmp, "target"))
+	_, _, err := installWithRenderTo(item, cursorProv, conv, filepath.Join(tmp, "target"))
 	if err == nil {
 		t.Fatal("expected error for empty content item")
 	}
@@ -799,7 +799,7 @@ func TestInstallFromSourceTo_NoSourceFile(t *testing.T) {
 }
 
 func TestInstall_CrossProviderRendering(t *testing.T) {
-	// Tests the converter dispatch path in Install() — when item.Provider != prov.Slug.
+	// Tests the converter dispatch path in Install(, ScanOptions{}) — when item.Provider != prov.Slug.
 	tmp := t.TempDir()
 	repoRoot := filepath.Join(tmp, "repo")
 	os.MkdirAll(repoRoot, 0755)
@@ -833,7 +833,7 @@ func TestInstall_CrossProviderRendering(t *testing.T) {
 		},
 	}
 
-	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install cross-provider: %v", err)
 	}
@@ -850,7 +850,7 @@ func TestInstall_CrossProviderRendering(t *testing.T) {
 }
 
 func TestInstall_SameProviderWithSource(t *testing.T) {
-	// Tests the source file lossless roundtrip path in Install().
+	// Tests the source file lossless roundtrip path in Install(, ScanOptions{}).
 	tmp := t.TempDir()
 	repoRoot := filepath.Join(tmp, "repo")
 	os.MkdirAll(repoRoot, 0755)
@@ -884,7 +884,7 @@ func TestInstall_SameProviderWithSource(t *testing.T) {
 		},
 	}
 
-	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "")
+	placement, err := Install(item, cursorProv, repoRoot, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install with source: %v", err)
 	}
@@ -943,7 +943,7 @@ func TestInstallWithResolver_SameProviderWithSource(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -1001,7 +1001,7 @@ func TestInstallWithResolver_CrossProviderRendering(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, cursorProv, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver cross-provider: %v", err)
 	}
@@ -1028,7 +1028,7 @@ func TestInstall_MergeTypeDispatch(t *testing.T) {
 		Path: "/nonexistent/path",
 	}
 
-	_, err := Install(item, prov, "/repo", MethodSymlink, "")
+	_, err := Install(item, prov, "/repo", MethodSymlink, "", ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1058,7 +1058,7 @@ func TestInstallWithResolver_UnsupportedType(t *testing.T) {
 	}
 
 	resolver := config.NewResolver(&config.Config{}, "")
-	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error for unsupported type")
 	}
@@ -1079,7 +1079,7 @@ func TestInstallWithResolver_ProjectScopeSentinel(t *testing.T) {
 	}
 
 	resolver := config.NewResolver(&config.Config{}, "")
-	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error for project-scoped type")
 	}
@@ -1112,7 +1112,7 @@ func TestInstallWithResolver_AgentsType(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver agents: %v", err)
 	}
@@ -1150,7 +1150,7 @@ func TestInstall_MergeTypeMCPDispatch(t *testing.T) {
 		Path: itemDir,
 	}
 
-	placement, err := Install(item, prov, tmpDir, MethodSymlink, "")
+	placement, err := Install(item, prov, tmpDir, MethodSymlink, "", ScanOptions{})
 	if err != nil {
 		t.Fatalf("Install MCP: %v", err)
 	}

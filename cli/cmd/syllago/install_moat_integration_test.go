@@ -169,6 +169,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		now,
 	)
 	if err != nil {
@@ -313,6 +314,7 @@ func TestInstallIntegration_RegistryRevocationRefuses(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatRevocationBlock)
@@ -365,6 +367,7 @@ func TestInstallIntegration_PublisherWarnHeadlessExits12(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -409,6 +412,7 @@ func TestInstallIntegration_PrivatePromptHeadlessExits10(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -455,6 +459,7 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatTierBelowPolicy)
@@ -513,6 +518,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		now,
 	)
 	if err != nil {
@@ -569,6 +575,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		now.Add(time.Hour),
 	)
 	if err != nil {
@@ -676,6 +683,7 @@ func TestInstallIntegration_ReplaceWithoutRecord(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		now,
 	)
 	if err != nil {

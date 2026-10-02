@@ -29,7 +29,7 @@ func TestPlacement_InstallFilesystemMethods(t *testing.T) {
 		}
 		item := catalog.ContentItem{Name: "placement-symlink", Type: catalog.Rules, Path: sourcePath}
 
-		placement, err := Install(item, prov, repoRoot, MethodSymlink, "")
+		placement, err := Install(item, prov, repoRoot, MethodSymlink, "", ScanOptions{})
 		if err != nil {
 			t.Fatalf("Install symlink: %v", err)
 		}
@@ -56,7 +56,7 @@ func TestPlacement_InstallFilesystemMethods(t *testing.T) {
 		}
 		item := catalog.ContentItem{Name: "placement-copy", Type: catalog.Rules, Path: sourcePath}
 
-		placement, err := Install(item, prov, repoRoot, MethodCopy, "")
+		placement, err := Install(item, prov, repoRoot, MethodCopy, "", ScanOptions{})
 		if err != nil {
 			t.Fatalf("Install copy: %v", err)
 		}
@@ -134,7 +134,7 @@ func TestPlacement_HookMergeInstallAndUninstall(t *testing.T) {
 	}
 	overrideHookSettingsPath(t, settingsPath)
 
-	placement, err := installHook(item, provider.ClaudeCode, projectRoot)
+	placement, err := installHook(item, provider.ClaudeCode, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}

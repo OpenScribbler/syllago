@@ -55,7 +55,7 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 	os.WriteFile(configPath, []byte(`{"mcp":{"existing":{"command":"keep-me"}}}`), 0644)
 	overrideHookSettingsPath(t, configPath)
 
-	placement, err := installHook(item, provider.Crush, projectRoot)
+	placement, err := installHook(item, provider.Crush, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestInstallHook_Crush_RejectsUnsupportedEvent(t *testing.T) {
 	os.WriteFile(configPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, configPath)
 
-	if _, err := installHook(item, provider.Crush, projectRoot); err == nil {
+	if _, err := installHook(item, provider.Crush, projectRoot, ScanOptions{}); err == nil {
 		t.Fatal("expected error installing a session_start hook to crush")
 	}
 	data, _ := os.ReadFile(configPath)
@@ -179,7 +179,7 @@ func TestInstallHook_Crush_RejectsNonCommand(t *testing.T) {
 	os.WriteFile(configPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, configPath)
 
-	if _, err := installHook(item, provider.Crush, projectRoot); err == nil {
+	if _, err := installHook(item, provider.Crush, projectRoot, ScanOptions{}); err == nil {
 		t.Fatal("expected error installing a prompt hook to crush")
 	}
 	data, _ := os.ReadFile(configPath)

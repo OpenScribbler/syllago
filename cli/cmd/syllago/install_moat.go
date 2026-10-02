@@ -151,6 +151,7 @@ func runInstallFromRegistry(
 	method installer.InstallMethod,
 	baseDir string,
 	dryRun bool,
+	scan installer.ScanOptions,
 	now time.Time,
 ) error {
 	reg := findRegistryByName(cfg, registryName)
@@ -376,7 +377,8 @@ func runInstallFromRegistry(
 		)
 	}
 
-	placement, installErr := installer.Install(item, *targetProv, cfgRoot, method, baseDir)
+	placement, installErr := installer.Install(item, *targetProv, cfgRoot, method, baseDir, scan)
+	printInstallNotices(errW, placement.Notices)
 	if installErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,

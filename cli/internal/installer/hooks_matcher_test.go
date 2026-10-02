@@ -59,7 +59,7 @@ func TestInstallHook_TranslatesMatcher(t *testing.T) {
 			os.WriteFile(settingsPath, []byte(`{}`), 0644)
 			overrideHookSettingsPath(t, settingsPath)
 
-			if _, err := installHook(item, tt.prov, projectRoot); err != nil {
+			if _, err := installHook(item, tt.prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("installHook: %v", err)
 			}
 
@@ -115,7 +115,7 @@ func TestInstallHook_MatcherPatterns(t *testing.T) {
 			os.WriteFile(settingsPath, []byte(`{}`), 0644)
 			overrideHookSettingsPath(t, settingsPath)
 
-			if _, err := installHook(item, provider.ClaudeCode, projectRoot); err != nil {
+			if _, err := installHook(item, provider.ClaudeCode, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("installHook: %v", err)
 			}
 

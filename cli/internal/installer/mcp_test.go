@@ -250,7 +250,7 @@ func TestInstallMCP_Cursor_RootsConfigAndRecordAtProjectRoot(t *testing.T) {
 	item := catalog.ContentItem{Name: "project-root-mcp", Type: catalog.MCP, Path: itemDir}
 	prov := provider.Cursor
 
-	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err != nil {
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, "", ScanOptions{}); err != nil {
 		t.Fatalf("Install: %v", err)
 	}
 
@@ -892,7 +892,7 @@ func TestInstallMCP_DeduplicatesAgainstLegacyRoot(t *testing.T) {
 
 	item := catalog.ContentItem{Name: "legacy-dup", Type: catalog.MCP, Path: itemDir, ServerKey: "legacy-dup"}
 	prov := provider.Cursor
-	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err == nil {
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil {
 		t.Fatal("expected duplicate MCP install to be rejected via legacy root record")
 	}
 

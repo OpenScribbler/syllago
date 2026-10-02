@@ -483,7 +483,7 @@ func setupMOATHookRollbackState(t *testing.T, homeDir, projectRoot string) rollb
 	}
 
 	item := scanRollbackTestItem(t, "rollback-hook", string(catalog.Hooks))
-	if _, err := installer.Install(*item, provider.ClaudeCode, projectRoot, installer.MethodSymlink, ""); err != nil {
+	if _, err := installer.Install(*item, provider.ClaudeCode, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{}); err != nil {
 		t.Fatalf("install v2 hook: %v", err)
 	}
 	assertFileContains(t, settingsPath, "echo v2")

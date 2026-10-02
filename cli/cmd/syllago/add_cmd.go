@@ -358,7 +358,8 @@ func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoo
 
 	for _, item := range globalCat.Items {
 		if addedSet[nameType{item.Name, item.Type}] {
-			placement, err := installer.Install(item, *prov, projectRoot, installer.MethodSymlink, "")
+			placement, err := installer.Install(item, *prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{})
+			printInstallNotices(output.ErrWriter, placement.Notices)
 			if err != nil {
 				fmt.Fprintf(output.ErrWriter, "Warning: install %s to %s: %v\n", item.Name, toSlug, err)
 			} else {

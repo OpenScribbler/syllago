@@ -13,34 +13,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
-// scannerChainPaths holds paths to external hook scanner binaries added via
-// CLI (--hook-scanner). It is read by installHook before writing. Empty by
-// default — only the builtin scanner runs.
-//
-// scannerForceBypass allows a user to proceed past high-severity findings
-// (--force). Tests set these via SetScannerChain + t.Cleanup save-restore
-// in the same pattern as the other package-level globals listed in
-// .claude/rules/cli-test-patterns.md.
-var (
-	scannerChainPaths  []string
-	scannerForceBypass bool
-)
-
-// SetScannerChain configures the hook scanner chain for subsequent installs.
-// Called by cmd/syllago/install_cmd.go after parsing flags. Tests use
-// t.Cleanup to restore the prior values.
-func SetScannerChain(paths []string, force bool) {
-	scannerChainPaths = paths
-	scannerForceBypass = force
-}
-
-// ScannerChain returns the currently configured scanner paths and force bit.
-// Exposed for tests (and potentially diagnostic output) so save-restore
-// cleanup can roll back cleanly.
-func ScannerChain() ([]string, bool) {
-	return append([]string(nil), scannerChainPaths...), scannerForceBypass
-}
-
 // InstallMethod controls how content is placed in the target directory.
 type InstallMethod string
 
@@ -69,6 +41,7 @@ type Placement struct {
 	Mechanism string   // "symlink", "copy", "hook_merge", or "mcp_merge"
 	Path      string   // destination path (symlink/copy) or settings file (merges)
 	Keys      []string // full JSON keys for merges (e.g. "hooks.PreToolUse", "mcpServers.github"); nil otherwise
+	Notices   []Notice // what the install has to tell the user; set even when it fails
 	desc      string   // exact legacy display string
 }
 
@@ -223,15 +196,16 @@ func CheckStatusWithResolver(item catalog.ContentItem, prov provider.Provider, r
 // For JSON merge types (MCP, hooks), it merges into the provider's config file.
 // For filesystem types, it creates a symlink or copy depending on the method.
 // baseDir overrides the home directory as the install root. If empty, uses home dir.
+// scan configures the hook scanner chain; other content types ignore it.
 // Returns placement metadata; Placement.String renders the legacy description.
-func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, baseDir string) (Placement, error) {
+func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, baseDir string, scan ScanOptions) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
 		case catalog.MCP:
 			return installMCP(item, prov, repoRoot)
 		case catalog.Hooks:
-			return installHook(item, prov, repoRoot)
+			return installHook(item, prov, repoRoot, scan)
 		}
 		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
@@ -264,8 +238,8 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 			if err != nil {
 				return Placement{}, err
 			}
-			installedPath, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
-			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
+			installedPath, notices, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, Notices: notices, desc: installedPath}, err
 		}
 		// Same provider + has .source/ → use original for lossless install
 		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
@@ -290,8 +264,8 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
-			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
-			return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
+			note := Notice{Kind: NoticeNote, Message: targetPath + " is on a Windows mount, using copy instead of symlink"}
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: []Notice{note}, desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
 		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
@@ -300,14 +274,14 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 // InstallWithResolver places the given item under the provider's install directory,
 // using the resolver for path resolution instead of a flat baseDir string.
 // This respects the full priority chain: per-type path > CLI --base-dir > config baseDir > default.
-func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, resolver *config.PathResolver) (Placement, error) {
+func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoRoot string, method InstallMethod, resolver *config.PathResolver, scan ScanOptions) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
 		case catalog.MCP:
 			return installMCP(item, prov, repoRoot)
 		case catalog.Hooks:
-			return installHook(item, prov, repoRoot)
+			return installHook(item, prov, repoRoot, scan)
 		}
 		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
@@ -345,8 +319,8 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 	// Check for cross-provider rendering via converter
 	if conv := converter.For(item.Type); conv != nil {
 		if item.Provider != "" && item.Provider != prov.Slug {
-			installedPath, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
-			return Placement{Mechanism: MechanismCopy, Path: installedPath, desc: installedPath}, err
+			installedPath, notices, err := installWithRenderTo(item, prov, conv, filepath.Dir(targetPath))
+			return Placement{Mechanism: MechanismCopy, Path: installedPath, Notices: notices, desc: installedPath}, err
 		}
 		if converter.HasSourceFile(item) && item.Provider == prov.Slug {
 			installedPath, err := installFromSourceTo(item, prov, filepath.Dir(targetPath))
@@ -361,8 +335,8 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
-			fmt.Fprintf(os.Stderr, "note: %s is on a Windows mount, using copy instead of symlink\n", targetPath)
-			return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
+			note := Notice{Kind: NoticeNote, Message: targetPath + " is on a Windows mount, using copy instead of symlink"}
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: []Notice{note}, desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
 		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
@@ -517,11 +491,9 @@ func installAgent(item catalog.ContentItem, prov provider.Provider, targetPath s
 	if err != nil {
 		return Placement{}, fmt.Errorf("rendering for %s: %w", prov.Name, err)
 	}
-	for _, w := range result.Warnings {
-		fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
-	}
+	placement.Notices = conversionNotices(item, result.Warnings)
 	if result.Content == nil {
-		return Placement{}, fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
+		return Placement{Notices: placement.Notices}, fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
 	}
 	return placement, writeFileAtomic(targetPath, bytes.NewReader(result.Content))
 }
@@ -541,41 +513,45 @@ func itemSourceProvider(item catalog.ContentItem) string {
 }
 
 // installWithRenderTo reads canonical content, renders it for the target provider,
-// and writes to the specified target directory.
-func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv converter.Converter, targetDir string) (string, error) {
+// and writes to the specified target directory. The render's warnings come
+// back as notices, also when the render skips the item.
+func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv converter.Converter, targetDir string) (string, []Notice, error) {
 	contentFile := converter.ResolveContentFile(item)
 	if contentFile == "" {
-		return "", fmt.Errorf("no content file found in %s", item.Path)
+		return "", nil, fmt.Errorf("no content file found in %s", item.Path)
 	}
 
 	content, err := os.ReadFile(contentFile)
 	if err != nil {
-		return "", fmt.Errorf("reading content file: %w", err)
+		return "", nil, fmt.Errorf("reading content file: %w", err)
 	}
 
 	result, err := conv.Render(content, prov)
 	if err != nil {
-		return "", fmt.Errorf("rendering for %s: %w", prov.Name, err)
+		return "", nil, fmt.Errorf("rendering for %s: %w", prov.Name, err)
 	}
+	notices := conversionNotices(item, result.Warnings)
 
 	// nil Content means this rule should be skipped (e.g. non-alwaysApply for single-file providers)
 	if result.Content == nil {
-		for _, w := range result.Warnings {
-			fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
-		}
-		return "", fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
-	}
-
-	for _, w := range result.Warnings {
-		fmt.Fprintf(os.Stderr, "warning: %s: %s\n", item.Name, w)
+		return "", notices, fmt.Errorf("skipped %s: not compatible with %s", item.Name, prov.Name)
 	}
 
 	targetPath := filepath.Join(targetDir, result.Filename)
 
 	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-		return "", err
+		return "", notices, err
 	}
-	return targetPath, os.WriteFile(targetPath, result.Content, 0644)
+	return targetPath, notices, os.WriteFile(targetPath, result.Content, 0644)
+}
+
+// conversionNotices turns a render's warnings into notices about item.
+func conversionNotices(item catalog.ContentItem, warnings []string) []Notice {
+	var notices []Notice
+	for _, w := range warnings {
+		notices = append(notices, Notice{Kind: NoticeConversionWarning, Message: item.Name + ": " + w})
+	}
+	return notices
 }
 
 // installFromSourceTo copies the .source/ original directly to the specified target directory.

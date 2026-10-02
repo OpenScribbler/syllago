@@ -81,6 +81,7 @@ type installDoneMsg struct {
 	itemName     string
 	providerName string
 	targetPath   string
+	notices      []installer.Notice // set on failure too
 	err          error
 }
 
@@ -99,8 +100,9 @@ type installAllResultMsg struct {
 // installAllDoneMsg carries the aggregate result of an "install to all" batch.
 type installAllDoneMsg struct {
 	itemName string
-	count    int   // number of successful installs
-	firstErr error // first error encountered, if any
+	count    int                // number of successful installs
+	notices  []installer.Notice // from every provider, failed installs included
+	firstErr error              // first error encountered, if any
 }
 
 // --- Model ---

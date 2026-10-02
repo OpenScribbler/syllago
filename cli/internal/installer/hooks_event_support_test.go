@@ -58,7 +58,7 @@ func TestInstallHook_RejectsUnsupportedEvent(t *testing.T) {
 			os.WriteFile(settingsPath, []byte(`{}`), 0644)
 			overrideHookSettingsPath(t, settingsPath)
 
-			_, err := installHook(item, tt.prov, projectRoot)
+			_, err := installHook(item, tt.prov, projectRoot, ScanOptions{})
 			if err == nil {
 				t.Fatalf("expected error installing %q hook to %s", tt.event, tt.prov.Slug)
 			}
@@ -83,7 +83,7 @@ func TestInstallHook_OwnNativeEventPassesThrough(t *testing.T) {
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	if _, err := installHook(item, provider.Crush, projectRoot); err != nil {
+	if _, err := installHook(item, provider.Crush, projectRoot, ScanOptions{}); err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
 	data, _ := os.ReadFile(settingsPath)
