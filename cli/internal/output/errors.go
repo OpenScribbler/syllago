@@ -89,6 +89,7 @@ const (
 	// System: environment and filesystem issues.
 	ErrSystemHomedir = "SYSTEM_001" // cannot determine home directory
 	ErrSystemIO      = "SYSTEM_002" // filesystem read/write/mkdir failure
+	ErrSystemLocked  = "SYSTEM_003" // another syllago process holds the install lock
 
 	// MOAT: manifest-based signing / verification.
 	ErrMoatIdentityUnpinned    = "MOAT_001" // registry add has neither allowlist match nor --signing-identity
@@ -199,6 +200,7 @@ func AllErrorCodes() []string {
 		// System
 		ErrSystemHomedir,
 		ErrSystemIO,
+		ErrSystemLocked,
 		// MOAT
 		ErrMoatIdentityUnpinned,
 		ErrMoatIdentityInvalid,

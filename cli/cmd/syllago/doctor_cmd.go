@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -135,6 +136,12 @@ func runDoctorFix(force bool) error {
 			return nil
 		}
 	}
+
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	linkErrs := installer.ApplyLinkFixes(actions)
 	for _, err := range linkErrs {

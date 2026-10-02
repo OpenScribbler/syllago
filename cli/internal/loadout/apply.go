@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/tidwall/sjson"
 )
 
@@ -74,6 +75,12 @@ type ApplyResult struct {
 //   - The SessionEnd hook injected for "try" mode is NOT recorded in installed.json --
 //     it lives only in the backed-up settings.json and gets reverted with the snapshot.
 func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) (*ApplyResult, error) {
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	if opts.HomeDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {

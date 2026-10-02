@@ -8,6 +8,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/rollback"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 const confirmPurposeRollback = "rollback"
@@ -54,6 +55,12 @@ func (a App) handlePin() (tea.Model, tea.Cmd) {
 	}
 
 	cmd := func() tea.Msg {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return pinToggleMsg{err: err}
+		}
+		defer release()
+
 		storePath, err := installstore.DefaultPath()
 		if err != nil {
 			return pinToggleMsg{err: fmt.Errorf("pin needs an installed item — install it first")}
@@ -100,7 +107,13 @@ func (a App) handleRollback() (tea.Model, tea.Cmd) {
 // doRollbackCmd
 func (a App) doRollbackCmd(plan *rollback.Plan) tea.Cmd {
 	return func() tea.Msg {
-		err := rollback.Restore(plan, a.version)
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return rollbackDoneMsg{err: err}
+		}
+		defer release()
+
+		err = rollback.Restore(plan, a.version)
 		if err != nil {
 			return rollbackDoneMsg{err: err}
 		}

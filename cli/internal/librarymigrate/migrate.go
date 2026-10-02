@@ -18,6 +18,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 // Run migrates the library at libDir away from retired provider slugs. It
@@ -122,6 +123,12 @@ func isProviderFolder(ct catalog.ContentType, dir string) bool {
 // scanner skips symlinked provider folders, so the items do not appear
 // twice.
 func moveFolder(oldDir, newDir, home, storePath string) error {
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	store, err := installstore.Load(storePath)
 	if err != nil {
 		return err

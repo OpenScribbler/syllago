@@ -6,6 +6,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 // ErrNoActiveLoadout is returned when no snapshot is found to revert.
@@ -43,6 +44,12 @@ type RemoveResult struct {
 // Gotcha: Symlink deletion ignores ErrNotExist because the user may have
 // manually removed a symlink before running remove.
 func Remove(opts RemoveOptions) (*RemoveResult, error) {
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	manifest, snapshotDir, err := snapshot.Load(opts.ProjectRoot)
 	if errors.Is(err, snapshot.ErrNoSnapshot) {
 		return nil, ErrNoActiveLoadout
