@@ -59,6 +59,14 @@ func runRollback(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("content_type", string(item.Type))
 	telemetry.Enrich("dry_run", dryRun)
 
+	if !dryRun {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return err
+		}
+		defer release()
+	}
+
 	plan, err := rollback.PlanFor(*item)
 	if err != nil {
 		return err
@@ -83,12 +91,6 @@ func runRollback(cmd *cobra.Command, args []string) error {
 		printRollbackDryRunPlan(*item, &plan.Prev)
 		return nil
 	}
-
-	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
-	if err != nil {
-		return err
-	}
-	defer release()
 
 	if err := rollback.Restore(plan, version); err != nil {
 		return err

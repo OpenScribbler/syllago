@@ -175,3 +175,80 @@ func withConfigDir(t *testing.T, dir string) {
 		config.GlobalDirOverride = prev
 	})
 }
+
+func TestRestoreRefusesPlanWhoseRollbackPointChanged(t *testing.T) {
+	configDir := t.TempDir()
+	withConfigDir(t, configDir)
+	storePath := filepath.Join(configDir, "installs.json")
+
+	libraryPath := filepath.Join(t.TempDir(), "canary-skill")
+	writeSkill := func(body string) {
+		t.Helper()
+		if err := os.MkdirAll(libraryPath, 0755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(libraryPath, "SKILL.md"), []byte(body), 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	copyOf := func(body string) string {
+		t.Helper()
+		dir := filepath.Join(t.TempDir(), "prev")
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(body), 0644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+		return dir
+	}
+
+	coord := installstore.Coord{Registry: "test-reg", Type: string(catalog.Skills), Name: "canary-skill"}
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	writeSkill("# A\n")
+	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
+		Provider:  "claude-code",
+		Mechanism: installstore.MechanismSymlink,
+		Path:      filepath.Join(t.TempDir(), "canary-skill"),
+	}, installstore.InstallMeta{}, now); err != nil {
+		t.Fatalf("RecordInstallMeta: %v", err)
+	}
+	writeSkill("# B\n")
+	if err := installstore.RecordUpdate(storePath, coord, libraryPath, "sha-b", copyOf("# A\n"), now.Add(time.Hour)); err != nil {
+		t.Fatalf("RecordUpdate to B: %v", err)
+	}
+
+	item := catalog.ContentItem{Name: "canary-skill", Type: catalog.Skills, Meta: &metadata.Meta{SourceRegistry: "test-reg"}}
+	plan, err := PlanFor(item)
+	if err != nil {
+		t.Fatalf("PlanFor: %v", err)
+	}
+
+	// Another update lands after the plan was shown to the user.
+	writeSkill("# C\n")
+	if err := installstore.RecordUpdate(storePath, coord, libraryPath, "sha-c", copyOf("# B\n"), now.Add(2*time.Hour)); err != nil {
+		t.Fatalf("RecordUpdate to C: %v", err)
+	}
+
+	err = Restore(plan, "test")
+	if err == nil || !strings.Contains(err.Error(), "changed since it was planned") {
+		t.Fatalf("Restore error = %v, want stale-plan refusal", err)
+	}
+	got, _ := os.ReadFile(filepath.Join(libraryPath, "SKILL.md"))
+	if string(got) != "# C\n" {
+		t.Fatalf("library content = %q, want it untouched", got)
+	}
+
+	// A fresh plan restores the current rollback point.
+	plan, err = PlanFor(item)
+	if err != nil {
+		t.Fatalf("PlanFor after update: %v", err)
+	}
+	if err := Restore(plan, "test"); err != nil {
+		t.Fatalf("Restore with fresh plan: %v", err)
+	}
+	got, _ = os.ReadFile(filepath.Join(libraryPath, "SKILL.md"))
+	if string(got) != "# B\n" {
+		t.Fatalf("library content = %q, want B restored", got)
+	}
+}
