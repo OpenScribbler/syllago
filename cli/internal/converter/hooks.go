@@ -240,6 +240,14 @@ func (c *HooksConverter) Canonicalize(content []byte, sourceProvider string) (*R
 		// Cursor hooks use CC-style event names (mapped via HookEvents).
 		// Unique fields (failClosed, loop_limit, version) are not yet preserved.
 		return canonicalizeStandardHooks(content, sourceProvider)
+	case "devin":
+		// .devin/hooks.v1.json is a bare event map; settings files wrap it.
+		events, err := devinHookEventsJSON(content)
+		if err != nil {
+			return nil, fmt.Errorf("parsing hooks JSON: %w", err)
+		}
+		wrapped, _ := json.Marshal(map[string]json.RawMessage{"hooks": events})
+		return canonicalizeStandardHooks(wrapped, sourceProvider)
 	default:
 		// Claude Code, Gemini CLI, and Devin share the same structure, just different event/tool names
 		return canonicalizeStandardHooks(content, sourceProvider)
@@ -509,6 +517,13 @@ func renderStandardHooks(cfg hooksConfig, targetSlug string, llmMode string) (*R
 				// Convert canonical seconds to the provider's unit
 				rendered := h
 				rendered.Timeout = TranslateTimeoutToProvider(rendered.Timeout, targetSlug)
+				if targetSlug == "devin" {
+					// Devin entries carry only type, command, and timeout.
+					if rendered.StatusMessage != "" || rendered.Async {
+						warnings = append(warnings, "devin hooks support only type, command, and timeout; async and statusMessage dropped")
+					}
+					rendered = HookEntry{Type: rendered.Type, Command: rendered.Command, Timeout: rendered.Timeout}
+				}
 				kept = append(kept, rendered)
 			}
 			tm.Hooks = kept

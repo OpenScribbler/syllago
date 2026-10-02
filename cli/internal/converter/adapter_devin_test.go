@@ -289,3 +289,52 @@ func TestDevinAdapterEncode_ArrayMatcherBecomesAlternation(t *testing.T) {
 	}
 	assertEqual(t, "exec|write", gjson.GetBytes(encoded.Content, "hooks.PreToolUse.0.matcher").String())
 }
+
+func TestDevinAdapterDecode_BareHooksV1File(t *testing.T) {
+	content := []byte(`{"PreToolUse": [{"matcher": "exec", "hooks": [{"type": "command", "command": "./guard.sh"}]}]}`)
+	hooks, err := AdapterFor("devin").Decode(content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(hooks.Hooks) != 1 {
+		t.Fatalf("expected 1 hook from a bare hooks.v1.json, got %d", len(hooks.Hooks))
+	}
+	assertEqual(t, "before_tool_execute", hooks.Hooks[0].Event)
+}
+
+func TestDevinAdapterDecode_SettingsWithoutHooks(t *testing.T) {
+	// A config.json with other settings and no hooks key holds no hooks.
+	hooks, err := AdapterFor("devin").Decode([]byte(`{"model": "swe-1.5", "permissions": {"allow": ["exec"]}}`))
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(hooks.Hooks) != 0 {
+		t.Errorf("expected no hooks, got %d", len(hooks.Hooks))
+	}
+}
+
+func TestDevinAdapterRoundTrip_MixedMCPAlternation(t *testing.T) {
+	// "mcp__github__create_issue|exec" must not decode as one MCP tool named
+	// "create_issue|exec", or the exec part never translates to other providers.
+	original := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{Event: "before_tool_execute", Matcher: json.RawMessage(`[{"mcp":{"server":"github","tool":"create_issue"}},"shell"]`), Blocking: true, Handler: HookHandler{Type: "command", Command: "echo guard"}},
+		},
+	}
+	encoded, err := AdapterFor("devin").Encode(original)
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	assertEqual(t, "mcp__github__create_issue|exec", gjson.GetBytes(encoded.Content, "hooks.PreToolUse.0.matcher").String())
+
+	decoded, err := AdapterFor("devin").Decode(encoded.Content)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	cc, err := AdapterFor("claude-code").Encode(decoded)
+	if err != nil {
+		t.Fatalf("Encode claude-code: %v", err)
+	}
+	assertEqual(t, "mcp__github__create_issue|Bash", gjson.GetBytes(cc.Content, "hooks.PreToolUse.0.matcher").String())
+}

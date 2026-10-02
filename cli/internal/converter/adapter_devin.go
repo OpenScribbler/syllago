@@ -117,14 +117,18 @@ func (a *DevinAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 
 func (a *DevinAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 	const slug = "devin"
-	var file devinHooksFile
-	if err := json.Unmarshal(content, &file); err != nil {
+	eventsJSON, err := devinHookEventsJSON(content)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s hooks: %w", slug, err)
+	}
+	var events map[string][]devinMatcherGroup
+	if err := json.Unmarshal(eventsJSON, &events); err != nil {
 		return nil, fmt.Errorf("parsing %s hooks: %w", slug, err)
 	}
 
 	ch := &CanonicalHooks{Spec: SpecVersion}
 
-	for nativeEvent, groups := range file.Hooks {
+	for nativeEvent, groups := range events {
 		canonEvent, _ := TranslateEventFromProvider(nativeEvent, slug)
 
 		for _, group := range groups {
@@ -156,6 +160,36 @@ func (a *DevinAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 	}
 
 	return ch, nil
+}
+
+// devinHookEventsJSON returns the event map from a Devin hook file. Settings
+// files such as config.json nest it under "hooks", while .devin/hooks.v1.json
+// is the bare map, so a file without a "hooks" key contributes the top-level
+// keys that are Devin events and ignores the rest.
+func devinHookEventsJSON(content []byte) ([]byte, error) {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(content, &top); err != nil {
+		return nil, err
+	}
+	if hooks, ok := top["hooks"]; ok {
+		return hooks, nil
+	}
+	events := map[string]json.RawMessage{}
+	for key, raw := range top {
+		if isDevinEvent(key) {
+			events[key] = raw
+		}
+	}
+	return json.Marshal(events)
+}
+
+func isDevinEvent(name string) bool {
+	for _, m := range HookEvents {
+		if m["devin"] == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *DevinAdapter) Capabilities() ProviderCapabilities {

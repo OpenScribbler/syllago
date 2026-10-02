@@ -178,6 +178,15 @@ func regexMatcherString(m json.RawMessage, slug string) (string, []ConversionWar
 	}}
 }
 
+func hasMCPToolName(names []string, slug string) bool {
+	for _, name := range names {
+		if server, _ := parseMCPToolName(name, slug); server != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // TranslateMatcherFromProvider translates a provider-native matcher to canonical format.
 // Provider-native MCP tool name strings are detected and promoted to canonical MCP objects.
 func TranslateMatcherFromProvider(matcher json.RawMessage, slug string) (json.RawMessage, []ConversionWarning) {
@@ -188,6 +197,18 @@ func TranslateMatcherFromProvider(matcher json.RawMessage, slug string) (json.Ra
 	// Try bare string
 	var s string
 	if json.Unmarshal(matcher, &s) == nil {
+		// An alternation containing an MCP tool name becomes an array, so each
+		// part translates on its own instead of the whole string parsing as
+		// one MCP tool.
+		if parts := strings.Split(s, "|"); len(parts) > 1 && hasMCPToolName(parts, slug) {
+			arr := make([]json.RawMessage, len(parts))
+			for i, part := range parts {
+				raw, _ := json.Marshal(part)
+				arr[i], _ = TranslateMatcherFromProvider(raw, slug)
+			}
+			result, _ := json.Marshal(arr)
+			return result, nil
+		}
 		// Check if it's an MCP-format string
 		server, tool := parseMCPToolName(s, slug)
 		if server != "" {

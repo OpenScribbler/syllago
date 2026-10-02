@@ -55,8 +55,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   `syllago install --to devin` now merges hooks into
   `~/.config/devin/config.json` (`%APPDATA%\devin\config.json` on Windows)
   and leaves the file's other settings alone; earlier releases refused to
-  install Devin hooks. `syllago convert` emits the new format, and MCP tool
-  matchers use `mcp__<server>__<tool>`. Devin no longer has worktree-setup
+  install Devin hooks. `syllago convert` emits the new format, with entries
+  limited to `type`, `command`, and `timeout`, reads a project's bare
+  `.devin/hooks.v1.json`, and writes MCP tool matchers as
+  `mcp__<server>__<tool>`. Devin no longer has worktree-setup
   or transcript hooks, so hooks on those events are skipped with a warning.
 
 - **Unknown MOAT revocation reasons no longer reject the registry

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -1754,5 +1755,57 @@ func TestClaudeHooksDevinRoundTrip(t *testing.T) {
 	}
 	if got := ccGroup.Get("hooks.0.timeout").Int(); got != 5000 {
 		t.Errorf("round-trip timeout: got %d, want 5000 (ms)", got)
+	}
+}
+
+func TestHooksConverterDevin_BareHooksV1File(t *testing.T) {
+	// .devin/hooks.v1.json is the event map itself, with no "hooks" wrapper.
+	input := []byte(`{"PreToolUse": [{"matcher": "exec", "hooks": [{"type": "command", "command": "./guard.sh", "timeout": 10}]}]}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "devin")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	group := gjson.GetBytes(canonical.Content, "hooks.before_tool_execute.0")
+	if got := group.Get("matcher").String(); got != "shell" {
+		t.Errorf("matcher: got %q, want shell; output: %s", got, canonical.Content)
+	}
+	if got := group.Get("hooks.0.command").String(); got != "./guard.sh" {
+		t.Errorf("command: got %q; output: %s", got, canonical.Content)
+	}
+}
+
+func TestHooksConverterDevin_RenderDropsUnsupportedFields(t *testing.T) {
+	input := []byte(`{"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
+		{"type": "command", "command": "echo hi", "timeout": 5000, "async": true, "statusMessage": "checking"}
+	]}]}}`)
+
+	conv := &HooksConverter{}
+	canonical, err := conv.Canonicalize(input, "claude-code")
+	if err != nil {
+		t.Fatalf("Canonicalize: %v", err)
+	}
+	result, err := conv.Render(canonical.Content, provider.Devin)
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	entry := gjson.GetBytes(result.Content, "hooks.PreToolUse.0.hooks.0")
+	entry.ForEach(func(key, _ gjson.Result) bool {
+		switch key.String() {
+		case "type", "command", "timeout":
+		default:
+			t.Errorf("unexpected field %q in devin entry: %s", key.String(), entry.Raw)
+		}
+		return true
+	})
+	found := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "async and statusMessage dropped") {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected dropped-fields warning, got %v", result.Warnings)
 	}
 }
