@@ -5,17 +5,22 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
-// placer writes one item into one target and removes it again.
+// placer writes one item into one target, reports whether a target holds
+// it, and removes it again.
 // installerPlacer is the real adapter; lifecycle tests substitute one that
 // fails a chosen target.
 type placer interface {
 	place(req InstallRequest, t Target) (installer.Placement, error)
 	unplace(req UninstallRequest, t Target) (installer.Placement, error)
+	// present reports whether t holds item at the provider default. An
+	// error means the check could not tell.
+	present(item catalog.ContentItem, projectRoot string, t Target) (bool, error)
 }
 
 type installerPlacer struct{}
@@ -47,6 +52,11 @@ func placeRuleAppend(req InstallRequest, t Target) (installer.Placement, error) 
 		return installer.Placement{}, err
 	}
 	return installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: target}, nil
+}
+
+func (installerPlacer) present(item catalog.ContentItem, projectRoot string, t Target) (bool, error) {
+	status, err := installer.StatusOf(item, t.Provider, projectRoot)
+	return status == installer.StatusInstalled, err
 }
 
 func (installerPlacer) unplace(req UninstallRequest, t Target) (installer.Placement, error) {

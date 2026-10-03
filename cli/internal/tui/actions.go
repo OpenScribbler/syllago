@@ -43,6 +43,7 @@ func formatToastErr(err error) string {
 type removeDoneMsg struct {
 	itemName        string
 	uninstalledFrom []string
+	warnings        []string // records the remove could not update
 	err             error
 }
 
@@ -89,15 +90,38 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	// Find installed providers for the multi-step flow.
-	var installed []provider.Provider
-	for _, prov := range a.providers {
-		if installer.CheckStatus(*item, prov, a.projectRoot) == installer.StatusInstalled {
-			installed = append(installed, prov)
+	// Without a confirmed decision, Remove only plans: it reads each
+	// provider's install state and changes nothing.
+	_, err := lifecycle.New().Remove(lifecycle.RemoveRequest{Item: *item, ProjectRoot: a.projectRoot, Providers: a.providers})
+	var decision *lifecycle.DecisionRequired
+	if !errors.As(err, &decision) {
+		cmd := a.toast.Push("Remove failed: "+formatToastErr(err), toastError)
+		return a, cmd
+	}
+	plan := decision.Context.(lifecycle.RemovePlan)
+	if len(plan.Unknown) > 0 {
+		var details []string
+		for _, f := range plan.Unknown {
+			details = append(details, f.Err.Error())
 		}
+		cmd := a.toast.PushDetails(fmt.Sprintf("Cannot remove %q: cannot tell where it is installed", item.Name), details, toastError)
+		return a, cmd
 	}
 
-	a.remove.Open(*item, installed)
+	var uninstallFrom []string
+	for _, t := range plan.Present {
+		uninstallFrom = append(uninstallFrom, t.Provider.Name)
+	}
+	for _, link := range plan.Links {
+		name := link.Provider
+		for _, prov := range a.providers {
+			if prov.Slug == link.Provider {
+				name = prov.Name
+			}
+		}
+		uninstallFrom = append(uninstallFrom, fmt.Sprintf("%s (%s)", name, filepath.Base(link.Path)))
+	}
+	a.remove.Open(*item, uninstallFrom)
 	return a, nil
 }
 
@@ -290,30 +314,22 @@ func (a App) handleRemoveResult(msg removeResultMsg) (tea.Model, tea.Cmd) {
 	return a, a.doRemoveCmd(msg)
 }
 
-// doRemoveCmd creates a tea.Cmd that removes a library item, optionally uninstalling first.
+// doRemoveCmd creates a tea.Cmd that uninstalls a library item from every
+// provider that holds it, then removes it from the library.
 func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
-	item := msg.item
-	targetProviders := msg.uninstallProviders
-	repoRoot := a.projectRoot
-
+	req := lifecycle.RemoveRequest{
+		Item:        msg.item,
+		ProjectRoot: a.projectRoot,
+		Providers:   a.providers,
+		Decisions:   lifecycle.Decisions{RemoveConfirmed: true},
+	}
 	return func() tea.Msg {
-		var uninstalledFrom []string
-
-		for _, prov := range targetProviders {
-			placement, err := installer.Uninstall(item, prov, repoRoot)
-			if err != nil {
-				continue // best-effort uninstall
-			}
-			recordTUIUninstallBookkeeping(item, prov.Slug, placement)
-			uninstalledFrom = append(uninstalledFrom, prov.Name)
+		outcome, err := lifecycle.New().Remove(req)
+		done := removeDoneMsg{itemName: req.Item.Name, warnings: outcome.Warnings(), err: err}
+		for _, step := range outcome.Completed {
+			done.uninstalledFrom = append(done.uninstalledFrom, step.Target.Provider.Name)
 		}
-
-		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
-			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing from library: %w", err)}
-		}
-		forgetTUIInstallRecord(item)
-
-		return removeDoneMsg{itemName: item.Name, uninstalledFrom: uninstalledFrom}
+		return done
 	}
 }
 
@@ -376,15 +392,26 @@ func (a App) doUninstallCmd(msg confirmResultMsg) tea.Cmd {
 
 // handleRemoveDone processes the result of a remove operation.
 func (a App) handleRemoveDone(msg removeDoneMsg) (tea.Model, tea.Cmd) {
+	details := installDetails(nil, msg.warnings)
 	if msg.err != nil {
-		cmd := a.toast.Push("Remove failed: "+msg.err.Error(), toastError)
-		return a, cmd
+		// A failed remove keeps the item, but the providers it reached
+		// no longer hold it.
+		if len(msg.uninstalledFrom) > 0 {
+			details = append(details, "uninstalled from "+strings.Join(msg.uninstalledFrom, ", "))
+		}
+		cmd1 := a.toast.PushDetails("Remove failed: "+formatToastErr(msg.err), details, toastError)
+		cmd2 := a.rescanCatalog()
+		return a, tea.Batch(cmd1, cmd2)
+	}
+	toastKind := toastSuccess
+	if len(details) > 0 {
+		toastKind = toastWarning
 	}
 	toastText := fmt.Sprintf("Removed %q", msg.itemName)
 	if len(msg.uninstalledFrom) > 0 {
 		toastText += " (uninstalled from " + strings.Join(msg.uninstalledFrom, ", ") + ")"
 	}
-	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd1 := a.toast.PushDetails(toastText, details, toastKind)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }

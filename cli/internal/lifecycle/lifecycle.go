@@ -1,11 +1,13 @@
-// Package lifecycle installs content items to providers, uninstalls them, and
-// keeps the install records that go with each placement. The CLI, the TUI and any later front
-// end make one call per verb here instead of assembling the installer, the
-// install store and the pin from separate steps. Nothing in this package
+// Package lifecycle installs content items to providers, uninstalls them,
+// removes them from the Library, and keeps the install records that go with
+// each placement. The CLI, the TUI and any later front end make one call per
+// verb here instead of assembling the installer, the install store and the
+// pin from separate steps. Nothing in this package
 // prints: every notice and failure comes back in the Outcome.
 package lifecycle
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -37,6 +39,10 @@ const (
 	// provider-side write. The target changed; only the bookkeeping is
 	// missing.
 	StageRecord Stage = "record"
+	// StagePresence is the check for whether a target holds the item,
+	// before Remove changes anything. A failure here means the check could
+	// not tell, so Remove stopped.
+	StagePresence Stage = "presence"
 	// StagePin is the pin requested with InstallRequest.Frozen. It applies
 	// to the item rather than one target, so its Failure has no Target.
 	StagePin Stage = "pin"
@@ -66,16 +72,42 @@ type Outcome struct {
 }
 
 // Warnings renders the failures that left the provider-side change in
-// effect: a record not updated or a pin not applied. Placement failures are
-// not warnings; the verb's error reports them.
+// effect: a record not updated or a pin not applied. Placement and presence
+// failures are not warnings; the verb's error reports them.
 func (o Outcome) Warnings() []string {
 	var out []string
 	for _, f := range o.Failed {
-		if f.Stage != StagePlace {
+		if f.Stage == StageRecord || f.Stage == StagePin {
 			out = append(out, f.Err.Error())
 		}
 	}
 	return out
+}
+
+// DecisionKind names a choice a verb needs from the user before it changes
+// anything.
+type DecisionKind string
+
+// RemoveConfirm asks the user to confirm a Remove after seeing its
+// RemovePlan.
+const RemoveConfirm DecisionKind = "remove_confirm"
+
+// Decisions carries the choices the user already made, so a verb that would
+// otherwise return DecisionRequired goes ahead.
+type Decisions struct {
+	RemoveConfirmed bool
+}
+
+// DecisionRequired is the error a verb returns when it needs a choice from
+// the user first. Nothing has changed when it is returned. Context holds
+// what the user decides on: a RemovePlan for RemoveConfirm.
+type DecisionRequired struct {
+	Kind    DecisionKind
+	Context any
+}
+
+func (d *DecisionRequired) Error() string {
+	return fmt.Sprintf("decision required: %s", d.Kind)
 }
 
 // Module runs the lifecycle verbs. New builds the real one.

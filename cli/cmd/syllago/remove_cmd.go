@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -103,34 +105,42 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	item := matches[0]
 
 	providerNames := providerNamesBySlug(provider.AllProviders)
-	installedByProvider := make(map[string]bool)
-	var installedIn []string
-	for _, prov := range provider.AllProviders {
-		if installer.CheckStatus(item, prov, projectRoot) == installer.StatusInstalled {
-			installedIn = append(installedIn, prov.Name)
-			installedByProvider[prov.Slug] = true
-		}
+	mod := lifecycle.New()
+	req := lifecycle.RemoveRequest{Item: item, ProjectRoot: projectRoot, Providers: provider.AllProviders}
+	_, err = mod.Remove(req)
+	var decision *lifecycle.DecisionRequired
+	if !errors.As(err, &decision) {
+		return err
 	}
-
-	home, _ := os.UserHomeDir()
-	providerLinks := installer.ScanProviderLinks(provider.AllProviders, home, []string{item.Path})
-	extraProviderLinks := extraRemoveProviderLinks(item, providerLinks, installedByProvider)
-	for _, link := range extraProviderLinks {
-		installedIn = append(installedIn, providerLinkLabel(link, providerNames))
+	plan := decision.Context.(lifecycle.RemovePlan)
+	linkLabels := make(map[string]string, len(plan.Links))
+	var installedIn []string
+	for _, t := range plan.Present {
+		installedIn = append(installedIn, t.Provider.Name)
+	}
+	for _, link := range plan.Links {
+		linkLabels[link.Path] = providerLinkLabel(link, providerNames)
+		installedIn = append(installedIn, linkLabels[link.Path])
 	}
 
 	if dryRun {
 		if len(installedIn) > 0 {
 			fmt.Fprintf(output.Writer, "[dry-run] Would uninstall from: %s\n", strings.Join(installedIn, ", "))
 		}
-		for _, link := range extraProviderLinks {
+		for _, link := range plan.Links {
 			fmt.Fprintf(output.Writer, "[dry-run] Would remove provider link: %s\n", link.Path)
+		}
+		for _, f := range plan.Unknown {
+			fmt.Fprintf(output.Writer, "[dry-run] Cannot tell whether it is installed: %s\n", f.Err)
 		}
 		fmt.Fprintf(output.Writer, "[dry-run] Would remove from library: %s (%s)\n", name, item.Type.Label())
 		return nil
 	}
 
 	if !force && !noInput && isInteractive() {
+		if len(plan.Unknown) > 0 {
+			return notRemovedError(name, unknownErrors(plan.Unknown))
+		}
 		provList := "none"
 		if len(installedIn) > 0 {
 			provList = strings.Join(installedIn, ", ")
@@ -151,48 +161,30 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	req.Decisions.RemoveConfirmed = true
+	outcome, err := mod.Remove(req)
+	if len(outcome.Unattempted) > 0 && len(outcome.Failed) == 0 {
+		return err
+	}
+	printUninstallFailures(outcome, func(p provider.Provider) string { return p.Name })
+	if err != nil {
+		return notRemovedError(name, err)
+	}
 	var uninstalledFrom []string
-	for _, prov := range provider.AllProviders {
-		if installer.CheckStatus(item, prov, projectRoot) != installer.StatusInstalled {
-			continue
-		}
-		placement, err := installer.Uninstall(item, prov, projectRoot)
-		if err != nil {
-			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
+	for _, step := range outcome.Completed {
+		if label, ok := linkLabels[step.Placement.Path]; ok {
+			uninstalledFrom = append(uninstalledFrom, label)
 		} else {
-			recordUninstallBookkeeping(item, prov.Slug, placement)
-			uninstalledFrom = append(uninstalledFrom, prov.Name)
+			uninstalledFrom = append(uninstalledFrom, step.Target.Provider.Name)
 		}
 	}
-
-	home, _ = os.UserHomeDir()
-	remainingLinks := installer.ScanProviderLinks(provider.AllProviders, home, []string{item.Path})
-	var linkRemoveErrs []string
-	for _, link := range remainingLinks {
-		if err := os.Remove(link.Path); err != nil {
-			msg := fmt.Sprintf("failed to remove provider link %s: %s", link.Path, err)
-			fmt.Fprintf(output.ErrWriter, "  warning: %s\n", msg)
-			linkRemoveErrs = append(linkRemoveErrs, msg)
-			continue
-		}
-		uninstalledFrom = append(uninstalledFrom, providerLinkLabel(link, providerNames))
-	}
-	if len(linkRemoveErrs) > 0 {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, fmt.Sprintf("%q is still installed and was not removed", name), "Remove the provider link(s) manually, then retry 'syllago remove'", strings.Join(linkRemoveErrs, "; "))
-	}
-
-	removedPath := item.Path
-	if err := catalog.RemoveLibraryItem(item.Path); err != nil {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing from library failed", "Check filesystem permissions", err.Error())
-	}
-	forgetInstallRecord(item)
 
 	if output.JSON {
 		output.Print(removeResult{
 			Name:            name,
 			Type:            string(item.Type),
 			UninstalledFrom: uninstalledFrom,
-			RemovedPath:     removedPath,
+			RemovedPath:     item.Path,
 		})
 		return nil
 	}
@@ -229,24 +221,16 @@ func providerLinkLabel(link installer.ScannedLink, names map[string]string) stri
 	return fmt.Sprintf("%s (%s)", name, filepath.Base(link.Path))
 }
 
-func extraRemoveProviderLinks(item catalog.ContentItem, links []installer.ScannedLink, installedByProvider map[string]bool) []installer.ScannedLink {
-	expectedLeaf := expectedRemoveInstallLeaf(item)
-	extra := make([]installer.ScannedLink, 0, len(links))
-	for _, link := range links {
-		if installedByProvider[link.Provider] && link.ContentType == item.Type && filepath.Base(link.Path) == expectedLeaf {
-			continue
-		}
-		extra = append(extra, link)
-	}
-	return extra
+// notRemovedError reports a remove that left the item in the library; err
+// joins the failures.
+func notRemovedError(name string, err error) error {
+	return output.NewStructuredErrorDetail(output.ErrSystemIO, fmt.Sprintf("%q was not removed", name), "Fix the errors above, then retry 'syllago remove'", err.Error())
 }
 
-func expectedRemoveInstallLeaf(item catalog.ContentItem) string {
-	if item.Type == catalog.Agents {
-		return item.Name + ".md"
+func unknownErrors(fs []lifecycle.Failure) error {
+	var errs []error
+	for _, f := range fs {
+		errs = append(errs, f.Err)
 	}
-	if item.Type.IsUniversal() {
-		return item.Name
-	}
-	return filepath.Base(item.Path)
+	return errors.Join(errs...)
 }
