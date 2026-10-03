@@ -54,7 +54,7 @@ func previewOne(ref ResolvedRef, prov provider.Provider, homeDir string, inst *i
 	case catalog.Hooks:
 		return previewHook(ref, prov, inst), nil
 	case catalog.MCP:
-		return previewMCP(ref, inst), nil
+		return previewMCP(ref, prov, inst), nil
 	default:
 		return previewSymlink(ref, prov, homeDir, resolver)
 	}
@@ -134,9 +134,11 @@ func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, res
 // previewHook checks installed.json for an existing hook entry and whether
 // the target provider can read the hook's event at all.
 func previewHook(ref ResolvedRef, prov provider.Provider, inst *installer.Installed) PlannedAction {
-	// Check if any hook with this name is already installed (any event)
+	// Check if a hook with this name is already installed on this provider
+	// (any event). An entry with no provider predates provider tracking and
+	// counts for every provider.
 	for _, h := range inst.Hooks {
-		if h.Name == ref.Name {
+		if h.Name == ref.Name && (h.Provider == prov.Slug || h.Provider == "") {
 			return PlannedAction{
 				Type:   ref.Type,
 				Name:   ref.Name,
@@ -193,8 +195,8 @@ func hookEvent(itemDir string) (string, bool) {
 }
 
 // previewMCP checks installed.json for an existing MCP entry.
-func previewMCP(ref ResolvedRef, inst *installer.Installed) PlannedAction {
-	if inst.FindMCP(ref.Name) >= 0 {
+func previewMCP(ref ResolvedRef, prov provider.Provider, inst *installer.Installed) PlannedAction {
+	if inst.FindMCP(ref.Name, prov.Slug) >= 0 {
 		return PlannedAction{
 			Type:   ref.Type,
 			Name:   ref.Name,

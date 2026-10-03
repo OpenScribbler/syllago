@@ -36,19 +36,22 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 	// Build lookup sets for fast matching. Hooks are matched by their canonical
 	// identity (installed.json GroupHash is the post-round-trip
 	// sha256(event|matcher|command|name)), the same identity install computes.
-	trackedHooks := make(map[string]bool)
+	// Both sets are keyed by provider slug, then identity; a record with no
+	// provider predates provider tracking and is stored under "", which
+	// tracked() treats as matching every provider.
+	trackedHooks := make(map[string]map[string]bool)
 	for _, h := range inst.Hooks {
 		if h.GroupHash != "" {
-			trackedHooks[h.GroupHash] = true
+			addTracked(trackedHooks, h.Provider, h.GroupHash)
 		}
 	}
-	mcpSet := make(map[string]bool)
+	mcpSet := make(map[string]map[string]bool)
 	for _, m := range inst.MCP {
 		if m.ServerKey != "" {
-			mcpSet[m.ServerKey] = true
+			addTracked(mcpSet, m.Provider, m.ServerKey)
 		}
 		for _, name := range m.ServerNames {
-			mcpSet[name] = true
+			addTracked(mcpSet, m.Provider, name)
 		}
 	}
 
@@ -67,7 +70,7 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 				if hookPath, pErr := HookConfigPath(prov, home); pErr == nil {
 					if hooks, dErr := decodeExistingHooks(model, adapter, hookPath); dErr == nil {
 						for i, hk := range hooks {
-							if trackedHooks[hookIdentity(hk)] {
+							if tracked(trackedHooks, prov.Slug, hookIdentity(hk)) {
 								continue // tracked by syllago
 							}
 							orphans = append(orphans, OrphanEntry{
@@ -92,7 +95,7 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 		if mcpObj.Exists() && mcpObj.IsObject() {
 			mcpObj.ForEach(func(key, _ gjson.Result) bool {
 				serverName := key.String()
-				if !mcpSet[serverName] {
+				if !tracked(mcpSet, prov.Slug, serverName) {
 					orphans = append(orphans, OrphanEntry{
 						Provider: prov.Slug,
 						Type:     "mcp",
@@ -106,4 +109,15 @@ func CheckOrphanedMerges(projectRoot string, providers []provider.Provider) ([]O
 	}
 
 	return orphans, nil
+}
+
+func addTracked(set map[string]map[string]bool, provSlug, key string) {
+	if set[provSlug] == nil {
+		set[provSlug] = make(map[string]bool)
+	}
+	set[provSlug][key] = true
+}
+
+func tracked(set map[string]map[string]bool, provSlug, key string) bool {
+	return set[provSlug][key] || set[""][key]
 }

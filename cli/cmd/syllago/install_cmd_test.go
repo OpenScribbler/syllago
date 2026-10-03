@@ -385,7 +385,7 @@ func TestInstallMCPRunERecordsAtProjectRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled(projectRoot): %v", err)
 	}
-	if inst.FindMCPByServerKey("cli-root-mcp", "cli-root-mcp") < 0 {
+	if inst.FindMCPByServerKey("cli-root-mcp", "cli-root-mcp", "cursor") < 0 {
 		t.Fatal("expected MCP install record under project root")
 	}
 	if _, err := os.Stat(filepath.Join(globalDir, ".syllago", "installed.json")); !os.IsNotExist(err) {

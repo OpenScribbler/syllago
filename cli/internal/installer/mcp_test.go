@@ -113,7 +113,7 @@ func TestInstallMCP_WhitelistsFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading installed.json: %v", err)
 	}
-	if inst.FindMCP("test-server") < 0 {
+	if inst.FindMCP("test-server", prov.Slug) < 0 {
 		t.Error("test-server not found in installed.json")
 	}
 }
@@ -267,7 +267,7 @@ func TestInstallMCP_Cursor_RootsConfigAndRecordAtProjectRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled(projectRoot): %v", err)
 	}
-	if inst.FindMCP("project-root-mcp") < 0 {
+	if inst.FindMCP("project-root-mcp", prov.Slug) < 0 {
 		t.Fatal("expected MCP record under project root")
 	}
 }
@@ -504,7 +504,7 @@ func TestInstallMCP_NestedFormat(t *testing.T) {
 
 	// installed.json should track the actual server names
 	inst, _ := LoadInstalled(tmpDir)
-	idx := inst.FindMCP("kitchen-sink-mcp")
+	idx := inst.FindMCP("kitchen-sink-mcp", prov.Slug)
 	if idx < 0 {
 		t.Fatal("kitchen-sink-mcp not found in installed.json")
 	}
@@ -812,7 +812,7 @@ func TestUninstallMCP_LegacyRootFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled(legacyRoot): %v", err)
 	}
-	if inst.FindMCPByServerKey("legacy-mcp", "legacy-mcp") >= 0 {
+	if inst.FindMCPByServerKey("legacy-mcp", "legacy-mcp", prov.Slug) >= 0 {
 		t.Fatal("legacy MCP record was not removed")
 	}
 	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
@@ -857,7 +857,11 @@ func TestCheckMCPStatus_LegacyRootFallback(t *testing.T) {
 	}
 }
 
-func TestInstallMCP_DeduplicatesAgainstLegacyRoot(t *testing.T) {
+// seedLegacyMCPRoot records legacy-dup in a legacy root's installed.json
+// with no provider, as versions before provider tracking wrote it, and
+// returns an item for it and the project root to install into.
+func seedLegacyMCPRoot(t *testing.T) (catalog.ContentItem, string) {
+	t.Helper()
 	tmpDir := t.TempDir()
 	legacyRoot := filepath.Join(tmpDir, "legacy-content")
 	projectRoot := filepath.Join(tmpDir, "project")
@@ -889,18 +893,52 @@ func TestInstallMCP_DeduplicatesAgainstLegacyRoot(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"command":"node"}`), 0644); err != nil {
 		t.Fatal(err)
 	}
+	return catalog.ContentItem{Name: "legacy-dup", Type: catalog.MCP, Path: itemDir, ServerKey: "legacy-dup"}, projectRoot
+}
 
-	item := catalog.ContentItem{Name: "legacy-dup", Type: catalog.MCP, Path: itemDir, ServerKey: "legacy-dup"}
-	prov := provider.Cursor
-	if _, err := Install(item, prov, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil {
+// A legacy-root record with no provider blocks a reinstall when the target
+// config already holds the server.
+func TestInstallMCP_DeduplicatesAgainstLegacyRoot(t *testing.T) {
+	item, projectRoot := seedLegacyMCPRoot(t)
+	targetDir := filepath.Join(projectRoot, ".cursor")
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	target := []byte(`{"mcpServers":{"legacy-dup":{"command":"node"}}}`)
+	if err := os.WriteFile(filepath.Join(targetDir, "mcp.json"), target, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Install(item, provider.Cursor, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil {
 		t.Fatal("expected duplicate MCP install to be rejected via legacy root record")
 	}
 
-	if _, err := os.Stat(filepath.Join(projectRoot, ".cursor", "mcp.json")); !os.IsNotExist(err) {
-		t.Fatalf("project MCP config should not be created by rejected duplicate, stat err = %v", err)
+	got, err := os.ReadFile(filepath.Join(targetDir, "mcp.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(target) {
+		t.Fatalf("rejected duplicate changed the project MCP config: %s", got)
 	}
 	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
 		t.Fatalf("project installed.json should not be created by rejected duplicate, stat err = %v", err)
+	}
+}
+
+// A legacy-root record with no provider could belong to any provider, so it
+// does not block an install to a target config that lacks the server.
+func TestInstallMCP_LegacyRootRecordAllowsMissingTarget(t *testing.T) {
+	item, projectRoot := seedLegacyMCPRoot(t)
+
+	if _, err := Install(item, provider.Cursor, projectRoot, MethodSymlink, "", ScanOptions{}); err != nil {
+		t.Fatalf("install with legacy record but no server in target: %v", err)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if idx := inst.FindMCPByServerKey("legacy-dup", "legacy-dup", "cursor"); idx < 0 || inst.MCP[idx].Provider != "cursor" {
+		t.Fatalf("expected a cursor record in the project, got %+v", inst.MCP)
 	}
 }
 
@@ -1087,7 +1125,7 @@ func TestUninstallMCP_NestedFormat(t *testing.T) {
 
 	// installed.json should be clean
 	inst, _ := LoadInstalled(tmpDir)
-	if inst.FindMCP("multi-mcp") >= 0 {
+	if inst.FindMCP("multi-mcp", prov.Slug) >= 0 {
 		t.Error("multi-mcp should be removed from installed.json")
 	}
 }
@@ -1243,7 +1281,7 @@ func TestInstallMCP_PerServer(t *testing.T) {
 
 	// Verify installed.json has per-server entry.
 	inst, _ := LoadInstalled(tmpDir)
-	idx := inst.FindMCPByServerKey("server-a", "server-a")
+	idx := inst.FindMCPByServerKey("server-a", "server-a", prov.Slug)
 	if idx < 0 {
 		t.Fatal("server-a not found in installed.json by server key")
 	}
@@ -1272,10 +1310,10 @@ func TestInstallMCP_PerServer(t *testing.T) {
 
 	// Verify both are tracked separately.
 	inst, _ = LoadInstalled(tmpDir)
-	if inst.FindMCPByServerKey("server-a", "server-a") < 0 {
+	if inst.FindMCPByServerKey("server-a", "server-a", prov.Slug) < 0 {
 		t.Error("server-a should still be tracked")
 	}
-	if inst.FindMCPByServerKey("server-b", "server-b") < 0 {
+	if inst.FindMCPByServerKey("server-b", "server-b", prov.Slug) < 0 {
 		t.Error("server-b should be tracked")
 	}
 }
@@ -1329,10 +1367,10 @@ func TestUninstallMCP_PerServer(t *testing.T) {
 	}
 
 	inst, _ = LoadInstalled(tmpDir)
-	if inst.FindMCPByServerKey("server-a", "server-a") >= 0 {
+	if inst.FindMCPByServerKey("server-a", "server-a", prov.Slug) >= 0 {
 		t.Error("server-a should be removed from installed.json")
 	}
-	if inst.FindMCPByServerKey("server-b", "server-b") < 0 {
+	if inst.FindMCPByServerKey("server-b", "server-b", prov.Slug) < 0 {
 		t.Error("server-b should still be in installed.json")
 	}
 }

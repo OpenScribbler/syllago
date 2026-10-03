@@ -49,7 +49,7 @@ func TestInstallHook_RecordsInInstalledJSON(t *testing.T) {
 	}
 
 	// Before install: should not find the hook
-	if inst.FindHook("test-hook", "PreToolUse") >= 0 {
+	if inst.FindHook("test-hook", "PreToolUse", "claude-code") >= 0 {
 		t.Error("hook should not exist before install")
 	}
 
@@ -69,7 +69,7 @@ func TestInstallHook_RecordsInInstalledJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled (reload): %v", err)
 	}
-	idx := inst2.FindHook("test-hook", "PreToolUse")
+	idx := inst2.FindHook("test-hook", "PreToolUse", "claude-code")
 	if idx < 0 {
 		t.Fatal("hook not found after install")
 	}
@@ -99,7 +99,7 @@ func TestUninstallHook_RemovesFromInstalledJSON(t *testing.T) {
 
 	// Simulate uninstallHook's installed.json part
 	inst, _ = LoadInstalled(projectRoot)
-	idx := inst.FindHook("remove-me", "PostToolUse")
+	idx := inst.FindHook("remove-me", "PostToolUse", "claude-code")
 	if idx < 0 {
 		t.Fatal("expected to find hook")
 	}
@@ -108,10 +108,10 @@ func TestUninstallHook_RemovesFromInstalledJSON(t *testing.T) {
 
 	// Verify
 	inst, _ = LoadInstalled(projectRoot)
-	if inst.FindHook("remove-me", "PostToolUse") >= 0 {
+	if inst.FindHook("remove-me", "PostToolUse", "claude-code") >= 0 {
 		t.Error("hook should have been removed")
 	}
-	if inst.FindHook("keep-me", "PreToolUse") < 0 {
+	if inst.FindHook("keep-me", "PreToolUse", "claude-code") < 0 {
 		t.Error("other hook should still exist")
 	}
 }
@@ -192,7 +192,7 @@ func TestUninstallHook_LegacyRootFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled(legacyRoot): %v", err)
 	}
-	if inst.FindHook("legacy-hook", "PreToolUse") >= 0 {
+	if inst.FindHook("legacy-hook", "PreToolUse", prov.Slug) >= 0 {
 		t.Fatal("legacy hook record was not removed")
 	}
 	if _, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json")); !os.IsNotExist(err) {
@@ -344,7 +344,7 @@ func TestInstallHook_HashComputation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled: %v", err)
 	}
-	idx := inst2.FindHook("hash-test-hook", "PreToolUse")
+	idx := inst2.FindHook("hash-test-hook", "PreToolUse", "claude-code")
 	if idx < 0 {
 		t.Fatal("hook not found after save")
 	}
@@ -387,7 +387,7 @@ func TestUninstallHook_HashMatching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadInstalled: %v", err)
 	}
-	idx := inst2.FindHook("hash-match-hook", "PreToolUse")
+	idx := inst2.FindHook("hash-match-hook", "PreToolUse", "claude-code")
 	if idx < 0 {
 		t.Fatal("hook not found in installed.json")
 	}
@@ -421,10 +421,10 @@ func TestInstallHook_RejectsDuplicate(t *testing.T) {
 		Path: hookDir,
 	}
 
-	// Pre-populate installed.json with this hook
+	// Pre-populate installed.json with this hook on this provider
 	inst := &Installed{
 		Hooks: []InstalledHook{
-			{Name: "dup-hook", Event: "PreToolUse", Command: "echo dup", Source: "export"},
+			{Name: "dup-hook", Event: "PreToolUse", Command: "echo dup", Source: "export", Provider: "claude-code"},
 		},
 	}
 	SaveInstalled(projectRoot, inst)

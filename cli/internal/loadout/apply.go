@@ -330,6 +330,7 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 		GroupHash:   res.GroupHash,
 		Command:     res.Command,
 		Source:      source,
+		Provider:    prov.Slug,
 		InstalledAt: time.Now(),
 	})
 
@@ -381,6 +382,7 @@ func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst 
 		Name:        ref.Name,
 		ServerNames: serverNames,
 		Source:      source,
+		Provider:    prov.Slug,
 		InstalledAt: time.Now(),
 	})
 

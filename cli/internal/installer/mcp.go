@@ -336,7 +336,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	if err != nil {
 		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
-	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries); ok {
+	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov.Slug, fileData, jsonKey); ok {
 		return Placement{}, fmt.Errorf("MCP server %q already installed", serverName)
 	}
 
@@ -352,7 +352,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		// H2: Check for collision with user-defined (non-syllago) server keys
 		if gjson.GetBytes(fileData, key).Exists() {
 			// Check if this key was installed by syllago (safe to overwrite)
-			syllagoManaged := mcpServerManagedBy(inst, name)
+			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			if !syllagoManaged {
 				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
 			}
@@ -381,6 +381,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 			Name:        item.Name,
 			ServerKey:   item.ServerKey,
 			Source:      "export",
+			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
 	} else {
@@ -389,6 +390,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 			Name:        item.Name,
 			ServerNames: serverNames,
 			Source:      "export",
+			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
 	}
@@ -430,36 +432,28 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 	}
 
 	// Try per-server lookup first (new format), then legacy bulk lookup.
-	instIdx := findMCPInstallRecord(inst, item)
+	instIdx := findMCPInstallRecord(inst, item, prov.Slug)
 	if instIdx < 0 {
 		if allowLegacyFallback {
-			if legacyRoot := legacyRootWithMCPRecord(repoRoot, item); legacyRoot != "" {
+			if legacyRoot := legacyRootWithMCPRecord(repoRoot, item, prov.Slug); legacyRoot != "" {
 				return uninstallMCPAtRoot(item, prov, legacyRoot, false)
 			}
 		}
 		return Placement{}, fmt.Errorf("%s was not installed by syllago", item.Name)
+	}
+	// An entry with no provider may belong to another provider. Remove it
+	// only when this provider's config holds its server, as hooks require a
+	// matching hook in the target settings.
+	if entry := inst.MCP[instIdx]; entry.Provider == "" && !mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
+		return Placement{}, fmt.Errorf("%s was not installed by syllago for %s", item.Name, prov.Name)
 	}
 
 	if err := backupFile(cfgPath); err != nil {
 		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
 	}
 
-	// Determine which server keys to remove.
-	var keysToRemove []string
-	entry := inst.MCP[instIdx]
-	if entry.ServerKey != "" {
-		// Per-server entry: remove just this server key.
-		keysToRemove = []string{entry.ServerKey}
-	} else if len(entry.ServerNames) > 0 {
-		// Legacy bulk entry: remove all tracked server names.
-		keysToRemove = entry.ServerNames
-	} else {
-		// Very old legacy: item name was the server key.
-		keysToRemove = []string{item.Name}
-	}
-
 	var keys []string
-	for _, name := range keysToRemove {
+	for _, name := range inst.MCP[instIdx].serverKeys(item.Name) {
 		key := jsonKey + "." + name
 		keys = append(keys, key)
 		if gjson.GetBytes(fileData, key).Exists() {
@@ -526,7 +520,7 @@ func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repo
 	// Legacy: check installed.json for bulk-installed entries.
 	inst, err := LoadInstalled(repoRoot)
 	if err == nil {
-		idx := inst.FindMCP(item.Name)
+		idx := inst.FindMCP(item.Name, prov.Slug)
 		if idx >= 0 {
 			names := inst.MCP[idx].ServerNames
 			if len(names) == 0 {
@@ -548,7 +542,12 @@ func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repo
 	return StatusNotInstalled
 }
 
-func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage) (string, bool) {
+// legacyMCPInstalled reports whether the legacy root's installed.json
+// records item, or one of its servers, as installed on the provider with
+// slug provSlug. fileData is that provider's MCP config and jsonKey its
+// servers key. An entry with no provider counts only when its server is
+// already in fileData, as hookTracked explains for hooks.
+func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, provSlug string, fileData []byte, jsonKey string) (string, bool) {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
 		return "", false
@@ -557,18 +556,32 @@ func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[s
 	if err != nil {
 		return "", false
 	}
-	if findMCPInstallRecord(inst, item) >= 0 {
-		return item.Name, true
+	if idx := findMCPInstallRecord(inst, item, provSlug); idx >= 0 {
+		entry := inst.MCP[idx]
+		if entry.Provider != "" || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
+			return item.Name, true
+		}
 	}
 	for name := range entries {
-		if mcpServerManagedBy(inst, name) {
+		if mcpServerClaimed(inst, name, provSlug, gjson.GetBytes(fileData, jsonKey+"."+name).Exists()) {
 			return name, true
 		}
 	}
 	return "", false
 }
 
-func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem) string {
+// mcpRecordInConfig reports whether any server the entry placed is in
+// fileData under jsonKey.
+func mcpRecordInConfig(entry InstalledMCP, itemName string, fileData []byte, jsonKey string) bool {
+	for _, key := range entry.serverKeys(itemName) {
+		if gjson.GetBytes(fileData, jsonKey+"."+key).Exists() {
+			return true
+		}
+	}
+	return false
+}
+
+func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem, provSlug string) string {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
 		return ""
@@ -577,23 +590,35 @@ func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem) string {
 	if err != nil {
 		return ""
 	}
-	if findMCPInstallRecord(inst, item) < 0 {
+	if findMCPInstallRecord(inst, item, provSlug) < 0 {
 		return ""
 	}
 	return legacyRoot
 }
 
-func findMCPInstallRecord(inst *Installed, item catalog.ContentItem) int {
-	if item.ServerKey != "" {
-		if idx := inst.FindMCPByServerKey(item.Name, item.ServerKey); idx >= 0 {
-			return idx
-		}
+// findMCPInstallRecord prefers a record for this provider, whether it is a
+// per-server record (installer) or a bulk one (loadout apply), over a record
+// with no provider.
+func findMCPInstallRecord(inst *Installed, item catalog.ContentItem, provSlug string) int {
+	byName := inst.FindMCP(item.Name, provSlug)
+	if item.ServerKey == "" {
+		return byName
 	}
-	return inst.FindMCP(item.Name)
+	byKey := inst.FindMCPByServerKey(item.Name, item.ServerKey, provSlug)
+	if byKey >= 0 && (inst.MCP[byKey].Provider == provSlug || byName < 0 || inst.MCP[byName].Provider != provSlug) {
+		return byKey
+	}
+	return byName
 }
 
-func mcpServerManagedBy(inst *Installed, serverName string) bool {
+// mcpServerClaimed reports whether an entry in inst placed serverName on the
+// provider with slug provSlug. An entry with no provider claims the server
+// only when inTarget says the provider's config holds it.
+func mcpServerClaimed(inst *Installed, serverName, provSlug string, inTarget bool) bool {
 	for _, m := range inst.MCP {
+		if m.Provider != provSlug && (m.Provider != "" || !inTarget) {
+			continue
+		}
 		if m.ServerKey == serverName {
 			return true
 		}

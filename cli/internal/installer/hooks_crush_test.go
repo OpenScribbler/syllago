@@ -95,7 +95,7 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 
 	// installed.json tracks the hook with the extracted command.
 	inst, _ := LoadInstalled(projectRoot)
-	idx := inst.FindHook("crush-hook", "PreToolUse")
+	idx := inst.FindHook("crush-hook", "PreToolUse", provider.Crush.Slug)
 	if idx < 0 {
 		t.Fatal("hook not found in installed.json")
 	}
@@ -120,7 +120,7 @@ func TestInstallHook_E2E_Crush(t *testing.T) {
 		t.Error("existing crush.json content was clobbered by hook uninstall")
 	}
 	inst, _ = LoadInstalled(projectRoot)
-	if inst.FindHook("crush-hook", "PreToolUse") >= 0 {
+	if inst.FindHook("crush-hook", "PreToolUse", provider.Crush.Slug) >= 0 {
 		t.Error("hook should be removed from installed.json")
 	}
 }
