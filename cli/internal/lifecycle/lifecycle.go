@@ -88,19 +88,29 @@ func (o Outcome) Warnings() []string {
 // anything.
 type DecisionKind string
 
-// RemoveConfirm asks the user to confirm a Remove after seeing its
-// RemovePlan.
-const RemoveConfirm DecisionKind = "remove_confirm"
+const (
+	// RemoveConfirm asks the user to confirm a Remove after seeing its
+	// RemovePlan.
+	RemoveConfirm DecisionKind = "remove_confirm"
+	// OverwritePinned asks the user whether an Overwrite may replace each
+	// pinned Library item it would write over.
+	OverwritePinned DecisionKind = "overwrite_pinned"
+)
 
 // Decisions carries the choices the user already made, so a verb that would
 // otherwise return DecisionRequired goes ahead.
 type Decisions struct {
 	RemoveConfirmed bool
+	// Overwrite answers OverwritePinned for each pinned destination, by
+	// Destination.Path: true replaces it and keeps the pin, false leaves it
+	// as it is.
+	Overwrite map[string]bool
 }
 
 // DecisionRequired is the error a verb returns when it needs a choice from
 // the user first. Nothing has changed when it is returned. Context holds
-// what the user decides on: a RemovePlan for RemoveConfirm.
+// what the user decides on: a RemovePlan for RemoveConfirm, a
+// []PinnedDestination for OverwritePinned.
 type DecisionRequired struct {
 	Kind    DecisionKind
 	Context any

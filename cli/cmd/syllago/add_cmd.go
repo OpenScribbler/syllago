@@ -13,7 +13,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -76,6 +75,18 @@ func init() {
 	addCmd.Flags().String("to", "", "Target provider for --install")
 	addCmd.Flags().Bool("frozen", false, "Pin the install record created by this command")
 	rootCmd.AddCommand(addCmd)
+}
+
+// canonicalizerFor returns the converter adapter for typeStr, or nil when
+// no type was given or the type has no converter.
+func canonicalizerFor(typeStr, fromSlug string) add.Canonicalizer {
+	if typeStr == "" {
+		return nil
+	}
+	if conv := converter.For(catalog.ContentType(typeStr)); conv != nil {
+		return &converterAdapter{conv: conv, provSlug: fromSlug}
+	}
+	return nil
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
@@ -293,19 +304,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Build the canonicalizer adapter for this content type.
-	var canon add.Canonicalizer
-	if typeStr != "" {
-		if conv := converter.For(catalog.ContentType(typeStr)); conv != nil {
-			canon = &converterAdapter{conv: conv, provSlug: fromSlug}
-		}
-	}
+	canon := canonicalizerFor(typeStr, fromSlug)
 
 	srcRegistry, _ := cmd.Flags().GetString("source-registry")
 	srcVisibility, _ := cmd.Flags().GetString("source-visibility")
 	sourceSHA := sourceSHAForConfiguredGitRegistry(mergedCfg, srcRegistry)
 
-	results := add.AddItems(items, add.AddOptions{
+	results, err := addRespectingPins(items, add.AddOptions{
 		Force:            force,
 		DryRun:           dryRun,
 		Provider:         fromSlug,
@@ -313,6 +318,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		SourceSHA:        sourceSHA,
 		SourceVisibility: srcVisibility,
 	}, globalDir, canon, version)
+	if err != nil {
+		return err
+	}
 
 	telemetry.Enrich("from", fromSlug)
 	telemetry.Enrich("content_type", typeStr)
@@ -1351,47 +1359,15 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 		}
 	}
 
-	// Check if any of the items requested to be added has an active install record that is Pinned: true
-	storePath, storeErr := installstore.DefaultPath()
-	if storeErr == nil {
-		if store, loadErr := installstore.Load(storePath); loadErr == nil {
-			var unpinnedItems []add.DiscoveryItem
-			for _, item := range items {
-				coord := installstore.Coord{Registry: reg.Name, Type: string(item.Type), Name: item.Name}
-				if rec := store.Find(coord); rec != nil && rec.Pinned {
-					if rec.SourceSHA != "" {
-						sha12 := rec.SourceSHA
-						if len(sha12) > 12 {
-							sha12 = sha12[:12]
-						}
-						fmt.Fprintf(output.ErrWriter, "  pinned %s/%s — holding at %s; unpin to update: syllago unpin %s\n", string(item.Type), item.Name, sha12, item.Name)
-					} else {
-						fmt.Fprintf(output.ErrWriter, "  pinned %s/%s; unpin to update: syllago unpin %s\n", string(item.Type), item.Name, item.Name)
-					}
-				} else {
-					unpinnedItems = append(unpinnedItems, item)
-				}
-			}
-			items = unpinnedItems
-		}
-	}
-	if len(items) == 0 {
-		return output.NewStructuredError(
-			output.ErrInstallConflict,
-			"all requested items are pinned",
-			"Run 'syllago unpin <name>' first to unpin the items you want to update",
-		)
-	}
-
-	results := add.AddItems(items, add.AddOptions{
+	results, err := addRespectingPins(items, add.AddOptions{
 		Force:            force,
 		DryRun:           dryRun,
 		SourceRegistry:   reg.Name,
 		SourceSHA:        sourceSHA,
 		SourceVisibility: visibility,
 	}, globalDir, nil, version)
-	if !dryRun {
-		recordAddUpdateBookkeeping(results, reg.Name, sourceSHA)
+	if err != nil {
+		return err
 	}
 
 	telemetry.Enrich("from", fromSlug)

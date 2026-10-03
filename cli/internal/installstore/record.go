@@ -146,12 +146,24 @@ func RecordUpdate(storePath string, c Coord, libraryPath string, newSourceSHA st
 	if rec.Pinned {
 		return fmt.Errorf("%w for coord registry=%q type=%q name=%q", ErrPinned, c.Registry, c.Type, c.Name)
 	}
+	if err := rec.Rotate(libraryPath, newSourceSHA, prevCopyPath, now); err != nil {
+		return err
+	}
+	if err := s.Save(); err != nil {
+		return fmt.Errorf("saving install store: %w", err)
+	}
+	return nil
+}
 
+// Rotate moves the record's current version to Previous after its library
+// copy at libraryPath has been overwritten, and takes the new content hash
+// from libraryPath. It ignores the pin; callers decide whether a pinned
+// record may be overwritten. A hash failure leaves the record unchanged.
+func (rec *Record) Rotate(libraryPath, newSourceSHA, prevCopyPath string, now time.Time) error {
 	contentHash, err := HashContent(libraryPath)
 	if err != nil {
 		return fmt.Errorf("hashing install content: %w", err)
 	}
-
 	rec.Previous = &PreviousVersion{
 		SourceSHA:   rec.SourceSHA,
 		ContentHash: rec.ContentHash,
@@ -161,9 +173,6 @@ func RecordUpdate(storePath string, c Coord, libraryPath string, newSourceSHA st
 	rec.ContentHash = contentHash
 	rec.SourceSHA = newSourceSHA
 	rec.UpdatedAt = now
-	if err := s.Save(); err != nil {
-		return fmt.Errorf("saving install store: %w", err)
-	}
 	return nil
 }
 

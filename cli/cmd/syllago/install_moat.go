@@ -351,24 +351,22 @@ func runInstallFromRegistry(
 		)
 	}
 
-	// Check if the item is pinned before overwriting content
-	if storePath, storeErr := installstore.DefaultPath(); storeErr == nil {
-		if store, loadErr := installstore.Load(storePath); loadErr == nil {
-			coord := installstore.Coord{Registry: reg.Name, Type: string(ct), Name: entry.Name}
-			if rec := store.Find(coord); rec != nil && rec.Pinned {
-				return output.NewStructuredError(
-					output.ErrInstallConflict,
-					fmt.Sprintf("could not install %s/%s: item is pinned", reg.Name, entry.Name),
-					fmt.Sprintf("syllago unpin %s", entry.Name),
-				)
-			}
-		}
-	}
-
 	// Provider-side install: stage the verified source tree into the
 	// library first, then place it from the library with the regular
 	// installer so symlinks and install records share the normal path model.
-	item, prevCopy, stageErr := moatinstall.StageIntoLibraryKeepPrev(cacheDir, entry, reg.Name, globalDir, now)
+	item, staged, stageErr := moatinstall.StageIntoLibraryRespectingPin(lifecycle.New(), cacheDir, entry, reg.Name, globalDir, now)
+	var decision *lifecycle.DecisionRequired
+	if errors.As(stageErr, &decision) {
+		return output.NewStructuredError(
+			output.ErrInstallConflict,
+			fmt.Sprintf("could not install %s/%s: item is pinned", reg.Name, entry.Name),
+			fmt.Sprintf("syllago unpin %s", entry.Name),
+		)
+	}
+	var structured output.StructuredError
+	if errors.As(stageErr, &structured) {
+		return stageErr
+	}
 	if stageErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,
@@ -377,15 +375,15 @@ func runInstallFromRegistry(
 			stageErr.Error(),
 		)
 	}
+	printLifecycleWarnings(errW, staged)
 
 	outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
-		Item:         item,
-		ProjectRoot:  cfgRoot,
-		Targets:      []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
-		Method:       method,
-		Scan:         scan,
-		Frozen:       isFrozenFromContext(ctx),
-		PreviousCopy: prevCopy,
+		Item:        item,
+		ProjectRoot: cfgRoot,
+		Targets:     []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
+		Method:      method,
+		Scan:        scan,
+		Frozen:      isFrozenFromContext(ctx),
 		Provenance: &installstore.MOATProvenance{
 			ManifestURI: reg.ManifestURI,
 			SourceURI:   entry.SourceURI,

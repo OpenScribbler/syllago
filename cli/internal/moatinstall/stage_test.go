@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
@@ -404,5 +407,55 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(PreviousRootOverride, "previous")); !os.IsNotExist(err) {
 		t.Errorf("expected wrapper StageIntoLibrary to not create previous/, got err: %v", err)
+	}
+}
+
+// Regression: staging that replaced the Library copy and then failed left
+// the install record describing the replaced version with no Previous.
+func TestStageIntoLibraryRespectingPin_FailedStageStillRotates(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	configDir := t.TempDir()
+	origConfig := config.GlobalDirOverride
+	config.GlobalDirOverride = configDir
+	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
+	t.Cleanup(func() { PreviousRootOverride = "" })
+	PreviousRootOverride = t.TempDir()
+	globalDir := t.TempDir()
+	now := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
+
+	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
+	cacheV1 := writeStageCache(t, map[string]string{"SKILL.md": "# v1\n"})
+	item, _, err := StageIntoLibraryRespectingPin(lifecycle.New(), cacheV1, entry, "example", globalDir, now)
+	if err != nil {
+		t.Fatalf("stage v1: %v", err)
+	}
+	storePath := filepath.Join(configDir, "installs.json")
+	coord := installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"}
+	if err := installstore.RecordInstallMeta(storePath, coord, item.Path, installstore.PlacementInput{
+		Provider: "claude-code", Mechanism: installstore.MechanismSymlink, Path: filepath.Join(t.TempDir(), "my-skill"),
+	}, installstore.InstallMeta{}, now); err != nil {
+		t.Fatal(err)
+	}
+	v1, err := installstore.HashContent(item.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A directory where the metadata file goes makes the metadata save fail
+	// after the new content is copied in.
+	cacheV2 := writeStageCache(t, map[string]string{"SKILL.md": "# v2\n", metadata.FileName + "/x": "x"})
+	entry.ContentHash = "sha256:bbbbbbbb"
+	if _, _, err := StageIntoLibraryRespectingPin(lifecycle.New(), cacheV2, entry, "example", globalDir, now.Add(time.Hour)); err == nil {
+		t.Fatal("want the metadata save error")
+	}
+
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := store.Find(coord)
+	prevDir, _ := PreviousDirFor("example", catalog.Skills, "my-skill")
+	if rec == nil || rec.Previous == nil || rec.Previous.ContentHash != v1 || rec.Previous.CopyPath != prevDir {
+		t.Errorf("record = %+v, want it rotated from %s with the copy at %s", rec, v1, prevDir)
 	}
 }

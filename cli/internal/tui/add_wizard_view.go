@@ -1183,6 +1183,9 @@ func (m *addWizardModel) viewExecute() string {
 			case "skipped":
 				icon = mutedStyle.Render("○")
 				statusText = "Skipped — same version already in library"
+			case "pinned":
+				icon = mutedStyle.Render("○")
+				statusText = "Pinned — unpin to update: syllago unpin " + item.name
 			default:
 				if i == m.executeCurrent && m.executing {
 					icon = lipgloss.NewStyle().Foreground(primaryColor).Render("◐")

@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,6 +21,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -180,7 +182,7 @@ type addDiscoveryItem struct {
 
 type addExecResult struct {
 	name   string
-	status string // "added", "updated", "error", "skipped", "cancelled"
+	status string // "added", "updated", "error", "skipped", "pinned", "cancelled"
 	err    error
 }
 
@@ -2519,7 +2521,8 @@ func discoverFromGitURL(
 	return items, confirmItems, tmpDir, nil
 }
 
-// addSingleItem adds a single item to the library.
+// addSingleItem adds a single item to the library. A pinned library item
+// is left as it is and reported as pinned.
 func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	if item.underlying == nil {
 		return addExecResult{
@@ -2529,6 +2532,43 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug,
 		}
 	}
 
+	// Auto-split branch (P4 of syllago-50wq4): a rule item whose source file
+	// is a recognized monolithic format and whose user-chosen Heuristic is
+	// "split" gets written via the splitter + rulestore instead of the
+	// generic add.AddItems copy flow.
+	if item.itemType == catalog.Rules && item.splittable && item.splitChosen {
+		return addSplitRuleItem(item, contentRoot, provSlug)
+	}
+
+	// The generic write lands under the discovered name; item.name may be a
+	// display name. A settings hook lands under item.name.
+	name := item.underlying.Name
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		name = item.name
+	}
+	dest := lifecycle.Destination{Type: item.itemType, Name: name, Path: add.DestDir(item.itemType, provSlug, name, contentRoot)}
+	var res addExecResult
+	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
+		Destinations: []lifecycle.Destination{dest},
+		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
+			res = writeLibraryItem(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
+			return []lifecycle.Written{{Path: dest.Path, SourceSHA: srcSHA}}, nil
+		},
+	})
+	var decision *lifecycle.DecisionRequired
+	if errors.As(err, &decision) {
+		return addExecResult{name: item.name, status: "pinned"}
+	}
+	if err != nil {
+		return addExecResult{name: item.name, status: "error", err: err}
+	}
+	// The TUI has no stable stderr surface mid-render, so a record left
+	// unrotated is dropped, as the install path drops it.
+	return res
+}
+
+// writeLibraryItem writes item into the library.
+func writeLibraryItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	// Hooks discovered from a provider's settings.json need their own write
 	// path: item.path is the settings.json (not a hook.json), so the generic
 	// add.AddItems copy-from-path flow would write the whole settings file as
@@ -2536,14 +2576,6 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug,
 	// cli/cmd/syllago/add_cmd.go addHooksFromLocation.
 	if item.itemType == catalog.Hooks && item.hookData != nil {
 		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
-	}
-
-	// Auto-split branch (P4 of syllago-50wq4): a rule item whose source file
-	// is a recognized monolithic format and whose user-chosen Heuristic is
-	// "split" gets written via the splitter + rulestore instead of the
-	// generic add.AddItems copy flow.
-	if item.itemType == catalog.Rules && item.splittable && item.splitChosen {
-		return addSplitRuleItem(item, contentRoot, provSlug)
 	}
 
 	opts := add.AddOptions{
@@ -2573,7 +2605,6 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug,
 	case add.AddStatusAdded:
 		return addExecResult{name: item.name, status: "added"}
 	case add.AddStatusUpdated:
-		recordTUIAddUpdateBookkeeping(srcReg, string(item.itemType), item.name, "", srcSHA)
 		return addExecResult{name: item.name, status: "updated"}
 	case add.AddStatusUpToDate:
 		return addExecResult{name: item.name, status: "skipped"}

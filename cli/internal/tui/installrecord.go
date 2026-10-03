@@ -1,34 +1,9 @@
 package tui
 
 import (
-	"time"
-
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 )
-
-func recordTUIAddUpdateBookkeeping(regName, contentType, name, libraryFallbackPath, sourceSHA string) {
-	storePath, err := installstore.DefaultPath()
-	if err != nil {
-		return
-	}
-	store, err := installstore.Load(storePath)
-	if err != nil {
-		return
-	}
-	coord := installstore.Coord{Registry: regName, Type: contentType, Name: name}
-	rec := store.Find(coord)
-	if rec == nil {
-		return
-	}
-	libraryPath := rec.LibraryPath
-	if libraryPath == "" {
-		libraryPath = libraryFallbackPath
-	}
-	// The TUI has no stable stderr surface mid-render; install-state
-	// bookkeeping is best-effort and must not disturb the Elm loop.
-	_ = installstore.RecordUpdate(storePath, coord, libraryPath, sourceSHA, "", time.Now())
-}
 
 func forgetTUIInstallRecord(item catalog.ContentItem) {
 	storePath, err := installstore.DefaultPath()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
@@ -35,9 +36,34 @@ func PreviousDirFor(regName string, ct catalog.ContentType, name string) (string
 // StageIntoLibraryKeepPrev copies a verified MOAT source-cache tree into the global
 // library, saves a copy of the previous library content for rollback (if it was
 // replaced), and writes item metadata. Returns the ContentItem and the path to
-// the saved previous copy, if any.
+// the saved previous copy, if any, also on an error after the copy was saved.
 func StageIntoLibraryKeepPrev(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, string, error) {
 	return stageIntoLibrary(cacheDir, entry, regName, globalDir, true, now)
+}
+
+// StageIntoLibraryRespectingPin stages entry like StageIntoLibraryKeepPrev,
+// through m's Overwrite: a pinned library item comes back as
+// *lifecycle.DecisionRequired and stays as it is, and a replaced item's
+// install record keeps the version it replaced. The Outcome holds record
+// failures that left the new content staged.
+func StageIntoLibraryRespectingPin(m *lifecycle.Module, cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, lifecycle.Outcome, error) {
+	if entry == nil {
+		return catalog.ContentItem{}, lifecycle.Outcome{}, fmt.Errorf("StageIntoLibrary: entry is nil")
+	}
+	ct, ok := moat.FromMOATType(entry.Type)
+	if !ok {
+		return catalog.ContentItem{}, lifecycle.Outcome{}, fmt.Errorf("StageIntoLibrary: unknown MOAT type %q", entry.Type)
+	}
+	var item catalog.ContentItem
+	out, err := m.Overwrite(lifecycle.OverwriteRequest{
+		Destinations: []lifecycle.Destination{{Type: ct, Name: entry.Name, Path: filepath.Join(globalDir, string(ct), entry.Name)}},
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			staged, prevCopy, err := StageIntoLibraryKeepPrev(cacheDir, entry, regName, globalDir, now)
+			item = staged
+			return []lifecycle.Written{{Path: approved[0].Path, PreviousCopy: prevCopy}}, err
+		},
+	})
+	return item, out, err
 }
 
 func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, keepPrev bool, now time.Time) (catalog.ContentItem, string, error) {
@@ -98,7 +124,7 @@ func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, global
 				prevCopyPath = prevDir
 			}
 			if err := os.RemoveAll(destDir); err != nil {
-				return catalog.ContentItem{}, "", fmt.Errorf("remove existing registry content: %w", err)
+				return catalog.ContentItem{}, prevCopyPath, fmt.Errorf("remove existing registry content: %w", err)
 			}
 		} else {
 			return catalog.ContentItem{}, "", fmt.Errorf("library already contains %s/%s not sourced from registry %q", string(ct), entry.Name, regName)
@@ -106,7 +132,7 @@ func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, global
 	}
 
 	if err := copyDir(cacheDir, destDir); err != nil {
-		return catalog.ContentItem{}, "", fmt.Errorf("stage registry content into library: %w", err)
+		return catalog.ContentItem{}, prevCopyPath, fmt.Errorf("stage registry content into library: %w", err)
 	}
 
 	m := &metadata.Meta{
@@ -120,7 +146,7 @@ func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, global
 		AddedBy:        "syllago moat install",
 	}
 	if err := metadata.Save(destDir, m); err != nil {
-		return catalog.ContentItem{}, "", fmt.Errorf("save library metadata: %w", err)
+		return catalog.ContentItem{}, prevCopyPath, fmt.Errorf("save library metadata: %w", err)
 	}
 
 	return item, prevCopyPath, nil
