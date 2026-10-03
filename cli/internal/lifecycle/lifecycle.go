@@ -1,5 +1,5 @@
-// Package lifecycle installs content items to providers and keeps the install
-// records that go with each placement. The CLI, the TUI and any later front
+// Package lifecycle installs content items to providers, uninstalls them, and
+// keeps the install records that go with each placement. The CLI, the TUI and any later front
 // end make one call per verb here instead of assembling the installer, the
 // install store and the pin from separate steps. Nothing in this package
 // prints: every notice and failure comes back in the Outcome.
@@ -25,11 +25,13 @@ type Target struct {
 type Stage string
 
 const (
-	// StagePlace is the provider-side write. A failure here means the
-	// target did not get the item.
+	// StagePlace is the provider-side write: placing the item on Install,
+	// removing it on Uninstall. A failure here means the target did not
+	// change.
 	StagePlace Stage = "place"
-	// StageRecord is the install store write after a successful placement.
-	// The item is in place; only the bookkeeping is missing.
+	// StageRecord is the install store write after a successful
+	// provider-side write. The target changed; only the bookkeeping is
+	// missing.
 	StageRecord Stage = "record"
 	// StagePin is the pin requested with InstallRequest.Frozen. It applies
 	// to the item rather than one target, so its Failure has no Target.
@@ -52,16 +54,16 @@ type Failure struct {
 // Outcome reports what a verb did. Every verb returns it alongside any
 // error, because a call that fails partway can still have changed files.
 type Outcome struct {
-	Completed   []Step             // targets that now hold the item
+	Completed   []Step             // targets the verb changed
 	Failed      []Failure          // in the order they happened
 	Unattempted []Target           // targets the call stopped before reaching
 	Notices     []installer.Notice // from every placement, failed ones included
 	Changed     bool               // true when any provider-side file changed
 }
 
-// Warnings renders the failures that left the item in place: a missing
-// install record or a pin that was not applied. Placement failures are not
-// warnings; the verb's error reports them.
+// Warnings renders the failures that left the provider-side change in
+// effect: a record not updated or a pin not applied. Placement failures are
+// not warnings; the verb's error reports them.
 func (o Outcome) Warnings() []string {
 	var out []string
 	for _, f := range o.Failed {

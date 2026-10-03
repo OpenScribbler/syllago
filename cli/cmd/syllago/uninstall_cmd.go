@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -110,6 +112,21 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			"Hint: syllago list    (show all library items)")
 	}
 
+	// Resolve install paths the way install does, so an item placed under a
+	// configured base directory or per-type path is found and removed.
+	globalCfg, err := config.LoadGlobal()
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading global config", "Check ~/.syllago/config.json syntax", err.Error())
+	}
+	projectCfg, err := config.Load(projectRoot)
+	if err != nil {
+		return output.NewStructuredErrorDetail(output.ErrConfigInvalid, "loading project config", "Check .syllago/config.json syntax", err.Error())
+	}
+	resolver := config.NewResolver(config.Merge(globalCfg, projectCfg), "")
+	if err := resolver.ExpandPaths(); err != nil {
+		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths", "Check path overrides in config", err.Error())
+	}
+
 	// Determine which providers to uninstall from
 	var targets []provider.Provider
 	if fromSlug != "" {
@@ -119,7 +136,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
 		}
 		// Verify it is actually installed there
-		status := installer.CheckStatus(*item, *prov, projectRoot)
+		status := installer.CheckStatusWithResolver(*item, *prov, projectRoot, resolver)
 		if status != installer.StatusInstalled {
 			return output.NewStructuredError(output.ErrInstallNotInstalled,
 				fmt.Sprintf("%q is not installed in %s", name, prov.Name),
@@ -129,7 +146,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	} else {
 		// Uninstall from all providers where it is currently installed
 		for _, prov := range provider.AllProviders {
-			status := installer.CheckStatus(*item, prov, projectRoot)
+			status := installer.CheckStatusWithResolver(*item, prov, projectRoot, resolver)
 			if status == installer.StatusInstalled {
 				targets = append(targets, prov)
 			}
@@ -168,21 +185,23 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Perform uninstall
+	lcTargets := make([]lifecycle.Target, len(targets))
+	for i, prov := range targets {
+		lcTargets[i] = lifecycle.Target{Provider: prov, Resolver: resolver}
+	}
+	outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{Item: *item, ProjectRoot: projectRoot, Targets: lcTargets})
+	if len(outcome.Unattempted) > 0 {
+		return err
+	}
+	printUninstallFailures(outcome, func(p provider.Provider) string { return p.Name })
 	var removedFrom []string
-	for _, prov := range targets {
-		placement, err := installer.Uninstall(*item, prov, projectRoot)
-		if err != nil {
-			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", prov.Name, err)
-			continue
-		}
-		recordUninstallBookkeeping(*item, prov.Slug, placement)
-		desc := placement.String()
-		removedFrom = append(removedFrom, prov.Name)
+	for _, step := range outcome.Completed {
+		removedFrom = append(removedFrom, step.Target.Provider.Name)
 		if !output.JSON && !output.Quiet {
-			if desc != "" {
+			if desc := step.Placement.String(); desc != "" {
 				fmt.Fprintf(output.Writer, "Removed %s\n", desc)
 			} else {
-				fmt.Fprintf(output.Writer, "Removed from %s\n", prov.Name)
+				fmt.Fprintf(output.Writer, "Removed from %s\n", step.Target.Provider.Name)
 			}
 		}
 	}
@@ -247,46 +266,47 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 		telemetry.Enrich("dry_run", true)
 		return true, nil
 	}
-	// Load the library rule once (it's the same libID for all matches because
-	// D14 uniqueness is per (LibraryID, TargetFile) — one rule, many targets).
-	library := map[string]*rulestore.Loaded{}
-	dirs := map[string]string{}
+	// The matches share one library rule: the name finds it, and D14
+	// uniqueness is per (LibraryID, TargetFile), so one rule has many targets.
 	rulesRoot := filepath.Join(globalDir, string(catalog.Rules))
-	for _, r := range matches {
-		if _, ok := library[r.LibraryID]; ok {
-			continue
-		}
-		dir, derr := findLibraryRuleDir(rulesRoot, name)
-		if derr != nil {
-			return true, output.NewStructuredErrorDetail(
-				output.ErrInstallItemNotFound,
-				fmt.Sprintf("library rule %q not found for uninstall", name),
-				"Library rules required for D7 exact-match uninstall live under ~/.syllago/content/rules/<source>/<name>/",
-				derr.Error(),
-			)
-		}
-		loaded, lerr := rulestore.LoadRule(dir)
-		if lerr != nil {
-			return true, output.NewStructuredErrorDetail(
-				output.ErrCatalogScanFailed,
-				"loading library rule for uninstall",
-				"Check .syllago.yaml and .history/ in the library rule dir.",
-				lerr.Error(),
-			)
-		}
-		library[r.LibraryID] = loaded
-		dirs[r.LibraryID] = dir
+	dir, derr := findLibraryRuleDir(rulesRoot, name)
+	if derr != nil {
+		return true, output.NewStructuredErrorDetail(
+			output.ErrInstallItemNotFound,
+			fmt.Sprintf("library rule %q not found for uninstall", name),
+			"Library rules required for D7 exact-match uninstall live under ~/.syllago/content/rules/<source>/<name>/",
+			derr.Error(),
+		)
 	}
-	var uninstalledFrom []string
+	if _, lerr := rulestore.LoadRule(dir); lerr != nil {
+		return true, output.NewStructuredErrorDetail(
+			output.ErrCatalogScanFailed,
+			"loading library rule for uninstall",
+			"Check .syllago.yaml and .history/ in the library rule dir.",
+			lerr.Error(),
+		)
+	}
+	// installed.json names providers by slug, and the slug is all the
+	// append path needs.
+	var targets []lifecycle.Target
 	for _, r := range matches {
-		if uerr := installer.UninstallRuleAppend(projectRoot, r.LibraryID, r.TargetFile, library); uerr != nil {
-			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", r.Provider, uerr)
-			continue
-		}
-		recordUninstallBookkeeping(appendRuleItem(dirs[r.LibraryID]), r.Provider, installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: r.TargetFile})
-		uninstalledFrom = append(uninstalledFrom, r.Provider)
+		targets = append(targets, lifecycle.Target{Provider: provider.Provider{Name: r.Provider, Slug: r.Provider}})
+	}
+	outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{
+		Item:        appendRuleItem(dir),
+		ProjectRoot: projectRoot,
+		Targets:     targets,
+		Method:      installer.MethodAppend,
+	})
+	if len(outcome.Unattempted) > 0 {
+		return true, err
+	}
+	printUninstallFailures(outcome, func(p provider.Provider) string { return p.Slug })
+	var uninstalledFrom []string
+	for _, step := range outcome.Completed {
+		uninstalledFrom = append(uninstalledFrom, step.Target.Provider.Slug)
 		if !output.JSON && !output.Quiet {
-			fmt.Fprintf(output.Writer, "Removed %s from %s\n", r.Name, r.TargetFile)
+			fmt.Fprintf(output.Writer, "Removed %s from %s\n", name, step.Placement.Path)
 		}
 	}
 	if output.JSON {
@@ -298,4 +318,15 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 	telemetry.Enrich("content_type", string(catalog.Rules))
 	telemetry.Enrich("dry_run", dryRun)
 	return true, nil
+}
+
+// printUninstallFailures warns about each target an uninstall could not
+// change, naming it with label, and about any record left out of date.
+func printUninstallFailures(o lifecycle.Outcome, label func(provider.Provider) string) {
+	for _, f := range o.Failed {
+		if f.Stage == lifecycle.StagePlace {
+			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", label(f.Target.Provider), f.Err)
+		}
+	}
+	printLifecycleWarnings(output.ErrWriter, o)
 }

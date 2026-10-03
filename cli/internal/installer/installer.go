@@ -81,7 +81,12 @@ func IsJSONMerge(prov provider.Provider, itemType catalog.ContentType) bool {
 // resolveTargetWithBase computes the target path using a specific base directory.
 // Returns an error if the provider doesn't support the content type or uses JSON merge.
 func resolveTargetWithBase(item catalog.ContentItem, prov provider.Provider, baseDir string) (string, error) {
-	installDir := prov.InstallDir(baseDir, item.Type)
+	return targetIn(prov.InstallDir(baseDir, item.Type), item, prov)
+}
+
+// targetIn returns the item's path inside installDir, or an error when
+// installDir says prov does not install the item's type on the filesystem.
+func targetIn(installDir string, item catalog.ContentItem, prov provider.Provider) (string, error) {
 	if installDir == "" {
 		return "", fmt.Errorf("%s does not support %s", prov.Name, item.Type.Label())
 	}
@@ -346,11 +351,21 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 	}
 }
 
-// Uninstall removes the given item from the provider's install directory.
-// For JSON merge types, it removes the entry from the provider's config file.
-// For filesystem types, it removes the symlink.
-// Returns placement metadata; Placement.String renders the legacy description.
+// Uninstall removes the given item from the provider's default install
+// directory under the home directory. See UninstallFrom.
 func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+	return UninstallFrom(item, prov, repoRoot, "", nil)
+}
+
+// UninstallFrom removes the given item from where Install or
+// InstallWithResolver placed it with the same baseDir or resolver. A
+// non-nil resolver overrides baseDir, and an empty baseDir means the home
+// directory.
+// For JSON merge types, it removes the entry from the provider's config file
+// and ignores baseDir and resolver, as Install does.
+// For filesystem types, it removes the symlink or copy.
+// Returns placement metadata; Placement.String renders the legacy description.
+func UninstallFrom(item catalog.ContentItem, prov provider.Provider, repoRoot, baseDir string, resolver *config.PathResolver) (Placement, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
@@ -362,16 +377,23 @@ func Uninstall(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		return Placement{}, fmt.Errorf("%s does not support %s via JSON merge", prov.Name, item.Type.Label())
 	}
 
-	targetPath, err := resolveTarget(item, prov)
-	if err != nil {
-		return Placement{}, err
-	}
 	home, homeErr := os.UserHomeDir()
 	if homeErr != nil {
 		return Placement{}, fmt.Errorf("getting home directory: %w", homeErr)
 	}
-	var resolver *config.PathResolver
-	installDir := resolver.InstallDir(prov, item.Type, home)
+	var installDir string
+	switch {
+	case resolver != nil:
+		installDir = resolver.InstallDir(prov, item.Type, home)
+	case baseDir != "":
+		installDir = prov.InstallDir(baseDir, item.Type)
+	default:
+		installDir = prov.InstallDir(home, item.Type)
+	}
+	targetPath, err := targetIn(installDir, item, prov)
+	if err != nil {
+		return Placement{}, err
+	}
 	if lp, ld, ok := legacyTarget(item, prov, home, targetPath); ok {
 		targetPath, installDir = lp, ld
 	}

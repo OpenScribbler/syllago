@@ -384,7 +384,7 @@ func TestActions_DoSimpleRemoveCmd(t *testing.T) {
 }
 
 func TestActions_DoUninstallCmd_NoChecks(t *testing.T) {
-	t.Parallel()
+	withTUIInstallRecordConfigDir(t) // the uninstall takes the syllago lock
 	app := testApp(t)
 	// No checks means "uninstall from all providers".
 	cmd := app.doUninstallCmd(confirmResultMsg{
