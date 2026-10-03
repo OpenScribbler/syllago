@@ -6,14 +6,13 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/audit"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -364,7 +363,7 @@ func installToProvider(
 ) (installResult, error) {
 	var result installResult
 
-	for _, item := range items {
+	for i, item := range items {
 		if dryRun {
 			if !output.Quiet {
 				m := "symlink"
@@ -390,8 +389,26 @@ func installToProvider(
 			continue
 		}
 
-		placement, err := installer.InstallWithResolver(item, prov, projectRoot, method, resolver, scan)
-		printInstallNotices(output.ErrWriter, placement.Notices)
+		outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+			Item:        item,
+			ProjectRoot: projectRoot,
+			Targets:     []lifecycle.Target{{Provider: prov, Resolver: resolver}},
+			Method:      method,
+			Scan:        scan,
+			Frozen:      frozen,
+		})
+		printInstallNotices(output.ErrWriter, outcome.Notices)
+		if len(outcome.Unattempted) > 0 {
+			// Without the lock no later item can install either, so skip
+			// them now rather than wait out the lock once per item.
+			for _, rest := range items[i:] {
+				result.Skipped = append(result.Skipped, skippedItem{Name: rest.Name, Reason: err.Error()})
+			}
+			if !output.JSON {
+				fmt.Fprintf(output.ErrWriter, "  skip %d item(s): %s\n", len(items)-i, err)
+			}
+			break
+		}
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {
@@ -399,26 +416,8 @@ func installToProvider(
 			}
 			continue
 		}
-		recordInstallBookkeeping(item, toSlug, placement)
-		if frozen {
-			if item.Meta != nil && item.Meta.SourceRegistry != "" {
-				coord := installstore.Coord{
-					Registry: item.Meta.SourceRegistry,
-					Type:     string(item.Type),
-					Name:     item.Name,
-				}
-				storePath, err := installstore.DefaultPath()
-				if err != nil {
-					warnInstallRecord(err)
-				} else {
-					if err := installstore.SetPinned(storePath, coord, true, time.Now()); err != nil {
-						warnInstallRecord(err)
-					}
-				}
-			} else {
-				fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
-			}
-		}
+		printLifecycleWarnings(output.ErrWriter, outcome)
+		placement := outcome.Completed[0].Placement
 		desc := placement.String()
 		// Report the method actually used: agents, cross-provider renders,
 		// and Windows mounts are copied even when a symlink was requested.

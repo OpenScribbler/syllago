@@ -9,44 +9,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
-	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
-
-func TestRecordTUIInstallBookkeepingCarriesSourceSHA(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-
-	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	item := catalog.ContentItem{
-		Name: "writer",
-		Type: catalog.Skills,
-		Path: libraryPath,
-		Meta: &metadata.Meta{
-			SourceType:     "registry",
-			SourceRegistry: "acme/tools",
-			SourceSHA:      "sha-from-meta",
-		},
-	}
-	placement := installer.Placement{
-		Mechanism: installer.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}
-
-	recordTUIInstallBookkeeping(item, "claude-code", placement)
-
-	store := mustLoadTUIInstallRecordStore(t, configDir)
-	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
-	rec := store.Find(coord)
-	if rec == nil {
-		t.Fatal("install record missing")
-	}
-	if rec.SourceSHA != "sha-from-meta" {
-		t.Fatalf("SourceSHA = %q, want sha-from-meta", rec.SourceSHA)
-	}
-}
 
 func TestRecordTUIAddUpdateBookkeepingRotatesExistingRecord(t *testing.T) {
 	configDir := withTUIInstallRecordConfigDir(t)
@@ -96,42 +61,6 @@ func TestRecordTUIAddUpdateBookkeepingMissingRecordDoesNotCreateStore(t *testing
 
 	if _, err := os.Stat(storePath); !os.IsNotExist(err) {
 		t.Fatalf("store file exists or stat failed: %v", err)
-	}
-}
-
-func TestRecordTUIMOATUpdateBookkeepingSetsPreviousCopyPath(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-	storePath := filepath.Join(configDir, "installs.json")
-	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	coord := installstore.Coord{Registry: "acme/moat", Type: string(catalog.Skills), Name: "writer"}
-	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
-		Provider:  "claude-code",
-		Mechanism: installstore.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}, installstore.InstallMeta{}, time.Date(2026, 8, 24, 11, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("seed RecordInstallMeta: %v", err)
-	}
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer updated\n"))
-	prevCopyPath := filepath.Join(t.TempDir(), "previous", "writer")
-
-	recordTUIMOATUpdateBookkeeping(catalog.ContentItem{
-		Name:     "writer",
-		Type:     catalog.Skills,
-		Path:     libraryPath,
-		Registry: "acme/moat",
-	}, prevCopyPath)
-
-	rec := mustLoadTUIInstallRecordStore(t, configDir).Find(coord)
-	if rec == nil {
-		t.Fatal("install record missing")
-	}
-	if rec.Previous == nil {
-		t.Fatal("Previous is nil")
-	}
-	if rec.Previous.CopyPath != prevCopyPath {
-		t.Fatalf("Previous.CopyPath = %q, want %q", rec.Previous.CopyPath, prevCopyPath)
 	}
 }
 

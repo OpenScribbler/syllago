@@ -31,6 +31,10 @@ const (
 	MechanismCopy      = "copy"
 	MechanismHookMerge = "hook_merge"
 	MechanismMCPMerge  = "mcp_merge"
+	// MechanismRuleAppend is a rule appended to a monolithic rule file.
+	// InstallRuleAppend returns no Placement; callers that record it build
+	// one with this mechanism and the target file as Path.
+	MechanismRuleAppend = "rule_append"
 )
 
 // Placement describes where an install (or uninstall) acted: the mechanism

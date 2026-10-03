@@ -250,6 +250,7 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 	// Load the library rule once (it's the same libID for all matches because
 	// D14 uniqueness is per (LibraryID, TargetFile) — one rule, many targets).
 	library := map[string]*rulestore.Loaded{}
+	dirs := map[string]string{}
 	rulesRoot := filepath.Join(globalDir, string(catalog.Rules))
 	for _, r := range matches {
 		if _, ok := library[r.LibraryID]; ok {
@@ -274,6 +275,7 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 			)
 		}
 		library[r.LibraryID] = loaded
+		dirs[r.LibraryID] = dir
 	}
 	var uninstalledFrom []string
 	for _, r := range matches {
@@ -281,6 +283,7 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 			fmt.Fprintf(output.ErrWriter, "  warning: failed to uninstall from %s: %s\n", r.Provider, uerr)
 			continue
 		}
+		recordUninstallBookkeeping(appendRuleItem(dirs[r.LibraryID]), r.Provider, installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: r.TargetFile})
 		uninstalledFrom = append(uninstalledFrom, r.Provider)
 		if !output.JSON && !output.Quiet {
 			fmt.Fprintf(output.Writer, "Removed %s from %s\n", r.Name, r.TargetFile)

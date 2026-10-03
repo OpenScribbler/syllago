@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
@@ -28,6 +30,11 @@ func TestUninstall_MonolithicRule_Roundtrip(t *testing.T) {
 	origGlobal := catalog.GlobalContentDirOverride
 	catalog.GlobalContentDirOverride = globalDir
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	configDir := t.TempDir()
+	origConfig := config.GlobalDirOverride
+	config.GlobalDirOverride = configDir
+	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
 
 	_, _ = output.SetForTest(t)
 
@@ -97,5 +104,14 @@ func TestUninstall_MonolithicRule_Roundtrip(t *testing.T) {
 	}
 	if len(inst.RuleAppends) != 0 {
 		t.Errorf("expected 0 RuleAppends after uninstall, got %d", len(inst.RuleAppends))
+	}
+
+	// The install store must forget the rule_append placement too.
+	store, err := installstore.Load(filepath.Join(configDir, "installs.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := store.Find(installstore.Coord{Type: string(catalog.Rules), Name: "foo"}); rec != nil {
+		t.Errorf("install record survived uninstall: %+v", rec)
 	}
 }

@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -62,8 +63,6 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 			err.Error(),
 		)
 	}
-
-	homeDir, _ := os.UserHomeDir()
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
@@ -142,13 +141,8 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 	switch {
 	case !hasRecord || pts.State == installcheck.StateFresh:
 		// Fresh install — no record or no clean match.
-		if err := installer.InstallRuleAppend(projectRoot, homeDir, toSlug, target, "manual", loaded); err != nil {
-			return output.NewStructuredErrorDetail(
-				output.ErrInstallNotWritable,
-				"appending rule to target file",
-				"Check write permissions on the target file.",
-				err.Error(),
-			)
+		if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
+			return err
 		}
 		installed = append(installed, installedItem{
 			Name:   loaded.Meta.Name,
@@ -240,28 +234,11 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 			}
 		case "append-fresh":
 			actionString = "append_fresh"
-			// D20's AppendRuleToTarget creates the file if missing and handles
-			// the non-empty newline rules. InstallRuleAppend also appends a
-			// new record, so drop the stale one first to preserve D14's
-			// (LibraryID, TargetFile) uniqueness.
-			if idx := inst.FindRuleAppend(loaded.Meta.ID, target); idx >= 0 {
-				inst.RemoveRuleAppend(idx)
-				if serr := installer.SaveInstalled(projectRoot, inst); serr != nil {
-					return output.NewStructuredErrorDetail(
-						output.ErrInstallNotWritable,
-						"saving installed records",
-						"Check write permissions on .syllago/installed.json",
-						serr.Error(),
-					)
-				}
-			}
-			if err := installer.InstallRuleAppend(projectRoot, homeDir, toSlug, target, "manual", loaded); err != nil {
-				return output.NewStructuredErrorDetail(
-					output.ErrInstallNotWritable,
-					"appending rule to target file",
-					"Check write permissions on the target file.",
-					err.Error(),
-				)
+			// InstallRuleAppend replaces the stale record only once the
+			// fresh copy is appended, keeping D14's (LibraryID, TargetFile)
+			// uniqueness without losing the record on failure.
+			if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
+				return err
 			}
 			installed = append(installed, installedItem{
 				Name:   loaded.Meta.Name,
@@ -291,6 +268,43 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 	telemetry.Enrich("verification_state", stateString)
 	telemetry.Enrich("decision_action", actionString)
 	return nil
+}
+
+// appendRule appends the library rule in ruleDir to the provider's
+// monolithic rule file and records the install. A lock that could not be
+// taken comes back as itself; any other failure is a write failure.
+func appendRule(ruleDir, toSlug, projectRoot string) error {
+	prov := findProviderBySlug(toSlug)
+	if prov == nil {
+		return fmt.Errorf("unknown provider: %s", toSlug)
+	}
+	outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+		Item:        appendRuleItem(ruleDir),
+		ProjectRoot: projectRoot,
+		Targets:     []lifecycle.Target{{Provider: *prov}},
+		Method:      installer.MethodAppend,
+		Source:      "manual",
+	})
+	if len(outcome.Unattempted) > 0 {
+		return err
+	}
+	if err != nil {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			"appending rule to target file",
+			"Check write permissions on the target file.",
+			err.Error(),
+		)
+	}
+	printLifecycleWarnings(output.ErrWriter, outcome)
+	return nil
+}
+
+// appendRuleItem is the catalog item for a library rule installed by
+// append. Install and uninstall both build it, so they share one record.
+func appendRuleItem(ruleDir string) catalog.ContentItem {
+	meta, _ := metadata.Load(ruleDir)
+	return catalog.ContentItem{Name: filepath.Base(ruleDir), Type: catalog.Rules, Path: ruleDir, Meta: meta}
 }
 
 // findLibraryRuleDir locates <rulesRoot>/*/<name>/ by iterating source-provider

@@ -82,6 +82,7 @@ type installDoneMsg struct {
 	providerName string
 	targetPath   string
 	notices      []installer.Notice // set on failure too
+	warnings     []string           // the item installed, but its record or pin did not
 	err          error
 }
 
@@ -102,6 +103,7 @@ type installAllDoneMsg struct {
 	itemName string
 	count    int                // number of successful installs
 	notices  []installer.Notice // from every provider, failed installs included
+	warnings []string           // records that could not be written
 	firstErr error              // first error encountered, if any
 }
 

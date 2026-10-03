@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -106,6 +107,16 @@ func TestInstallBuiltins_InstallsTaggedBuiltin(t *testing.T) {
 	target := filepath.Join(home, ".test-provider", "skills", "alpha")
 	if _, err := os.Lstat(target); err != nil {
 		t.Errorf("expected install target at %s: %v", target, err)
+	}
+
+	// init installs used to skip the install record.
+	store, err := installstore.Load(filepath.Join(home, ".syllago", "installs.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := store.Find(installstore.Coord{Type: string(catalog.Skills), Name: "alpha"})
+	if rec == nil || len(rec.Placements) != 1 || rec.Placements[0].Path != target {
+		t.Errorf("record = %+v, want one placement at %s", rec, target)
 	}
 }
 

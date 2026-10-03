@@ -90,3 +90,34 @@ func TestInstallRuleAppend_RecordsAndAppends(t *testing.T) {
 		t.Errorf("InstalledAt: must be set, got zero time")
 	}
 }
+
+func TestInstallRuleAppend_ReinstallReplacesRecord(t *testing.T) {
+	t.Parallel()
+
+	projectRoot := t.TempDir()
+	homeDir := t.TempDir()
+	libraryRoot := filepath.Join(projectRoot, "syllago-library")
+	meta := metadata.RuleMetadata{ID: "lib-id-abc", Name: "my-rule"}
+	if err := rulestore.WriteRule(libraryRoot, "claude-code", "my-rule", meta, []byte("# Rule body\n")); err != nil {
+		t.Fatalf("WriteRule: %v", err)
+	}
+	loaded, err := rulestore.LoadRule(filepath.Join(libraryRoot, "claude-code", "my-rule"))
+	if err != nil {
+		t.Fatalf("LoadRule: %v", err)
+	}
+	target := filepath.Join(projectRoot, "CLAUDE.md")
+
+	for i := 0; i < 2; i++ {
+		if err := InstallRuleAppend(projectRoot, homeDir, "claude-code", target, "manual", loaded); err != nil {
+			t.Fatalf("InstallRuleAppend #%d: %v", i+1, err)
+		}
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if len(inst.RuleAppends) != 1 {
+		t.Fatalf("expected 1 RuleAppend after reinstall, got %d", len(inst.RuleAppends))
+	}
+}
