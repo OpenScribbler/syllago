@@ -394,6 +394,9 @@ func runInstallFromRegistry(
 		},
 	})
 	printInstallNotices(errW, outcome.Notices)
+	if len(outcome.Unattempted) > 0 {
+		return installErr
+	}
 	if installErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,

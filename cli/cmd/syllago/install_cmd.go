@@ -363,7 +363,7 @@ func installToProvider(
 ) (installResult, error) {
 	var result installResult
 
-	for _, item := range items {
+	for i, item := range items {
 		if dryRun {
 			if !output.Quiet {
 				m := "symlink"
@@ -398,6 +398,17 @@ func installToProvider(
 			Frozen:      frozen,
 		})
 		printInstallNotices(output.ErrWriter, outcome.Notices)
+		if len(outcome.Unattempted) > 0 {
+			// Without the lock no later item can install either, so skip
+			// them now rather than wait out the lock once per item.
+			for _, rest := range items[i:] {
+				result.Skipped = append(result.Skipped, skippedItem{Name: rest.Name, Reason: err.Error()})
+			}
+			if !output.JSON {
+				fmt.Fprintf(output.ErrWriter, "  skip %d item(s): %s\n", len(items)-i, err)
+			}
+			break
+		}
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {

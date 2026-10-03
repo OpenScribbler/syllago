@@ -23,16 +23,18 @@ type InstallRequest struct {
 	Provenance *installstore.MOATProvenance // nil keeps any recorded provenance
 	Source     string                       // who appended a rule: "manual", "tui"
 	// PreviousCopy is where the library copy this install replaces was
-	// saved. When set, the item's record rotates before any placement, so
-	// its previous version keeps the old content hash.
+	// saved. When set, the item's record rotates once a placement succeeds
+	// and before it is recorded, so its previous version keeps the old
+	// content hash.
 	PreviousCopy string
 }
 
 var errPinNotRegistry = errors.New("only registry items can be pinned")
 
-// Install rotates the item's record when it replaces a library copy, places
-// the item in every target, records each placement in the install store, and
-// pins the item when Frozen is set and any target took it.
+// Install places the item in every target, records each placement in the
+// install store, and pins the item when Frozen is set and any target took
+// it. When the item replaces a library copy, the first successful placement
+// rotates its record before recording.
 // A failed target does not stop the others. The error joins the placement
 // failures, or reports the lock when the call could not start; record and
 // pin failures leave the item installed and appear only in Outcome.Failed.
@@ -47,11 +49,6 @@ func (m *Module) Install(req InstallRequest) (Outcome, error) {
 
 	coord := recordCoord(req.Item)
 	storePath, storeErr := installstore.DefaultPath()
-	if req.PreviousCopy != "" {
-		if err := m.rotate(storePath, storeErr, coord, req); err != nil {
-			out.Failed = append(out.Failed, Failure{Stage: StageRecord, Err: recordErr(err)})
-		}
-	}
 	var placeErrs []error
 	for _, t := range req.Targets {
 		pl, err := m.placer.place(req, t)
@@ -63,6 +60,13 @@ func (m *Module) Install(req InstallRequest) (Outcome, error) {
 		}
 		out.Changed = true
 		out.Completed = append(out.Completed, Step{Target: t, Placement: pl})
+		// Rotate once, after the first placement succeeds and before it is
+		// recorded, so a failed install never touches the rollback state.
+		if req.PreviousCopy != "" && len(out.Completed) == 1 {
+			if err := m.rotate(storePath, storeErr, coord, req); err != nil {
+				out.Failed = append(out.Failed, Failure{Stage: StageRecord, Err: recordErr(err)})
+			}
+		}
 
 		recErr := storeErr
 		if recErr == nil {

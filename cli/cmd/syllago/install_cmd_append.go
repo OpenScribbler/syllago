@@ -142,12 +142,7 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 	case !hasRecord || pts.State == installcheck.StateFresh:
 		// Fresh install — no record or no clean match.
 		if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
-			return output.NewStructuredErrorDetail(
-				output.ErrInstallNotWritable,
-				"appending rule to target file",
-				"Check write permissions on the target file.",
-				err.Error(),
-			)
+			return err
 		}
 		installed = append(installed, installedItem{
 			Name:   loaded.Meta.Name,
@@ -243,12 +238,7 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 			// fresh copy is appended, keeping D14's (LibraryID, TargetFile)
 			// uniqueness without losing the record on failure.
 			if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
-				return output.NewStructuredErrorDetail(
-					output.ErrInstallNotWritable,
-					"appending rule to target file",
-					"Check write permissions on the target file.",
-					err.Error(),
-				)
+				return err
 			}
 			installed = append(installed, installedItem{
 				Name:   loaded.Meta.Name,
@@ -281,7 +271,8 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 }
 
 // appendRule appends the library rule in ruleDir to the provider's
-// monolithic rule file and records the install.
+// monolithic rule file and records the install. A lock that could not be
+// taken comes back as itself; any other failure is a write failure.
 func appendRule(ruleDir, toSlug, projectRoot string) error {
 	prov := findProviderBySlug(toSlug)
 	if prov == nil {
@@ -294,8 +285,16 @@ func appendRule(ruleDir, toSlug, projectRoot string) error {
 		Method:      installer.MethodAppend,
 		Source:      "manual",
 	})
-	if err != nil {
+	if len(outcome.Unattempted) > 0 {
 		return err
+	}
+	if err != nil {
+		return output.NewStructuredErrorDetail(
+			output.ErrInstallNotWritable,
+			"appending rule to target file",
+			"Check write permissions on the target file.",
+			err.Error(),
+		)
 	}
 	printLifecycleWarnings(output.ErrWriter, outcome)
 	return nil

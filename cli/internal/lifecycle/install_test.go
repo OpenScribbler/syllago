@@ -306,6 +306,38 @@ func TestInstall_PreviousCopyNotRotatedWithoutLock(t *testing.T) {
 	}
 }
 
+// A failed install leaves the rollback state alone.
+func TestInstall_PreviousCopyNotRotatedWhenPlacementFails(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r12", "acme")
+	v1 := seedV1(t, storePath, item)
+	p := &scriptedPlacer{fail: map[string]error{"alpha": errors.New("boom")}}
+
+	if _, err := scriptedModule(p).Install(InstallRequest{Item: item, Targets: targets("alpha"), PreviousCopy: "/prev/r12"}); err == nil {
+		t.Fatal("want the placement error")
+	}
+	rec := loadRecord(t, storePath, recordCoord(item))
+	if rec == nil || rec.Previous != nil || rec.ContentHash != v1 {
+		t.Errorf("record = %+v, want it unchanged at %s", rec, v1)
+	}
+}
+
+// Several targets rotate the record once, so Previous keeps the old version.
+func TestInstall_PreviousCopyRotatesOnce(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r13", "acme")
+	v1 := seedV1(t, storePath, item)
+	p := &scriptedPlacer{fail: map[string]error{"alpha": errors.New("boom")}}
+
+	if _, err := scriptedModule(p).Install(InstallRequest{Item: item, Targets: targets("alpha", "beta", "gamma"), PreviousCopy: "/prev/r13"}); err == nil {
+		t.Fatal("want the alpha placement error")
+	}
+	rec := loadRecord(t, storePath, recordCoord(item))
+	if rec == nil || rec.Previous == nil || rec.Previous.ContentHash != v1 {
+		t.Errorf("record = %+v, want previous version %s", rec, v1)
+	}
+}
+
 func TestInstall_PreviousCopyWithoutRecord(t *testing.T) {
 	storePath := isolate(t)
 	item := libraryItem(t, "r11", "acme")
