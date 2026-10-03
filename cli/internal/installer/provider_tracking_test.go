@@ -304,3 +304,77 @@ func TestLoadInstalled_ResolvesRetiredProviderSlugs(t *testing.T) {
 		t.Errorf("providers = %q, %q; want devin", inst.Hooks[0].Provider, inst.MCP[0].Provider)
 	}
 }
+
+// When a legacy per-server record and this provider's bulk record (written by
+// loadout apply) both name the item, uninstall removes this provider's record
+// and leaves the legacy one.
+func TestUninstallMCP_PrefersProviderRecordOverLegacyPerServer(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"cursor": filepath.Join(dir, "cursor-mcp.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["cursor"], []byte(`{"mcpServers":{"shared-mcp":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "shared-mcp")
+	if err := SaveInstalled(projectRoot, &Installed{MCP: []InstalledMCP{
+		{Name: "shared-mcp", ServerKey: "shared-mcp"},
+		{Name: "shared-mcp", ServerNames: []string{"shared-mcp"}, Provider: "cursor"},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := uninstallMCP(item, provider.Cursor, projectRoot); err != nil {
+		t.Fatalf("uninstall from cursor: %v", err)
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if len(inst.MCP) != 1 || inst.MCP[0].Provider != "" {
+		t.Fatalf("expected only the legacy record to remain, got %+v", inst.MCP)
+	}
+}
+
+// A server another provider's record tracks is an orphan on a provider whose
+// settings hold it untracked. A legacy record with no provider tracks it on
+// every provider.
+func TestCheckOrphanedMerges_ProviderScopedRecords(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		recordProv  string
+		wantOrphans int
+	}{
+		{"other provider's record", "cursor", 1},
+		{"legacy record", "", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			if err := os.MkdirAll(filepath.Join(home, ".orphan-test"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, ".orphan-test", "settings.json"),
+				[]byte(`{"mcpServers":{"srv":{"command":"node"}}}`), 0644); err != nil {
+				t.Fatal(err)
+			}
+			projectRoot := t.TempDir()
+			if err := SaveInstalled(projectRoot, &Installed{MCP: []InstalledMCP{
+				{Name: "srv", ServerKey: "srv", Provider: tc.recordProv},
+			}}); err != nil {
+				t.Fatal(err)
+			}
+			prov := provider.Provider{Name: "Test", Slug: "test", ConfigDir: ".orphan-test", Detected: true}
+
+			orphans, err := CheckOrphanedMerges(projectRoot, []provider.Provider{prov})
+			if err != nil {
+				t.Fatalf("CheckOrphanedMerges: %v", err)
+			}
+			if len(orphans) != tc.wantOrphans {
+				t.Fatalf("got %d orphans %+v, want %d", len(orphans), orphans, tc.wantOrphans)
+			}
+		})
+	}
+}

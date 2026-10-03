@@ -584,13 +584,19 @@ func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem, provSlug
 	return legacyRoot
 }
 
+// findMCPInstallRecord prefers a record for this provider, whether it is a
+// per-server record (installer) or a bulk one (loadout apply), over a record
+// with no provider.
 func findMCPInstallRecord(inst *Installed, item catalog.ContentItem, provSlug string) int {
-	if item.ServerKey != "" {
-		if idx := inst.FindMCPByServerKey(item.Name, item.ServerKey, provSlug); idx >= 0 {
-			return idx
-		}
+	byName := inst.FindMCP(item.Name, provSlug)
+	if item.ServerKey == "" {
+		return byName
 	}
-	return inst.FindMCP(item.Name, provSlug)
+	byKey := inst.FindMCPByServerKey(item.Name, item.ServerKey, provSlug)
+	if byKey >= 0 && (inst.MCP[byKey].Provider == provSlug || byName < 0 || inst.MCP[byName].Provider != provSlug) {
+		return byKey
+	}
+	return byName
 }
 
 // mcpServerClaimed reports whether an entry in inst placed serverName on the
