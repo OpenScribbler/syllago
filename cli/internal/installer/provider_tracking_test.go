@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -171,6 +172,29 @@ func TestInstallHook_LegacyRecordDedup(t *testing.T) {
 	}
 	if _, err := installHook(item, provider.Cursor, projectRoot, ScanOptions{}); err != nil {
 		t.Errorf("install to cursor beside a legacy claude-code record: %v", err)
+	}
+}
+
+// A record with no provider under the legacy root blocks a reinstall the same
+// way: only on a provider whose settings already hold the hook.
+func TestInstallHook_LegacyRootRecordDedup(t *testing.T) {
+	legacyRoot := isolateLegacyRoot(t)
+	paths := hookTestPaths(t)
+	overrideHookSettingsPaths(t, paths)
+	projectRoot := t.TempDir()
+	item := writeCanonicalHookItemInProject(t, projectRoot, "old-hook", "PreToolUse", "Bash", "echo old")
+
+	if _, err := installHook(item, provider.ClaudeCode, legacyRoot, ScanOptions{}); err != nil {
+		t.Fatalf("seed legacy root: %v", err)
+	}
+	stripRecordedProviders(t, legacyRoot)
+
+	_, err := installHook(item, provider.ClaudeCode, projectRoot, ScanOptions{})
+	if err == nil || !strings.Contains(err.Error(), "already installed") {
+		t.Errorf("reinstall to claude-code: got %v, want an 'already installed' error", err)
+	}
+	if _, err := installHook(item, provider.Cursor, projectRoot, ScanOptions{}); err != nil {
+		t.Errorf("install to cursor beside a legacy-root claude-code record: %v", err)
 	}
 }
 
@@ -407,5 +431,52 @@ func TestUninstallMCP_LegacyRecordMissingFromTarget(t *testing.T) {
 	}
 	if len(inst.MCP) != 1 {
 		t.Fatalf("legacy record removed: %+v", inst.MCP)
+	}
+}
+
+// The orphan check scopes hook records by provider the same way it scopes
+// MCP records.
+func TestCheckOrphanedMerges_ProviderScopedHookRecords(t *testing.T) {
+	const settings = `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}]}}`
+	decoded, err := converter.AdapterFor("claude-code").Decode([]byte(settings))
+	if err != nil || len(decoded.Hooks) != 1 {
+		t.Fatalf("decode: %v, %d hooks", err, len(decoded.Hooks))
+	}
+	hash := hookIdentity(decoded.Hooks[0])
+
+	for _, tc := range []struct {
+		name        string
+		recordProv  string
+		wantOrphans int
+	}{
+		{"same provider's record", "claude-code", 0},
+		{"other provider's record", "cursor", 1},
+		{"legacy record", "", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			if err := os.MkdirAll(filepath.Join(home, ".orphan-hooks"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(home, ".orphan-hooks", "settings.json"), []byte(settings), 0644); err != nil {
+				t.Fatal(err)
+			}
+			projectRoot := t.TempDir()
+			if err := SaveInstalled(projectRoot, &Installed{Hooks: []InstalledHook{
+				{Name: "h", Event: "PreToolUse", GroupHash: hash, Provider: tc.recordProv},
+			}}); err != nil {
+				t.Fatal(err)
+			}
+			prov := provider.Provider{Name: "Claude Code", Slug: "claude-code", ConfigDir: ".orphan-hooks", Detected: true}
+
+			orphans, err := CheckOrphanedMerges(projectRoot, []provider.Provider{prov})
+			if err != nil {
+				t.Fatalf("CheckOrphanedMerges: %v", err)
+			}
+			if len(orphans) != tc.wantOrphans {
+				t.Fatalf("got %d orphans %+v, want %d", len(orphans), orphans, tc.wantOrphans)
+			}
+		})
 	}
 }
