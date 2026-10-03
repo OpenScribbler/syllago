@@ -18,6 +18,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 // Run migrates the library at libDir away from retired provider slugs. It
@@ -34,6 +35,23 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		return nil
 	}
 
+	// The install lock is taken only once there is work, so a library with
+	// nothing to migrate never waits on another syllago process.
+	var release func()
+	takeLock := func() error {
+		if release != nil {
+			return nil
+		}
+		var err error
+		release, err = syllagolock.Acquire(syllagolock.DefaultTimeout)
+		return err
+	}
+	defer func() {
+		if release != nil {
+			release()
+		}
+	}()
+
 	var errs []error
 	var movedNames []string
 	for _, prov := range provider.AllProviders {
@@ -41,11 +59,14 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 			for _, ct := range catalog.AllContentTypes() {
 				oldDir := filepath.Join(libDir, string(ct), old)
 				newDir := filepath.Join(libDir, string(ct), prov.Slug)
-				if !isProviderFolder(ct, oldDir) {
+				if !isProviderFolder(ct, oldDir) || bothFolders(w, oldDir, newDir) {
 					continue
 				}
-				if _, err := os.Lstat(newDir); err == nil {
-					fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
+				if err := takeLock(); err != nil {
+					return err
+				}
+				// Re-check under the lock: another process may have moved it.
+				if !isProviderFolder(ct, oldDir) || bothFolders(w, oldDir, newDir) {
 					continue
 				}
 				if err := moveFolder(oldDir, newDir, home, storePath); err != nil {
@@ -57,7 +78,7 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		}
 	}
 
-	rewritten, err := rewriteLibraryFiles(libDir)
+	rewritten, err := rewriteLibraryFiles(libDir, takeLock)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -71,6 +92,17 @@ func Run(libDir, home, storePath string, w io.Writer) error {
 		fmt.Fprintf(w, "notice: migrated library content to renamed provider slugs: %s\n", strings.Join(parts, "; "))
 	}
 	return errors.Join(errs...)
+}
+
+// bothFolders reports whether newDir already exists beside oldDir, and warns
+// when it does. Migration leaves that case for the user, so it is checked
+// before taking the lock as well as under it.
+func bothFolders(w io.Writer, oldDir, newDir string) bool {
+	if _, err := os.Lstat(newDir); err != nil {
+		return false
+	}
+	fmt.Fprintf(w, "warning: library has both %s and %s; move the items from the first into the second, then delete the first\n", oldDir, newDir)
+	return true
 }
 
 // isProviderFolder reports whether dir is a provider folder of content type
@@ -214,7 +246,7 @@ func rebase(path, oldDir, newDir string) string {
 // of every metadata and loadout file in the library, and returns how many
 // files it changed. A file it cannot parse is left alone; the catalog scan
 // reports it.
-func rewriteLibraryFiles(libDir string) (int, error) {
+func rewriteLibraryFiles(libDir string, takeLock func() error) (int, error) {
 	count := 0
 	err := filepath.WalkDir(libDir, func(path string, d fs.DirEntry, err error) error {
 		// A symlinked file may point outside the library, so only regular
@@ -232,7 +264,7 @@ func rewriteLibraryFiles(libDir string) (int, error) {
 		default:
 			return nil
 		}
-		changed, err := rewriteYAML(path, fields)
+		changed, err := rewriteYAML(path, fields, takeLock)
 		if err != nil {
 			return err
 		}
@@ -246,27 +278,29 @@ func rewriteLibraryFiles(libDir string) (int, error) {
 
 // rewriteYAML applies fields to the top-level mapping of the YAML file at
 // path and writes the file back when fields reports a change.
-func rewriteYAML(path string, fields func(root *yaml.Node) bool) (bool, error) {
+func rewriteYAML(path string, fields func(root *yaml.Node) bool, takeLock func() error) (bool, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
-	if !mentionsRetiredSlug(data) {
+	if doc := rewrittenDoc(data, fields); doc == nil {
 		return false, nil
 	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return false, nil
+	// Take the lock, then re-read, so the rewrite starts from the file as
+	// it stands under the lock rather than from the unlocked read.
+	if err := takeLock(); err != nil {
+		return false, err
 	}
-	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		return false, nil
+	if data, err = os.ReadFile(path); err != nil {
+		return false, err
 	}
-	if !fields(doc.Content[0]) {
+	doc := rewrittenDoc(data, fields)
+	if doc == nil {
 		return false, nil
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
-	if err := enc.Encode(&doc); err != nil {
+	if err := enc.Encode(doc); err != nil {
 		return false, fmt.Errorf("encoding %s: %w", path, err)
 	}
 	if err := enc.Close(); err != nil {
@@ -280,6 +314,28 @@ func rewriteYAML(path string, fields func(root *yaml.Node) bool) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+// rewrittenDoc parses data and applies fields to its top-level mapping. It
+// returns nil when the file needs no change, including when it does not
+// parse. A retired slug can sit in a field fields leaves alone, such as a
+// source path ending in .windsurfrules, so the substring filter alone does
+// not mean there is work.
+func rewrittenDoc(data []byte, fields func(root *yaml.Node) bool) *yaml.Node {
+	if !mentionsRetiredSlug(data) {
+		return nil
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return nil
+	}
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
+		return nil
+	}
+	if !fields(doc.Content[0]) {
+		return nil
+	}
+	return &doc
 }
 
 // mentionsRetiredSlug is a cheap filter that skips parsing files that

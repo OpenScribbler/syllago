@@ -74,6 +74,8 @@ type ApplyResult struct {
 //   - The SessionEnd hook injected for "try" mode is NOT recorded in installed.json --
 //     it lives only in the backed-up settings.json and gets reverted with the snapshot.
 func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) (*ApplyResult, error) {
+	// Callers that change state hold the install lock across their
+	// active-loadout check and every Apply, so the check stays true.
 	if opts.HomeDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {

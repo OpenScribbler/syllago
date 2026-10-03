@@ -8,6 +8,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/rollback"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -57,6 +58,14 @@ func runRollback(cmd *cobra.Command, args []string) error {
 	}
 	telemetry.Enrich("content_type", string(item.Type))
 	telemetry.Enrich("dry_run", dryRun)
+
+	if !dryRun {
+		release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+		if err != nil {
+			return err
+		}
+		defer release()
+	}
 
 	plan, err := rollback.PlanFor(*item)
 	if err != nil {

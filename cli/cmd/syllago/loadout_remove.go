@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/loadout"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +32,14 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 	if !autoMode {
 		checkAndWarnStaleSnapshot(projectRoot)
 	}
+
+	// Hold the install lock from showing the snapshot through removing it,
+	// confirmation prompt included, so the loadout removed is the one shown.
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	// Check for active snapshot first to show what will be reverted
 	manifest, found, err := loadSnapshotManifest(projectRoot)

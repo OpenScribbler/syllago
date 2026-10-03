@@ -43,6 +43,8 @@ type RemoveResult struct {
 // Gotcha: Symlink deletion ignores ErrNotExist because the user may have
 // manually removed a symlink before running remove.
 func Remove(opts RemoveOptions) (*RemoveResult, error) {
+	// Callers hold the install lock from the snapshot they show the user
+	// through this call, so Remove reverts the loadout they confirmed.
 	manifest, snapshotDir, err := snapshot.Load(opts.ProjectRoot)
 	if errors.Is(err, snapshot.ErrNoSnapshot) {
 		return nil, ErrNoActiveLoadout

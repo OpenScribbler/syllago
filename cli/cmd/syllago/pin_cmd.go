@@ -8,6 +8,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -88,6 +89,12 @@ func handlePinState(cmd *cobra.Command, name string, pinned bool) error {
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "could not determine install store path", "Check filesystem permissions", err.Error())
 	}
+
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return err
+	}
+	defer release()
 
 	if err := installstore.SetPinned(storePath, coord, pinned, time.Now()); err != nil {
 		return output.NewStructuredErrorDetail(

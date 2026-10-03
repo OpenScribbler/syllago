@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 	"github.com/spf13/cobra"
 )
@@ -87,6 +88,14 @@ func runDoctorFix(force bool) error {
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemHomedir, "cannot determine home directory", "Ensure $HOME is set in your environment", err.Error())
 	}
+	// Hold the lock from scan to repair, confirmation prompt included, so
+	// another writer cannot fix or replace a link between plan and apply.
+	release, err := syllagolock.Acquire(syllagolock.DefaultTimeout)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	links := installer.ScanProviderLinks(provider.AllProviders, home, doctor.SyllagoOwnedRoots(home))
 	broken := doctorFixBrokenLinks(links)
 

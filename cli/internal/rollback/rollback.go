@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
@@ -93,6 +94,36 @@ func loadRollbackRecord(item catalog.ContentItem) (string, *installstore.Record,
 	return storePath, rec, coord, nil
 }
 
+// checkPlanCurrent rejects a plan whose record changed since PlanFor, such
+// as an update that ran while a confirmation prompt was open.
+func checkPlanCurrent(plan *Plan) error {
+	_, rec, coord, err := loadRollbackRecord(plan.Item)
+	if err != nil {
+		return err
+	}
+	// The placements count too: the TUI reapplies plan.Placements, so a
+	// provider added after planning would keep the newer content.
+	if rec.Previous == nil || rec.LibraryPath != plan.LibraryPath || !samePrevious(*rec.Previous, plan.Prev) ||
+		!slices.EqualFunc(rec.Placements, plan.Placements, samePlacement) {
+		return output.NewStructuredError(
+			output.ErrInstallConflict,
+			fmt.Sprintf("rollback point for %s/%s changed since it was planned", coord.Type, coord.Name),
+			"Run rollback again to review the current rollback point.",
+		)
+	}
+	return nil
+}
+
+func samePrevious(a, b installstore.PreviousVersion) bool {
+	return a.SourceSHA == b.SourceSHA && a.ContentHash == b.ContentHash &&
+		a.CopyPath == b.CopyPath && a.ReplacedAt.Equal(b.ReplacedAt)
+}
+
+func samePlacement(a, b installstore.Placement) bool {
+	return a.Provider == b.Provider && a.Mechanism == b.Mechanism && a.Path == b.Path &&
+		a.Key == b.Key && a.Scope == b.Scope && a.InstalledAt.Equal(b.InstalledAt)
+}
+
 func noInstallRecordError(c installstore.Coord) error {
 	return output.NewStructuredError(
 		output.ErrInstallNotInstalled,
@@ -110,7 +141,12 @@ func noRollbackDataError(c installstore.Coord) error {
 }
 
 // Restore restores plan's previous content and records the rollback.
+// Callers hold the install lock; Restore refuses a plan whose rollback
+// point changed after it was planned.
 func Restore(plan *Plan, version string) error {
+	if err := checkPlanCurrent(plan); err != nil {
+		return err
+	}
 	if plan.FromCopy {
 		if err := restoreFromPreviousCopy(plan.LibraryPath, plan.Prev.CopyPath); err != nil {
 			return err
