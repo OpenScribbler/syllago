@@ -293,32 +293,39 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 	}, nil
 }
 
-func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
-	status := checkHookStatusAtRoot(item, prov, repoRoot)
+// hookStatus is checkHookStatus with the error that left its status a
+// guess, as StatusOf describes.
+func hookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Status, error) {
+	status, err := hookStatusAtRoot(item, prov, repoRoot)
 	if status != StatusNotInstalled {
-		return status
+		return status, err
 	}
 	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
-		if legacyStatus := checkHookStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
-			return StatusInstalled
+		if legacyStatus, _ := hookStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
+			return StatusInstalled, nil
 		}
 	}
+	return status, err
+}
+
+func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+	status, _ := hookStatus(item, prov, repoRoot)
 	return status
 }
 
-func checkHookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+func hookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Status, error) {
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, err
 	}
 
 	adapter := converter.AdapterFor(prov.Slug)
 	if adapter == nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 	model, err := hookStorageModelFor(prov.Slug)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 
 	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
@@ -326,28 +333,28 @@ func checkHookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, rep
 
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, err
 	}
 	instIdx := inst.FindHook(item.Name, nativeEvent, prov.Slug)
 	if instIdx < 0 {
-		return StatusNotInstalled
+		return StatusNotInstalled, nil
 	}
 	storedHash := inst.Hooks[instIdx].GroupHash
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return StatusNotInstalled
+		return StatusNotInstalled, nil
 	}
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
-		return StatusNotInstalled
+		return StatusNotInstalled, err
 	}
 	for _, eh := range existing {
 		if hookIdentity(eh) == storedHash {
-			return StatusInstalled
+			return StatusInstalled, nil
 		}
 	}
-	return StatusNotInstalled
+	return StatusNotInstalled, nil
 }
 
 // hookTracked reports whether inst records hook name for event as installed

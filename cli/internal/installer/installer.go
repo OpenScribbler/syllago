@@ -2,7 +2,9 @@ package installer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -118,20 +120,29 @@ func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, er
 // CheckStatus checks whether an item is installed for a given provider.
 // registryPaths contains additional valid symlink source roots (registry cache directories).
 func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string, registryPaths ...string) Status {
+	status, _ := StatusOf(item, prov, repoRoot, registryPaths...)
+	return status
+}
+
+// StatusOf is CheckStatus that also reports when it could not tell. A
+// non-nil error means a file the check needed could not be read or parsed,
+// so the returned Status is a guess; a caller about to delete the item
+// treats that provider as unknown rather than as not installed.
+func StatusOf(item catalog.ContentItem, prov provider.Provider, repoRoot string, registryPaths ...string) (Status, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
 		case catalog.MCP:
-			return checkMCPStatus(item, prov, repoRoot)
+			return mcpStatus(item, prov, repoRoot)
 		case catalog.Hooks:
-			return checkHookStatus(item, prov, repoRoot)
+			return hookStatus(item, prov, repoRoot)
 		}
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 
 	targetPath, err := resolveTarget(item, prov)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 	if home, homeErr := os.UserHomeDir(); homeErr == nil {
 		if lp, _, ok := legacyTarget(item, prov, home, targetPath); ok {
@@ -141,15 +152,17 @@ func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	allRoots := append([]string{repoRoot}, registryPaths...)
 	if IsSymlinkedToAny(targetPath, allRoots) {
-		return StatusInstalled
+		return StatusInstalled, nil
 	}
 
 	// Also check if target exists as a regular file (e.g., installed via copy)
 	if _, err := os.Lstat(targetPath); err == nil {
-		return StatusInstalled
+		return StatusInstalled, nil
+	} else if errors.Is(err, fs.ErrPermission) {
+		return StatusNotInstalled, err
 	}
 
-	return StatusNotInstalled
+	return StatusNotInstalled, nil
 }
 
 // CheckStatusWithResolver checks whether an item is installed, using the resolver
