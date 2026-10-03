@@ -1,11 +1,14 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -45,11 +48,32 @@ type FixAction struct {
 	NewSource string
 }
 
+// LinkScanError is a provider install directory that exists but that a link
+// scan could not read, so links in it went unseen.
+type LinkScanError struct {
+	Provider string
+	Dir      string
+	Err      error
+}
+
+func (e LinkScanError) Error() string { return fmt.Sprintf("reading %s: %v", e.Dir, e.Err) }
+func (e LinkScanError) Unwrap() error { return e.Err }
+
 // ScanProviderLinks walks each provider's install directory for every content
 // type and returns the symlinks whose target resolves into any of roots.
 // Symlinks pointing elsewhere (user-owned) and non-symlink entries are ignored.
+// A directory it cannot read is skipped; ScanProviderLinksChecked reports it.
 func ScanProviderLinks(providers []provider.Provider, home string, roots []string) []ScannedLink {
+	links, _ := ScanProviderLinksChecked(providers, home, roots)
+	return links
+}
+
+// ScanProviderLinksChecked is ScanProviderLinks that also returns each
+// install directory it could not read. A caller about to delete what the
+// links point at needs to know a link may have gone unseen.
+func ScanProviderLinksChecked(providers []provider.Provider, home string, roots []string) ([]ScannedLink, []LinkScanError) {
 	var links []ScannedLink
+	var errs []LinkScanError
 	seen := make(map[string]bool)
 
 	for _, prov := range providers {
@@ -62,7 +86,11 @@ func ScanProviderLinks(providers []provider.Provider, home string, roots []strin
 				dirs = append(dirs, prov.LegacyInstallDir(home, ct))
 			}
 			for _, dir := range dirs {
-				links = append(links, scanLinkDir(prov, ct, dir, roots, seen)...)
+				found, err := scanLinkDir(prov, ct, dir, roots, seen)
+				links = append(links, found...)
+				if err != nil {
+					errs = append(errs, LinkScanError{Provider: prov.Slug, Dir: dir, Err: err})
+				}
 			}
 		}
 	}
@@ -76,18 +104,22 @@ func ScanProviderLinks(providers []provider.Provider, home string, roots []strin
 		}
 		return links[i].Path < links[j].Path
 	})
-	return links
+	return links, errs
 }
 
 // scanLinkDir returns the symlinks in dir whose target resolves into roots,
-// skipping paths already in seen and recording the ones it returns.
-func scanLinkDir(prov provider.Provider, ct catalog.ContentType, dir string, roots []string, seen map[string]bool) []ScannedLink {
+// skipping paths already in seen and recording the ones it returns. A dir
+// that does not exist holds no links; any other read failure is returned.
+func scanLinkDir(prov provider.Provider, ct catalog.ContentType, dir string, roots []string, seen map[string]bool) ([]ScannedLink, error) {
 	if dir == "" || dir == provider.JSONMergeSentinel || dir == provider.ProjectScopeSentinel {
-		return nil
+		return nil, nil
 	}
 	entries, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	var links []ScannedLink
 	for _, entry := range entries {
@@ -127,7 +159,7 @@ func scanLinkDir(prov provider.Provider, ct catalog.ContentType, dir string, roo
 		})
 		seen[linkPath] = true
 	}
-	return links
+	return links, nil
 }
 
 // SourcePathFor returns the filesystem source path used when installing item.

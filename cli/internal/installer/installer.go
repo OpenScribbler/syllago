@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -145,7 +146,11 @@ func StatusOf(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		return StatusNotAvailable, nil
 	}
 	if home, homeErr := os.UserHomeDir(); homeErr == nil {
-		if lp, _, ok := legacyTarget(item, prov, home, targetPath); ok {
+		lp, _, ok, err := legacyTargetChecked(item, prov, home, targetPath)
+		if err != nil {
+			return StatusNotInstalled, err
+		}
+		if ok {
 			targetPath = lp
 		}
 	}
@@ -158,11 +163,18 @@ func StatusOf(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	// Also check if target exists as a regular file (e.g., installed via copy)
 	if _, err := os.Lstat(targetPath); err == nil {
 		return StatusInstalled, nil
-	} else if errors.Is(err, fs.ErrPermission) {
+	} else if lstatUnreadable(err) {
 		return StatusNotInstalled, err
 	}
 
 	return StatusNotInstalled, nil
+}
+
+// lstatUnreadable reports whether err from os.Lstat leaves it unknown
+// whether the path exists. A missing path, or a file where a parent
+// directory should be, means nothing is there.
+func lstatUnreadable(err error) bool {
+	return err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR)
 }
 
 // CheckStatusWithResolver checks whether an item is installed, using the resolver
@@ -451,21 +463,31 @@ func UninstallFrom(item catalog.ContentItem, prov provider.Provider, repoRoot, b
 // for its type, and that directory, when nothing exists at targetPath and
 // something exists at the legacy path.
 func legacyTarget(item catalog.ContentItem, prov provider.Provider, home, targetPath string) (string, string, bool) {
+	lp, dir, ok, _ := legacyTargetChecked(item, prov, home, targetPath)
+	return lp, dir, ok
+}
+
+// legacyTargetChecked is legacyTarget that also returns the error when the
+// legacy path could not be checked, so an install there may be unseen.
+func legacyTargetChecked(item catalog.ContentItem, prov provider.Provider, home, targetPath string) (string, string, bool, error) {
 	if prov.LegacyInstallDir == nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 	if _, err := os.Lstat(targetPath); err == nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 	dir := prov.LegacyInstallDir(home, item.Type)
 	if dir == "" {
-		return "", "", false
+		return "", "", false, nil
 	}
 	lp := filepath.Join(dir, filepath.Base(targetPath))
 	if _, err := os.Lstat(lp); err != nil {
-		return "", "", false
+		if lstatUnreadable(err) {
+			return "", "", false, err
+		}
+		return "", "", false, nil
 	}
-	return lp, dir, true
+	return lp, dir, true, nil
 }
 
 func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {

@@ -491,8 +491,12 @@ func mcpStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string
 		return status, err
 	}
 	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
-		if legacyStatus, _ := mcpStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
+		legacyStatus, legacyErr := mcpStatusAtRoot(item, prov, legacyRoot)
+		if legacyStatus == StatusInstalled {
 			return StatusInstalled, nil
+		}
+		if err == nil {
+			err = legacyErr
 		}
 	}
 	return status, err
@@ -524,9 +528,10 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 		return StatusNotInstalled, nil
 	}
 
-	// Legacy: check installed.json for bulk-installed entries.
-	inst, err := LoadInstalled(repoRoot)
-	if err == nil {
+	// Legacy: check installed.json for bulk-installed entries. When it
+	// cannot be read, a server it names under another key goes unseen.
+	inst, instErr := LoadInstalled(repoRoot)
+	if instErr == nil {
 		idx := inst.FindMCP(item.Name, prov.Slug)
 		if idx >= 0 {
 			names := inst.MCP[idx].ServerNames
@@ -546,7 +551,7 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	if gjson.GetBytes(fileData, jsonKey+"."+item.Name).Exists() {
 		return StatusInstalled, nil
 	}
-	return StatusNotInstalled, nil
+	return StatusNotInstalled, instErr
 }
 
 // legacyMCPInstalled reports whether the legacy root's installed.json

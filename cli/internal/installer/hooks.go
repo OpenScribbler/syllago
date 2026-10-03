@@ -301,8 +301,12 @@ func hookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return status, err
 	}
 	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
-		if legacyStatus, _ := hookStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
+		legacyStatus, legacyErr := hookStatusAtRoot(item, prov, legacyRoot)
+		if legacyStatus == StatusInstalled {
 			return StatusInstalled, nil
+		}
+		if err == nil {
+			err = legacyErr
 		}
 	}
 	return status, err
