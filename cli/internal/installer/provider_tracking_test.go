@@ -378,3 +378,34 @@ func TestCheckOrphanedMerges_ProviderScopedRecords(t *testing.T) {
 		})
 	}
 }
+
+// A record with no provider whose server is missing from this provider's
+// config may belong to another provider, so uninstall refuses and keeps it.
+func TestUninstallMCP_LegacyRecordMissingFromTarget(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"cursor": filepath.Join(dir, "cursor-mcp.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["cursor"], []byte(`{"mcpServers":{}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "shared-mcp")
+	if err := SaveInstalled(projectRoot, &Installed{MCP: []InstalledMCP{
+		{Name: "shared-mcp", ServerKey: "shared-mcp"},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := uninstallMCP(item, provider.Cursor, projectRoot); err == nil {
+		t.Fatal("uninstall from cursor succeeded, want a not-installed error")
+	}
+
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if len(inst.MCP) != 1 {
+		t.Fatalf("legacy record removed: %+v", inst.MCP)
+	}
+}

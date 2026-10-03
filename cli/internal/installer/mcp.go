@@ -441,6 +441,12 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 		}
 		return Placement{}, fmt.Errorf("%s was not installed by syllago", item.Name)
 	}
+	// An entry with no provider may belong to another provider. Remove it
+	// only when this provider's config holds its server, as hooks require a
+	// matching hook in the target settings.
+	if entry := inst.MCP[instIdx]; entry.Provider == "" && !mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
+		return Placement{}, fmt.Errorf("%s was not installed by syllago for %s", item.Name, prov.Name)
+	}
 
 	if err := backupFile(cfgPath); err != nil {
 		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
@@ -552,13 +558,8 @@ func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[s
 	}
 	if idx := findMCPInstallRecord(inst, item, provSlug); idx >= 0 {
 		entry := inst.MCP[idx]
-		if entry.Provider != "" {
+		if entry.Provider != "" || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
 			return item.Name, true
-		}
-		for _, key := range entry.serverKeys(item.Name) {
-			if gjson.GetBytes(fileData, jsonKey+"."+key).Exists() {
-				return item.Name, true
-			}
 		}
 	}
 	for name := range entries {
@@ -567,6 +568,17 @@ func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[s
 		}
 	}
 	return "", false
+}
+
+// mcpRecordInConfig reports whether any server the entry placed is in
+// fileData under jsonKey.
+func mcpRecordInConfig(entry InstalledMCP, itemName string, fileData []byte, jsonKey string) bool {
+	for _, key := range entry.serverKeys(itemName) {
+		if gjson.GetBytes(fileData, jsonKey+"."+key).Exists() {
+			return true
+		}
+	}
+	return false
 }
 
 func legacyRootWithMCPRecord(repoRoot string, item catalog.ContentItem, provSlug string) string {

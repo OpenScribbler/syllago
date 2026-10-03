@@ -111,6 +111,45 @@ func TestFindMCP(t *testing.T) {
 	}
 }
 
+// Each Find method takes the record for the asked provider even when a record
+// with no provider comes first, falls back to that record otherwise, and never
+// takes another provider's record.
+func TestFind_PrefersProviderOverLegacy(t *testing.T) {
+	t.Parallel()
+	inst := &Installed{
+		Hooks: []InstalledHook{
+			{Name: "h", Event: "PreToolUse"},
+			{Name: "h", Event: "PreToolUse", Provider: "cursor"},
+			{Name: "only-other", Event: "PreToolUse", Provider: "cursor"},
+		},
+		MCP: []InstalledMCP{
+			{Name: "m", ServerKey: "m"},
+			{Name: "m", ServerKey: "m", Provider: "cursor"},
+			{Name: "only-other", ServerKey: "only-other", Provider: "cursor"},
+		},
+	}
+	tests := []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"FindHook exact", inst.FindHook("h", "PreToolUse", "cursor"), 1},
+		{"FindHook legacy", inst.FindHook("h", "PreToolUse", "claude-code"), 0},
+		{"FindHook other provider", inst.FindHook("only-other", "PreToolUse", "claude-code"), -1},
+		{"FindMCP exact", inst.FindMCP("m", "cursor"), 1},
+		{"FindMCP legacy", inst.FindMCP("m", "claude-code"), 0},
+		{"FindMCP other provider", inst.FindMCP("only-other", "claude-code"), -1},
+		{"FindMCPByServerKey exact", inst.FindMCPByServerKey("m", "m", "cursor"), 1},
+		{"FindMCPByServerKey legacy", inst.FindMCPByServerKey("m", "m", "claude-code"), 0},
+		{"FindMCPByServerKey other provider", inst.FindMCPByServerKey("only-other", "only-other", "claude-code"), -1},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %d, want %d", tt.name, tt.got, tt.want)
+		}
+	}
+}
+
 func TestInstalled_FindAndRemoveRuleAppend(t *testing.T) {
 	t.Parallel()
 	inst := &Installed{
