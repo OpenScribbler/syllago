@@ -10,10 +10,12 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
-// placer writes one item into one target. installerPlacer is the real
-// adapter; lifecycle tests substitute one that fails a chosen target.
+// placer writes one item into one target and removes it again.
+// installerPlacer is the real adapter; lifecycle tests substitute one that
+// fails a chosen target.
 type placer interface {
 	place(req InstallRequest, t Target) (installer.Placement, error)
+	unplace(req UninstallRequest, t Target) (installer.Placement, error)
 }
 
 type installerPlacer struct{}
@@ -45,4 +47,39 @@ func placeRuleAppend(req InstallRequest, t Target) (installer.Placement, error) 
 		return installer.Placement{}, err
 	}
 	return installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: target}, nil
+}
+
+func (installerPlacer) unplace(req UninstallRequest, t Target) (installer.Placement, error) {
+	if req.Method == installer.MethodAppend {
+		return unplaceRuleAppend(req, t)
+	}
+	return installer.UninstallFrom(req.Item, t.Provider, req.ProjectRoot, t.BaseDir, t.Resolver)
+}
+
+// unplaceRuleAppend removes a library rule from the monolithic rule file
+// that installed.json records for the target's provider. A record matches by
+// the rule's name as well as its ID, because re-importing a rule gives it a
+// new ID while the records keep the old one.
+func unplaceRuleAppend(req UninstallRequest, t Target) (installer.Placement, error) {
+	loaded, err := rulestore.LoadRule(req.Item.Path)
+	if err != nil {
+		return installer.Placement{}, fmt.Errorf("loading library rule: %w", err)
+	}
+	inst, err := installer.LoadInstalled(req.ProjectRoot)
+	if err != nil {
+		return installer.Placement{}, err
+	}
+	for _, r := range inst.RuleAppends {
+		if r.Provider != t.Provider.Slug || (t.File != "" && r.TargetFile != t.File) {
+			continue
+		}
+		if r.LibraryID != loaded.Meta.ID && r.Name != req.Item.Name {
+			continue
+		}
+		if err := installer.UninstallRuleAppend(req.ProjectRoot, r.LibraryID, r.TargetFile, map[string]*rulestore.Loaded{r.LibraryID: loaded}); err != nil {
+			return installer.Placement{}, err
+		}
+		return installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: r.TargetFile}, nil
+	}
+	return installer.Placement{}, fmt.Errorf("rule %s is not appended for %s", req.Item.Name, t.Provider.Slug)
 }

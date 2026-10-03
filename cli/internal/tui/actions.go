@@ -50,6 +50,7 @@ type removeDoneMsg struct {
 type uninstallDoneMsg struct {
 	itemName        string
 	uninstalledFrom []string
+	warnings        []string // providers or records the uninstall did not reach
 	err             error
 }
 
@@ -345,21 +346,31 @@ func (a App) doUninstallCmd(msg confirmResultMsg) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		var uninstalledFrom []string
-		var lastErr error
-		for _, prov := range targetProviders {
-			placement, err := installer.Uninstall(item, prov, repoRoot)
-			if err != nil {
-				lastErr = err
-			} else {
-				recordTUIUninstallBookkeeping(item, prov.Slug, placement)
-				uninstalledFrom = append(uninstalledFrom, prov.Name)
+		targets := make([]lifecycle.Target, len(targetProviders))
+		for i, prov := range targetProviders {
+			targets[i] = lifecycle.Target{Provider: prov}
+		}
+		outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{
+			Item:        item,
+			ProjectRoot: repoRoot,
+			Targets:     targets,
+		})
+		done := uninstallDoneMsg{itemName: item.Name, warnings: outcome.Warnings()}
+		for _, step := range outcome.Completed {
+			done.uninstalledFrom = append(done.uninstalledFrom, step.Target.Provider.Name)
+		}
+		// Fail the toast only when nothing came out; a partial uninstall
+		// names the providers it could not reach.
+		if len(done.uninstalledFrom) == 0 {
+			done.err = err
+			return done
+		}
+		for _, f := range outcome.Failed {
+			if f.Stage == lifecycle.StagePlace {
+				done.warnings = append(done.warnings, fmt.Sprintf("not uninstalled from %s: %s", f.Target.Provider.Name, f.Err))
 			}
 		}
-		if lastErr != nil && len(uninstalledFrom) == 0 {
-			return uninstallDoneMsg{itemName: item.Name, err: lastErr}
-		}
-		return uninstallDoneMsg{itemName: item.Name, uninstalledFrom: uninstalledFrom}
+		return done
 	}
 }
 
@@ -380,12 +391,17 @@ func (a App) handleRemoveDone(msg removeDoneMsg) (tea.Model, tea.Cmd) {
 
 // handleUninstallDone processes the result of an uninstall operation.
 func (a App) handleUninstallDone(msg uninstallDoneMsg) (tea.Model, tea.Cmd) {
+	details := installDetails(nil, msg.warnings)
 	if msg.err != nil {
-		cmd := a.toast.Push("Uninstall failed: "+msg.err.Error(), toastError)
+		cmd := a.toast.PushDetails("Uninstall failed: "+formatToastErr(msg.err), details, toastError)
 		return a, cmd
 	}
+	toastKind := toastSuccess
+	if len(details) > 0 {
+		toastKind = toastWarning
+	}
 	toastText := fmt.Sprintf("Uninstalled %q from %s", msg.itemName, strings.Join(msg.uninstalledFrom, ", "))
-	cmd1 := a.toast.Push(toastText, toastSuccess)
+	cmd1 := a.toast.PushDetails(toastText, details, toastKind)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }

@@ -26,7 +26,7 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/catalog` | Content discovery, loading, risk indicators |
 | `internal/provider` | Provider detection and configuration |
 | `internal/installer` | Install/uninstall operations per provider |
-| `internal/lifecycle` | Install sequencing shared by every front end: place, record and pin under the syllago lock, returning an Outcome without printing |
+| `internal/lifecycle` | Install and uninstall sequencing shared by every front end: place or remove, record and pin under the syllago lock, returning an Outcome without printing |
 | `internal/converter` | Content format conversion between providers. Hook conversion uses the canonical interchange format (`docs/spec/hooks.md`) with provider-neutral names, HookAdapter interface, and read-back verification |
 | `internal/audit` | Structured JSON audit logging for content lifecycle events |
 | `internal/config` | User configuration management |

@@ -36,6 +36,18 @@ func (s *scriptedPlacer) place(req InstallRequest, t Target) (installer.Placemen
 	}, nil
 }
 
+// unplace removes what place put down, failing the same slugs.
+func (s *scriptedPlacer) unplace(req UninstallRequest, t Target) (installer.Placement, error) {
+	s.calls = append(s.calls, t.Provider.Slug)
+	if err := s.fail[t.Provider.Slug]; err != nil {
+		return installer.Placement{}, err
+	}
+	return installer.Placement{
+		Mechanism: installer.MechanismSymlink,
+		Path:      filepath.Join("/dest", t.Provider.Slug, req.Item.Name),
+	}, nil
+}
+
 var testNow = time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
 
 // isolate points HOME and the syllago directory at fresh temp dirs and
