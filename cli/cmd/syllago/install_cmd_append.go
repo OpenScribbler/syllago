@@ -239,21 +239,9 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 			}
 		case "append-fresh":
 			actionString = "append_fresh"
-			// D20's AppendRuleToTarget creates the file if missing and handles
-			// the non-empty newline rules. InstallRuleAppend also appends a
-			// new record, so drop the stale one first to preserve D14's
-			// (LibraryID, TargetFile) uniqueness.
-			if idx := inst.FindRuleAppend(loaded.Meta.ID, target); idx >= 0 {
-				inst.RemoveRuleAppend(idx)
-				if serr := installer.SaveInstalled(projectRoot, inst); serr != nil {
-					return output.NewStructuredErrorDetail(
-						output.ErrInstallNotWritable,
-						"saving installed records",
-						"Check write permissions on .syllago/installed.json",
-						serr.Error(),
-					)
-				}
-			}
+			// InstallRuleAppend replaces the stale record only once the
+			// fresh copy is appended, keeping D14's (LibraryID, TargetFile)
+			// uniqueness without losing the record on failure.
 			if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
 				return output.NewStructuredErrorDetail(
 					output.ErrInstallNotWritable,
@@ -292,10 +280,6 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 	return nil
 }
 
-// findLibraryRuleDir locates <rulesRoot>/*/<name>/ by iterating source-provider
-// subdirectories. Returns fs.ErrNotExist if no match is found. First-match
-// wins when the same rule name exists under multiple source providers — D14
-// uniqueness is enforced per (LibraryID, TargetFile), not per name.
 // appendRule appends the library rule in ruleDir to the provider's
 // monolithic rule file and records the install.
 func appendRule(ruleDir, toSlug, projectRoot string) error {
@@ -303,9 +287,8 @@ func appendRule(ruleDir, toSlug, projectRoot string) error {
 	if prov == nil {
 		return fmt.Errorf("unknown provider: %s", toSlug)
 	}
-	meta, _ := metadata.Load(ruleDir)
 	outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
-		Item:        catalog.ContentItem{Name: filepath.Base(ruleDir), Type: catalog.Rules, Path: ruleDir, Meta: meta},
+		Item:        appendRuleItem(ruleDir),
 		ProjectRoot: projectRoot,
 		Targets:     []lifecycle.Target{{Provider: *prov}},
 		Method:      installer.MethodAppend,
@@ -318,6 +301,17 @@ func appendRule(ruleDir, toSlug, projectRoot string) error {
 	return nil
 }
 
+// appendRuleItem is the catalog item for a library rule installed by
+// append. Install and uninstall both build it, so they share one record.
+func appendRuleItem(ruleDir string) catalog.ContentItem {
+	meta, _ := metadata.Load(ruleDir)
+	return catalog.ContentItem{Name: filepath.Base(ruleDir), Type: catalog.Rules, Path: ruleDir, Meta: meta}
+}
+
+// findLibraryRuleDir locates <rulesRoot>/*/<name>/ by iterating source-provider
+// subdirectories. Returns fs.ErrNotExist if no match is found. First-match
+// wins when the same rule name exists under multiple source providers — D14
+// uniqueness is enforced per (LibraryID, TargetFile), not per name.
 func findLibraryRuleDir(rulesRoot, name string) (string, error) {
 	return rulestore.FindRuleDir(rulesRoot, name)
 }

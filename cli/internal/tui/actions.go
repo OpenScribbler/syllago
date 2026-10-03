@@ -1138,16 +1138,12 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 
-		// Rotate the record before the install writes the new content hash,
-		// so the previous version keeps the old one.
-		if prevCopy != "" {
-			recordTUIMOATUpdateBookkeeping(staged, prevCopy)
-		}
 		outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
-			Item:        staged,
-			ProjectRoot: projectRoot,
-			Targets:     []lifecycle.Target{{Provider: prov, BaseDir: baseDir}},
-			Method:      method,
+			Item:         staged,
+			ProjectRoot:  projectRoot,
+			Targets:      []lifecycle.Target{{Provider: prov, BaseDir: baseDir}},
+			Method:       method,
+			PreviousCopy: prevCopy,
 			Provenance: &installstore.MOATProvenance{
 				ManifestURI: reg.ManifestURI,
 				SourceURI:   entry.SourceURI,

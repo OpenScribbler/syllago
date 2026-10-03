@@ -22,12 +22,17 @@ type InstallRequest struct {
 	Frozen     bool                         // pin the item after it installs
 	Provenance *installstore.MOATProvenance // nil keeps any recorded provenance
 	Source     string                       // who appended a rule: "manual", "tui"
+	// PreviousCopy is where the library copy this install replaces was
+	// saved. When set, the item's record rotates before any placement, so
+	// its previous version keeps the old content hash.
+	PreviousCopy string
 }
 
 var errPinNotRegistry = errors.New("only registry items can be pinned")
 
-// Install places the item in every target, records each placement in the
-// install store, and pins the item when Frozen is set and any target took it.
+// Install rotates the item's record when it replaces a library copy, places
+// the item in every target, records each placement in the install store, and
+// pins the item when Frozen is set and any target took it.
 // A failed target does not stop the others. The error joins the placement
 // failures, or reports the lock when the call could not start; record and
 // pin failures leave the item installed and appear only in Outcome.Failed.
@@ -42,6 +47,11 @@ func (m *Module) Install(req InstallRequest) (Outcome, error) {
 
 	coord := recordCoord(req.Item)
 	storePath, storeErr := installstore.DefaultPath()
+	if req.PreviousCopy != "" {
+		if err := m.rotate(storePath, storeErr, coord, req); err != nil {
+			out.Failed = append(out.Failed, Failure{Stage: StageRecord, Err: recordErr(err)})
+		}
+	}
 	var placeErrs []error
 	for _, t := range req.Targets {
 		pl, err := m.placer.place(req, t)
@@ -83,6 +93,22 @@ func (m *Module) Install(req InstallRequest) (Outcome, error) {
 		}
 	}
 	return out, errors.Join(placeErrs...)
+}
+
+// rotate moves the item's recorded version to Previous. An item with no
+// record has nothing to rotate.
+func (m *Module) rotate(storePath string, storeErr error, coord installstore.Coord, req InstallRequest) error {
+	if storeErr != nil {
+		return storeErr
+	}
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		return err
+	}
+	if store.Find(coord) == nil {
+		return nil
+	}
+	return installstore.RecordUpdate(storePath, coord, req.Item.Path, "", req.PreviousCopy, m.now())
 }
 
 func recordErr(err error) error {

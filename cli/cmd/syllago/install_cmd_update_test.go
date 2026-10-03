@@ -201,3 +201,68 @@ func TestInstall_ModifiedState_NonInteractiveErrors(t *testing.T) {
 		})
 	}
 }
+
+// TestInstall_ModifiedState_AppendFresh_KeepsOneRecord: append-fresh against
+// a missing target appends a fresh copy and replaces the stale record rather
+// than adding a second one.
+func TestInstall_ModifiedState_AppendFresh_KeepsOneRecord(t *testing.T) {
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+	setupAppendReinstallEnv(t, projectRoot, globalDir)
+
+	target := filepath.Join(projectRoot, "CLAUDE.md")
+	if err := os.Remove(target); err != nil {
+		t.Fatalf("remove target: %v", err)
+	}
+
+	installCmd.Flags().Set("on-modified", "append-fresh")
+	if err := installCmd.RunE(installCmd, []string{"foo"}); err != nil {
+		t.Fatalf("install --on-modified=append-fresh: %v", err)
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read target: %v", err)
+	}
+	if !strings.Contains(string(got), "Append me.") {
+		t.Errorf("target should contain the fresh copy; got: %q", got)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if len(inst.RuleAppends) != 1 {
+		t.Fatalf("expected 1 RuleAppend after append-fresh, got %d", len(inst.RuleAppends))
+	}
+}
+
+// TestInstall_ModifiedState_AppendFreshFailure_KeepsStaleRecord: when the
+// fresh append fails, the stale record stays, so the user can still choose
+// drop-record or keep.
+func TestInstall_ModifiedState_AppendFreshFailure_KeepsStaleRecord(t *testing.T) {
+	projectRoot := t.TempDir()
+	globalDir := t.TempDir()
+	setupAppendReinstallEnv(t, projectRoot, globalDir)
+
+	// A directory at the target path makes the record stale and the append fail.
+	target := filepath.Join(projectRoot, "CLAUDE.md")
+	if err := os.Remove(target); err != nil {
+		t.Fatalf("remove target: %v", err)
+	}
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatalf("mkdir target: %v", err)
+	}
+
+	installCmd.Flags().Set("on-modified", "append-fresh")
+	if err := installCmd.RunE(installCmd, []string{"foo"}); err == nil {
+		t.Fatal("expected append-fresh to fail when the target is a directory")
+	}
+
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		t.Fatalf("LoadInstalled: %v", err)
+	}
+	if len(inst.RuleAppends) != 1 {
+		t.Fatalf("expected the stale RuleAppend to survive, got %d", len(inst.RuleAppends))
+	}
+}

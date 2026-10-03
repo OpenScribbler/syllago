@@ -378,18 +378,14 @@ func runInstallFromRegistry(
 		)
 	}
 
-	// Rotate the record before the install writes the new content hash, so
-	// the previous version keeps the old one.
-	if prevCopy != "" {
-		recordMOATUpdateBookkeeping(item, prevCopy)
-	}
 	outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
-		Item:        item,
-		ProjectRoot: cfgRoot,
-		Targets:     []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
-		Method:      method,
-		Scan:        scan,
-		Frozen:      isFrozenFromContext(ctx),
+		Item:         item,
+		ProjectRoot:  cfgRoot,
+		Targets:      []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
+		Method:       method,
+		Scan:         scan,
+		Frozen:       isFrozenFromContext(ctx),
+		PreviousCopy: prevCopy,
 		Provenance: &installstore.MOATProvenance{
 			ManifestURI: reg.ManifestURI,
 			SourceURI:   entry.SourceURI,

@@ -64,42 +64,6 @@ func TestRecordTUIAddUpdateBookkeepingMissingRecordDoesNotCreateStore(t *testing
 	}
 }
 
-func TestRecordTUIMOATUpdateBookkeepingSetsPreviousCopyPath(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-	storePath := filepath.Join(configDir, "installs.json")
-	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	coord := installstore.Coord{Registry: "acme/moat", Type: string(catalog.Skills), Name: "writer"}
-	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
-		Provider:  "claude-code",
-		Mechanism: installstore.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}, installstore.InstallMeta{}, time.Date(2026, 8, 24, 11, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("seed RecordInstallMeta: %v", err)
-	}
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer updated\n"))
-	prevCopyPath := filepath.Join(t.TempDir(), "previous", "writer")
-
-	recordTUIMOATUpdateBookkeeping(catalog.ContentItem{
-		Name:     "writer",
-		Type:     catalog.Skills,
-		Path:     libraryPath,
-		Registry: "acme/moat",
-	}, prevCopyPath)
-
-	rec := mustLoadTUIInstallRecordStore(t, configDir).Find(coord)
-	if rec == nil {
-		t.Fatal("install record missing")
-	}
-	if rec.Previous == nil {
-		t.Fatal("Previous is nil")
-	}
-	if rec.Previous.CopyPath != prevCopyPath {
-		t.Fatalf("Previous.CopyPath = %q, want %q", rec.Previous.CopyPath, prevCopyPath)
-	}
-}
-
 func TestAddSingleItemOverwriteRotatesInstallRecord(t *testing.T) {
 	configDir := withTUIInstallRecordConfigDir(t)
 	storePath := filepath.Join(configDir, "installs.json")

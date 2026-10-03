@@ -176,6 +176,20 @@ func TestInstall_Frozen(t *testing.T) {
 			t.Fatalf("Failed = %+v, want the only-registry pin failure", out.Failed)
 		}
 	})
+	t.Run("library copy of a registry item is pinned", func(t *testing.T) {
+		storePath := isolate(t)
+		item := libraryItem(t, "r9", "")
+		item.Meta = &metadata.Meta{SourceType: "registry", SourceRegistry: "acme"}
+
+		out, err := scriptedModule(&scriptedPlacer{}).Install(InstallRequest{Item: item, Targets: targets("alpha"), Frozen: true})
+		if err != nil || len(out.Failed) != 0 {
+			t.Fatalf("err = %v, Failed = %+v", err, out.Failed)
+		}
+		rec := loadRecord(t, storePath, installstore.Coord{Registry: "acme", Type: "rules", Name: "r9"})
+		if rec == nil || !rec.Pinned {
+			t.Fatalf("record = %+v, want pinned under acme", rec)
+		}
+	})
 	t.Run("nothing installed means nothing pinned", func(t *testing.T) {
 		storePath := isolate(t)
 		item := libraryItem(t, "r4", "acme")
@@ -218,6 +232,90 @@ func TestInstall_LibraryCopyOfRegistryItem(t *testing.T) {
 	rec := loadRecord(t, storePath, installstore.Coord{Registry: "acme", Type: "rules", Name: "r8"})
 	if rec == nil || rec.SourceSHA != "sha-1" {
 		t.Fatalf("record = %+v, want one under acme with SourceSHA sha-1", rec)
+	}
+}
+
+// An item's own registry wins over the registry its metadata names.
+func TestInstall_ItemRegistryWinsOverMeta(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r10", "acme")
+	item.Meta = &metadata.Meta{SourceType: "registry", SourceRegistry: "other"}
+
+	if _, err := scriptedModule(&scriptedPlacer{}).Install(InstallRequest{Item: item, Targets: targets("alpha")}); err != nil {
+		t.Fatal(err)
+	}
+	if rec := loadRecord(t, storePath, installstore.Coord{Registry: "acme", Type: "rules", Name: "r10"}); rec == nil {
+		t.Fatal("no record under the item's own registry")
+	}
+	if rec := loadRecord(t, storePath, installstore.Coord{Registry: "other", Type: "rules", Name: "r10"}); rec != nil {
+		t.Errorf("record under the metadata registry: %+v", rec)
+	}
+}
+
+// seedV1 records item at its current content, then rewrites the library
+// copy so the next install sees a new version. It returns the v1 hash.
+func seedV1(t *testing.T, storePath string, item catalog.ContentItem) string {
+	t.Helper()
+	if err := installstore.RecordInstallMeta(storePath, recordCoord(item), item.Path, installstore.PlacementInput{
+		Provider: "alpha", Mechanism: installstore.MechanismSymlink, Path: "/x/alpha",
+	}, installstore.InstallMeta{}, testNow); err != nil {
+		t.Fatal(err)
+	}
+	v1, err := installstore.HashContent(item.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(item.Path, "rule.md"), []byte("# v2\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return v1
+}
+
+func TestInstall_PreviousCopyRotatesRecord(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r9", "acme")
+	v1 := seedV1(t, storePath, item)
+
+	out, err := scriptedModule(&scriptedPlacer{}).Install(InstallRequest{Item: item, Targets: targets("alpha"), PreviousCopy: "/prev/r9"})
+	if err != nil || len(out.Failed) != 0 {
+		t.Fatalf("err = %v, Failed = %+v", err, out.Failed)
+	}
+	rec := loadRecord(t, storePath, recordCoord(item))
+	if rec == nil || rec.Previous == nil {
+		t.Fatalf("record = %+v, want a previous version", rec)
+	}
+	if rec.Previous.CopyPath != "/prev/r9" || rec.Previous.ContentHash != v1 || rec.ContentHash == v1 {
+		t.Errorf("Previous = %+v, ContentHash = %s; want previous %s at /prev/r9 and a new current hash", rec.Previous, rec.ContentHash, v1)
+	}
+}
+
+// Rotation waits for the lock: a refused install leaves the record as it was.
+func TestInstall_PreviousCopyNotRotatedWithoutLock(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r10", "acme")
+	v1 := seedV1(t, storePath, item)
+	m := scriptedModule(&scriptedPlacer{})
+	m.lock = func() (func(), error) { return nil, errors.New("busy") }
+
+	if _, err := m.Install(InstallRequest{Item: item, Targets: targets("alpha"), PreviousCopy: "/prev/r10"}); err == nil {
+		t.Fatal("want the lock error")
+	}
+	rec := loadRecord(t, storePath, recordCoord(item))
+	if rec == nil || rec.Previous != nil || rec.ContentHash != v1 {
+		t.Errorf("record = %+v, want it unchanged at %s", rec, v1)
+	}
+}
+
+func TestInstall_PreviousCopyWithoutRecord(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r11", "acme")
+
+	out, err := scriptedModule(&scriptedPlacer{}).Install(InstallRequest{Item: item, Targets: targets("alpha"), PreviousCopy: "/prev/r11"})
+	if err != nil || len(out.Failed) != 0 {
+		t.Fatalf("err = %v, Failed = %+v", err, out.Failed)
+	}
+	if rec := loadRecord(t, storePath, recordCoord(item)); rec == nil || rec.Previous != nil {
+		t.Errorf("record = %+v, want a fresh record with no previous version", rec)
 	}
 }
 

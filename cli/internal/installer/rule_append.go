@@ -60,9 +60,9 @@ func AppendRuleToTarget(targetFile string, canonicalBody []byte) error {
 
 // InstallRuleAppend performs a monolithic-file append install. The library
 // rule's current_version bytes are the canonical body (already normalized
-// per D11's "files on disk = canonical"). D14 uniqueness: callers must
-// route repeats through the update flow (D17); this function assumes
-// Fresh state.
+// per D11's "files on disk = canonical"). D14 uniqueness: the new record
+// replaces any existing one for the same (LibraryID, TargetFile), so a
+// stale record survives until the append succeeds.
 func InstallRuleAppend(projectRoot, homeDir, providerSlug, targetFile, source string, rule *rulestore.Loaded) error {
 	canonBody := rule.History[rule.Meta.CurrentVersion]
 	if canonBody == nil {
@@ -74,6 +74,9 @@ func InstallRuleAppend(projectRoot, homeDir, providerSlug, targetFile, source st
 	inst, err := LoadInstalled(projectRoot)
 	if err != nil {
 		return err
+	}
+	if idx := inst.FindRuleAppend(rule.Meta.ID, targetFile); idx >= 0 {
+		inst.RemoveRuleAppend(idx)
 	}
 	inst.RuleAppends = append(inst.RuleAppends, InstalledRuleAppend{
 		Name:        rule.Meta.Name,
