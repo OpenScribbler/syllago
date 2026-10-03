@@ -121,15 +121,19 @@ func TestRemove_FailureKeepsEmptiedRecord(t *testing.T) {
 	storePath := isolate(t)
 	item := libraryItem(t, "r4", "")
 	installScripted(t, item, "alpha")
+	coord := installstore.Coord{Type: "rules", Name: "r4"}
+	if err := installstore.SetPinned(storePath, coord, true, testNow); err != nil {
+		t.Fatal(err)
+	}
 	boom := errors.New("boom")
 	p := &scriptedPlacer{fail: map[string]error{"beta": boom}}
 
 	if _, err := scriptedModule(p).Remove(confirmedRemove(item, "alpha", "beta")); !errors.Is(err, boom) {
 		t.Fatalf("err = %v, want the beta failure", err)
 	}
-	rec := loadRecord(t, storePath, installstore.Coord{Type: "rules", Name: "r4"})
-	if rec == nil || len(rec.Placements) != 0 {
-		t.Fatalf("record = %+v, want it kept with no placements", rec)
+	rec := loadRecord(t, storePath, coord)
+	if rec == nil || len(rec.Placements) != 0 || !rec.Pinned {
+		t.Fatalf("record = %+v, want it kept pinned with no placements", rec)
 	}
 }
 
@@ -472,4 +476,164 @@ func TestRemove_StrayLinkRemovalFails(t *testing.T) {
 	}
 	requireExists(t, link)
 	requireExists(t, item.Path)
+}
+
+// dirProvider installs item types it supports as symlinks under
+// ~/<dir>/<type>, or under ~/<dir>/shared for the types in shared.
+func dirProvider(slug, dir string, legacy string, shared ...catalog.ContentType) provider.Provider {
+	p := provider.Provider{
+		Name: slug, Slug: slug,
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			for _, s := range shared {
+				if ct == s {
+					return filepath.Join(home, dir, "shared")
+				}
+			}
+			return filepath.Join(home, dir, string(ct))
+		},
+		SupportsType: func(catalog.ContentType) bool { return true },
+	}
+	if legacy != "" {
+		p.LegacyInstallDir = func(home string, ct catalog.ContentType) string {
+			return filepath.Join(home, legacy, string(ct))
+		}
+	}
+	return p
+}
+
+func installSymlink(t *testing.T, item catalog.ContentItem, projectRoot string, prov provider.Provider) string {
+	t.Helper()
+	out, err := New().Install(InstallRequest{
+		Item:        item,
+		ProjectRoot: projectRoot,
+		Targets:     []Target{{Provider: prov}},
+		Method:      installer.MethodSymlink,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out.Completed[0].Placement.Path
+}
+
+func confirmedReal(item catalog.ContentItem, projectRoot string, provs ...provider.Provider) RemoveRequest {
+	return RemoveRequest{Item: item, ProjectRoot: projectRoot, Providers: provs, Decisions: Decisions{RemoveConfirmed: true}}
+}
+
+// Two providers that install to the same directory share one install, and
+// removing it for the first removes it for both.
+func TestRemove_SharedInstallDir(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r16", "")
+	first := dirProvider("first", ".shared", "")
+	second := dirProvider("second", ".shared", "")
+	dest := installSymlink(t, item, t.TempDir(), first)
+
+	out, err := New().Remove(confirmedReal(item, t.TempDir(), first, second))
+
+	if err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	requireGone(t, dest)
+	requireGone(t, item.Path)
+	if got := slugsOf(targetsOf(out.Completed)); len(got) != 2 {
+		t.Errorf("Completed = %v, want both providers", got)
+	}
+}
+
+// A provider that installs two types to one directory has its install
+// removed once, whatever type the link scan files the link under.
+func TestRemove_SharedTypeDir(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r17", "")
+	item.Type = catalog.Commands
+	prov := dirProvider("mixed", ".mixed", "", catalog.Rules, catalog.Commands)
+	dest := installSymlink(t, item, t.TempDir(), prov)
+
+	if _, err := New().Remove(confirmedReal(item, t.TempDir(), prov)); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	requireGone(t, dest)
+	requireGone(t, item.Path)
+}
+
+// A link of the same name in the legacy directory is not the install
+// Remove uninstalls, so Remove deletes it as a stray link.
+func TestRemove_LegacyLinkBesideInstall(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r18", "")
+	prov := dirProvider("moved", ".moved", ".moved-old")
+	dest := installSymlink(t, item, t.TempDir(), prov)
+	legacy := filepath.Join(os.Getenv("HOME"), ".moved-old", "rules", filepath.Base(dest))
+	if err := os.MkdirAll(filepath.Dir(legacy), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(item.Path, legacy); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := New().Remove(confirmedReal(item, t.TempDir(), prov)); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	requireGone(t, dest)
+	requireGone(t, legacy)
+	requireGone(t, item.Path)
+}
+
+// An MCP server merged into another project's config is an install Remove
+// does not reach, so the Library item and the record stay.
+func TestRemove_MCPInAnotherProjectKeepsItem(t *testing.T) {
+	storePath := isolate(t)
+	itemDir := filepath.Join(t.TempDir(), "srv2")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"command":"node","args":["server.js"]}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "srv2", Type: catalog.MCP, Path: itemDir}
+	if _, err := New().Install(InstallRequest{
+		Item:        item,
+		ProjectRoot: t.TempDir(),
+		Targets:     []Target{{Provider: provider.Cursor}},
+		Method:      installer.MethodSymlink,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := New().Remove(confirmedReal(item, t.TempDir(), provider.Cursor)); err == nil {
+		t.Fatal("err = nil, want the unreached MCP install reported")
+	}
+	requireExists(t, itemDir)
+	if rec := loadRecord(t, storePath, installstore.Coord{Type: "mcp", Name: "srv2"}); rec == nil || len(rec.Placements) == 0 {
+		t.Errorf("record = %+v, want its placement kept", rec)
+	}
+}
+
+// A rule appended to another project's file is an install Remove does not
+// reach, so the Library item stays.
+func TestRemove_AppendInAnotherProjectKeepsItem(t *testing.T) {
+	isolate(t)
+	item := writeAppendRule(t, t.TempDir(), "lib-r19", "Elsewhere.\n")
+	if _, err := New().Install(InstallRequest{
+		Item:        item,
+		ProjectRoot: t.TempDir(),
+		Targets:     []Target{{Provider: provider.ClaudeCode}},
+		Method:      installer.MethodAppend,
+		Source:      "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := New().Remove(confirmedReal(item, t.TempDir(), provider.ClaudeCode)); err == nil {
+		t.Fatal("err = nil, want the unreached append reported")
+	}
+	requireExists(t, item.Path)
+}
+
+func targetsOf(steps []Step) []Target {
+	var out []Target
+	for _, s := range steps {
+		out = append(out, s.Target)
+	}
+	return out
 }
