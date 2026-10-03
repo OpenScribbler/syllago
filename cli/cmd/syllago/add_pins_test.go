@@ -11,6 +11,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
@@ -23,6 +24,9 @@ func seedPinnedProviderRule(t *testing.T, configDir, globalDir, name string) str
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(libraryPath, "rule.md"), []byte("# held\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := metadata.Save(libraryPath, &metadata.Meta{Name: name, SourceType: "provider", SourceProvider: "claude-code"}); err != nil {
 		t.Fatal(err)
 	}
 	storePath := filepath.Join(configDir, "installs.json")
