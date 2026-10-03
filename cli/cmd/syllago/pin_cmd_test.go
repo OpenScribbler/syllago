@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
@@ -141,6 +142,18 @@ func TestPreOverwritePinGuard_Add(t *testing.T) {
 	origGlobal := catalog.GlobalContentDirOverride
 	catalog.GlobalContentDirOverride = globalDir
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	// The pin guards the Library copy the add would overwrite.
+	libraryPath := filepath.Join(globalDir, "skills", "canary-skill")
+	if err := os.MkdirAll(libraryPath, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(libraryPath, "SKILL.md"), []byte("# pinned\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := metadata.Save(libraryPath, &metadata.Meta{Name: "canary-skill", SourceType: "registry", SourceRegistry: regName}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Seed the install store in the temp global dir (so DefaultPath points to it)
 	tmpDir := t.TempDir()

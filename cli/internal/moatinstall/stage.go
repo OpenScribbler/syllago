@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
@@ -38,6 +39,37 @@ func PreviousDirFor(regName string, ct catalog.ContentType, name string) (string
 // the saved previous copy, if any.
 func StageIntoLibraryKeepPrev(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, string, error) {
 	return stageIntoLibrary(cacheDir, entry, regName, globalDir, true, now)
+}
+
+// StageIntoLibraryRespectingPin stages entry like StageIntoLibraryKeepPrev,
+// through m's Overwrite: a pinned library item comes back as
+// *lifecycle.DecisionRequired and stays as it is, and a replaced item's
+// install record keeps the version it replaced. The Outcome holds record
+// failures that left the new content staged.
+func StageIntoLibraryRespectingPin(m *lifecycle.Module, cacheDir string, entry *moat.ContentEntry, regName, globalDir string, now time.Time) (catalog.ContentItem, lifecycle.Outcome, error) {
+	if entry == nil {
+		return catalog.ContentItem{}, lifecycle.Outcome{}, fmt.Errorf("StageIntoLibrary: entry is nil")
+	}
+	ct, ok := moat.FromMOATType(entry.Type)
+	if !ok {
+		return catalog.ContentItem{}, lifecycle.Outcome{}, fmt.Errorf("StageIntoLibrary: unknown MOAT type %q", entry.Type)
+	}
+	var item catalog.ContentItem
+	out, err := m.Overwrite(lifecycle.OverwriteRequest{
+		Destinations: []lifecycle.Destination{{Type: ct, Name: entry.Name, Path: filepath.Join(globalDir, string(ct), entry.Name)}},
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			staged, prevCopy, err := StageIntoLibraryKeepPrev(cacheDir, entry, regName, globalDir, now)
+			if err != nil {
+				return nil, err
+			}
+			item = staged
+			if prevCopy == "" {
+				return nil, nil
+			}
+			return []lifecycle.Written{{Path: approved[0].Path, PreviousCopy: prevCopy}}, nil
+		},
+	})
+	return item, out, err
 }
 
 func stageIntoLibrary(cacheDir string, entry *moat.ContentEntry, regName, globalDir string, keepPrev bool, now time.Time) (catalog.ContentItem, string, error) {

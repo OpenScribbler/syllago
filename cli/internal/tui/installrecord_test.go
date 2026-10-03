@@ -13,87 +13,13 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
-func TestRecordTUIAddUpdateBookkeepingRotatesExistingRecord(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-	storePath := filepath.Join(configDir, "installs.json")
-	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
-	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
-		Provider:  "claude-code",
-		Mechanism: installstore.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}, installstore.InstallMeta{SourceSHA: "sha-old"}, time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("seed RecordInstallMeta: %v", err)
-	}
-	oldHash := mustHashTUIInstallContent(t, libraryPath)
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer updated\n"))
-
-	recordTUIAddUpdateBookkeeping("acme/tools", string(catalog.Skills), "writer", "", "sha-new")
-
-	rec := mustLoadTUIInstallRecordStore(t, configDir).Find(coord)
-	if rec == nil {
-		t.Fatal("install record missing")
-	}
-	if rec.SourceSHA != "sha-new" {
-		t.Fatalf("SourceSHA = %q, want sha-new", rec.SourceSHA)
-	}
-	if rec.Previous == nil {
-		t.Fatal("Previous is nil")
-	}
-	if rec.Previous.SourceSHA != "sha-old" {
-		t.Fatalf("Previous.SourceSHA = %q, want sha-old", rec.Previous.SourceSHA)
-	}
-	if rec.Previous.ContentHash != oldHash {
-		t.Fatalf("Previous.ContentHash = %q, want %q", rec.Previous.ContentHash, oldHash)
-	}
-	if rec.Previous.CopyPath != "" {
-		t.Fatalf("Previous.CopyPath = %q, want empty", rec.Previous.CopyPath)
-	}
-}
-
-func TestRecordTUIAddUpdateBookkeepingMissingRecordDoesNotCreateStore(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-	storePath := filepath.Join(configDir, "installs.json")
-
-	recordTUIAddUpdateBookkeeping("acme/tools", string(catalog.Skills), "writer", "", "sha-new")
-
-	if _, err := os.Stat(storePath); !os.IsNotExist(err) {
-		t.Fatalf("store file exists or stat failed: %v", err)
-	}
-}
-
 func TestAddSingleItemOverwriteRotatesInstallRecord(t *testing.T) {
 	configDir := withTUIInstallRecordConfigDir(t)
 	storePath := filepath.Join(configDir, "installs.json")
 	contentRoot := t.TempDir()
 	libraryPath := filepath.Join(contentRoot, string(catalog.Skills), "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
-	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
-		Provider:  "claude-code",
-		Mechanism: installstore.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}, installstore.InstallMeta{SourceSHA: "sha-old"}, time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("seed RecordInstallMeta: %v", err)
-	}
-	oldHash := mustHashTUIInstallContent(t, libraryPath)
-
-	sourcePath := filepath.Join(t.TempDir(), "SKILL.md")
-	writeTUITestFile(t, sourcePath, []byte("# Writer updated\n"))
-	item := addDiscoveryItem{
-		name:      "writer",
-		itemType:  catalog.Skills,
-		overwrite: true,
-		underlying: &add.DiscoveryItem{
-			Name:   "writer",
-			Type:   catalog.Skills,
-			Path:   sourcePath,
-			Status: add.StatusOutdated,
-		},
-	}
+	coord, oldHash := seedTUILibraryWriter(t, storePath, libraryPath)
+	item := overwriteWriterItem(t)
 
 	result := addSingleItem(item, contentRoot, "acme/tools", "private", "", "sha-new")
 	if result.status != "updated" {
@@ -115,6 +41,68 @@ func TestAddSingleItemOverwriteRotatesInstallRecord(t *testing.T) {
 	}
 	if rec.Previous.ContentHash != oldHash {
 		t.Fatalf("Previous.ContentHash = %q, want %q", rec.Previous.ContentHash, oldHash)
+	}
+}
+
+// Regression: the Add wizard wrote over a pinned library item and the
+// record update refused it silently, leaving the pin on new content.
+func TestAddSingleItemOverwriteLeavesPinnedItem(t *testing.T) {
+	configDir := withTUIInstallRecordConfigDir(t)
+	storePath := filepath.Join(configDir, "installs.json")
+	contentRoot := t.TempDir()
+	libraryPath := filepath.Join(contentRoot, string(catalog.Skills), "writer")
+	coord, oldHash := seedTUILibraryWriter(t, storePath, libraryPath)
+	if err := installstore.SetPinned(storePath, coord, true, time.Date(2026, 8, 24, 13, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("SetPinned: %v", err)
+	}
+
+	result := addSingleItem(overwriteWriterItem(t), contentRoot, "acme/tools", "private", "", "sha-new")
+	if result.status != "pinned" {
+		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
+	}
+	if got := mustHashTUIInstallContent(t, libraryPath); got != oldHash {
+		t.Errorf("library content hash = %s, want it unchanged at %s", got, oldHash)
+	}
+	rec := mustLoadTUIInstallRecordStore(t, configDir).Find(coord)
+	if rec == nil || !rec.Pinned || rec.SourceSHA != "sha-old" || rec.Previous != nil {
+		t.Errorf("record = %+v, want it pinned and unchanged at sha-old", rec)
+	}
+}
+
+// seedTUILibraryWriter puts a writer skill from acme/tools in the library
+// with an install record, and returns the record's coord and content hash.
+func seedTUILibraryWriter(t *testing.T, storePath, libraryPath string) (installstore.Coord, string) {
+	t.Helper()
+	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
+	if err := metadata.Save(libraryPath, &metadata.Meta{Name: "writer", SourceType: "registry", SourceRegistry: "acme/tools"}); err != nil {
+		t.Fatalf("metadata.Save: %v", err)
+	}
+	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
+	if err := installstore.RecordInstallMeta(storePath, coord, libraryPath, installstore.PlacementInput{
+		Provider:  "claude-code",
+		Mechanism: installstore.MechanismSymlink,
+		Path:      filepath.Join(t.TempDir(), "writer"),
+	}, installstore.InstallMeta{SourceSHA: "sha-old"}, time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("seed RecordInstallMeta: %v", err)
+	}
+	return coord, mustHashTUIInstallContent(t, libraryPath)
+}
+
+// overwriteWriterItem is a newer writer skill the user chose to overwrite.
+func overwriteWriterItem(t *testing.T) addDiscoveryItem {
+	t.Helper()
+	sourcePath := filepath.Join(t.TempDir(), "SKILL.md")
+	writeTUITestFile(t, sourcePath, []byte("# Writer updated\n"))
+	return addDiscoveryItem{
+		name:      "writer",
+		itemType:  catalog.Skills,
+		overwrite: true,
+		underlying: &add.DiscoveryItem{
+			Name:   "writer",
+			Type:   catalog.Skills,
+			Path:   sourcePath,
+			Status: add.StatusOutdated,
+		},
 	}
 }
 

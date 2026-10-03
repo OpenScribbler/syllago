@@ -204,6 +204,16 @@ func AddItems(items []DiscoveryItem, opts AddOptions, globalDir string, canon Ca
 	return results
 }
 
+// DestDir is the Library directory an add of an item named name writes to.
+// Universal types share one directory across providers; the rest sit under
+// the provider they came from.
+func DestDir(ct catalog.ContentType, provider, name, globalDir string) string {
+	if ct.IsUniversal() {
+		return filepath.Join(globalDir, string(ct), name)
+	}
+	return filepath.Join(globalDir, string(ct), provider, name)
+}
+
 func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Canonicalizer, ver string) AddResult {
 	r := AddResult{Name: item.Name, Type: item.Type}
 
@@ -221,13 +231,7 @@ func writeItem(item DiscoveryItem, opts AddOptions, globalDir string, canon Cano
 		}
 	}
 
-	// Determine destination directory.
-	var destDir string
-	if item.Type.IsUniversal() {
-		destDir = filepath.Join(globalDir, string(item.Type), item.Name)
-	} else {
-		destDir = filepath.Join(globalDir, string(item.Type), opts.Provider, item.Name)
-	}
+	destDir := DestDir(item.Type, opts.Provider, item.Name, globalDir)
 
 	if opts.DryRun {
 		if item.Status == StatusNew {
