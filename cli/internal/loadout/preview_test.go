@@ -289,6 +289,51 @@ func TestPreview_MCPAlreadyInstalled(t *testing.T) {
 	}
 }
 
+// A hook or MCP record for another provider does not make the item exist on
+// this one.
+func TestPreview_OtherProviderRecordIsNew(t *testing.T) {
+	t.Parallel()
+	repoRoot := t.TempDir()
+	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
+	inst := &installer.Installed{
+		Hooks: []installer.InstalledHook{
+			{Name: "my-hook", Event: "PostToolUse", Command: "echo test", Source: "export", Provider: "other"},
+		},
+		MCP: []installer.InstalledMCP{
+			{Name: "my-server", Source: "export", Provider: "other"},
+		},
+	}
+	if err := installer.SaveInstalled(repoRoot, inst); err != nil {
+		t.Fatalf("failed to save installed.json: %v", err)
+	}
+
+	prov := provider.Provider{
+		Name: "test-provider",
+		Slug: "test",
+		InstallDir: func(home string, ct catalog.ContentType) string {
+			return ""
+		},
+	}
+	refs := []ResolvedRef{
+		{Type: catalog.Hooks, Name: "my-hook", Item: catalog.ContentItem{Name: "my-hook", Type: catalog.Hooks}},
+		{Type: catalog.MCP, Name: "my-server", Item: catalog.ContentItem{Name: "my-server", Type: catalog.MCP}},
+	}
+
+	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(actions) != 2 {
+		t.Fatalf("expected 2 actions, got %d", len(actions))
+	}
+	if actions[0].Action != "merge-hook" {
+		t.Errorf("hook recorded for another provider: got %s, want merge-hook", actions[0].Action)
+	}
+	if actions[1].Action != "merge-mcp" {
+		t.Errorf("MCP recorded for another provider: got %s, want merge-mcp", actions[1].Action)
+	}
+}
+
 func TestPreview_RegularFileConflict(t *testing.T) {
 	t.Parallel()
 	homeDir := t.TempDir()

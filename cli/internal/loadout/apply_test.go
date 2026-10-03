@@ -657,6 +657,9 @@ func TestApplyHook_CrushFlattensAndRoutes(t *testing.T) {
 	if inst.Hooks[0].Command != "echo guard" {
 		t.Errorf("tracked command: got %q, want 'echo guard'", inst.Hooks[0].Command)
 	}
+	if inst.Hooks[0].Provider != "crush" {
+		t.Errorf("tracked provider: got %q, want 'crush'", inst.Hooks[0].Provider)
+	}
 }
 
 // TestApply_TryMode_CrushNoSessionEndCorruption: crush has no session_end
@@ -766,5 +769,27 @@ func TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd(t *testing.T) 
 	}
 	if !found {
 		t.Error("claude-code supports session_end; try-mode must back up settings.json so auto-revert injection can be reverted")
+	}
+}
+
+// applyMCP records the provider it merged the server into.
+func TestApplyMCP_RecordsProvider(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "srv")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"command":"node"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	ref := ResolvedRef{Type: catalog.MCP, Name: "srv", Item: catalog.ContentItem{Name: "srv", Type: catalog.MCP, Path: itemDir}}
+	inst := &installer.Installed{}
+
+	if err := applyMCP(ref, provider.Cursor, projectRoot, inst, "loadout:test"); err != nil {
+		t.Fatalf("applyMCP: %v", err)
+	}
+	if len(inst.MCP) != 1 || inst.MCP[0].Provider != "cursor" {
+		t.Fatalf("expected one cursor record, got %+v", inst.MCP)
 	}
 }

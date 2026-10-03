@@ -83,13 +83,13 @@ func TestFindHook(t *testing.T) {
 		},
 	}
 
-	if idx := inst.FindHook("hook-a", "PreToolUse"); idx != 0 {
+	if idx := inst.FindHook("hook-a", "PreToolUse", "claude-code"); idx != 0 {
 		t.Errorf("expected index 0, got %d", idx)
 	}
-	if idx := inst.FindHook("hook-b", "PostToolUse"); idx != 1 {
+	if idx := inst.FindHook("hook-b", "PostToolUse", "claude-code"); idx != 1 {
 		t.Errorf("expected index 1, got %d", idx)
 	}
-	if idx := inst.FindHook("hook-c", "PreToolUse"); idx != -1 {
+	if idx := inst.FindHook("hook-c", "PreToolUse", "claude-code"); idx != -1 {
 		t.Errorf("expected -1, got %d", idx)
 	}
 }
@@ -103,10 +103,10 @@ func TestFindMCP(t *testing.T) {
 		},
 	}
 
-	if idx := inst.FindMCP("server-a"); idx != 0 {
+	if idx := inst.FindMCP("server-a", "claude-code"); idx != 0 {
 		t.Errorf("expected index 0, got %d", idx)
 	}
-	if idx := inst.FindMCP("nonexistent"); idx != -1 {
+	if idx := inst.FindMCP("nonexistent", "claude-code"); idx != -1 {
 		t.Errorf("expected -1, got %d", idx)
 	}
 }

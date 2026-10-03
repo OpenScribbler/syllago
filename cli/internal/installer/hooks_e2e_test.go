@@ -64,7 +64,7 @@ func TestInstallHook_E2E_InlineCommand(t *testing.T) {
 
 	// Verify installed.json recorded
 	inst, _ := LoadInstalled(projectRoot)
-	idx := inst.FindHook("inline-hook", "PostToolUse")
+	idx := inst.FindHook("inline-hook", "PostToolUse", prov.Slug)
 	if idx < 0 {
 		t.Fatal("hook not found in installed.json")
 	}
@@ -144,7 +144,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 
 	// Verify installed.json has the rewritten command
 	inst, _ := LoadInstalled(projectRoot)
-	idx := inst.FindHook("script-hook", "PostToolUse")
+	idx := inst.FindHook("script-hook", "PostToolUse", prov.Slug)
 	if idx < 0 {
 		t.Fatal("hook not found in installed.json")
 	}
@@ -208,7 +208,7 @@ func TestInstallHook_E2E_Uninstall(t *testing.T) {
 
 	// Verify removed from installed.json
 	inst, _ := LoadInstalled(projectRoot)
-	if inst.FindHook("roundtrip-hook", "PreToolUse") >= 0 {
+	if inst.FindHook("roundtrip-hook", "PreToolUse", prov.Slug) >= 0 {
 		t.Error("hook should be removed from installed.json")
 	}
 }

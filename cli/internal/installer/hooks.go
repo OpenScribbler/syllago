@@ -126,31 +126,30 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
-	// Dedup against installed.json (name + event).
+	settingsPath, err := hookSettingsPath(prov)
+	if err != nil {
+		return Placement{Notices: notices}, err
+	}
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
+	if err != nil {
+		return Placement{Notices: notices}, err
+	}
+
+	// Dedup against installed.json (name + event + provider).
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
 		return Placement{Notices: notices}, fmt.Errorf("loading installed.json: %w", err)
 	}
-	if inst.FindHook(item.Name, nativeEvent) >= 0 {
+	if hookTracked(inst, item.Name, nativeEvent, prov.Slug, existing) {
 		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
-	if hookInstalledAtLegacyRoot(repoRoot, item.Name, nativeEvent) {
+	if hookTrackedAtLegacyRoot(repoRoot, item.Name, nativeEvent, prov.Slug, existing) {
 		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
-	}
-
-	settingsPath, err := hookSettingsPath(prov)
-	if err != nil {
-		return Placement{Notices: notices}, err
 	}
 
 	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-install:"+item.Name, []string{settingsPath})
 	if err != nil {
 		return Placement{Notices: notices}, fmt.Errorf("creating snapshot: %w", err)
-	}
-
-	existing, err := decodeExistingHooks(model, adapter, settingsPath)
-	if err != nil {
-		return Placement{Notices: notices}, err
 	}
 	all := make([]converter.CanonicalHook, 0, len(existing)+1)
 	all = append(all, existing...)
@@ -175,6 +174,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		Command:     canonHook.Handler.Command,
 		Source:      "export",
 		Scope:       "global",
+		Provider:    prov.Slug,
 		InstalledAt: time.Now(),
 	})
 	if err := SaveInstalled(repoRoot, inst); err != nil {
@@ -222,10 +222,10 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 	if err != nil {
 		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
 	}
-	instIdx := inst.FindHook(item.Name, nativeEvent)
+	instIdx := inst.FindHook(item.Name, nativeEvent, prov.Slug)
 	if instIdx < 0 {
 		if allowLegacyFallback {
-			if legacyRoot := legacyRootWithHookRecord(repoRoot, item.Name, nativeEvent); legacyRoot != "" {
+			if legacyRoot := legacyRootWithHookRecord(repoRoot, item.Name, nativeEvent, prov.Slug); legacyRoot != "" {
 				return uninstallHookAtRoot(item, prov, legacyRoot, false)
 			}
 		}
@@ -328,7 +328,7 @@ func checkHookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, rep
 	if err != nil {
 		return StatusNotAvailable
 	}
-	instIdx := inst.FindHook(item.Name, nativeEvent)
+	instIdx := inst.FindHook(item.Name, nativeEvent, prov.Slug)
 	if instIdx < 0 {
 		return StatusNotInstalled
 	}
@@ -350,11 +350,42 @@ func checkHookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, rep
 	return StatusNotInstalled
 }
 
-func hookInstalledAtLegacyRoot(repoRoot, name, nativeEvent string) bool {
-	return legacyRootWithHookRecord(repoRoot, name, nativeEvent) != ""
+// hookTracked reports whether inst records hook name for event as installed
+// on the provider with slug provSlug. An entry with no provider predates
+// provider tracking and could belong to any provider, so it counts only when
+// the provider's own hooks, existing, already hold a hook with its identity.
+// Counting it everywhere would block a hook installed to one provider from
+// ever being installed to another.
+func hookTracked(inst *Installed, name, event, provSlug string, existing []converter.CanonicalHook) bool {
+	idx := inst.FindHook(name, event, provSlug)
+	if idx < 0 {
+		return false
+	}
+	entry := inst.Hooks[idx]
+	if entry.Provider != "" {
+		return true
+	}
+	for _, eh := range existing {
+		if hookIdentity(eh) == entry.GroupHash {
+			return true
+		}
+	}
+	return false
 }
 
-func legacyRootWithHookRecord(repoRoot, name, nativeEvent string) string {
+func hookTrackedAtLegacyRoot(repoRoot, name, event, provSlug string, existing []converter.CanonicalHook) bool {
+	legacyRoot := legacyInstalledRoot(repoRoot)
+	if legacyRoot == "" {
+		return false
+	}
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		return false
+	}
+	return hookTracked(inst, name, event, provSlug, existing)
+}
+
+func legacyRootWithHookRecord(repoRoot, name, nativeEvent, provSlug string) string {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
 		return ""
@@ -363,7 +394,7 @@ func legacyRootWithHookRecord(repoRoot, name, nativeEvent string) string {
 	if err != nil {
 		return ""
 	}
-	if inst.FindHook(name, nativeEvent) < 0 {
+	if inst.FindHook(name, nativeEvent, provSlug) < 0 {
 		return ""
 	}
 	return legacyRoot
