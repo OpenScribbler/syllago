@@ -270,7 +270,7 @@ func TestInstallWithResolver_PerTypePath(t *testing.T) {
 	resolver := config.NewResolver(cfg, "")
 
 	// Install with per-type path override
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -319,7 +319,7 @@ func TestInstallWithResolver_BaseDir(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -360,7 +360,7 @@ func TestInstallWithResolver_CLIOverridesConfig(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, cliBase)
 
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -402,7 +402,7 @@ func TestInstallWithResolver_PerTypeOverridesCLI(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, cliBase)
 
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestInstallWithResolver_MergeTypeBypassesResolver(t *testing.T) {
 	// Should dispatch to installHook (merge path), not filesystem path.
 	// This will fail because we don't have a real settings file, but the error
 	// should be about JSON merge mechanics, not about the resolver path.
-	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver)
+	_, err := InstallWithResolver(item, prov, repoRoot, MethodSymlink, resolver, ScanOptions{})
 	if err == nil {
 		// If it succeeded, that's fine too — it means hooks handled it
 		return
@@ -486,7 +486,7 @@ func TestInstallWithResolver_CopyMethod(t *testing.T) {
 	}
 	resolver := config.NewResolver(cfg, "")
 
-	placement, err := InstallWithResolver(item, prov, repoRoot, MethodCopy, resolver)
+	placement, err := InstallWithResolver(item, prov, repoRoot, MethodCopy, resolver, ScanOptions{})
 	if err != nil {
 		t.Fatalf("InstallWithResolver with copy: %v", err)
 	}

@@ -262,7 +262,8 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 				continue
 			}
 
-			placement, err := installer.Install(item, prov, repoRoot, installer.MethodSymlink, "")
+			placement, err := installer.Install(item, prov, repoRoot, installer.MethodSymlink, "", installer.ScanOptions{})
+			printInstallNotices(output.ErrWriter, placement.Notices)
 			if err != nil {
 				if !output.JSON {
 					fmt.Fprintf(os.Stderr, "  warning: could not install %s to %s: %s\n", item.Name, prov.Name, err)

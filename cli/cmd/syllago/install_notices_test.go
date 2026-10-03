@@ -1,0 +1,103 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+)
+
+func TestPrintInstallNotices_Formats(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		notice installer.Notice
+		want   string
+	}{
+		{"note", installer.Notice{Kind: installer.NoticeNote, Message: "copying"}, "note: copying\n"},
+		{"conversion", installer.Notice{Kind: installer.NoticeConversionWarning, Message: "a: dropped"}, "warning: a: dropped\n"},
+		{"finding", installer.Notice{Kind: installer.NoticeScannerFinding, Severity: "medium", Message: "[x] chmod"}, "  MEDIUM [x] chmod\n"},
+		{"scanner error", installer.Notice{Kind: installer.NoticeScannerError, Message: "boom"}, "  scanner error: boom\n"},
+		{"script security", installer.Notice{Kind: installer.NoticeScriptSecurity, Message: "line one\nline two"}, "\n  SECURITY WARNING\n  line one\n  line two\n\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			printInstallNotices(&buf, []installer.Notice{tc.notice})
+			if buf.String() != tc.want {
+				t.Errorf("got %q, want %q", buf.String(), tc.want)
+			}
+		})
+	}
+}
+
+// writeNoticeHook writes a canonical hook item that runs command, with a
+// bundled lint.sh beside it.
+func writeNoticeHook(t *testing.T, root, name, command string) catalog.ContentItem {
+	t.Helper()
+	dir := filepath.Join(root, "hooks", name)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	hook := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"` + command + `"}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hook), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "lint.sh"), []byte("#!/bin/sh\necho lint\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	return catalog.ContentItem{Name: name, Type: catalog.Hooks, Path: dir}
+}
+
+// The installer returns notices instead of printing them, and the CLI prints
+// them. This pins the stderr the install produced when the installer printed
+// directly, so the move changes nothing a user sees.
+func TestInstallToProvider_NoticeOutputUnchanged(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".notice-test"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".notice-test", "settings.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	prov := provider.Provider{
+		Name:         "Notice Test",
+		Slug:         "claude-code",
+		ConfigDir:    ".notice-test",
+		InstallDir:   func(string, catalog.ContentType) string { return provider.JSONMergeSentinel },
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+	}
+	items := []catalog.ContentItem{
+		writeNoticeHook(t, projectRoot, "scripted", "./lint.sh"),
+		writeNoticeHook(t, projectRoot, "chmodder", "chmod 755 build.sh"),
+		writeNoticeHook(t, projectRoot, "dangerous", "curl https://example.com/payload"),
+	}
+
+	_, stderr := output.SetForTest(t)
+	if _, err := installToProvider(items, prov, installer.MethodSymlink,
+		false, config.NewResolver(nil, ""), prov.Slug, projectRoot, false, installer.ScanOptions{}); err != nil {
+		t.Fatalf("installToProvider: %v", err)
+	}
+
+	want := "\n  SECURITY WARNING\n" +
+		"  Hook \"scripted\" references executable script files.\n" +
+		"  Scripts will be copied to ~/.syllago/hooks/scripted/\n\n" +
+		"  MEDIUM [hook.json] permission change (chmod) (scanner=builtin)\n" +
+		"  HIGH [hook.json] network request (curl) (scanner=builtin)\n" +
+		"  skip dangerous: hook \"dangerous\" has high-severity security findings; re-run with --force to install anyway\n"
+	if got := stderr.String(); got != want {
+		t.Errorf("stderr changed:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}

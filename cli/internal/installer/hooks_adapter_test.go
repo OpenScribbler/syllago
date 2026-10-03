@@ -57,7 +57,7 @@ func TestInstallHook_Adapter_SharedJSON_RoundTrip(t *testing.T) {
 			os.WriteFile(settingsPath, []byte(`{}`), 0644)
 			overrideHookSettingsPath(t, settingsPath)
 
-			if _, err := installHook(item, prov, projectRoot); err != nil {
+			if _, err := installHook(item, prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("installHook: %v", err)
 			}
 
@@ -93,7 +93,7 @@ func TestInstallHook_Adapter_SharedJSON_RoundTrip(t *testing.T) {
 
 			// Re-install must succeed (round-trip): the uninstall cleared the
 			// installed.json record so the dedup check no longer trips.
-			if _, err := installHook(item, prov, projectRoot); err != nil {
+			if _, err := installHook(item, prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("re-install: %v", err)
 			}
 		})
@@ -142,7 +142,7 @@ func TestInstallHook_Adapter_PreservesSiblings(t *testing.T) {
 			os.WriteFile(settingsPath, []byte(tt.seed), 0644)
 			overrideHookSettingsPath(t, settingsPath)
 
-			if _, err := installHook(item, tt.prov, projectRoot); err != nil {
+			if _, err := installHook(item, tt.prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("installHook: %v", err)
 			}
 			data, _ := os.ReadFile(settingsPath)
@@ -171,7 +171,7 @@ func TestInstallHook_Devin_NativeShape(t *testing.T) {
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	if _, err := installHook(item, provider.Devin, projectRoot); err != nil {
+	if _, err := installHook(item, provider.Devin, projectRoot, ScanOptions{}); err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
 	data, _ := os.ReadFile(settingsPath)
@@ -217,7 +217,7 @@ func TestInstallHook_Adapter_RejectsNoEncoder(t *testing.T) {
 	os.WriteFile(settingsPath, []byte(`{}`), 0644)
 	overrideHookSettingsPath(t, settingsPath)
 
-	_, err := installHook(item, provider.Amp, projectRoot)
+	_, err := installHook(item, provider.Amp, projectRoot, ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error installing hook to amp (no adapter)")
 	}
@@ -271,7 +271,7 @@ func TestInstallHook_Adapter_DirectoryProviderLifecycle(t *testing.T) {
 				t.Fatalf("parent dir should not exist before install, stat err: %v", err)
 			}
 
-			if _, err := installHook(first, tt.prov, projectRoot); err != nil {
+			if _, err := installHook(first, tt.prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("install first hook: %v", err)
 			}
 			if _, err := os.Stat(filepath.Dir(settingsPath)); err != nil {
@@ -293,7 +293,7 @@ func TestInstallHook_Adapter_DirectoryProviderLifecycle(t *testing.T) {
 				t.Fatalf("write sibling: %v", err)
 			}
 
-			if _, err := installHook(second, tt.prov, projectRoot); err != nil {
+			if _, err := installHook(second, tt.prov, projectRoot, ScanOptions{}); err != nil {
 				t.Fatalf("install second hook: %v", err)
 			}
 			assertDecodedCommands(t, tt.prov, settingsPath, []string{"echo one", "echo two"})

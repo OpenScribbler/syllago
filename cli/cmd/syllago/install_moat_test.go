@@ -97,6 +97,7 @@ func TestRunInstallFromRegistry_RegistryNotFound(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrRegistryNotFound)
@@ -121,6 +122,7 @@ func TestRunInstallFromRegistry_NotMOATRegistry(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -184,6 +186,7 @@ func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatIdentityMismatch)
@@ -210,6 +213,7 @@ func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -244,6 +248,7 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrInstallItemNotFound)
@@ -277,6 +282,7 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -322,6 +328,7 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -371,6 +378,7 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -441,6 +449,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
@@ -488,6 +497,7 @@ func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectEr
 		installer.MethodSymlink,
 		"",
 		true,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	return captured
@@ -612,6 +622,7 @@ func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatRevocationBlock)
@@ -645,6 +656,7 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -684,6 +696,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid) // "cleared MOAT gates" deferred-fetch error
@@ -721,6 +734,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) 
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -760,6 +774,7 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	if err != nil {
@@ -795,6 +810,7 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatInvalid) // deferred-fetch error after Y
@@ -829,6 +845,7 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 		installer.MethodSymlink,
 		"",
 		false,
+		installer.ScanOptions{},
 		time.Now(),
 	)
 	assertStructuredCode(t, err, output.ErrMoatTierBelowPolicy)
@@ -858,7 +875,8 @@ func TestRunInstallFromRegistry_DryRunPreviewsGateDecision(t *testing.T) {
 		nil,
 		installer.MethodSymlink,
 		"",
-		true, // dry-run
+		true, installer.ScanOptions{},
+		// dry-run
 		time.Now(),
 	)
 	// Dry-run STILL surfaces the hard-block rather than a summary —

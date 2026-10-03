@@ -172,7 +172,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 	frozen, _ := cmd.Flags().GetBool("frozen")
 	telemetry.Enrich("frozen", frozen)
-	installer.SetScannerChain(scannerPaths, force)
+	scan := installer.ScanOptions{Scanners: scannerPaths, Force: force}
 	refreshInstallEntryPointsForInstall()
 
 	// --to-all and --to are mutually exclusive.
@@ -220,7 +220,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// --to-all path: detect providers and delegate.
 	if toAll {
 		noInput, _ := cmd.Flags().GetBool("no-input")
-		return runInstallToAll(cmd, args, typeFilter, methodStr, method, dryRun, baseDir, installAll, noInput)
+		return runInstallToAll(cmd, args, typeFilter, methodStr, method, dryRun, baseDir, installAll, noInput, scan)
 	}
 
 	prov := findProviderBySlug(toSlug)
@@ -278,6 +278,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 				method,
 				baseDir,
 				dryRun,
+				scan,
 				moatInstallNow(),
 			)
 		}
@@ -326,7 +327,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Installing %d items to %s...\n", len(items), prov.Name)
 	}
 
-	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot, frozen)
+	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot, frozen, scan)
 
 	if output.JSON {
 		output.Print(result)
@@ -359,6 +360,7 @@ func installToProvider(
 	toSlug string,
 	projectRoot string,
 	frozen bool,
+	scan installer.ScanOptions,
 ) (installResult, error) {
 	var result installResult
 
@@ -388,7 +390,8 @@ func installToProvider(
 			continue
 		}
 
-		placement, err := installer.InstallWithResolver(item, prov, projectRoot, method, resolver)
+		placement, err := installer.InstallWithResolver(item, prov, projectRoot, method, resolver, scan)
+		printInstallNotices(output.ErrWriter, placement.Notices)
 		if err != nil {
 			result.Skipped = append(result.Skipped, skippedItem{Name: item.Name, Reason: err.Error()})
 			if !output.JSON {
@@ -505,6 +508,7 @@ func runInstallToAll(
 	baseDir string,
 	installAll bool,
 	noInput bool,
+	scan installer.ScanOptions,
 ) error {
 	frozen, _ := cmd.Flags().GetBool("frozen")
 	globalCfg, err := config.LoadGlobal()
@@ -610,7 +614,7 @@ func runInstallToAll(
 			fmt.Fprintf(output.Writer, "→ %s\n", prov.Name)
 		}
 
-		result, _ := installToProvider(items, prov, method, dryRun, resolver, prov.Slug, projectRoot, frozen)
+		result, _ := installToProvider(items, prov, method, dryRun, resolver, prov.Slug, projectRoot, frozen, scan)
 
 		pr := providerInstallResult{
 			Provider: prov.Name,

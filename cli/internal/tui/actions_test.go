@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
@@ -829,5 +830,66 @@ func TestApp_HandleCatalogReady_NoPendingInstall_NoWizard(t *testing.T) {
 	updated := m.(App)
 	if updated.installWizard != nil {
 		t.Error("expected no wizard for normal rescan, got non-nil installWizard")
+	}
+}
+
+func TestActions_HandleInstallDone_NoticesWarn(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	m, _ := app.handleInstallDone(installDoneMsg{
+		itemName:     "my-hook",
+		providerName: "Claude Code",
+		notices:      []installer.Notice{{Kind: installer.NoticeNote, Message: "copied"}},
+	})
+	result := m.(App)
+	cur := result.toast.Current()
+	if cur == nil || cur.level != toastWarning {
+		t.Fatalf("install with notices should raise a warning toast, got %+v", cur)
+	}
+	if len(cur.details) != 1 || cur.details[0] != "note: copied" {
+		t.Errorf("details = %q, want [note: copied]", cur.details)
+	}
+}
+
+func TestActions_HandleInstallDone_CleanSucceeds(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	m, _ := app.handleInstallDone(installDoneMsg{itemName: "my-rule", providerName: "Claude Code"})
+	result := m.(App)
+	if cur := result.toast.Current(); cur == nil || cur.level != toastSuccess {
+		t.Fatalf("install without notices should raise a success toast, got %+v", cur)
+	}
+}
+
+func TestActions_HandleInstallDone_ErrorCarriesNotices(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	m, _ := app.handleInstallDone(installDoneMsg{
+		itemName: "my-hook",
+		err:      errors.New("blocked"),
+		notices:  []installer.Notice{{Kind: installer.NoticeScannerFinding, Severity: "high", Message: "curl"}},
+	})
+	result := m.(App)
+	cur := result.toast.Current()
+	if cur == nil || cur.level != toastError {
+		t.Fatalf("failed install should raise an error toast, got %+v", cur)
+	}
+	if len(cur.details) != 1 || cur.details[0] != "HIGH curl" {
+		t.Errorf("details = %q, want [HIGH curl]", cur.details)
+	}
+}
+
+func TestActions_HandleInstallAllDone_NoticesWarn(t *testing.T) {
+	t.Parallel()
+	app := testApp(t)
+	m, _ := app.handleInstallAllDone(installAllDoneMsg{
+		itemName: "my-hook",
+		count:    2,
+		notices:  []installer.Notice{{Kind: installer.NoticeConversionWarning, Message: "dropped"}},
+	})
+	result := m.(App)
+	cur := result.toast.Current()
+	if cur == nil || cur.level != toastWarning || len(cur.details) != 1 {
+		t.Fatalf("install-all with notices should raise a warning toast with details, got %+v", cur)
 	}
 }

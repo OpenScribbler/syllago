@@ -186,7 +186,11 @@ func ReapplyPlacements(item catalog.ContentItem, placements []installstore.Place
 		var err error
 		switch pl.Mechanism {
 		case installstore.MechanismHookMerge, installstore.MechanismMCPMerge:
-			err = reapplyJSONMergePlacement(item, *prov, opts.ProjectRoot)
+			var notices []installer.Notice
+			notices, err = reapplyJSONMergePlacement(item, *prov, opts.ProjectRoot)
+			for _, n := range notices {
+				warnings = append(warnings, fmt.Sprintf("%s placement for %s: %s", pl.Mechanism, pl.Provider, n))
+			}
 		case installstore.MechanismRuleAppend:
 			err = reapplyRuleAppendPlacement(item, pl, opts.ProjectRoot)
 		}
@@ -208,14 +212,17 @@ func shouldReapplyPlacement(m installstore.Mechanism) bool {
 	}
 }
 
-func reapplyJSONMergePlacement(item catalog.ContentItem, prov provider.Provider, projectRoot string) error {
+// reapplyJSONMergePlacement returns the reinstall's notices, also when it
+// fails, so a blocked hook still says why.
+func reapplyJSONMergePlacement(item catalog.ContentItem, prov provider.Provider, projectRoot string) ([]installer.Notice, error) {
 	if _, err := installer.Uninstall(item, prov, projectRoot); err != nil {
-		return fmt.Errorf("remove current merge before re-apply: %w", err)
+		return nil, fmt.Errorf("remove current merge before re-apply: %w", err)
 	}
-	if _, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, ""); err != nil {
-		return fmt.Errorf("install restored merge: %w", err)
+	placement, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{})
+	if err != nil {
+		return placement.Notices, fmt.Errorf("install restored merge: %w", err)
 	}
-	return nil
+	return placement.Notices, nil
 }
 
 func reapplyRuleAppendPlacement(item catalog.ContentItem, pl installstore.Placement, projectRoot string) error {

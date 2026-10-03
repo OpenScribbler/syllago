@@ -11,7 +11,6 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
-	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
@@ -39,7 +38,7 @@ func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	return HookConfigPath(prov, home)
 }
 
-func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string, scan ScanOptions) (Placement, error) {
 	// item.Path is already absolute (set by scanner).
 	h, err := readSingleManifestHook(item.Path)
 	if err != nil {
@@ -83,27 +82,37 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if fi, statErr := os.Stat(item.Path); statErr == nil && !fi.IsDir() {
 		itemDir = filepath.Dir(item.Path)
 	}
-	scanResult, _ := converter.RunScanChain(itemDir, scannerChainPaths)
+	scanResult, _ := converter.RunScanChain(itemDir, scan.Scanners)
+	var notices []Notice
 	for _, f := range scanResult.Findings {
 		loc := f.File
 		if f.Line > 0 {
 			loc = fmt.Sprintf("%s:%d", f.File, f.Line)
 		}
-		fmt.Fprintf(output.ErrWriter, "  %s [%s] %s (scanner=%s)\n",
-			strings.ToUpper(f.Severity), loc, f.Description, f.Scanner)
+		notices = append(notices, Notice{
+			Kind:     NoticeScannerFinding,
+			Severity: f.Severity,
+			Message:  fmt.Sprintf("[%s] %s (scanner=%s)", loc, f.Description, f.Scanner),
+		})
 	}
 	for _, e := range scanResult.Errors {
-		fmt.Fprintf(output.ErrWriter, "  scanner error: %s\n", e)
+		notices = append(notices, Notice{Kind: NoticeScannerError, Message: e})
 	}
-	if !scannerForceBypass && converter.HighestSeverity(scanResult.Findings) == "high" {
-		return Placement{}, fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
+	if !scan.Force && converter.HighestSeverity(scanResult.Findings) == "high" {
+		return Placement{Notices: notices}, fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
 	}
 
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
 	// command path (operates on the hook before encode).
-	resolvedCmd, err := resolveHookCommandScript(canonHook.Handler.Command, item, repoRoot)
+	resolvedCmd, copied, err := resolveHookCommandScript(canonHook.Handler.Command, item, repoRoot)
+	if copied {
+		notices = append(notices, Notice{
+			Kind:    NoticeScriptSecurity,
+			Message: fmt.Sprintf("Hook %q references executable script files.\nScripts will be copied to ~/.syllago/hooks/%s/", item.Name, item.Name),
+		})
+	}
 	if err != nil {
-		return Placement{}, err
+		return Placement{Notices: notices}, err
 	}
 	canonHook.Handler.Command = resolvedCmd
 
@@ -112,7 +121,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// file is touched.
 	groupHash, err := roundTripIdentity(adapter, canonHook)
 	if err != nil {
-		return Placement{}, fmt.Errorf("hook %q: %w", item.Name, err)
+		return Placement{Notices: notices}, fmt.Errorf("hook %q: %w", item.Name, err)
 	}
 
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
@@ -120,28 +129,28 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// Dedup against installed.json (name + event).
 	inst, err := LoadInstalled(repoRoot)
 	if err != nil {
-		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
+		return Placement{Notices: notices}, fmt.Errorf("loading installed.json: %w", err)
 	}
 	if inst.FindHook(item.Name, nativeEvent) >= 0 {
-		return Placement{}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
 	if hookInstalledAtLegacyRoot(repoRoot, item.Name, nativeEvent) {
-		return Placement{}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
 
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
-		return Placement{}, err
+		return Placement{Notices: notices}, err
 	}
 
 	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-install:"+item.Name, []string{settingsPath})
 	if err != nil {
-		return Placement{}, fmt.Errorf("creating snapshot: %w", err)
+		return Placement{Notices: notices}, fmt.Errorf("creating snapshot: %w", err)
 	}
 
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
-		return Placement{}, err
+		return Placement{Notices: notices}, err
 	}
 	all := make([]converter.CanonicalHook, 0, len(existing)+1)
 	all = append(all, existing...)
@@ -149,14 +158,14 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	encoded, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: all})
 	if err != nil {
-		return Placement{}, fmt.Errorf("encoding hooks: %w", err)
+		return Placement{Notices: notices}, fmt.Errorf("encoding hooks: %w", err)
 	}
 	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
 		// Auto-rollback using the snapshot we just created.
 		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
 			_ = snapshot.Restore(snapshotDir, manifest)
 		}
-		return Placement{}, fmt.Errorf("writing %s: %w", settingsPath, err)
+		return Placement{Notices: notices}, fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
 	inst.Hooks = append(inst.Hooks, InstalledHook{
@@ -169,7 +178,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		InstalledAt: time.Now(),
 	})
 	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
+		return Placement{Notices: notices}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
 	desc := fmt.Sprintf("hooks.%s in %s", nativeEvent, settingsPath)
@@ -177,6 +186,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		Mechanism: MechanismHookMerge,
 		Path:      settingsPath,
 		Keys:      []string{"hooks." + nativeEvent},
+		Notices:   notices,
 		desc:      desc,
 	}, nil
 }
@@ -372,26 +382,28 @@ func hookScriptsDir(name string) (string, error) {
 // script-copying security logic (resolveHookScripts operates on a matcher
 // group, so we wrap the command in a minimal group and read the rewritten
 // command back). An empty command (e.g. a non-command handler) is a no-op.
-func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot string) (string, error) {
+// copied reports whether a script was copied, also when a later step failed.
+func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot string) (resolved string, copied bool, err error) {
 	if cmd == "" {
-		return "", nil
+		return "", false, nil
 	}
 	mg, err := sjson.SetBytes([]byte(`{}`), "hooks.0.command", cmd)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
-	mg, err = resolveHookScripts(mg, item, repoRoot)
+	mg, copied, err = resolveHookScripts(mg, item, repoRoot)
 	if err != nil {
-		return "", err
+		return "", copied, err
 	}
-	return gjson.GetBytes(mg, "hooks.0.command").String(), nil
+	return gjson.GetBytes(mg, "hooks.0.command").String(), copied, nil
 }
 
 // resolveHookScripts finds script file references in a hook's matcher group,
 // copies them to a stable location (~/.syllago/hooks/<name>/), and rewrites
 // the command paths in the JSON. This ensures hooks from registries don't
-// break when the registry cache changes.
-func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot string) ([]byte, error) {
+// break when the registry cache changes. The bool reports whether any script
+// was copied, so the caller can warn that the hook runs bundled scripts.
+func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot string) ([]byte, bool, error) {
 	// Resolve the item directory (hooks can be a file or directory)
 	itemDir := item.Path
 	fi, err := os.Stat(item.Path)
@@ -402,7 +414,7 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 	// Find all command fields in hooks array
 	hooksArray := gjson.GetBytes(matcherGroup, "hooks")
 	if !hooksArray.Exists() || !hooksArray.IsArray() {
-		return matcherGroup, nil
+		return matcherGroup, false, nil
 	}
 
 	var scriptsCopied bool
@@ -434,7 +446,7 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 			// Verify the resolved path stays within the item directory
 			rel, relErr := filepath.Rel(itemDir, scriptPath)
 			if relErr != nil || strings.HasPrefix(rel, "..") {
-				return nil, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
+				return nil, scriptsCopied, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
 			}
 		}
 
@@ -447,21 +459,15 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 			continue // script doesn't exist, leave command as-is
 		}
 
-		// Show security warning on first script
-		if !scriptsCopied {
-			fmt.Fprintf(output.ErrWriter, "\n  SECURITY WARNING\n")
-			fmt.Fprintf(output.ErrWriter, "  Hook %q references executable script files.\n", item.Name)
-			fmt.Fprintf(output.ErrWriter, "  Scripts will be copied to ~/.syllago/hooks/%s/\n\n", item.Name)
-			scriptsCopied = true
-		}
+		scriptsCopied = true
 
 		// Copy script to stable location
 		destDir, err := hookScriptsDir(item.Name)
 		if err != nil {
-			return nil, fmt.Errorf("getting hook scripts dir: %w", err)
+			return nil, scriptsCopied, fmt.Errorf("getting hook scripts dir: %w", err)
 		}
 		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return nil, fmt.Errorf("creating hook scripts dir: %w", err)
+			return nil, scriptsCopied, fmt.Errorf("creating hook scripts dir: %w", err)
 		}
 
 		scriptName := filepath.Base(scriptPath)
@@ -469,10 +475,10 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 
 		scriptData, readErr := os.ReadFile(scriptPath)
 		if readErr != nil {
-			return nil, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
+			return nil, scriptsCopied, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
 		}
 		if writeErr := os.WriteFile(destPath, scriptData, 0700); writeErr != nil {
-			return nil, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
+			return nil, scriptsCopied, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
 		}
 
 		// Rewrite command: replace the script ref with the stable absolute path
@@ -480,9 +486,9 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {
-			return nil, fmt.Errorf("rewriting command for %s: %w", item.Name, err)
+			return nil, scriptsCopied, fmt.Errorf("rewriting command for %s: %w", item.Name, err)
 		}
 	}
 
-	return result, nil
+	return result, scriptsCopied, nil
 }

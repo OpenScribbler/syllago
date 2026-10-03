@@ -14,7 +14,7 @@ func TestResolveHookScripts_InlineCommand(t *testing.T) {
 	matcherGroup := []byte(`{"hooks": [{"type": "command", "command": "echo lint"}]}`)
 	item := catalog.ContentItem{Name: "test-hook", Path: t.TempDir()}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestResolveHookScripts_RelativeScript(t *testing.T) {
 	matcherGroup := []byte(`{"hooks": [{"type": "command", "command": "./lint.sh"}]}`)
 	item := catalog.ContentItem{Name: "test-relative", Path: itemDir}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestResolveHookScripts_ScriptWithArgs(t *testing.T) {
 	matcherGroup := []byte(`{"hooks": [{"type": "command", "command": "./check.sh --strict --verbose"}]}`)
 	item := catalog.ContentItem{Name: "test-args", Path: itemDir}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestResolveHookScripts_MissingScript(t *testing.T) {
 	matcherGroup := []byte(`{"hooks": [{"type": "command", "command": "./nonexistent.sh"}]}`)
 	item := catalog.ContentItem{Name: "test-missing", Path: itemDir}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

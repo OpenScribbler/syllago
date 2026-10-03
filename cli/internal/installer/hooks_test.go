@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
@@ -142,7 +141,7 @@ func TestCheckHookStatus_UsesInstalledJSON(t *testing.T) {
 
 	// After a real adapter-routed install, status resolves via the stored
 	// canonical identity.
-	if _, err := installHook(item, prov, projectRoot); err != nil {
+	if _, err := installHook(item, prov, projectRoot, ScanOptions{}); err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
 	if status := checkHookStatus(item, prov, projectRoot); status != StatusInstalled {
@@ -174,7 +173,7 @@ func TestUninstallHook_LegacyRootFallback(t *testing.T) {
 	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-hook", "PreToolUse", "Bash", "echo legacy")
 	prov := provider.ClaudeCode
 
-	if _, err := installHook(item, prov, legacyRoot); err != nil {
+	if _, err := installHook(item, prov, legacyRoot, ScanOptions{}); err != nil {
 		t.Fatalf("seed legacy installHook: %v", err)
 	}
 	if _, err := uninstallHook(item, prov, projectRoot); err != nil {
@@ -224,7 +223,7 @@ func TestCheckHookStatus_LegacyRootFallback(t *testing.T) {
 
 	prov := provider.ClaudeCode
 	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-status-hook", "PreToolUse", "Bash", "echo status")
-	if _, err := installHook(item, prov, legacyRoot); err != nil {
+	if _, err := installHook(item, prov, legacyRoot, ScanOptions{}); err != nil {
 		t.Fatalf("seed legacy installHook: %v", err)
 	}
 	if status := CheckStatus(item, prov, projectRoot); status != StatusInstalled {
@@ -443,7 +442,7 @@ func TestInstallHook_RejectsDuplicate(t *testing.T) {
 		ConfigDir: filepath.Base(configDir),
 	}
 
-	_, err := installHook(item, prov, projectRoot)
+	_, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err == nil {
 		t.Fatal("expected error for duplicate hook")
 	}
@@ -476,10 +475,10 @@ func TestInstallHook_DeduplicatesAgainstLegacyRoot(t *testing.T) {
 	item := writeCanonicalHookItemInProject(t, projectRoot, "legacy-dup-hook", "PreToolUse", "Bash", "echo dup")
 	prov := provider.ClaudeCode
 
-	if _, err := installHook(item, prov, legacyRoot); err != nil {
+	if _, err := installHook(item, prov, legacyRoot, ScanOptions{}); err != nil {
 		t.Fatalf("seed legacy installHook: %v", err)
 	}
-	if _, err := Install(item, prov, projectRoot, MethodSymlink, ""); err == nil {
+	if _, err := Install(item, prov, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil {
 		t.Fatal("expected duplicate install to be rejected via legacy root record")
 	} else if !strings.Contains(err.Error(), "already installed") {
 		t.Fatalf("duplicate error = %v, want already installed", err)
@@ -510,7 +509,7 @@ func TestResolveHookScripts_AbsolutePathRejected(t *testing.T) {
 		Path: itemDir,
 	}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -547,7 +546,7 @@ func TestResolveHookScripts_RelativePathEscape(t *testing.T) {
 		Path: itemDir,
 	}
 
-	_, err = resolveHookScripts(matcherGroup, item, t.TempDir())
+	_, _, err = resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err == nil {
 		t.Fatal("expected error for path traversal, got nil")
 	}
@@ -557,11 +556,6 @@ func TestResolveHookScripts_RelativePathEscape(t *testing.T) {
 }
 
 func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
-	// Mutates output.ErrWriter — cannot be parallel.
-	origErr := output.ErrWriter
-	output.ErrWriter = &strings.Builder{}
-	t.Cleanup(func() { output.ErrWriter = origErr })
-
 	itemDir := t.TempDir()
 	scriptPath := filepath.Join(itemDir, "lint.sh")
 	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho lint"), 0755)
@@ -573,9 +567,12 @@ func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
 		Path: itemDir,
 	}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, copied, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !copied {
+		t.Error("expected copied = true for a bundled script")
 	}
 
 	// The command should have been rewritten to the stable location
@@ -621,7 +618,7 @@ func TestResolveHookScripts_SymlinkTraversal(t *testing.T) {
 		Path: itemDir,
 	}
 
-	_, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	_, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err == nil {
 		t.Fatal("expected error for symlink traversal, got nil")
 	}
@@ -631,11 +628,6 @@ func TestResolveHookScripts_SymlinkTraversal(t *testing.T) {
 }
 
 func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
-	// Mutates output.ErrWriter — cannot be parallel.
-	origErr := output.ErrWriter
-	output.ErrWriter = &strings.Builder{}
-	t.Cleanup(func() { output.ErrWriter = origErr })
-
 	itemDir := t.TempDir()
 	scriptPath := filepath.Join(itemDir, "check.sh")
 	os.WriteFile(scriptPath, []byte("#!/bin/sh\necho check"), 0755)
@@ -648,9 +640,12 @@ func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 		Path: itemDir,
 	}
 
-	result, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	result, copied, err := resolveHookScripts(matcherGroup, item, t.TempDir())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !copied {
+		t.Error("expected copied = true for a bundled script")
 	}
 
 	// The command should be rewritten: "bash ./check.sh" → "bash /abs/path/check.sh"
@@ -679,9 +674,7 @@ func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 
 // setupScannerTestProvider wires up the minimum surface installHook needs:
 // a real home-resolved settings.json, a project root with .syllago/, and a
-// provider stub. Also resets the scanner-chain globals on cleanup so tests
-// don't leak state into each other (same pattern as other global-mutating
-// tests — see .claude/rules/cli-test-patterns.md).
+// provider stub.
 func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, prov provider.Provider, cleanup func()) {
 	t.Helper()
 
@@ -705,11 +698,7 @@ func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, pro
 		ConfigDir: filepath.Base(configDir),
 	}
 
-	origPaths, origForce := ScannerChain()
-	cleanup = func() {
-		SetScannerChain(origPaths, origForce)
-		os.RemoveAll(configDir)
-	}
+	cleanup = func() { os.RemoveAll(configDir) }
 	return projectRoot, prov, cleanup
 }
 
@@ -719,7 +708,6 @@ func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, pro
 func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 	projectRoot, prov, cleanup := setupScannerTestProvider(t, "high")
 	defer cleanup()
-	SetScannerChain(nil, false) // explicit: no force
 
 	hookDir := filepath.Join(projectRoot, "hooks", "dangerous")
 	os.MkdirAll(hookDir, 0755)
@@ -733,12 +721,16 @@ func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 		Path: hookDir,
 	}
 
-	_, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err == nil {
 		t.Fatal("expected high-severity scan to block install")
 	}
 	if !strings.Contains(err.Error(), "high-severity") {
 		t.Errorf("error should mention high-severity; got %v", err)
+	}
+	// The findings come back with the error, so the user can see why.
+	if !hasNotice(placement.Notices, NoticeScannerFinding, "high") {
+		t.Errorf("blocked install should return its high finding; got %+v", placement.Notices)
 	}
 }
 
@@ -747,7 +739,6 @@ func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 func TestInstallHook_ForceBypassesScan(t *testing.T) {
 	projectRoot, prov, cleanup := setupScannerTestProvider(t, "force")
 	defer cleanup()
-	SetScannerChain(nil, true) // force = true
 
 	hookDir := filepath.Join(projectRoot, "hooks", "forced")
 	os.MkdirAll(hookDir, 0755)
@@ -760,9 +751,12 @@ func TestInstallHook_ForceBypassesScan(t *testing.T) {
 		Path: hookDir,
 	}
 
-	_, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{Force: true})
 	if err != nil {
 		t.Fatalf("--force should allow install past high-severity findings; got %v", err)
+	}
+	if !hasNotice(placement.Notices, NoticeScannerFinding, "high") {
+		t.Errorf("forced install should still report its high finding; got %+v", placement.Notices)
 	}
 }
 
@@ -771,7 +765,6 @@ func TestInstallHook_ForceBypassesScan(t *testing.T) {
 func TestInstallHook_MediumSeverityDoesNotBlock(t *testing.T) {
 	projectRoot, prov, cleanup := setupScannerTestProvider(t, "medium")
 	defer cleanup()
-	SetScannerChain(nil, false)
 
 	hookDir := filepath.Join(projectRoot, "hooks", "mid")
 	os.MkdirAll(hookDir, 0755)
@@ -784,9 +777,12 @@ func TestInstallHook_MediumSeverityDoesNotBlock(t *testing.T) {
 		Path: hookDir,
 	}
 
-	_, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("medium-severity scan should not block; got %v", err)
+	}
+	if !hasNotice(placement.Notices, NoticeScannerFinding, "medium") {
+		t.Errorf("medium finding should come back as a notice; got %+v", placement.Notices)
 	}
 }
 
@@ -796,7 +792,6 @@ func TestInstallHook_MediumSeverityDoesNotBlock(t *testing.T) {
 func TestInstallHook_CleanHookInstalls(t *testing.T) {
 	projectRoot, prov, cleanup := setupScannerTestProvider(t, "clean")
 	defer cleanup()
-	SetScannerChain(nil, false)
 
 	hookDir := filepath.Join(projectRoot, "hooks", "clean")
 	os.MkdirAll(hookDir, 0755)
@@ -809,8 +804,20 @@ func TestInstallHook_CleanHookInstalls(t *testing.T) {
 		Path: hookDir,
 	}
 
-	_, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("clean hook failed to install: %v", err)
 	}
+	if len(placement.Notices) != 0 {
+		t.Errorf("clean hook should return no notices; got %+v", placement.Notices)
+	}
+}
+
+func hasNotice(notices []Notice, kind NoticeKind, severity string) bool {
+	for _, n := range notices {
+		if n.Kind == kind && n.Severity == severity {
+			return true
+		}
+	}
+	return false
 }

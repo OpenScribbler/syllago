@@ -972,11 +972,12 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		placement, err := installer.Install(item, prov, projectRoot, method, baseDir)
+		placement, err := installer.Install(item, prov, projectRoot, method, baseDir, installer.ScanOptions{})
 		if err != nil {
 			return installDoneMsg{
 				itemName:     item.DisplayName,
 				providerName: prov.Name,
+				notices:      placement.Notices,
 				err:          err,
 			}
 		}
@@ -985,6 +986,7 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 			itemName:     item.DisplayName,
 			providerName: prov.Name,
 			targetPath:   placement.String(),
+			notices:      placement.Notices,
 		}
 	}
 }
@@ -1136,7 +1138,8 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 
-		placement, installErr := installer.Install(staged, prov, projectRoot, method, baseDir)
+		placement, installErr := installer.Install(staged, prov, projectRoot, method, baseDir, installer.ScanOptions{})
+		done.notices = placement.Notices
 		if installErr != nil {
 			done.err = installErr
 			return done
@@ -1246,9 +1249,11 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 
 	return func() tea.Msg {
 		var firstErr error
+		var notices []installer.Notice
 		count := 0
 		for _, prov := range providers {
-			placement, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "")
+			placement, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{})
+			notices = append(notices, placement.Notices...)
 			if err != nil {
 				if firstErr == nil {
 					firstErr = err
@@ -1265,6 +1270,7 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 		return installAllDoneMsg{
 			itemName: name,
 			count:    count,
+			notices:  notices,
 			firstErr: firstErr,
 		}
 	}
@@ -1274,6 +1280,9 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
 	var toastText string
 	toastKind := toastSuccess
+	if len(msg.notices) > 0 {
+		toastKind = toastWarning
+	}
 	if msg.firstErr != nil {
 		toastText = fmt.Sprintf("Installed to %d providers (some errors occurred)", msg.count)
 		toastKind = toastWarning
@@ -1284,15 +1293,25 @@ func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
 		}
 		toastText = fmt.Sprintf("Installed %q to %d providers", name, msg.count)
 	}
-	cmd1 := a.toast.Push(toastText, toastKind)
+	cmd1 := a.toast.PushDetails(toastText, noticeLines(msg.notices), toastKind)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }
 
+// noticeLines renders install notices as toast detail lines.
+func noticeLines(notices []installer.Notice) []string {
+	var lines []string
+	for _, n := range notices {
+		lines = append(lines, n.String())
+	}
+	return lines
+}
+
 // handleInstallDone processes the result of an install operation.
 func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
+	details := noticeLines(msg.notices)
 	if msg.err != nil {
-		cmd := a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
+		cmd := a.toast.PushDetails("Install failed: "+formatToastErr(msg.err), details, toastError)
 		return a, cmd
 	}
 	name := msg.itemName
@@ -1300,7 +1319,11 @@ func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
 		name = "item"
 	}
 	toastText := fmt.Sprintf("Installed %q to %s", name, msg.providerName)
-	cmd1 := a.toast.Push(toastText, toastSuccess)
+	level := toastSuccess
+	if len(details) > 0 {
+		level = toastWarning
+	}
+	cmd1 := a.toast.PushDetails(toastText, details, level)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }

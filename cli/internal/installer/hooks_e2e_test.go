@@ -46,7 +46,7 @@ func TestInstallHook_E2E_InlineCommand(t *testing.T) {
 	}
 
 	// Install
-	placement, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 	}
 
 	// Install
-	_, err = installHook(item, prov, projectRoot)
+	_, err = installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestInstallHook_E2E_Uninstall(t *testing.T) {
 	}
 
 	// Install
-	_, err := installHook(item, prov, projectRoot)
+	_, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestInstallHook_TranslatesCanonicalEvent(t *testing.T) {
 		ConfigDir: filepath.Base(configDir),
 	}
 
-	placement, err := installHook(item, prov, projectRoot)
+	placement, err := installHook(item, prov, projectRoot, ScanOptions{})
 	if err != nil {
 		t.Fatalf("installHook: %v", err)
 	}

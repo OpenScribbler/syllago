@@ -1,0 +1,7 @@
+╭────────────────────────────────────────────────────────────╮
+│ ! Installed "hook" to Claude Code                    [×]   │
+│   note: copying instead of symlinking                      │
+│   MEDIUM [hook.json] permission change (chmod) (scanner…   │
+│   security warning: Hook "hook" references executable s…   │
+│   +2 more                                                  │
+╰────────────────────────────────────────────────────────────╯
