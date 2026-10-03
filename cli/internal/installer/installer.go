@@ -2,10 +2,13 @@ package installer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -118,38 +121,60 @@ func resolveTarget(item catalog.ContentItem, prov provider.Provider) (string, er
 // CheckStatus checks whether an item is installed for a given provider.
 // registryPaths contains additional valid symlink source roots (registry cache directories).
 func CheckStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string, registryPaths ...string) Status {
+	status, _ := StatusOf(item, prov, repoRoot, registryPaths...)
+	return status
+}
+
+// StatusOf is CheckStatus that also reports when it could not tell. A
+// non-nil error means a file the check needed could not be read or parsed,
+// so the returned Status is a guess; a caller about to delete the item
+// treats that provider as unknown rather than as not installed.
+func StatusOf(item catalog.ContentItem, prov provider.Provider, repoRoot string, registryPaths ...string) (Status, error) {
 	// Dispatch to JSON merge handlers for types that need it
 	if IsJSONMerge(prov, item.Type) {
 		switch item.Type {
 		case catalog.MCP:
-			return checkMCPStatus(item, prov, repoRoot)
+			return mcpStatus(item, prov, repoRoot)
 		case catalog.Hooks:
-			return checkHookStatus(item, prov, repoRoot)
+			return hookStatus(item, prov, repoRoot)
 		}
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 
 	targetPath, err := resolveTarget(item, prov)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 	if home, homeErr := os.UserHomeDir(); homeErr == nil {
-		if lp, _, ok := legacyTarget(item, prov, home, targetPath); ok {
+		lp, _, ok, err := legacyTargetChecked(item, prov, home, targetPath)
+		if err != nil {
+			return StatusNotInstalled, err
+		}
+		if ok {
 			targetPath = lp
 		}
 	}
 
 	allRoots := append([]string{repoRoot}, registryPaths...)
 	if IsSymlinkedToAny(targetPath, allRoots) {
-		return StatusInstalled
+		return StatusInstalled, nil
 	}
 
 	// Also check if target exists as a regular file (e.g., installed via copy)
 	if _, err := os.Lstat(targetPath); err == nil {
-		return StatusInstalled
+		return StatusInstalled, nil
+	} else if lstatUnreadable(err) {
+		return StatusNotInstalled, err
 	}
 
-	return StatusNotInstalled
+	return StatusNotInstalled, nil
+}
+
+// lstatUnreadable reports whether err from os.Lstat leaves it unknown
+// whether the path exists. A missing path, or a file where a parent
+// directory should be, means nothing is there.
+func lstatUnreadable(err error) bool {
+	return err != nil && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, syscall.ENOTDIR)
 }
 
 // CheckStatusWithResolver checks whether an item is installed, using the resolver
@@ -438,21 +463,31 @@ func UninstallFrom(item catalog.ContentItem, prov provider.Provider, repoRoot, b
 // for its type, and that directory, when nothing exists at targetPath and
 // something exists at the legacy path.
 func legacyTarget(item catalog.ContentItem, prov provider.Provider, home, targetPath string) (string, string, bool) {
+	lp, dir, ok, _ := legacyTargetChecked(item, prov, home, targetPath)
+	return lp, dir, ok
+}
+
+// legacyTargetChecked is legacyTarget that also returns the error when the
+// legacy path could not be checked, so an install there may be unseen.
+func legacyTargetChecked(item catalog.ContentItem, prov provider.Provider, home, targetPath string) (string, string, bool, error) {
 	if prov.LegacyInstallDir == nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 	if _, err := os.Lstat(targetPath); err == nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 	dir := prov.LegacyInstallDir(home, item.Type)
 	if dir == "" {
-		return "", "", false
+		return "", "", false, nil
 	}
 	lp := filepath.Join(dir, filepath.Base(targetPath))
 	if _, err := os.Lstat(lp); err != nil {
-		return "", "", false
+		if lstatUnreadable(err) {
+			return "", "", false, err
+		}
+		return "", "", false, nil
 	}
-	return lp, dir, true
+	return lp, dir, true, nil
 }
 
 func symlinkTargetBelongsToItem(target string, item catalog.ContentItem) bool {

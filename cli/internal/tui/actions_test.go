@@ -12,11 +12,13 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // testAppWithInstalledRule builds an App with one library rule already installed
@@ -348,9 +350,89 @@ func TestActions_HandleRemoveResult_Confirmed(t *testing.T) {
 		t.Fatal("expected non-nil cmd from confirmed remove")
 	}
 	// Execute cmd to run doRemoveCmd closure.
-	msg := cmd()
-	if _, ok := msg.(removeDoneMsg); !ok {
-		t.Errorf("expected removeDoneMsg, got %T", msg)
+	done, ok := cmd().(removeDoneMsg)
+	if !ok {
+		t.Fatalf("expected removeDoneMsg, got %T", cmd())
+	}
+	if done.err != nil || len(done.uninstalledFrom) != 1 || done.uninstalledFrom[0] != "Claude Code" {
+		t.Errorf("done = %+v, want uninstalled from Claude Code with no error", done)
+	}
+	if _, err := os.Stat(item.Path); !os.IsNotExist(err) {
+		t.Errorf("library item still exists (err = %v)", err)
+	}
+}
+
+// A provider that still holds the item after a failed uninstall keeps the
+// library item.
+func TestActions_DoRemoveCmd_UninstallFailureKeepsItem(t *testing.T) {
+	app, item, prov := testAppWithInstalledRule(t)
+	installDir := prov.InstallDir(os.Getenv("HOME"), catalog.Rules)
+	if err := os.Chmod(installDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(installDir, 0o755) })
+
+	done, ok := app.doRemoveCmd(removeResultMsg{confirmed: true, item: item})().(removeDoneMsg)
+	if !ok || done.err == nil {
+		t.Fatalf("done = %+v, want the failed uninstall reported", done)
+	}
+	if _, err := os.Stat(item.Path); err != nil {
+		t.Errorf("library item gone after a failed uninstall: %v", err)
+	}
+}
+
+func TestActions_HandleRemove_ListsInstalls(t *testing.T) {
+	app, _, _ := testAppWithInstalledRule(t)
+	m, _ := app.handleRemove()
+	a := m.(App)
+	if got := a.remove.uninstallFrom; len(got) != 1 || got[0] != "Claude Code" {
+		t.Errorf("uninstallFrom = %v, want [Claude Code]", got)
+	}
+}
+
+// A rule both installed and appended to a project's CLAUDE.md lists each
+// place in the modal, and names its provider once when it is gone.
+func TestActions_Remove_InstalledAndAppended(t *testing.T) {
+	app, item, prov := testAppWithInstalledRule(t)
+	if err := rulestore.WriteRule(filepath.Dir(filepath.Dir(item.Path)), "rules", item.Name, metadata.RuleMetadata{ID: "lib-tui1", Name: item.Name}, []byte("Always append.\n")); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := rulestore.LoadRule(item.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claudeMD := filepath.Join(app.projectRoot, "CLAUDE.md")
+	if err := installer.InstallRuleAppend(app.projectRoot, t.TempDir(), prov.Slug, claudeMD, "manual", loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	m, _ := app.handleRemove()
+	if got := m.(App).remove.uninstallFrom; len(got) != 2 || got[0] != "Claude Code" || got[1] != "Claude Code (CLAUDE.md)" {
+		t.Errorf("uninstallFrom = %v, want the install and the CLAUDE.md append", got)
+	}
+	done := app.doRemoveCmd(removeResultMsg{confirmed: true, item: item})().(removeDoneMsg)
+	if done.err != nil || len(done.uninstalledFrom) != 1 || done.uninstalledFrom[0] != "Claude Code" {
+		t.Errorf("done = %+v, want Claude Code once with no error", done)
+	}
+}
+
+// A provider whose install directory cannot be read might hold the item, so
+// the remove never reaches the confirm step.
+func TestActions_HandleRemove_UnreadableStateBlocks(t *testing.T) {
+	app, _, prov := testAppWithInstalledRule(t)
+	installDir := prov.InstallDir(os.Getenv("HOME"), catalog.Rules)
+	if err := os.Chmod(installDir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(installDir, 0o755) })
+
+	m, _ := app.handleRemove()
+	a := m.(App)
+	if a.remove.active {
+		t.Error("remove modal opened although install state was unreadable")
+	}
+	if !a.toast.visible || !strings.Contains(a.toast.Current().message, "cannot tell where it is installed") {
+		t.Errorf("toast = %q, want the unreadable-state error", a.toast.Current().message)
 	}
 }
 

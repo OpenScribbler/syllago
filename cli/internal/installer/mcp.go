@@ -483,28 +483,39 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 	}, nil
 }
 
-func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
-	status := checkMCPStatusAtRoot(item, prov, repoRoot)
+// mcpStatus is checkMCPStatus with the error that left its status a guess,
+// as StatusOf describes.
+func mcpStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Status, error) {
+	status, err := mcpStatusAtRoot(item, prov, repoRoot)
 	if status != StatusNotInstalled {
-		return status
+		return status, err
 	}
 	if legacyRoot := legacyInstalledRoot(repoRoot); legacyRoot != "" {
-		if legacyStatus := checkMCPStatusAtRoot(item, prov, legacyRoot); legacyStatus == StatusInstalled {
-			return StatusInstalled
+		legacyStatus, legacyErr := mcpStatusAtRoot(item, prov, legacyRoot)
+		if legacyStatus == StatusInstalled {
+			return StatusInstalled, nil
+		}
+		if err == nil {
+			err = legacyErr
 		}
 	}
+	return status, err
+}
+
+func checkMCPStatus(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+	status, _ := mcpStatus(item, prov, repoRoot)
 	return status
 }
 
-func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) Status {
+func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Status, error) {
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, nil
 	}
 
 	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
-		return StatusNotAvailable
+		return StatusNotAvailable, err
 	}
 
 	jsonKey := MCPConfigKey(prov)
@@ -512,14 +523,15 @@ func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repo
 	// Per-server check: if item has a ServerKey, check for that specific key.
 	if item.ServerKey != "" {
 		if gjson.GetBytes(fileData, jsonKey+"."+item.ServerKey).Exists() {
-			return StatusInstalled
+			return StatusInstalled, nil
 		}
-		return StatusNotInstalled
+		return StatusNotInstalled, nil
 	}
 
-	// Legacy: check installed.json for bulk-installed entries.
-	inst, err := LoadInstalled(repoRoot)
-	if err == nil {
+	// Legacy: check installed.json for bulk-installed entries. When it
+	// cannot be read, a server it names under another key goes unseen.
+	inst, instErr := LoadInstalled(repoRoot)
+	if instErr == nil {
 		idx := inst.FindMCP(item.Name, prov.Slug)
 		if idx >= 0 {
 			names := inst.MCP[idx].ServerNames
@@ -528,18 +540,18 @@ func checkMCPStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repo
 			}
 			for _, name := range names {
 				if gjson.GetBytes(fileData, jsonKey+"."+name).Exists() {
-					return StatusInstalled
+					return StatusInstalled, nil
 				}
 			}
-			return StatusNotInstalled
+			return StatusNotInstalled, nil
 		}
 	}
 
 	// Fallback: check if item name exists as a server key
 	if gjson.GetBytes(fileData, jsonKey+"."+item.Name).Exists() {
-		return StatusInstalled
+		return StatusInstalled, nil
 	}
-	return StatusNotInstalled
+	return StatusNotInstalled, instErr
 }
 
 // legacyMCPInstalled reports whether the legacy root's installed.json

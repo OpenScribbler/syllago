@@ -8,8 +8,11 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // setupGlobalLibraryWithSkill creates a temp global content dir with one skill.
@@ -487,5 +490,112 @@ func TestRemoveJSONOutput(t *testing.T) {
 	}
 	if result.RemovedPath == "" {
 		t.Error("expected non-empty removed_path in JSON output")
+	}
+}
+
+// runForcedRemove removes name with --force and returns the error.
+func runForcedRemove(t *testing.T, name string) error {
+	t.Helper()
+	output.SetForTest(t)
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	t.Cleanup(func() { resetRemoveFlags(t) })
+	removeCmd.Flags().Set("force", "true")
+	return removeCmd.RunE(removeCmd, []string{name})
+}
+
+// A provider that still holds the item after a failed uninstall keeps the
+// Library item, so a retry can find it.
+func TestRemoveKeepsLibraryItemWhenUninstallFails(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "stuck-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	skillsDir := filepath.Join(installBase, "skills")
+	if err := os.MkdirAll(filepath.Join(skillsDir, "stuck-skill"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillsDir, "stuck-skill", "SKILL.md"), []byte("# copy\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(skillsDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(skillsDir, 0755) })
+
+	if err := runForcedRemove(t, "stuck-skill"); err == nil {
+		t.Fatal("err = nil, want the failed uninstall reported")
+	}
+	if _, err := os.Stat(skillDir); err != nil {
+		t.Fatalf("library item gone after a failed uninstall: %v", err)
+	}
+}
+
+// A provider whose install directory cannot be read might hold the item,
+// so remove changes nothing.
+func TestRemoveStopsWhenInstallStateUnreadable(t *testing.T) {
+	globalDir, skillDir := setupGlobalLibraryWithSkill(t, "hidden-skill")
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	installBase := t.TempDir()
+	withRemoveProvider(t, installBase)
+
+	skillsDir := filepath.Join(installBase, "skills")
+	if err := os.MkdirAll(skillsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(skillsDir, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(skillsDir, 0755) })
+
+	if err := runForcedRemove(t, "hidden-skill"); err == nil {
+		t.Fatal("err = nil, want remove to stop on unreadable install state")
+	}
+	if _, err := os.Stat(skillDir); err != nil {
+		t.Fatalf("library item gone although install state was unreadable: %v", err)
+	}
+}
+
+// A rule appended to a project's CLAUDE.md is listed with the file it
+// comes out of.
+func TestRemoveDryRunListsRuleAppend(t *testing.T) {
+	globalDir := t.TempDir()
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+	withRemoveProvider(t, t.TempDir())
+	projectRoot := t.TempDir()
+	withFakeRepoRoot(t, projectRoot)
+
+	rulesDir := filepath.Join(globalDir, "rules")
+	if err := rulestore.WriteRule(rulesDir, "claude-code", "appended-rule", metadata.RuleMetadata{ID: "lib-a1", Name: "appended-rule"}, []byte("Always append.\n")); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := rulestore.LoadRule(filepath.Join(rulesDir, "claude-code", "appended-rule"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	claudeMD := filepath.Join(projectRoot, "CLAUDE.md")
+	if err := installer.InstallRuleAppend(projectRoot, t.TempDir(), "remove-test-provider", claudeMD, "manual", loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, _ := output.SetForTest(t)
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	t.Cleanup(func() { resetRemoveFlags(t) })
+	removeCmd.Flags().Set("dry-run", "true")
+
+	if err := removeCmd.RunE(removeCmd, []string{"appended-rule"}); err != nil {
+		t.Fatalf("dry-run remove failed: %v", err)
+	}
+	want := "[dry-run] Would uninstall from: Remove Test Provider (CLAUDE.md)"
+	if out := stdout.String(); !strings.Contains(out, want) {
+		t.Fatalf("expected dry-run output to include %q, got:\n%s", want, out)
 	}
 }

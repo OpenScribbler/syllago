@@ -17,10 +17,27 @@ import (
 )
 
 // scriptedPlacer places every target except the slugs in fail, and records
-// the order it was called in.
+// the order it was called in. Every target holds the item except the slugs
+// in absent; the check cannot tell for the slugs in unknown. The item is
+// appended to appends, or appendErr says the records cannot be read.
 type scriptedPlacer struct {
-	fail  map[string]error
-	calls []string
+	fail      map[string]error
+	absent    map[string]bool
+	unknown   map[string]error
+	appends   []Target
+	appendErr error
+	calls     []string
+}
+
+func (s *scriptedPlacer) appended(catalog.ContentItem, string) ([]Target, error) {
+	return s.appends, s.appendErr
+}
+
+func (s *scriptedPlacer) present(item catalog.ContentItem, projectRoot string, t Target) (bool, error) {
+	if err := s.unknown[t.Provider.Slug]; err != nil {
+		return false, err
+	}
+	return !s.absent[t.Provider.Slug], nil
 }
 
 func (s *scriptedPlacer) place(req InstallRequest, t Target) (installer.Placement, error) {

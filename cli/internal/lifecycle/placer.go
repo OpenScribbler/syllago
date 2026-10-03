@@ -5,17 +5,26 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
-// placer writes one item into one target and removes it again.
+// placer writes one item into one target, reports whether a target holds
+// it, and removes it again.
 // installerPlacer is the real adapter; lifecycle tests substitute one that
 // fails a chosen target.
 type placer interface {
 	place(req InstallRequest, t Target) (installer.Placement, error)
 	unplace(req UninstallRequest, t Target) (installer.Placement, error)
+	// present reports whether t holds item at the provider default. An
+	// error means the check could not tell.
+	present(item catalog.ContentItem, projectRoot string, t Target) (bool, error)
+	// appended returns a target, with File set, for each monolithic rule
+	// file that records item as appended to it. An error means the records
+	// could not be read.
+	appended(item catalog.ContentItem, projectRoot string) ([]Target, error)
 }
 
 type installerPlacer struct{}
@@ -47,6 +56,32 @@ func placeRuleAppend(req InstallRequest, t Target) (installer.Placement, error) 
 		return installer.Placement{}, err
 	}
 	return installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: target}, nil
+}
+
+func (installerPlacer) present(item catalog.ContentItem, projectRoot string, t Target) (bool, error) {
+	status, err := installer.StatusOf(item, t.Provider, projectRoot)
+	return status == installer.StatusInstalled, err
+}
+
+func (installerPlacer) appended(item catalog.ContentItem, projectRoot string) ([]Target, error) {
+	if item.Type != catalog.Rules {
+		return nil, nil
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil {
+		return nil, err
+	}
+	var id string
+	if loaded, err := rulestore.LoadRule(item.Path); err == nil {
+		id = loaded.Meta.ID
+	}
+	var out []Target
+	for _, r := range inst.RuleAppends {
+		if r.Name == item.Name || (id != "" && r.LibraryID == id) {
+			out = append(out, Target{Provider: provider.Provider{Name: r.Provider, Slug: r.Provider}, File: r.TargetFile})
+		}
+	}
+	return out, nil
 }
 
 func (installerPlacer) unplace(req UninstallRequest, t Target) (installer.Placement, error) {
