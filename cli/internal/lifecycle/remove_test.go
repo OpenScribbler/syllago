@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -285,4 +286,190 @@ func TestRemove_RealMCPBackupIsDirectory(t *testing.T) {
 	if rec := loadRecord(t, storePath, installstore.Coord{Type: "mcp", Name: "srv"}); rec == nil || len(rec.Placements) == 0 {
 		t.Errorf("record = %+v, want its placement kept", rec)
 	}
+}
+
+// stubProvider installs every content type under ~/.stub/<type>.
+var stubProvider = provider.Provider{
+	Name: "Stub", Slug: "stub",
+	InstallDir: func(home string, ct catalog.ContentType) string {
+		return filepath.Join(home, ".stub", string(ct))
+	},
+}
+
+// A rule appended to a monolithic file comes out of that file on Remove.
+func TestRemove_RealRuleAppend(t *testing.T) {
+	isolate(t)
+	item := writeAppendRule(t, t.TempDir(), "lib-r9", "Always append.\n")
+	projectRoot := t.TempDir()
+	claudeMD := filepath.Join(projectRoot, "CLAUDE.md")
+	appendTo(t, projectRoot, claudeMD, item)
+	req := RemoveRequest{Item: item, ProjectRoot: projectRoot, Providers: []provider.Provider{provider.ClaudeCode}}
+
+	_, err := New().Remove(req)
+	var dr *DecisionRequired
+	if !errors.As(err, &dr) {
+		t.Fatalf("err = %v, want a decision", err)
+	}
+	if plan := dr.Context.(RemovePlan); len(plan.Appends) != 1 || plan.Appends[0].File != claudeMD || plan.Appends[0].Provider.Name != provider.ClaudeCode.Name {
+		t.Fatalf("plan appends = %+v, want %s for Claude Code", plan.Appends, claudeMD)
+	}
+
+	req.Decisions.RemoveConfirmed = true
+	if _, err := New().Remove(req); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if body, _ := os.ReadFile(claudeMD); strings.Contains(string(body), "Always append.") {
+		t.Errorf("CLAUDE.md still holds the rule: %q", body)
+	}
+	if inst, _ := installer.LoadInstalled(projectRoot); len(inst.RuleAppends) != 0 {
+		t.Errorf("rule appends = %+v, want none", inst.RuleAppends)
+	}
+	requireGone(t, item.Path)
+}
+
+func TestRemove_AppendReadErrorBlocks(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r10", "")
+	unreadable := errors.New("unreadable")
+	p := &scriptedPlacer{appendErr: unreadable}
+
+	out, err := scriptedModule(p).Remove(confirmedRemove(item, "alpha"))
+
+	if !errors.Is(err, unreadable) || len(p.calls) != 0 || out.Changed {
+		t.Fatalf("err = %v, calls = %v, Changed = %v; want the read error and nothing attempted", err, p.calls, out.Changed)
+	}
+	requireExists(t, item.Path)
+}
+
+// copyPlacer places a copy at path, outside any default install location.
+type copyPlacer struct {
+	scriptedPlacer
+	path string
+}
+
+func (c *copyPlacer) place(InstallRequest, Target) (installer.Placement, error) {
+	return installer.Placement{Mechanism: installer.MechanismCopy, Path: c.path}, nil
+}
+
+// An install the provider checks cannot see, such as one under a custom
+// base directory, keeps the Library item rather than being orphaned.
+func TestRemove_UnreachedPlacementKeepsItem(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r11", "")
+	copied := filepath.Join(t.TempDir(), "custom", "r11")
+	if err := os.MkdirAll(copied, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := scriptedModule(&copyPlacer{path: copied}).Install(InstallRequest{Item: item, Targets: targets("alpha")}); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := scriptedModule(&scriptedPlacer{absent: map[string]bool{"alpha": true}}).Remove(confirmedRemove(item, "alpha"))
+
+	if err == nil || !strings.Contains(err.Error(), copied) {
+		t.Fatalf("err = %v, want it to name %s", err, copied)
+	}
+	if len(out.Failed) != 1 || out.Failed[0].Stage != StagePlace || out.Failed[0].Target.Provider.Slug != "alpha" {
+		t.Errorf("Failed = %+v, want one place failure for alpha", out.Failed)
+	}
+	requireExists(t, item.Path)
+	if rec := loadRecord(t, storePath, installstore.Coord{Type: "rules", Name: "r11"}); rec == nil || len(rec.Placements) != 1 {
+		t.Errorf("record = %+v, want the copy placement kept", rec)
+	}
+}
+
+// A provider directory that cannot be read may hide a link into the item.
+func TestRemove_LinkScanErrorBlocks(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r12", "")
+	sealed := filepath.Join(os.Getenv("HOME"), ".stub", "skills")
+	if err := os.MkdirAll(sealed, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(sealed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(sealed, 0755) })
+	p := &scriptedPlacer{absent: map[string]bool{"stub": true}}
+
+	out, err := scriptedModule(p).Remove(RemoveRequest{Item: item, Providers: []provider.Provider{stubProvider}, Decisions: Decisions{RemoveConfirmed: true}})
+
+	if err == nil || len(p.calls) != 0 || out.Changed {
+		t.Fatalf("err = %v, calls = %v, Changed = %v; want a refusal before any change", err, p.calls, out.Changed)
+	}
+	if len(out.Failed) != 1 || out.Failed[0].Stage != StagePresence || out.Failed[0].Target.Provider.Name != "Stub" {
+		t.Errorf("Failed = %+v, want one presence failure for Stub", out.Failed)
+	}
+	requireExists(t, item.Path)
+}
+
+// Without the install records Remove cannot tell what it would orphan.
+func TestRemove_CorruptStoreBlocks(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r13", "")
+	if err := os.WriteFile(storePath, []byte("{not json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	p := &scriptedPlacer{}
+
+	out, err := scriptedModule(p).Remove(confirmedRemove(item, "alpha"))
+
+	if err == nil || len(p.calls) != 0 || out.Changed {
+		t.Fatalf("err = %v, calls = %v, Changed = %v; want a refusal before any change", err, p.calls, out.Changed)
+	}
+	if len(out.Failed) != 1 || out.Failed[0].Stage != StagePresence || len(out.Warnings()) != 0 {
+		t.Errorf("Failed = %+v, want one presence failure and no warnings", out.Failed)
+	}
+	requireExists(t, item.Path)
+}
+
+// A Library item that cannot be deleted keeps its record, emptied of the
+// placements Remove took out.
+func TestRemove_LibraryDeleteFails(t *testing.T) {
+	storePath := isolate(t)
+	item := libraryItem(t, "r14", "")
+	installScripted(t, item, "alpha")
+	if err := os.Chmod(item.Path, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(item.Path, 0755) })
+
+	_, err := scriptedModule(&scriptedPlacer{}).Remove(confirmedRemove(item, "alpha"))
+
+	if err == nil {
+		t.Fatal("err = nil, want the library delete failure")
+	}
+	requireExists(t, item.Path)
+	if rec := loadRecord(t, storePath, installstore.Coord{Type: "rules", Name: "r14"}); rec == nil || len(rec.Placements) != 0 {
+		t.Errorf("record = %+v, want it kept with no placements", rec)
+	}
+}
+
+func TestRemove_StrayLinkRemovalFails(t *testing.T) {
+	isolate(t)
+	item := libraryItem(t, "r15", "")
+	dir := filepath.Join(os.Getenv("HOME"), ".stub", "skills")
+	link := filepath.Join(dir, "old-name")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(item.Path, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0755) })
+	p := &scriptedPlacer{absent: map[string]bool{"stub": true}}
+
+	out, err := scriptedModule(p).Remove(RemoveRequest{Item: item, Providers: []provider.Provider{stubProvider}, Decisions: Decisions{RemoveConfirmed: true}})
+
+	if err == nil {
+		t.Fatal("err = nil, want the link removal failure")
+	}
+	if len(out.Failed) != 1 || out.Failed[0].Stage != StagePlace {
+		t.Errorf("Failed = %+v, want one place failure", out.Failed)
+	}
+	requireExists(t, link)
+	requireExists(t, item.Path)
 }

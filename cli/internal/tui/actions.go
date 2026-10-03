@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -111,6 +112,9 @@ func (a App) handleRemove() (tea.Model, tea.Cmd) {
 	var uninstallFrom []string
 	for _, t := range plan.Present {
 		uninstallFrom = append(uninstallFrom, t.Provider.Name)
+	}
+	for _, t := range plan.Appends {
+		uninstallFrom = append(uninstallFrom, fmt.Sprintf("%s (%s)", t.Provider.Name, filepath.Base(t.File)))
 	}
 	for _, link := range plan.Links {
 		name := link.Provider
@@ -327,7 +331,9 @@ func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 		outcome, err := lifecycle.New().Remove(req)
 		done := removeDoneMsg{itemName: req.Item.Name, warnings: outcome.Warnings(), err: err}
 		for _, step := range outcome.Completed {
-			done.uninstalledFrom = append(done.uninstalledFrom, step.Target.Provider.Name)
+			if name := step.Target.Provider.Name; !slices.Contains(done.uninstalledFrom, name) {
+				done.uninstalledFrom = append(done.uninstalledFrom, name)
+			}
 		}
 		return done
 	}

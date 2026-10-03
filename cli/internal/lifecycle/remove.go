@@ -3,8 +3,10 @@ package lifecycle
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -25,22 +27,25 @@ type RemoveRequest struct {
 // RemovePlan is what a Remove would do, returned as the Context of its
 // RemoveConfirm decision.
 type RemovePlan struct {
-	Present []Target                // providers that hold the item
-	Unknown []Failure               // providers whose check could not tell; Remove stops on any
+	Present []Target                // providers that hold the item at their default location
+	Appends []Target                // monolithic rule files the item is appended to, one per File
+	Unknown []Failure               // checks that could not tell; Remove stops on any
 	Links   []installer.ScannedLink // links into the item that no Present target accounts for
 }
 
-// Remove uninstalls the item from every provider that holds it, removes
-// every provider link into it, then deletes it from the Library and forgets
-// its install record.
+// Remove uninstalls the item from every provider that holds it, takes it
+// out of every rule file it is appended to, removes every provider link
+// into it, then deletes it from the Library and forgets its install record.
 //
 // Without Decisions.RemoveConfirmed it changes nothing and returns
 // *DecisionRequired carrying the RemovePlan. With it, Remove stops before
-// any change when a provider's check could not tell whether it holds the
-// item. Otherwise it attempts every target and link; if any fails, the
-// Library item and the record stay, and the record loses only the
-// placements that were removed. A record that cannot be forgotten after the
-// Library item is gone appears only in Outcome.Failed.
+// any change when a check could not tell where the item is installed or the
+// install records cannot be read. Otherwise it attempts every target and
+// link; if any fails, or the record names a file or link Remove did not
+// reach and that still exists, the Library item and the record stay, and
+// the record loses only the placements that were removed. A record that
+// cannot be forgotten after the Library item is gone appears only in
+// Outcome.Failed.
 func (m *Module) Remove(req RemoveRequest) (Outcome, error) {
 	var out Outcome
 	if !req.Decisions.RemoveConfirmed {
@@ -54,9 +59,13 @@ func (m *Module) Remove(req RemoveRequest) (Outcome, error) {
 	defer release()
 
 	plan := m.removePlan(req)
+	rec := m.loadRemovalRecord(req.Item)
+	if rec.err != nil {
+		plan.Unknown = append(plan.Unknown, Failure{Stage: StagePresence, Err: recordErr(rec.err)})
+	}
 	if len(plan.Unknown) > 0 {
 		out.Failed = append(out.Failed, plan.Unknown...)
-		out.Unattempted = plan.Present
+		out.Unattempted = append(plan.Present, plan.Appends...)
 		var errs []error
 		for _, f := range plan.Unknown {
 			errs = append(errs, f.Err)
@@ -65,19 +74,23 @@ func (m *Module) Remove(req RemoveRequest) (Outcome, error) {
 	}
 
 	var errs []error
-	ureq := UninstallRequest{Item: req.Item, ProjectRoot: req.ProjectRoot}
-	for _, t := range plan.Present {
+	unplace := func(ureq UninstallRequest, t Target) {
 		pl, err := m.placer.unplace(ureq, t)
 		if err != nil {
 			out.Failed = append(out.Failed, Failure{Target: t, Stage: StagePlace, Err: err})
 			errs = append(errs, err)
-			continue
+			return
 		}
 		out.Changed = true
 		out.Completed = append(out.Completed, Step{Target: t, Placement: pl})
 	}
-	home, _ := os.UserHomeDir()
-	for _, link := range installer.ScanProviderLinks(req.Providers, home, []string{req.Item.Path}) {
+	for _, t := range plan.Present {
+		unplace(UninstallRequest{Item: req.Item, ProjectRoot: req.ProjectRoot}, t)
+	}
+	for _, t := range plan.Appends {
+		unplace(UninstallRequest{Item: req.Item, ProjectRoot: req.ProjectRoot, Method: installer.MethodAppend}, t)
+	}
+	for _, link := range plan.Links {
 		t := targetFor(req.Providers, link.Provider)
 		if err := os.Remove(link.Path); err != nil {
 			err = fmt.Errorf("removing provider link %s: %w", link.Path, err)
@@ -89,7 +102,13 @@ func (m *Module) Remove(req RemoveRequest) (Outcome, error) {
 		out.Completed = append(out.Completed, Step{Target: t, Placement: installer.Placement{Mechanism: installer.MechanismSymlink, Path: link.Path}})
 	}
 
-	rec := m.removeRecord(req.Item, out.Completed)
+	rec.drop(out.Completed, m.now())
+	if len(errs) == 0 {
+		for _, f := range rec.unreached(req.Providers) {
+			out.Failed = append(out.Failed, f)
+			errs = append(errs, f.Err)
+		}
+	}
 	if len(errs) > 0 {
 		out.Failed = append(out.Failed, rec.save()...)
 		return out, errors.Join(errs...)
@@ -103,8 +122,8 @@ func (m *Module) Remove(req RemoveRequest) (Outcome, error) {
 	return out, nil
 }
 
-// removePlan checks every provider for the item and sweeps for links into
-// it. It changes nothing.
+// removePlan checks every provider for the item, reads the rule files it
+// is appended to, and sweeps for links into it. It changes nothing.
 func (m *Module) removePlan(req RemoveRequest) RemovePlan {
 	var plan RemovePlan
 	present := make(map[string]bool)
@@ -120,9 +139,22 @@ func (m *Module) removePlan(req RemoveRequest) RemovePlan {
 			present[p.Slug] = true
 		}
 	}
+	appends, err := m.placer.appended(req.Item, req.ProjectRoot)
+	if err != nil {
+		plan.Unknown = append(plan.Unknown, Failure{Stage: StagePresence, Err: fmt.Errorf("reading rule appends: %w", err)})
+	}
+	for _, t := range appends {
+		named := targetFor(req.Providers, t.Provider.Slug)
+		named.File = t.File
+		plan.Appends = append(plan.Appends, named)
+	}
 	home, _ := os.UserHomeDir()
 	leaf := installLeaf(req.Item)
-	for _, link := range installer.ScanProviderLinks(req.Providers, home, []string{req.Item.Path}) {
+	links, scanErrs := installer.ScanProviderLinksChecked(req.Providers, home, []string{req.Item.Path})
+	for _, e := range scanErrs {
+		plan.Unknown = append(plan.Unknown, Failure{Target: targetFor(req.Providers, e.Provider), Stage: StagePresence, Err: e})
+	}
+	for _, link := range links {
 		if present[link.Provider] && link.ContentType == req.Item.Type && filepath.Base(link.Path) == leaf {
 			continue
 		}
@@ -173,17 +205,21 @@ type removalRecord struct {
 	changed bool
 }
 
-// removeRecord loads the store and drops the placements of steps from the
-// item's record.
-func (m *Module) removeRecord(item catalog.ContentItem, steps []Step) *removalRecord {
+// loadRemovalRecord loads the store that holds the item's install record.
+func (m *Module) loadRemovalRecord(item catalog.ContentItem) *removalRecord {
 	r := &removalRecord{coord: recordCoord(item)}
 	path, err := installstore.DefaultPath()
 	if err == nil {
 		r.store, err = installstore.Load(path)
 	}
-	if err != nil {
-		r.err = err
-		return r
+	r.err = err
+	return r
+}
+
+// drop removes the placements of steps from the item's record.
+func (r *removalRecord) drop(steps []Step, now time.Time) {
+	if r.store == nil {
+		return
 	}
 	for _, s := range steps {
 		p := recordPlacement(s.Target.Provider.Slug, s.Placement)
@@ -198,9 +234,40 @@ func (m *Module) removeRecord(item catalog.ContentItem, steps []Step) *removalRe
 		}
 	}
 	if rec := r.store.Find(r.coord); rec != nil && r.changed {
-		rec.UpdatedAt = m.now()
+		rec.UpdatedAt = now
 	}
-	return r
+}
+
+// unreached returns a failure for each file or link the record still lists
+// that is still on disk: an install Remove did not reach, such as a copy
+// under a custom base directory. Deleting the Library item would orphan it.
+// Merged hooks and MCP servers live in shared settings files and cannot be
+// checked this way.
+func (r *removalRecord) unreached(providers []provider.Provider) []Failure {
+	if r.store == nil {
+		return nil
+	}
+	rec := r.store.Find(r.coord)
+	if rec == nil {
+		return nil
+	}
+	var out []Failure
+	for _, p := range rec.Placements {
+		if p.Mechanism != installstore.MechanismSymlink && p.Mechanism != installstore.MechanismCopy {
+			continue
+		}
+		_, err := os.Lstat(p.Path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err == nil {
+			err = fmt.Errorf("still installed at %s, which Remove does not reach; uninstall it there, then remove again", p.Path)
+		} else {
+			err = fmt.Errorf("checking %s: %w", p.Path, err)
+		}
+		out = append(out, Failure{Target: targetFor(providers, p.Provider), Stage: StagePlace, Err: err})
+	}
+	return out
 }
 
 func (r *removalRecord) forget() {

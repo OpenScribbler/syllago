@@ -113,14 +113,18 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	plan := decision.Context.(lifecycle.RemovePlan)
-	linkLabels := make(map[string]string, len(plan.Links))
+	pathLabels := make(map[string]string, len(plan.Links)+len(plan.Appends))
 	var installedIn []string
 	for _, t := range plan.Present {
 		installedIn = append(installedIn, t.Provider.Name)
 	}
+	for _, t := range plan.Appends {
+		pathLabels[t.File] = fmt.Sprintf("%s (%s)", t.Provider.Name, filepath.Base(t.File))
+		installedIn = append(installedIn, pathLabels[t.File])
+	}
 	for _, link := range plan.Links {
-		linkLabels[link.Path] = providerLinkLabel(link, providerNames)
-		installedIn = append(installedIn, linkLabels[link.Path])
+		pathLabels[link.Path] = providerLinkLabel(link, providerNames)
+		installedIn = append(installedIn, pathLabels[link.Path])
 	}
 
 	if dryRun {
@@ -172,7 +176,7 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 	var uninstalledFrom []string
 	for _, step := range outcome.Completed {
-		if label, ok := linkLabels[step.Placement.Path]; ok {
+		if label, ok := pathLabels[step.Placement.Path]; ok {
 			uninstalledFrom = append(uninstalledFrom, label)
 		} else {
 			uninstalledFrom = append(uninstalledFrom, step.Target.Provider.Name)

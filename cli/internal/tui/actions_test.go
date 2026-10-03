@@ -12,11 +12,13 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // testAppWithInstalledRule builds an App with one library rule already installed
@@ -385,6 +387,32 @@ func TestActions_HandleRemove_ListsInstalls(t *testing.T) {
 	a := m.(App)
 	if got := a.remove.uninstallFrom; len(got) != 1 || got[0] != "Claude Code" {
 		t.Errorf("uninstallFrom = %v, want [Claude Code]", got)
+	}
+}
+
+// A rule both installed and appended to a project's CLAUDE.md lists each
+// place in the modal, and names its provider once when it is gone.
+func TestActions_Remove_InstalledAndAppended(t *testing.T) {
+	app, item, prov := testAppWithInstalledRule(t)
+	if err := rulestore.WriteRule(filepath.Dir(filepath.Dir(item.Path)), "rules", item.Name, metadata.RuleMetadata{ID: "lib-tui1", Name: item.Name}, []byte("Always append.\n")); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := rulestore.LoadRule(item.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claudeMD := filepath.Join(app.projectRoot, "CLAUDE.md")
+	if err := installer.InstallRuleAppend(app.projectRoot, t.TempDir(), prov.Slug, claudeMD, "manual", loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	m, _ := app.handleRemove()
+	if got := m.(App).remove.uninstallFrom; len(got) != 2 || got[0] != "Claude Code" || got[1] != "Claude Code (CLAUDE.md)" {
+		t.Errorf("uninstallFrom = %v, want the install and the CLAUDE.md append", got)
+	}
+	done := app.doRemoveCmd(removeResultMsg{confirmed: true, item: item})().(removeDoneMsg)
+	if done.err != nil || len(done.uninstalledFrom) != 1 || done.uninstalledFrom[0] != "Claude Code" {
+		t.Errorf("done = %+v, want Claude Code once with no error", done)
 	}
 }
 

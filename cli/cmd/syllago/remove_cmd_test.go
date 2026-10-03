@@ -8,8 +8,11 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // setupGlobalLibraryWithSkill creates a temp global content dir with one skill.
@@ -554,5 +557,45 @@ func TestRemoveStopsWhenInstallStateUnreadable(t *testing.T) {
 	}
 	if _, err := os.Stat(skillDir); err != nil {
 		t.Fatalf("library item gone although install state was unreadable: %v", err)
+	}
+}
+
+// A rule appended to a project's CLAUDE.md is listed with the file it
+// comes out of.
+func TestRemoveDryRunListsRuleAppend(t *testing.T) {
+	globalDir := t.TempDir()
+	withGlobalDirOverride(t, globalDir)
+	withNonInteractive(t)
+	t.Setenv("HOME", t.TempDir())
+	withRemoveProvider(t, t.TempDir())
+	projectRoot := t.TempDir()
+	withFakeRepoRoot(t, projectRoot)
+
+	rulesDir := filepath.Join(globalDir, "rules")
+	if err := rulestore.WriteRule(rulesDir, "claude-code", "appended-rule", metadata.RuleMetadata{ID: "lib-a1", Name: "appended-rule"}, []byte("Always append.\n")); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := rulestore.LoadRule(filepath.Join(rulesDir, "claude-code", "appended-rule"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	claudeMD := filepath.Join(projectRoot, "CLAUDE.md")
+	if err := installer.InstallRuleAppend(projectRoot, t.TempDir(), "remove-test-provider", claudeMD, "manual", loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, _ := output.SetForTest(t)
+	removeCmd.SilenceUsage = true
+	removeCmd.SilenceErrors = true
+	resetRemoveFlags(t)
+	t.Cleanup(func() { resetRemoveFlags(t) })
+	removeCmd.Flags().Set("dry-run", "true")
+
+	if err := removeCmd.RunE(removeCmd, []string{"appended-rule"}); err != nil {
+		t.Fatalf("dry-run remove failed: %v", err)
+	}
+	want := "[dry-run] Would uninstall from: Remove Test Provider (CLAUDE.md)"
+	if out := stdout.String(); !strings.Contains(out, want) {
+		t.Fatalf("expected dry-run output to include %q, got:\n%s", want, out)
 	}
 }
