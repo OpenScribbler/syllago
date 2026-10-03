@@ -7,7 +7,9 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -40,6 +42,11 @@ func TestInstall_MethodAppend_WritesMonolithicFile(t *testing.T) {
 	origGlobal := catalog.GlobalContentDirOverride
 	catalog.GlobalContentDirOverride = globalDir
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
+
+	configDir := t.TempDir()
+	origConfig := config.GlobalDirOverride
+	config.GlobalDirOverride = configDir
+	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
 
 	_, _ = output.SetForTest(t)
 
@@ -79,6 +86,16 @@ func TestInstall_MethodAppend_WritesMonolithicFile(t *testing.T) {
 	}
 	if inst.RuleAppends[0].TargetFile != target {
 		t.Errorf("targetFile: got %q, want %q", inst.RuleAppends[0].TargetFile, target)
+	}
+
+	// Rule appends used to skip the install record.
+	store, err := installstore.Load(filepath.Join(configDir, "installs.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := store.Find(installstore.Coord{Type: string(catalog.Rules), Name: "foo"})
+	if rec == nil || len(rec.Placements) != 1 || rec.Placements[0].Mechanism != installstore.MechanismRuleAppend || rec.Placements[0].Path != target {
+		t.Errorf("record = %+v, want one rule_append placement at %s", rec, target)
 	}
 }
 

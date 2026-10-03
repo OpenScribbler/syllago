@@ -36,7 +36,7 @@ cd cli && go test ./internal/tui/ -update-golden
 
 ## Testing Requirements
 
-Every behavioral code change must include tests. Coverage target is **80% on core logic packages** (converter, installer, catalog, loadout, moat, analyzer). Thin command wiring, print-only functions, and stubs are explicitly exempt — never write a test whose only purpose is to raise a coverage number.
+Every behavioral code change must include tests. Coverage target is **80% on core logic packages** (converter, installer, lifecycle, catalog, loadout, moat, analyzer). Thin command wiring, print-only functions, and stubs are explicitly exempt — never write a test whose only purpose is to raise a coverage number.
 
 - **New logic** must have test cases covering the happy path and at least one error path.
 - **Bug fixes** must include a regression test that would have caught the bug.

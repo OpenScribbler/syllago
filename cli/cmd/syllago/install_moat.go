@@ -49,6 +49,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -377,8 +378,26 @@ func runInstallFromRegistry(
 		)
 	}
 
-	placement, installErr := installer.Install(item, *targetProv, cfgRoot, method, baseDir, scan)
-	printInstallNotices(errW, placement.Notices)
+	// Rotate the record before the install writes the new content hash, so
+	// the previous version keeps the old one.
+	if prevCopy != "" {
+		recordMOATUpdateBookkeeping(item, prevCopy)
+	}
+	outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
+		Item:        item,
+		ProjectRoot: cfgRoot,
+		Targets:     []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
+		Method:      method,
+		Scan:        scan,
+		Frozen:      isFrozenFromContext(ctx),
+		Provenance: &installstore.MOATProvenance{
+			ManifestURI: reg.ManifestURI,
+			SourceURI:   entry.SourceURI,
+			TrustTier:   entry.TrustTier().String(),
+			AttestedAt:  now,
+		},
+	})
+	printInstallNotices(errW, outcome.Notices)
 	if installErr != nil {
 		return output.NewStructuredErrorDetail(
 			output.ErrInstallNotWritable,
@@ -387,30 +406,8 @@ func runInstallFromRegistry(
 			installErr.Error(),
 		)
 	}
-	if prevCopy != "" {
-		recordMOATUpdateBookkeeping(item, prevCopy)
-	}
-	recordMOATInstallBookkeeping(item, targetProv.Slug, placement, &installstore.MOATProvenance{
-		ManifestURI: reg.ManifestURI,
-		SourceURI:   entry.SourceURI,
-		TrustTier:   entry.TrustTier().String(),
-		AttestedAt:  now,
-	})
-
-	if isFrozenFromContext(ctx) {
-		coord := installRecordCoord(item)
-		if coord.Registry != "" {
-			if storePath, err := installstore.DefaultPath(); err == nil {
-				if err := installstore.SetPinned(storePath, coord, true, now); err != nil {
-					warnInstallRecord(err)
-				}
-			} else {
-				warnInstallRecord(err)
-			}
-		} else {
-			fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
-		}
-	}
+	printLifecycleWarnings(errW, outcome)
+	placement := outcome.Completed[0].Placement
 
 	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), placement.String())
 	return nil

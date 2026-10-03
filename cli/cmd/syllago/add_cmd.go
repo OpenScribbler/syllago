@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -358,31 +359,18 @@ func chainInstallAfterAdd(results []add.AddResult, toSlug, globalDir, projectRoo
 
 	for _, item := range globalCat.Items {
 		if addedSet[nameType{item.Name, item.Type}] {
-			placement, err := installer.Install(item, *prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{})
-			printInstallNotices(output.ErrWriter, placement.Notices)
+			outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+				Item:        item,
+				ProjectRoot: projectRoot,
+				Targets:     []lifecycle.Target{{Provider: *prov}},
+				Method:      installer.MethodSymlink,
+				Frozen:      frozen,
+			})
+			printInstallNotices(output.ErrWriter, outcome.Notices)
 			if err != nil {
 				fmt.Fprintf(output.ErrWriter, "Warning: install %s to %s: %v\n", item.Name, toSlug, err)
 			} else {
-				recordInstallBookkeeping(item, toSlug, placement)
-				if frozen {
-					if item.Meta != nil && item.Meta.SourceRegistry != "" {
-						coord := installstore.Coord{
-							Registry: item.Meta.SourceRegistry,
-							Type:     string(item.Type),
-							Name:     item.Name,
-						}
-						storePath, err := installstore.DefaultPath()
-						if err != nil {
-							warnInstallRecord(err)
-						} else {
-							if err := installstore.SetPinned(storePath, coord, true, time.Now()); err != nil {
-								warnInstallRecord(err)
-							}
-						}
-					} else {
-						fmt.Fprintf(output.ErrWriter, "warning: only registry items can be pinned\n")
-					}
-				}
+				printLifecycleWarnings(output.ErrWriter, outcome)
 			}
 		}
 	}

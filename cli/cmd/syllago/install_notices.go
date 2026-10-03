@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 )
 
 // printInstallNotices writes an install's notices in the form the installer
@@ -30,5 +31,13 @@ func printInstallNotices(w io.Writer, notices []installer.Notice) {
 		default:
 			fmt.Fprintf(w, "%s\n", n)
 		}
+	}
+}
+
+// printLifecycleWarnings prints the parts of an install that did not happen
+// even though the item is in place: its install record or its pin.
+func printLifecycleWarnings(w io.Writer, o lifecycle.Outcome) {
+	for _, msg := range o.Warnings() {
+		fmt.Fprintf(w, "warning: %s\n", msg)
 	}
 }

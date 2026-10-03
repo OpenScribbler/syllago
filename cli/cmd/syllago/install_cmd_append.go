@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
@@ -62,8 +63,6 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 			err.Error(),
 		)
 	}
-
-	homeDir, _ := os.UserHomeDir()
 
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
@@ -142,7 +141,7 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 	switch {
 	case !hasRecord || pts.State == installcheck.StateFresh:
 		// Fresh install — no record or no clean match.
-		if err := installer.InstallRuleAppend(projectRoot, homeDir, toSlug, target, "manual", loaded); err != nil {
+		if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
 			return output.NewStructuredErrorDetail(
 				output.ErrInstallNotWritable,
 				"appending rule to target file",
@@ -255,7 +254,7 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 					)
 				}
 			}
-			if err := installer.InstallRuleAppend(projectRoot, homeDir, toSlug, target, "manual", loaded); err != nil {
+			if err := appendRule(ruleDir, toSlug, projectRoot); err != nil {
 				return output.NewStructuredErrorDetail(
 					output.ErrInstallNotWritable,
 					"appending rule to target file",
@@ -297,6 +296,28 @@ func runInstallAppend(cmd *cobra.Command, args []string, toSlug, typeFilter stri
 // subdirectories. Returns fs.ErrNotExist if no match is found. First-match
 // wins when the same rule name exists under multiple source providers — D14
 // uniqueness is enforced per (LibraryID, TargetFile), not per name.
+// appendRule appends the library rule in ruleDir to the provider's
+// monolithic rule file and records the install.
+func appendRule(ruleDir, toSlug, projectRoot string) error {
+	prov := findProviderBySlug(toSlug)
+	if prov == nil {
+		return fmt.Errorf("unknown provider: %s", toSlug)
+	}
+	meta, _ := metadata.Load(ruleDir)
+	outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+		Item:        catalog.ContentItem{Name: filepath.Base(ruleDir), Type: catalog.Rules, Path: ruleDir, Meta: meta},
+		ProjectRoot: projectRoot,
+		Targets:     []lifecycle.Target{{Provider: *prov}},
+		Method:      installer.MethodAppend,
+		Source:      "manual",
+	})
+	if err != nil {
+		return err
+	}
+	printLifecycleWarnings(output.ErrWriter, outcome)
+	return nil
+}
+
 func findLibraryRuleDir(rulesRoot, name string) (string, error) {
 	return rulestore.FindRuleDir(rulesRoot, name)
 }

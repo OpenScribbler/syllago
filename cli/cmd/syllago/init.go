@@ -12,6 +12,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -262,15 +263,21 @@ func installBuiltins(cmd *cobra.Command, repoRoot string, detected []provider.Pr
 				continue
 			}
 
-			placement, err := installer.Install(item, prov, repoRoot, installer.MethodSymlink, "", installer.ScanOptions{})
-			printInstallNotices(output.ErrWriter, placement.Notices)
+			outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+				Item:        item,
+				ProjectRoot: repoRoot,
+				Targets:     []lifecycle.Target{{Provider: prov}},
+				Method:      installer.MethodSymlink,
+			})
+			printInstallNotices(output.ErrWriter, outcome.Notices)
 			if err != nil {
 				if !output.JSON {
 					fmt.Fprintf(os.Stderr, "  warning: could not install %s to %s: %s\n", item.Name, prov.Name, err)
 				}
 				continue
 			}
-			desc := placement.String()
+			printLifecycleWarnings(output.ErrWriter, outcome)
+			desc := outcome.Completed[0].Placement.String()
 
 			installed = append(installed, initInstalledItem{
 				Name:     item.Name,

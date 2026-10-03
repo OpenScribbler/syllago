@@ -11,37 +11,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 )
 
-// recordInstallBookkeeping best-effort-records a successful install. Never
-// fails the install: any error is reported as a warning on stderr.
-func recordInstallBookkeeping(item catalog.ContentItem, provSlug string, pl installer.Placement) {
-	storePath, err := installstore.DefaultPath()
-	if err != nil {
-		warnInstallRecord(err)
-		return
-	}
-	if err := installstore.RecordInstallMeta(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), installstore.InstallMeta{
-		SourceSHA: installRecordSourceSHA(item),
-	}, time.Now()); err != nil {
-		warnInstallRecord(err)
-	}
-}
-
-// recordMOATInstallBookkeeping best-effort-records a successful MOAT install
-// with provenance. Never fails the install: any error is reported as a warning.
-func recordMOATInstallBookkeeping(item catalog.ContentItem, provSlug string, pl installer.Placement, moatProv *installstore.MOATProvenance) {
-	storePath, err := installstore.DefaultPath()
-	if err != nil {
-		warnInstallRecord(err)
-		return
-	}
-	if err := installstore.RecordInstallMeta(storePath, installRecordCoord(item), item.Path, installRecordPlacement(provSlug, pl), installstore.InstallMeta{
-		MOAT:      moatProv,
-		SourceSHA: installRecordSourceSHA(item),
-	}, time.Now()); err != nil {
-		warnInstallRecord(err)
-	}
-}
-
 // recordMOATUpdateBookkeeping rotates the install record for a MOAT item whose
 // library copy was just replaced, capturing the saved previous copy for
 // one-step rollback. Best-effort; items without records skip silently.
@@ -94,7 +63,8 @@ func recordAddUpdateBookkeeping(results []add.AddResult, regName, sourceSHA stri
 	}
 }
 
-// recordUninstallBookkeeping mirrors recordInstallBookkeeping for uninstalls.
+// recordUninstallBookkeeping best-effort-records an uninstall. Never fails
+// the uninstall: any error is reported as a warning on stderr.
 func recordUninstallBookkeeping(item catalog.ContentItem, provSlug string, pl installer.Placement) {
 	storePath, err := installstore.DefaultPath()
 	if err != nil {
@@ -137,13 +107,6 @@ func installRecordPlacement(provSlug string, pl installer.Placement) installstor
 		Path:      pl.Path,
 		Keys:      pl.Keys,
 	}
-}
-
-func installRecordSourceSHA(item catalog.ContentItem) string {
-	if item.Meta == nil {
-		return ""
-	}
-	return item.Meta.SourceSHA
 }
 
 func warnInstallRecord(err error) {

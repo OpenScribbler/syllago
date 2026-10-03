@@ -16,6 +16,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -23,7 +24,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
-	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 )
 
 // formatToastErr renders an error for a TUI toast. For output.StructuredError
@@ -944,7 +944,7 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	method := msg.method
 	projectRoot := msg.projectRoot
 
-	// D5 append path: route to InstallRuleAppend, which writes to the
+	// D5 append path: route to the rule-append install, which writes to the
 	// provider's monolithic filename (CLAUDE.md, AGENTS.md, etc.) rather
 	// than placing a file via installer.Install. Location flag is ignored
 	// because the append scope comes from the target file's path (resolved
@@ -972,29 +972,33 @@ func (a App) doInstallCmd(msg installResultMsg) tea.Cmd {
 	}
 
 	return func() tea.Msg {
-		placement, err := installer.Install(item, prov, projectRoot, method, baseDir, installer.ScanOptions{})
+		outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+			Item:        item,
+			ProjectRoot: projectRoot,
+			Targets:     []lifecycle.Target{{Provider: prov, BaseDir: baseDir}},
+			Method:      method,
+		})
 		if err != nil {
 			return installDoneMsg{
 				itemName:     item.DisplayName,
 				providerName: prov.Name,
-				notices:      placement.Notices,
+				notices:      outcome.Notices,
 				err:          err,
 			}
 		}
-		recordTUIInstallBookkeeping(item, prov.Slug, placement)
 		return installDoneMsg{
 			itemName:     item.DisplayName,
 			providerName: prov.Name,
-			targetPath:   placement.String(),
-			notices:      placement.Notices,
+			targetPath:   outcome.Completed[0].Placement.String(),
+			notices:      outcome.Notices,
+			warnings:     outcome.Warnings(),
 		}
 	}
 }
 
-// doInstallAppendCmd runs the D5 monolithic-append install. It loads the
-// library rule via rulestore, resolves the target monolithic filename from
-// the provider slug (D10), and calls InstallRuleAppend. Returns
-// installDoneMsg with targetPath set to the monolithic file.
+// doInstallAppendCmd runs the D5 monolithic-append install, which appends
+// the library rule to the provider's monolithic file (D10). Returns
+// installDoneMsg with targetPath set to that file.
 func (a App) doInstallAppendCmd(msg installResultMsg) tea.Cmd {
 	item := msg.item
 	prov := msg.provider
@@ -1005,23 +1009,19 @@ func (a App) doInstallAppendCmd(msg installResultMsg) tea.Cmd {
 			itemName:     item.DisplayName,
 			providerName: prov.Name,
 		}
-		monoNames := provider.MonolithicFilenames(prov.Slug)
-		if len(monoNames) == 0 {
-			done.err = fmt.Errorf("provider %s does not have a monolithic rule filename", prov.Slug)
-			return done
-		}
-		loaded, err := rulestore.LoadRule(item.Path)
+		outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+			Item:        item,
+			ProjectRoot: projectRoot,
+			Targets:     []lifecycle.Target{{Provider: prov}},
+			Method:      installer.MethodAppend,
+			Source:      "tui",
+		})
 		if err != nil {
-			done.err = fmt.Errorf("loading library rule: %w", err)
-			return done
-		}
-		homeDir, _ := os.UserHomeDir()
-		target := filepath.Join(projectRoot, monoNames[0])
-		if err := installer.InstallRuleAppend(projectRoot, homeDir, prov.Slug, target, "tui", loaded); err != nil {
 			done.err = err
 			return done
 		}
-		done.targetPath = target
+		done.targetPath = outcome.Completed[0].Placement.Path
+		done.warnings = outcome.Warnings()
 		return done
 	}
 }
@@ -1138,22 +1138,30 @@ func (a App) doMOATInstallCmd(msg installResultMsg) tea.Cmd {
 			return done
 		}
 
-		placement, installErr := installer.Install(staged, prov, projectRoot, method, baseDir, installer.ScanOptions{})
-		done.notices = placement.Notices
+		// Rotate the record before the install writes the new content hash,
+		// so the previous version keeps the old one.
+		if prevCopy != "" {
+			recordTUIMOATUpdateBookkeeping(staged, prevCopy)
+		}
+		outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
+			Item:        staged,
+			ProjectRoot: projectRoot,
+			Targets:     []lifecycle.Target{{Provider: prov, BaseDir: baseDir}},
+			Method:      method,
+			Provenance: &installstore.MOATProvenance{
+				ManifestURI: reg.ManifestURI,
+				SourceURI:   entry.SourceURI,
+				TrustTier:   entry.TrustTier().String(),
+				AttestedAt:  now,
+			},
+		})
+		done.notices = outcome.Notices
 		if installErr != nil {
 			done.err = installErr
 			return done
 		}
-		if prevCopy != "" {
-			recordTUIMOATUpdateBookkeeping(staged, prevCopy)
-		}
-		recordTUIMOATInstallBookkeeping(staged, prov.Slug, placement, &installstore.MOATProvenance{
-			ManifestURI: reg.ManifestURI,
-			SourceURI:   entry.SourceURI,
-			TrustTier:   entry.TrustTier().String(),
-			AttestedAt:  now,
-		})
-		done.targetPath = placement.String()
+		done.targetPath = outcome.Completed[0].Placement.String()
+		done.warnings = outcome.Warnings()
 		return done
 	}
 }
@@ -1248,19 +1256,22 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 	projectRoot := msg.projectRoot
 
 	return func() tea.Msg {
-		var firstErr error
-		var notices []installer.Notice
-		count := 0
+		targets := make([]lifecycle.Target, 0, len(providers))
 		for _, prov := range providers {
-			placement, err := installer.Install(item, prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{})
-			notices = append(notices, placement.Notices...)
-			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
-			} else {
-				recordTUIInstallBookkeeping(item, prov.Slug, placement)
-				count++
+			targets = append(targets, lifecycle.Target{Provider: prov})
+		}
+		outcome, err := lifecycle.New().Install(lifecycle.InstallRequest{
+			Item:        item,
+			ProjectRoot: projectRoot,
+			Targets:     targets,
+			Method:      installer.MethodSymlink,
+		})
+		// err joins every placement failure; the toast names only the first.
+		firstErr := err
+		for _, f := range outcome.Failed {
+			if f.Stage == lifecycle.StagePlace {
+				firstErr = f.Err
+				break
 			}
 		}
 		name := item.DisplayName
@@ -1269,8 +1280,9 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 		}
 		return installAllDoneMsg{
 			itemName: name,
-			count:    count,
-			notices:  notices,
+			count:    len(outcome.Completed),
+			notices:  outcome.Notices,
+			warnings: outcome.Warnings(),
 			firstErr: firstErr,
 		}
 	}
@@ -1279,8 +1291,9 @@ func (a App) doInstallAllCmd(msg installAllResultMsg) tea.Cmd {
 // handleInstallAllDone processes the aggregate result of an "install to all" batch.
 func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
 	var toastText string
+	details := installDetails(msg.notices, msg.warnings)
 	toastKind := toastSuccess
-	if len(msg.notices) > 0 {
+	if len(details) > 0 {
 		toastKind = toastWarning
 	}
 	if msg.firstErr != nil {
@@ -1293,23 +1306,27 @@ func (a App) handleInstallAllDone(msg installAllDoneMsg) (tea.Model, tea.Cmd) {
 		}
 		toastText = fmt.Sprintf("Installed %q to %d providers", name, msg.count)
 	}
-	cmd1 := a.toast.PushDetails(toastText, noticeLines(msg.notices), toastKind)
+	cmd1 := a.toast.PushDetails(toastText, details, toastKind)
 	cmd2 := a.rescanCatalog()
 	return a, tea.Batch(cmd1, cmd2)
 }
 
-// noticeLines renders install notices as toast detail lines.
-func noticeLines(notices []installer.Notice) []string {
+// installDetails renders install notices and lifecycle warnings as toast
+// detail lines.
+func installDetails(notices []installer.Notice, warnings []string) []string {
 	var lines []string
 	for _, n := range notices {
 		lines = append(lines, n.String())
+	}
+	for _, w := range warnings {
+		lines = append(lines, "warning: "+w)
 	}
 	return lines
 }
 
 // handleInstallDone processes the result of an install operation.
 func (a App) handleInstallDone(msg installDoneMsg) (tea.Model, tea.Cmd) {
-	details := noticeLines(msg.notices)
+	details := installDetails(msg.notices, msg.warnings)
 	if msg.err != nil {
 		cmd := a.toast.PushDetails("Install failed: "+formatToastErr(msg.err), details, toastError)
 		return a, cmd

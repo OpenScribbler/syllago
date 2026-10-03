@@ -9,44 +9,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
-	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
-
-func TestRecordTUIInstallBookkeepingCarriesSourceSHA(t *testing.T) {
-	configDir := withTUIInstallRecordConfigDir(t)
-
-	libraryPath := filepath.Join(t.TempDir(), "skills", "writer")
-	writeTUITestFile(t, filepath.Join(libraryPath, "SKILL.md"), []byte("# Writer\n"))
-
-	item := catalog.ContentItem{
-		Name: "writer",
-		Type: catalog.Skills,
-		Path: libraryPath,
-		Meta: &metadata.Meta{
-			SourceType:     "registry",
-			SourceRegistry: "acme/tools",
-			SourceSHA:      "sha-from-meta",
-		},
-	}
-	placement := installer.Placement{
-		Mechanism: installer.MechanismSymlink,
-		Path:      filepath.Join(t.TempDir(), "writer"),
-	}
-
-	recordTUIInstallBookkeeping(item, "claude-code", placement)
-
-	store := mustLoadTUIInstallRecordStore(t, configDir)
-	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.Skills), Name: "writer"}
-	rec := store.Find(coord)
-	if rec == nil {
-		t.Fatal("install record missing")
-	}
-	if rec.SourceSHA != "sha-from-meta" {
-		t.Fatalf("SourceSHA = %q, want sha-from-meta", rec.SourceSHA)
-	}
-}
 
 func TestRecordTUIAddUpdateBookkeepingRotatesExistingRecord(t *testing.T) {
 	configDir := withTUIInstallRecordConfigDir(t)
