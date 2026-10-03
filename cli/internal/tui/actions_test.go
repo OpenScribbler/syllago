@@ -437,7 +437,7 @@ func TestActions_HandleRemove_UnreadableStateBlocks(t *testing.T) {
 }
 
 func TestActions_DoSimpleRemoveCmd(t *testing.T) {
-	t.Parallel()
+	withTUIInstallRecordConfigDir(t) // the remove takes the syllago lock
 	app := testApp(t)
 	itemDir := filepath.Join(t.TempDir(), "rules", "my-rule")
 	if err := os.MkdirAll(itemDir, 0o755); err != nil {
