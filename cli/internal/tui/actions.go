@@ -339,14 +339,19 @@ func (a App) doRemoveCmd(msg removeResultMsg) tea.Cmd {
 	}
 }
 
-// doSimpleRemoveCmd creates a tea.Cmd that removes an item from disk (no uninstall).
+// doSimpleRemoveCmd creates a tea.Cmd that removes a loadout from the
+// library. A loadout has no provider placements, so it confirms without a
+// plan.
 func (a App) doSimpleRemoveCmd(item catalog.ContentItem) tea.Cmd {
+	req := lifecycle.RemoveRequest{
+		Item:        item,
+		ProjectRoot: a.projectRoot,
+		Providers:   a.providers,
+		Decisions:   lifecycle.Decisions{RemoveConfirmed: true},
+	}
 	return func() tea.Msg {
-		if err := catalog.RemoveLibraryItem(item.Path); err != nil {
-			return removeDoneMsg{itemName: item.Name, err: fmt.Errorf("removing: %w", err)}
-		}
-		forgetTUIInstallRecord(item)
-		return removeDoneMsg{itemName: item.Name}
+		outcome, err := lifecycle.New().Remove(req)
+		return removeDoneMsg{itemName: item.Name, warnings: outcome.Warnings(), err: err}
 	}
 }
 
