@@ -19,6 +19,10 @@ type Target struct {
 	Provider provider.Provider
 	BaseDir  string               // empty means the provider default
 	Resolver *config.PathResolver // nil means none; when set, BaseDir is ignored
+	// File names the monolithic rule file an append Uninstall removes the
+	// rule from. Empty means the first file installed.json records for the
+	// provider.
+	File string
 }
 
 // Stage names the part of a verb a Failure happened in.

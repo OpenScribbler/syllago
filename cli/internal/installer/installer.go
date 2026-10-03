@@ -425,7 +425,7 @@ func UninstallFrom(item catalog.ContentItem, prov provider.Provider, repoRoot, b
 		// Verify targetPath is within the expected install directory to prevent
 		// path traversal attacks from removing arbitrary directories.
 		rel, relErr := filepath.Rel(installDir, targetPath)
-		if relErr != nil || strings.HasPrefix(rel, "..") {
+		if relErr != nil || rel == "." || strings.HasPrefix(rel, "..") {
 			return Placement{}, fmt.Errorf("refusing to remove %s: outside install directory %s", targetPath, installDir)
 		}
 		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, os.RemoveAll(targetPath)

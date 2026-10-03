@@ -57,7 +57,9 @@ func (installerPlacer) unplace(req UninstallRequest, t Target) (installer.Placem
 }
 
 // unplaceRuleAppend removes a library rule from the monolithic rule file
-// that installed.json records for the target's provider.
+// that installed.json records for the target's provider. A record matches by
+// the rule's name as well as its ID, because re-importing a rule gives it a
+// new ID while the records keep the old one.
 func unplaceRuleAppend(req UninstallRequest, t Target) (installer.Placement, error) {
 	loaded, err := rulestore.LoadRule(req.Item.Path)
 	if err != nil {
@@ -67,12 +69,14 @@ func unplaceRuleAppend(req UninstallRequest, t Target) (installer.Placement, err
 	if err != nil {
 		return installer.Placement{}, err
 	}
-	id := loaded.Meta.ID
 	for _, r := range inst.RuleAppends {
-		if r.LibraryID != id || r.Provider != t.Provider.Slug {
+		if r.Provider != t.Provider.Slug || (t.File != "" && r.TargetFile != t.File) {
 			continue
 		}
-		if err := installer.UninstallRuleAppend(req.ProjectRoot, id, r.TargetFile, map[string]*rulestore.Loaded{id: loaded}); err != nil {
+		if r.LibraryID != loaded.Meta.ID && r.Name != req.Item.Name {
+			continue
+		}
+		if err := installer.UninstallRuleAppend(req.ProjectRoot, r.LibraryID, r.TargetFile, map[string]*rulestore.Loaded{r.LibraryID: loaded}); err != nil {
 			return installer.Placement{}, err
 		}
 		return installer.Placement{Mechanism: installer.MechanismRuleAppend, Path: r.TargetFile}, nil

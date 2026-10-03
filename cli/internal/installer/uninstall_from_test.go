@@ -73,3 +73,24 @@ func TestUninstallFrom_FindsInstallLocation(t *testing.T) {
 		})
 	}
 }
+
+// An item whose path names no entry resolves to the install directory
+// itself, which UninstallFrom must never delete.
+func TestUninstallFrom_RefusesInstallDirItself(t *testing.T) {
+	tmp := t.TempDir()
+	prov := testProvider("test")
+	installDir := prov.InstallDir(tmp, catalog.Rules)
+	kept := filepath.Join(installDir, "other-rule")
+	if err := os.MkdirAll(kept, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := UninstallFrom(catalog.ContentItem{Name: "", Type: catalog.Rules, Path: ""}, prov, tmp, tmp, nil)
+
+	if err == nil {
+		t.Fatal("UninstallFrom succeeded on an item with no path")
+	}
+	if _, err := os.Stat(kept); err != nil {
+		t.Errorf("install dir contents gone: %v", err)
+	}
+}

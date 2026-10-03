@@ -201,3 +201,87 @@ func TestUninstall_RuleAppendForAnotherProvider(t *testing.T) {
 		t.Errorf("rule appends = %+v, want the claude-code record kept", inst.RuleAppends)
 	}
 }
+
+// writeAppendRule writes a library rule and returns its catalog item.
+func writeAppendRule(t *testing.T, library, id, body string) catalog.ContentItem {
+	t.Helper()
+	meta := metadata.RuleMetadata{ID: id, Name: "append-me"}
+	if err := rulestore.WriteRule(library, "claude-code", "append-me", meta, []byte(body)); err != nil {
+		t.Fatal(err)
+	}
+	return catalog.ContentItem{Name: "append-me", Type: catalog.Rules, Path: filepath.Join(library, "claude-code", "append-me")}
+}
+
+// appendTo appends item's rule to file for claude-code.
+func appendTo(t *testing.T, projectRoot, file string, item catalog.ContentItem) {
+	t.Helper()
+	loaded, err := rulestore.LoadRule(item.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := installer.InstallRuleAppend(projectRoot, t.TempDir(), "claude-code", file, "manual", loaded); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Each target names its own file, so a file the rule cannot come out of
+// does not stop the provider's other file.
+func TestUninstall_RuleAppendFilesFailSeparately(t *testing.T) {
+	isolate(t)
+	item := writeAppendRule(t, t.TempDir(), "lib-u8", "Always append.\n")
+	projectRoot := t.TempDir()
+	edited := filepath.Join(projectRoot, "CLAUDE.md")
+	healthy := filepath.Join(projectRoot, "sub", "CLAUDE.md")
+	appendTo(t, projectRoot, edited, item)
+	appendTo(t, projectRoot, healthy, item)
+	if err := os.WriteFile(edited, []byte("the user rewrote this file\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cc := provider.Provider{Name: "claude-code", Slug: "claude-code"}
+
+	out, err := New().Uninstall(UninstallRequest{
+		Item:        item,
+		ProjectRoot: projectRoot,
+		Targets:     []Target{{Provider: cc, File: edited}, {Provider: cc, File: healthy}},
+		Method:      installer.MethodAppend,
+	})
+
+	if err == nil {
+		t.Fatal("err = nil, want the edited file's failure")
+	}
+	if len(out.Completed) != 1 || out.Completed[0].Placement.Path != healthy {
+		t.Fatalf("Completed = %+v, want the healthy file", out.Completed)
+	}
+	if body, _ := os.ReadFile(healthy); strings.Contains(string(body), "Always append.") {
+		t.Errorf("healthy file still holds the rule: %q", body)
+	}
+}
+
+// Re-importing a rule gives it a new ID; its existing appends keep the old
+// one and must still come out.
+func TestUninstall_RuleAppendAfterReimport(t *testing.T) {
+	isolate(t)
+	library := t.TempDir()
+	item := writeAppendRule(t, library, "lib-old", "Always append.\n")
+	projectRoot := t.TempDir()
+	claudeMD := filepath.Join(projectRoot, "CLAUDE.md")
+	appendTo(t, projectRoot, claudeMD, item)
+	writeAppendRule(t, library, "lib-new", "Always append.\n")
+
+	_, err := New().Uninstall(UninstallRequest{
+		Item:        item,
+		ProjectRoot: projectRoot,
+		Targets:     []Target{{Provider: provider.Provider{Name: "claude-code", Slug: "claude-code"}}},
+		Method:      installer.MethodAppend,
+	})
+
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if inst, _ := installer.LoadInstalled(projectRoot); len(inst.RuleAppends) != 0 {
+		t.Errorf("rule appends = %+v, want none", inst.RuleAppends)
+	}
+}

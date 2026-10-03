@@ -128,7 +128,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine which providers to uninstall from
-	var targets []provider.Provider
+	var targets []lifecycle.Target
 	if fromSlug != "" {
 		prov := findProviderBySlug(fromSlug)
 		if prov == nil {
@@ -136,19 +136,18 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			return output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+fromSlug, "Available: "+strings.Join(slugs, ", "))
 		}
 		// Verify it is actually installed there
-		status := installer.CheckStatusWithResolver(*item, *prov, projectRoot, resolver)
-		if status != installer.StatusInstalled {
+		t, ok := installedTarget(*item, *prov, projectRoot, resolver)
+		if !ok {
 			return output.NewStructuredError(output.ErrInstallNotInstalled,
 				fmt.Sprintf("%q is not installed in %s", name, prov.Name),
 				"Run 'syllago list --installed' to see installed items")
 		}
-		targets = []provider.Provider{*prov}
+		targets = []lifecycle.Target{t}
 	} else {
 		// Uninstall from all providers where it is currently installed
 		for _, prov := range provider.AllProviders {
-			status := installer.CheckStatusWithResolver(*item, prov, projectRoot, resolver)
-			if status == installer.StatusInstalled {
-				targets = append(targets, prov)
+			if t, ok := installedTarget(*item, prov, projectRoot, resolver); ok {
+				targets = append(targets, t)
 			}
 		}
 		if len(targets) == 0 {
@@ -160,8 +159,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	// Build a summary of what will be affected
 	var targetNames []string
-	for _, prov := range targets {
-		targetNames = append(targetNames, prov.Name)
+	for _, t := range targets {
+		targetNames = append(targetNames, t.Provider.Name)
 	}
 
 	// Confirm unless --force, --dry-run, --no-input, or non-interactive
@@ -178,22 +177,21 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	if dryRun {
-		for _, prov := range targets {
-			fmt.Fprintf(output.Writer, "[dry-run] Would uninstall %q from %s\n", name, prov.Name)
+		for _, t := range targets {
+			fmt.Fprintf(output.Writer, "[dry-run] Would uninstall %q from %s\n", name, t.Provider.Name)
 		}
 		return nil
 	}
 
 	// Perform uninstall
-	lcTargets := make([]lifecycle.Target, len(targets))
-	for i, prov := range targets {
-		lcTargets[i] = lifecycle.Target{Provider: prov, Resolver: resolver}
-	}
-	outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{Item: *item, ProjectRoot: projectRoot, Targets: lcTargets})
+	outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{Item: *item, ProjectRoot: projectRoot, Targets: targets})
 	if len(outcome.Unattempted) > 0 {
 		return err
 	}
 	printUninstallFailures(outcome, func(p provider.Provider) string { return p.Name })
+	if len(outcome.Completed) == 0 {
+		return notUninstalledError(name, err)
+	}
 	var removedFrom []string
 	for _, step := range outcome.Completed {
 		removedFrom = append(removedFrom, step.Target.Provider.Name)
@@ -290,7 +288,7 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 	// append path needs.
 	var targets []lifecycle.Target
 	for _, r := range matches {
-		targets = append(targets, lifecycle.Target{Provider: provider.Provider{Name: r.Provider, Slug: r.Provider}})
+		targets = append(targets, lifecycle.Target{Provider: provider.Provider{Name: r.Provider, Slug: r.Provider}, File: r.TargetFile})
 	}
 	outcome, err := lifecycle.New().Uninstall(lifecycle.UninstallRequest{
 		Item:        appendRuleItem(dir),
@@ -302,6 +300,9 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 		return true, err
 	}
 	printUninstallFailures(outcome, func(p provider.Provider) string { return p.Slug })
+	if len(outcome.Completed) == 0 {
+		return true, notUninstalledError(name, err)
+	}
 	var uninstalledFrom []string
 	for _, step := range outcome.Completed {
 		uninstalledFrom = append(uninstalledFrom, step.Target.Provider.Slug)
@@ -318,6 +319,24 @@ func tryUninstallMonolithicRule(name, fromSlug, typeFilter string, dryRun bool, 
 	telemetry.Enrich("content_type", string(catalog.Rules))
 	telemetry.Enrich("dry_run", dryRun)
 	return true, nil
+}
+
+// installedTarget finds where prov holds item: the configured location that
+// install uses, or else the home default that the TUI installs to.
+func installedTarget(item catalog.ContentItem, prov provider.Provider, projectRoot string, resolver *config.PathResolver) (lifecycle.Target, bool) {
+	if installer.CheckStatusWithResolver(item, prov, projectRoot, resolver) == installer.StatusInstalled {
+		return lifecycle.Target{Provider: prov, Resolver: resolver}, true
+	}
+	if installer.CheckStatus(item, prov, projectRoot) == installer.StatusInstalled {
+		return lifecycle.Target{Provider: prov}, true
+	}
+	return lifecycle.Target{}, false
+}
+
+// notUninstalledError reports an uninstall that removed nothing; err joins
+// the failures already printed per target.
+func notUninstalledError(name string, err error) error {
+	return output.NewStructuredErrorDetail(output.ErrSystemIO, fmt.Sprintf("%q was not uninstalled", name), "Fix the errors above, then retry", err.Error())
 }
 
 // printUninstallFailures warns about each target an uninstall could not
