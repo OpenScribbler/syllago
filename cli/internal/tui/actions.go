@@ -1474,7 +1474,24 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem, installAfter bool) (tea
 			SourceRegistry: itemCopy.Registry,
 			SourceSHA:      sourceSHA,
 		}
-		results := add.AddItems([]add.DiscoveryItem{di}, opts, contentRoot, nil, "syllago")
+		// The catalog may predate an add and pin made since, so the write
+		// still goes through the pin check.
+		dest := add.DestDir(di.Type, "", di.Name, contentRoot)
+		var results []add.AddResult
+		_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
+			Destinations: []lifecycle.Destination{{Type: di.Type, Name: di.Name, Path: dest}},
+			Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
+				results = add.AddItems([]add.DiscoveryItem{di}, opts, contentRoot, nil, "syllago")
+				return []lifecycle.Written{{Path: dest, SourceSHA: sourceSHA}}, nil
+			},
+		})
+		var decision *lifecycle.DecisionRequired
+		if errors.As(err, &decision) {
+			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: fmt.Errorf("%s/%s is pinned; unpin it to update: syllago unpin %s", itemCopy.Type, itemCopy.Name, itemCopy.Name)}
+		}
+		if err != nil {
+			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: err}
+		}
 		if len(results) == 0 {
 			return libraryAddDoneMsg{name: itemCopy.Name, itemType: itemCopy.Type, err: fmt.Errorf("no result")}
 		}

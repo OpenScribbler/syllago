@@ -35,14 +35,9 @@ func addRespectingPins(items []add.DiscoveryItem, opts add.AddOptions, globalDir
 				}
 			}
 			results = add.AddItems(write, opts, globalDir, canon, ver)
-			if opts.DryRun {
-				return nil, nil
-			}
-			var written []lifecycle.Written
-			for _, r := range results {
-				if r.Status == add.AddStatusUpdated {
-					written = append(written, lifecycle.Written{Path: add.DestDir(r.Type, opts.Provider, r.Name, globalDir), SourceSHA: opts.SourceSHA})
-				}
+			written := make([]lifecycle.Written, 0, len(approved))
+			for _, d := range approved {
+				written = append(written, lifecycle.Written{Path: d.Path, SourceSHA: opts.SourceSHA})
 			}
 			return written, nil
 		},

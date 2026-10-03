@@ -2540,16 +2540,19 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug,
 		return addSplitRuleItem(item, contentRoot, provSlug)
 	}
 
-	dest := lifecycle.Destination{Type: item.itemType, Name: item.name, Path: add.DestDir(item.itemType, provSlug, item.name, contentRoot)}
+	// The generic write lands under the discovered name; item.name may be a
+	// display name. A settings hook lands under item.name.
+	name := item.underlying.Name
+	if item.itemType == catalog.Hooks && item.hookData != nil {
+		name = item.name
+	}
+	dest := lifecycle.Destination{Type: item.itemType, Name: name, Path: add.DestDir(item.itemType, provSlug, name, contentRoot)}
 	var res addExecResult
 	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
 		Destinations: []lifecycle.Destination{dest},
 		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
 			res = writeLibraryItem(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
-			if res.status == "updated" {
-				return []lifecycle.Written{{Path: dest.Path, SourceSHA: srcSHA}}, nil
-			}
-			return nil, nil
+			return []lifecycle.Written{{Path: dest.Path, SourceSHA: srcSHA}}, nil
 		},
 	})
 	var decision *lifecycle.DecisionRequired

@@ -235,3 +235,45 @@ func TestOverwrite_NewContentSkipsTheStore(t *testing.T) {
 		t.Errorf("err = %v, Write saw %v; want %s written", err, saw, d.Path)
 	}
 }
+
+// Regression: a Write that replaced content and then failed reported
+// nothing, so the record kept describing the content it replaced.
+func TestOverwrite_WriteFailingPartwayStillRotates(t *testing.T) {
+	storePath := isolate(t)
+	d, v1 := libraryDest(t, storePath, "p11", "acme", false)
+
+	_, err := scriptedModule(&scriptedPlacer{}).Overwrite(OverwriteRequest{
+		Destinations: []Destination{d},
+		Write: func([]Destination) ([]Written, error) {
+			if err := os.WriteFile(filepath.Join(d.Path, "rule.md"), []byte("# v2\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			return nil, errors.New("copying supporting files failed")
+		},
+	})
+	if err == nil {
+		t.Fatal("want the write error")
+	}
+	if rec := loadRecord(t, storePath, destCoord(d, "acme")); rec == nil || rec.Previous == nil || rec.Previous.ContentHash != v1 {
+		t.Errorf("record = %+v, want it rotated from %s", rec, v1)
+	}
+}
+
+// A destination the Write reported but left as it was keeps its record.
+func TestOverwrite_UnchangedDestinationKeepsRecord(t *testing.T) {
+	storePath := isolate(t)
+	d, v1 := libraryDest(t, storePath, "p12", "acme", false)
+
+	_, err := scriptedModule(&scriptedPlacer{}).Overwrite(OverwriteRequest{
+		Destinations: []Destination{d},
+		Write: func(approved []Destination) ([]Written, error) {
+			return []Written{{Path: approved[0].Path, SourceSHA: "sha2"}}, nil
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := loadRecord(t, storePath, destCoord(d, "acme")); rec == nil || rec.Previous != nil || rec.ContentHash != v1 || rec.SourceSHA != "sha1" {
+		t.Errorf("record = %+v, want it unchanged", rec)
+	}
+}

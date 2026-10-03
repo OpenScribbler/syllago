@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,6 +67,62 @@ func TestAddSingleItemOverwriteLeavesPinnedItem(t *testing.T) {
 	rec := mustLoadTUIInstallRecordStore(t, configDir).Find(coord)
 	if rec == nil || !rec.Pinned || rec.SourceSHA != "sha-old" || rec.Previous != nil {
 		t.Errorf("record = %+v, want it pinned and unchanged at sha-old", rec)
+	}
+}
+
+// Regression: a review-step display name made the pin check look at a
+// destination that did not exist while the write landed on the pinned one.
+func TestAddSingleItemDisplayNameStillChecksPin(t *testing.T) {
+	configDir := withTUIInstallRecordConfigDir(t)
+	storePath := filepath.Join(configDir, "installs.json")
+	contentRoot := t.TempDir()
+	libraryPath := filepath.Join(contentRoot, string(catalog.Skills), "writer")
+	coord, oldHash := seedTUILibraryWriter(t, storePath, libraryPath)
+	if err := installstore.SetPinned(storePath, coord, true, time.Date(2026, 8, 24, 13, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("SetPinned: %v", err)
+	}
+	item := overwriteWriterItem(t)
+	item.name = "Writer Display"
+
+	result := addSingleItem(item, contentRoot, "acme/tools", "private", "", "sha-new")
+	if result.status != "pinned" {
+		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
+	}
+	if got := mustHashTUIInstallContent(t, libraryPath); got != oldHash {
+		t.Errorf("library content hash = %s, want it unchanged at %s", got, oldHash)
+	}
+}
+
+// Regression: adding a registry item straight to the Library wrote over a
+// pinned item added since the catalog loaded.
+func TestHandleLibraryAddLeavesPinnedItem(t *testing.T) {
+	configDir := withTUIInstallRecordConfigDir(t)
+	storePath := filepath.Join(configDir, "installs.json")
+	globalDir := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = globalDir
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+	libraryPath := filepath.Join(globalDir, string(catalog.Skills), "writer")
+	coord, oldHash := seedTUILibraryWriter(t, storePath, libraryPath)
+	if err := installstore.SetPinned(storePath, coord, true, time.Date(2026, 8, 24, 13, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("SetPinned: %v", err)
+	}
+	src := filepath.Join(t.TempDir(), "writer")
+	writeTUITestFile(t, filepath.Join(src, "SKILL.md"), []byte("# Writer from clone\n"))
+
+	app := testApp(t)
+	_, cmd := app.handleLibraryAdd(&catalog.ContentItem{
+		Name: "writer", Type: catalog.Skills, Path: src, Files: []string{"SKILL.md"}, Registry: "other/registry",
+	}, false)
+	if cmd == nil {
+		t.Fatal("handleLibraryAdd returned no command")
+	}
+	msg, ok := cmd().(libraryAddDoneMsg)
+	if !ok || msg.err == nil || !strings.Contains(msg.err.Error(), "pinned") {
+		t.Fatalf("msg = %+v, want a pinned error", msg)
+	}
+	if got := mustHashTUIInstallContent(t, libraryPath); got != oldHash {
+		t.Errorf("library content hash = %s, want it unchanged at %s", got, oldHash)
 	}
 }
 

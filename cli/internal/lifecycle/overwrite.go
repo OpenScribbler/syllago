@@ -26,7 +26,7 @@ type PinnedDestination struct {
 	SourceSHA string
 }
 
-// Written is one destination a Write replaced: the new source commit, and
+// Written is one destination a Write attempted: the new source commit, and
 // where the copy it replaced was saved ("" when it was not kept).
 type Written struct {
 	Path         string
@@ -38,8 +38,9 @@ type Written struct {
 type OverwriteRequest struct {
 	Destinations []Destination
 	// Write writes the new content to approved, a subset of Destinations,
-	// and reports each existing item it replaced. It never sees a pinned
-	// destination the user has not approved.
+	// and reports each destination it attempted, including one it failed
+	// partway through. It never sees a pinned destination the user has not
+	// approved.
 	Write     func(approved []Destination) ([]Written, error)
 	Decisions Decisions
 }
@@ -53,12 +54,12 @@ type OverwriteRequest struct {
 // changes nothing and returns *DecisionRequired carrying every such
 // destination. When some destination already exists, it also changes
 // nothing when the install records or a destination's metadata cannot be
-// read, because then it cannot tell what is pinned. Otherwise it calls Write with the approved destinations, then
-// moves each replaced item's recorded version to Previous; an approved
-// pinned record stays pinned. Record failures leave the new content in
-// place and appear only in Outcome.Failed. Write's error is returned after
-// the destinations it did write are recorded. Its Outcome holds only those
-// record failures.
+// read, because then it cannot tell what is pinned. Otherwise it calls
+// Write with the approved destinations, then moves the recorded version of
+// each recorded item whose content changed to Previous, even when Write
+// failed partway; an approved pinned record stays pinned. Record failures
+// leave the new content in place and appear only in Outcome.Failed, which
+// holds nothing else. Write's error is returned after the records.
 func (m *Module) Overwrite(req OverwriteRequest) (Outcome, error) {
 	var out Outcome
 	release, err := m.lock()
@@ -126,18 +127,34 @@ func (m *Module) Overwrite(req OverwriteRequest) (Outcome, error) {
 		return out, nil
 	}
 
-	written, writeErr := req.Write(approved)
-	changed := false
-	for _, w := range written {
-		c, ok := coords[w.Path]
-		if !ok {
-			continue
+	// A destination counts as replaced when its content changed, so a Write
+	// that fails partway still records what it replaced.
+	before := make(map[string]string, len(approved))
+	for _, d := range approved {
+		if rec := store.Find(coords[d.Path]); rec != nil {
+			hash, err := installstore.HashContent(d.Path)
+			if err != nil {
+				hash = rec.ContentHash
+			}
+			before[d.Path] = hash
 		}
-		rec := store.Find(c)
+	}
+	written, writeErr := req.Write(approved)
+	reported := make(map[string]Written, len(written))
+	for _, w := range written {
+		reported[w.Path] = w
+	}
+	changed := false
+	for _, d := range approved {
+		rec := store.Find(coords[d.Path])
 		if rec == nil {
 			continue
 		}
-		if err := rec.Rotate(w.Path, w.SourceSHA, w.PreviousCopy, m.now()); err != nil {
+		if after, err := installstore.HashContent(d.Path); err == nil && after == before[d.Path] {
+			continue
+		}
+		w := reported[d.Path]
+		if err := rec.Rotate(d.Path, w.SourceSHA, w.PreviousCopy, m.now()); err != nil {
 			out.Failed = append(out.Failed, Failure{Stage: StageRecord, Err: recordErr(err)})
 			continue
 		}
