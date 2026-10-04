@@ -112,111 +112,144 @@ func FetchAndRecord(
 	if lf == nil {
 		return "", errors.New("FetchAndRecord: lockfile is nil")
 	}
+	rekorBundle, err := verifyAttestations(ctx, entry, registryName, registryProfile, trustedRootJSON)
+	if err != nil {
+		return "", err
+	}
+	categoryDir, err := checkSource(entry, registryName)
+	if err != nil {
+		return "", err
+	}
+	cloneDir, cleanup, err := cloneSource(ctx, moat.CloneRepoFn, entry, registryName)
+	if err != nil {
+		return "", err
+	}
+	defer cleanup()
+	targetDir, err := extractItem(cloneDir, categoryDir, entry, registryName)
+	if err != nil {
+		return "", err
+	}
+	if err := recordEntry(lf, entry, registryName, registryURL, rekorBundle, Now()); err != nil {
+		return "", err
+	}
+	if err := saveLockfile(lf, lockfilePath, entry, registryName); err != nil {
+		return "", err
+	}
+	return targetDir, nil
+}
 
+// verifyAttestations checks entry's transparency-log entries for its trust
+// tier and returns the registry's Rekor bundle, nil for an UNSIGNED entry.
+func verifyAttestations(ctx context.Context, entry *moat.ContentEntry, registryName string, registryProfile *moat.SigningProfile, trustedRootJSON []byte) ([]byte, error) {
 	tier := entry.TrustTier()
-	var rekorBundle []byte
-	if tier != moat.TrustTierUnsigned {
-		// Spec model: per-item rekor_log_index is the REGISTRY's per-item
-		// Rekor entry (moat-spec.md line 786). It MUST be pinned against
-		// the manifest-level RegistrySigningProfile, regardless of whether
-		// per-item signing_profile is present. The per-item profile pins
-		// the publisher's SEPARATE Rekor entry from moat-attestation.json
-		// — handled below for Dual-Attested only.
-		if registryProfile == nil {
-			return "", output.NewStructuredError(
-				output.ErrMoatInvalid,
-				fmt.Sprintf("cannot verify %s/%s: registry signing profile not pinned", registryName, entry.Name),
-				"The manifest reached install without a registry_signing_profile — re-sync the registry to surface the underlying error.",
-			)
-		}
-
-		raw, fetchErr := FetchRekorEntryFn(ctx, *entry.RekorLogIndex)
-		if fetchErr != nil {
-			return "", output.NewStructuredErrorDetail(
-				output.ErrMoatInvalid,
-				fmt.Sprintf("could not fetch Rekor entry for %s/%s", registryName, entry.Name),
-				"Check network access to rekor.sigstore.dev. The registry's manifest references a transparency-log entry that we could not retrieve.",
-				fetchErr.Error(),
-			)
-		}
-
-		item := moat.AttestationItem{
-			Name:          entry.Name,
-			ContentHash:   entry.ContentHash,
-			SourceRef:     entry.SourceURI,
-			RekorLogIndex: *entry.RekorLogIndex,
-		}
-		if _, vErr := VerifyItem(item, registryProfile, raw, trustedRootJSON); vErr != nil {
-			return "", output.NewStructuredErrorDetail(
-				output.ErrMoatInvalid,
-				fmt.Sprintf("attestation verification failed for %s/%s", registryName, entry.Name),
-				"The registry's per-item Rekor entry did not validate against the pinned registry_signing_profile. Re-sync the registry and retry.",
-				vErr.Error(),
-			)
-		}
-		rekorBundle = raw
-
-		// Dual-Attested second leg: fetch the publisher's separate Rekor
-		// entry from moat-attestation.json on the source repo's
-		// moat-attestation branch and verify it against per-item
-		// signing_profile. Mirrors moat_verify.py:_online_step5.
-		if tier == moat.TrustTierDualAttested {
-			if entry.SigningProfile == nil {
-				// Defense-in-depth — TrustTier() already implies non-nil.
-				return "", output.NewStructuredError(
-					output.ErrMoatInvalid,
-					fmt.Sprintf("cannot verify publisher attestation for %s/%s: per-item signing_profile missing", registryName, entry.Name),
-					"This indicates a malformed manifest reached install. Re-sync the registry to surface the underlying error.",
-				)
-			}
-
-			attBytes, attErr := FetchPublisherAttestationFn(ctx, entry.SourceURI)
-			if attErr != nil {
-				return "", output.NewStructuredErrorDetail(
-					output.ErrMoatInvalid,
-					fmt.Sprintf("could not fetch publisher attestation for %s/%s", registryName, entry.Name),
-					"The Dual-Attested tier requires moat-attestation.json on the publisher's moat-attestation branch. Check network access to raw.githubusercontent.com.",
-					attErr.Error(),
-				)
-			}
-
-			pubLogIndex, lookupErr := moat.FindPublisherEntry(attBytes, entry.ContentHash)
-			if lookupErr != nil {
-				return "", output.NewStructuredErrorDetail(
-					output.ErrMoatInvalid,
-					fmt.Sprintf("publisher attestation does not cover %s/%s", registryName, entry.Name),
-					"The publisher's moat-attestation.json has no items[] entry matching this content_hash — the registry indexed content the publisher never attested.",
-					lookupErr.Error(),
-				)
-			}
-
-			pubRaw, pubFetchErr := FetchRekorEntryFn(ctx, pubLogIndex)
-			if pubFetchErr != nil {
-				return "", output.NewStructuredErrorDetail(
-					output.ErrMoatInvalid,
-					fmt.Sprintf("could not fetch publisher Rekor entry for %s/%s", registryName, entry.Name),
-					"Check network access to rekor.sigstore.dev.",
-					pubFetchErr.Error(),
-				)
-			}
-
-			pubItem := moat.AttestationItem{
-				Name:          entry.Name,
-				ContentHash:   entry.ContentHash,
-				SourceRef:     entry.SourceURI,
-				RekorLogIndex: pubLogIndex,
-			}
-			if _, vErr := VerifyItem(pubItem, entry.SigningProfile, pubRaw, trustedRootJSON); vErr != nil {
-				return "", output.NewStructuredErrorDetail(
-					output.ErrMoatInvalid,
-					fmt.Sprintf("publisher attestation verification failed for %s/%s", registryName, entry.Name),
-					"The publisher's Rekor entry did not validate against the pinned per-item signing_profile.",
-					vErr.Error(),
-				)
-			}
-		}
+	if tier == moat.TrustTierUnsigned {
+		return nil, nil
+	}
+	// Spec model: per-item rekor_log_index is the REGISTRY's per-item
+	// Rekor entry (moat-spec.md line 786). It MUST be pinned against
+	// the manifest-level RegistrySigningProfile, regardless of whether
+	// per-item signing_profile is present. The per-item profile pins
+	// the publisher's SEPARATE Rekor entry from moat-attestation.json
+	// — handled below for Dual-Attested only.
+	if registryProfile == nil {
+		return nil, output.NewStructuredError(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("cannot verify %s/%s: registry signing profile not pinned", registryName, entry.Name),
+			"The manifest reached install without a registry_signing_profile — re-sync the registry to surface the underlying error.",
+		)
 	}
 
+	raw, fetchErr := FetchRekorEntryFn(ctx, *entry.RekorLogIndex)
+	if fetchErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("could not fetch Rekor entry for %s/%s", registryName, entry.Name),
+			"Check network access to rekor.sigstore.dev. The registry's manifest references a transparency-log entry that we could not retrieve.",
+			fetchErr.Error(),
+		)
+	}
+
+	item := moat.AttestationItem{
+		Name:          entry.Name,
+		ContentHash:   entry.ContentHash,
+		SourceRef:     entry.SourceURI,
+		RekorLogIndex: *entry.RekorLogIndex,
+	}
+	if _, vErr := VerifyItem(item, registryProfile, raw, trustedRootJSON); vErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("attestation verification failed for %s/%s", registryName, entry.Name),
+			"The registry's per-item Rekor entry did not validate against the pinned registry_signing_profile. Re-sync the registry and retry.",
+			vErr.Error(),
+		)
+	}
+	if tier != moat.TrustTierDualAttested {
+		return raw, nil
+	}
+
+	// Dual-Attested second leg: fetch the publisher's separate Rekor
+	// entry from moat-attestation.json on the source repo's
+	// moat-attestation branch and verify it against per-item
+	// signing_profile. Mirrors moat_verify.py:_online_step5.
+	if entry.SigningProfile == nil {
+		// Defense-in-depth — TrustTier() already implies non-nil.
+		return nil, output.NewStructuredError(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("cannot verify publisher attestation for %s/%s: per-item signing_profile missing", registryName, entry.Name),
+			"This indicates a malformed manifest reached install. Re-sync the registry to surface the underlying error.",
+		)
+	}
+
+	attBytes, attErr := FetchPublisherAttestationFn(ctx, entry.SourceURI)
+	if attErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("could not fetch publisher attestation for %s/%s", registryName, entry.Name),
+			"The Dual-Attested tier requires moat-attestation.json on the publisher's moat-attestation branch. Check network access to raw.githubusercontent.com.",
+			attErr.Error(),
+		)
+	}
+
+	pubLogIndex, lookupErr := moat.FindPublisherEntry(attBytes, entry.ContentHash)
+	if lookupErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("publisher attestation does not cover %s/%s", registryName, entry.Name),
+			"The publisher's moat-attestation.json has no items[] entry matching this content_hash — the registry indexed content the publisher never attested.",
+			lookupErr.Error(),
+		)
+	}
+
+	pubRaw, pubFetchErr := FetchRekorEntryFn(ctx, pubLogIndex)
+	if pubFetchErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("could not fetch publisher Rekor entry for %s/%s", registryName, entry.Name),
+			"Check network access to rekor.sigstore.dev.",
+			pubFetchErr.Error(),
+		)
+	}
+
+	pubItem := moat.AttestationItem{
+		Name:          entry.Name,
+		ContentHash:   entry.ContentHash,
+		SourceRef:     entry.SourceURI,
+		RekorLogIndex: pubLogIndex,
+	}
+	if _, vErr := VerifyItem(pubItem, entry.SigningProfile, pubRaw, trustedRootJSON); vErr != nil {
+		return nil, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("publisher attestation verification failed for %s/%s", registryName, entry.Name),
+			"The publisher's Rekor entry did not validate against the pinned per-item signing_profile.",
+			vErr.Error(),
+		)
+	}
+	return raw, nil
+}
+
+// checkSource validates entry's source URI and returns the category
+// directory its item lives under in the source repository.
+func checkSource(entry *moat.ContentEntry, registryName string) (string, error) {
 	if err := moat.ValidateSourceURI(entry.SourceURI); err != nil {
 		return "", output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
@@ -225,7 +258,6 @@ func FetchAndRecord(
 			err.Error(),
 		)
 	}
-
 	categoryDir, ok := moat.CategoryDirForMOATType(entry.Type)
 	if !ok {
 		return "", output.NewStructuredError(
@@ -234,7 +266,55 @@ func FetchAndRecord(
 			"Only skill, agent, rules, and command are normative MOAT types. hook and mcp are deferred.",
 		)
 	}
+	return categoryDir, nil
+}
 
+// cloneSource clones entry's source repository into a scratch directory.
+// The returned cleanup removes it, whether or not the clone succeeded.
+func cloneSource(ctx context.Context, clone moat.CloneRepoFunc, entry *moat.ContentEntry, registryName string) (string, func(), error) {
+	noop := func() {}
+	scratchRoot, err := CloneScratchDir()
+	if err != nil {
+		return "", noop, output.NewStructuredErrorDetail(
+			output.ErrSystemHomedir,
+			"cannot resolve scratch dir for source clone",
+			"Ensure $TMPDIR is writable.",
+			err.Error(),
+		)
+	}
+	cloneDir, err := os.MkdirTemp(scratchRoot, "syllago-moat-src-*")
+	if err != nil {
+		return "", noop, output.NewStructuredErrorDetail(
+			output.ErrSystemIO,
+			"could not create temp dir for source clone",
+			"Ensure $TMPDIR is writable.",
+			err.Error(),
+		)
+	}
+	// MkdirTemp creates the dir; the cloner expects an absent path.
+	_ = os.Remove(cloneDir)
+	cleanup := func() { _ = os.RemoveAll(cloneDir) }
+
+	if cloneErr := clone(ctx, entry.SourceURI, cloneDir); cloneErr != nil {
+		cleanup()
+		return "", noop, output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("could not clone source repo for %s/%s", registryName, entry.Name),
+			"Check network access to the source repository and that the repo exists at the URL in the manifest.",
+			cloneErr.Error(),
+		)
+	}
+	return cloneDir, cleanup, nil
+}
+
+// extractItem checks the hash of entry's directory in a cloned source
+// repository against the manifest and copies it into the source cache,
+// returning the cached copy's path.
+//
+// Spec model (moat-spec.md §"Repository Layout" + line 781): source_uri is
+// the source REPOSITORY URI; content_hash is the merkle hash of the item
+// subdirectory at <category>/<name>/.
+func extractItem(cloneDir, categoryDir string, entry *moat.ContentEntry, registryName string) (string, error) {
 	cacheRoot, err := SourceCacheDir()
 	if err != nil {
 		return "", output.NewStructuredErrorDetail(
@@ -244,47 +324,7 @@ func FetchAndRecord(
 			err.Error(),
 		)
 	}
-
-	hashPrefix := shortHashCache(entry.ContentHash)
-	targetDir := filepath.Join(cacheRoot, registryName, entry.Name, hashPrefix)
-
-	// Spec model (moat-spec.md §"Repository Layout" + line 781):
-	// source_uri is the source REPOSITORY URI; content_hash is the
-	// merkle hash of the item subdirectory at <category>/<name>/.
-	// Materialize the repo, locate the subdir, recompute the tree hash,
-	// then copy the verified subdir into the install cache.
-	scratchRoot, err := CloneScratchDir()
-	if err != nil {
-		return "", output.NewStructuredErrorDetail(
-			output.ErrSystemHomedir,
-			"cannot resolve scratch dir for source clone",
-			"Ensure $TMPDIR is writable.",
-			err.Error(),
-		)
-	}
-	cloneDir, err := os.MkdirTemp(scratchRoot, "syllago-moat-src-*")
-	if err != nil {
-		return "", output.NewStructuredErrorDetail(
-			output.ErrSystemIO,
-			"could not create temp dir for source clone",
-			"Ensure $TMPDIR is writable.",
-			err.Error(),
-		)
-	}
-	// MkdirTemp creates the dir; the cloner expects an absent path. Remove
-	// the empty dir before cloning, and ensure cleanup runs whether the
-	// install succeeds or fails.
-	_ = os.Remove(cloneDir)
-	defer func() { _ = os.RemoveAll(cloneDir) }()
-
-	if cloneErr := moat.CloneRepoFn(ctx, entry.SourceURI, cloneDir); cloneErr != nil {
-		return "", output.NewStructuredErrorDetail(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("could not clone source repo for %s/%s", registryName, entry.Name),
-			"Check network access to the source repository and that the repo exists at the URL in the manifest.",
-			cloneErr.Error(),
-		)
-	}
+	targetDir := filepath.Join(cacheRoot, registryName, entry.Name, shortHashCache(entry.ContentHash))
 
 	itemDir := filepath.Join(cloneDir, categoryDir, entry.Name)
 	if info, statErr := os.Stat(itemDir); statErr != nil || !info.IsDir() {
@@ -321,25 +361,32 @@ func FetchAndRecord(
 			err.Error(),
 		)
 	}
+	return targetDir, nil
+}
 
-	if _, err := installer.RecordInstall(lf, entry, registryURL, rekorBundle, Now()); err != nil {
-		return "", output.NewStructuredErrorDetail(
+// recordEntry adds entry to the in-memory lockfile.
+func recordEntry(lf *moat.Lockfile, entry *moat.ContentEntry, registryName, registryURL string, rekorBundle []byte, now time.Time) error {
+	if _, err := installer.RecordInstall(lf, entry, registryURL, rekorBundle, now); err != nil {
+		return output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("could not record install of %s/%s in lockfile", registryName, entry.Name),
 			"This is a programmer error; re-run with --dry-run and report the issue.",
 			err.Error(),
 		)
 	}
+	return nil
+}
+
+func saveLockfile(lf *moat.Lockfile, lockfilePath string, entry *moat.ContentEntry, registryName string) error {
 	if err := lf.Save(lockfilePath); err != nil {
-		return "", output.NewStructuredErrorDetail(
+		return output.NewStructuredErrorDetail(
 			output.ErrMoatInvalid,
 			fmt.Sprintf("could not save moat lockfile after recording %s/%s", registryName, entry.Name),
 			"Check filesystem permissions on .syllago/moat-lockfile.json.",
 			err.Error(),
 		)
 	}
-
-	return targetDir, nil
+	return nil
 }
 
 // shortHashCache returns the first 12 hex chars after "sha256:". Used for

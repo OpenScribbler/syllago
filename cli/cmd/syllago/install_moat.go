@@ -1,40 +1,14 @@
 package main
 
-// MOAT registry-sourced install dispatcher.
+// MOAT registry-sourced install: `syllago install <registry>/<item>`.
 //
-// Scope of this slice:
-//
-//   - Parse the `<registry>/<item>` positional syntax in `syllago install`
-//     and route to this file's runInstallFromRegistry when present.
-//   - Run the MOAT sync for the named registry and map SyncResult flags to
-//     the G-18 non-interactive exit codes (10 TOFU / 11 profile change /
-//     13 stale). The exit-code path bypasses cobra's RunE via moatSyncExit
-//     (os.Exit) — cobra only knows about 0/1.
-//   - Resolve the ContentEntry in the freshly-synced manifest via
-//     moat.FindContentEntry (bead syllago-kvf66).
-//   - Under `--dry-run`, print a diagnostic summary of what was resolved
-//     (trust tier, content hash prefix, source URI) so operators can
-//     validate the syntax without mutating state.
-//   - Under non-dry-run, return a structured "gate wiring lands in
-//     syllago-raivj" error with exit 1. This is deliberate: the gate
-//     primitives (installer.PreInstallCheck), interactive prompts, and the
-//     actual file side-effect land in the next sub-bead so this commit
-//     stays reviewable.
-//
-// What this slice intentionally does NOT do:
-//
-//   - Call installer.PreInstallCheck. No gate branching, no Y/n prompts.
-//   - Touch the filesystem. No file copy, no symlink, no audit log.
-//   - Append LockEntry rows. lockfile.Save is never called.
-//
-// Side effects on success: the sync runs through registryops.SyncOne, the
-// same orchestrator `syllago registry sync` uses, so it saves the same
-// state to the same places. This is intentional — an install that begins
-// with a 200 + verified sync has legitimately advanced the trust clock,
-// even if the install itself is not yet performed. Pipelines that run
-// `syllago install foo/bar --dry-run` get the same fetched_at advance
-// they would have gotten from `syllago registry sync foo`, which is the
-// correct semantics for the 72h staleness window.
+// moatinstall.Operation does the work: it syncs the registry through the
+// same registryops.SyncOne that `syllago registry sync` uses, checks the
+// item against the trust gate, fetches and verifies it, stages it into the
+// Library, and installs it. This file parses the syntax, answers the
+// operation's decisions at a prompt or with a G-18 non-interactive exit
+// (10 TOFU or private source / 11 profile change / 12 publisher
+// revocation / 13 stale), and prints the result.
 
 import (
 	"bufio"
@@ -46,16 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
-	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
-	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
@@ -126,372 +95,172 @@ func parseRegistryItemSyntax(arg string) (string, string, bool) {
 	return reg, item, true
 }
 
-// runInstallFromRegistry is the MOAT-backed install path. Returns a normal
-// error for sync/parse/lookup failures (cobra maps to exit 1); on a G-18
-// non-interactive failure it calls moatSyncExit(code) and returns nil —
-// cobra cannot express exit codes beyond 1.
+// runInstallFromRegistry installs one MOAT registry item through
+// moatinstall.Operation and turns what it reports into the CLI's output,
+// prompts, and exits. A G-18 non-interactive failure calls
+// moatSyncExit(code) and returns nil, because cobra cannot express exit
+// codes beyond 1.
 //
-// The function re-uses the same seams as syncMOATRegistry so test harnesses
-// written for that path (registryops.SyncOneFn, moatSyncExit) compose
-// without additional stubbing.
-// targetProv is the provider that the resolved MOAT item should be
-// installed to once fetchAndRecord has staged its source-cache directory.
-// May be nil for dry-run paths or when the caller has not yet selected
-// a provider (in non-dry-run that's a programmer error and we surface it
-// as a structured input-missing failure rather than panicking).
-//
-// method/baseDir thread the same install semantics as the library install
-// path (--method, --base-dir) into the MOAT pipeline so the resulting
-// symlink/copy ends up where operators expect.
-func runInstallFromRegistry(
-	ctx context.Context,
-	out, errW io.Writer,
-	cfg *config.Config,
-	cfgRoot string,
-	globalDir string,
-	registryName, itemName string,
-	targetProv *provider.Provider,
-	method installer.InstallMethod,
-	baseDir string,
-	dryRun bool,
-	scan installer.ScanOptions,
-	now time.Time,
-) error {
-	reg := findRegistryByName(cfg, registryName)
-	if reg == nil {
-		return output.NewStructuredError(
-			output.ErrRegistryNotFound,
-			fmt.Sprintf("registry %q not found in config", registryName),
-			"Run 'syllago registry list' to see configured registries, or 'syllago registry add' to add one.",
-		)
-	}
-	if !reg.IsMOAT() {
-		return output.NewStructuredError(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("registry %q is not MOAT-backed; <registry>/<item> install syntax requires a MOAT registry", registryName),
-			"Use the plain 'syllago install <item>' form for git-registry content, or configure this registry as MOAT with a manifest_uri.",
-		)
-	}
-
-	rootInfo := moat.BundledTrustedRoot(now)
-	if rootInfo.Status == moat.TrustedRootStatusExpired ||
-		rootInfo.Status == moat.TrustedRootStatusMissing ||
-		rootInfo.Status == moat.TrustedRootStatusCorrupt {
-		return output.NewStructuredErrorDetail(
-			output.ErrMoatTrustedRootStale,
-			fmt.Sprintf("bundled trusted root unusable while installing from registry %q", registryName),
-			"Run `syllago update` to refresh the bundled Sigstore trusted root.",
-			rootInfo.Status.String(),
-		)
-	}
-
-	// Sync *before* the gate. A stale manifest cannot correctly classify
-	// revocations or tiers; re-fetching here means the gate always reads
-	// from the freshest view the network can provide. TOFU and profile-
-	// change paths short-circuit with G-18 exits — install never proceeds
-	// past a trust-state surprise.
-	//
-	// --yes is intentionally NOT exposed on install. Accepting TOFU at
-	// install time would let a pipeline silently pin a new registry by
-	// scheduling one job; the spec's row-1 MUST-exit is meant to prevent
-	// exactly that shortcut. Operators run `syllago registry add --yes`
-	// interactively first; only then can install succeed.
-	//
-	// SyncOne persists what `syllago registry sync` persists: the registry's
-	// ETag and fetch time in the global config, where `registry add` saved
-	// the registry, the lockfile, and the manifest and content caches.
-	cacheDir, err := config.GlobalDirPath()
-	if err != nil {
-		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine the syllago config directory", "Set the HOME environment variable")
-	}
-	synced, err := registryops.SyncOne(ctx, reg.Name, registryops.SyncOpts{
-		LockfileRoot: cfgRoot,
-		CacheDir:     cacheDir,
-		Now:          now,
-	})
-	if err != nil {
-		// Sync classifies expiry only after the manifest verified, and it
-		// saves an expired manifest like any other. A failed save still
-		// leaves the install refused for the expiry, under its own exit.
-		if synced.MoatResult.Staleness == moat.StalenessExpired {
-			fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
-			moatSyncExit(moat.ExitMoatManifestStale)
-			return nil
-		}
-		var ve *moat.VerifyError
-		if errors.As(err, &ve) {
-			return classifyVerifyError(reg.Name, err)
-		}
-		return output.NewStructuredErrorDetail(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("sync failed while installing from registry %q", reg.Name),
-			"Run `syllago registry sync` to surface the error in isolation, then retry install.",
-			err.Error(),
-		)
-	}
-	res := synced.MoatResult
-
-	if synced.GateProfileChanged {
-		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureSigningProfileChange.Message())
-		moatSyncExit(moat.ExitMoatSigningProfileChange)
-		return nil
-	}
-	if synced.GateTOFUNeeded {
-		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureTOFUAcceptance.Message())
-		moatSyncExit(moat.ExitMoatTOFUAcceptance)
-		return nil
-	}
-
-	// A 304 returns no manifest body: the copy cached by the sync that
-	// fetched it is still the current one. Sync classified the 304 without
-	// that body, so its expiry is checked here.
-	manifest := res.Manifest
-	staleness := res.Staleness
-	if res.NotModified {
-		manifest, err = regdiff.LoadCachedManifest(cacheDir, reg.Name)
-		if err != nil || manifest == nil {
-			return output.NewStructuredError(
-				output.ErrMoatInvalid,
-				fmt.Sprintf("registry %q is at the pinned revision but the manifest body is not cached locally", reg.Name),
-				"Clear the cached ETag by removing the `manifest_etag` field for registry \""+reg.Name+"\" from ~/.syllago/config.json, then run `syllago registry sync "+reg.Name+"` to force a full re-fetch.",
-			)
-		}
-		staleness = moat.CheckStaleness(res.FetchedAt, manifest.Expires, now)
-	}
-	if staleness == moat.StalenessExpired {
-		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
-		moatSyncExit(moat.ExitMoatManifestStale)
-		return nil
-	}
-
-	lockfilePath := moat.LockfilePath(cfgRoot)
-	lf, err := moat.LoadLockfile(lockfilePath)
-	if err != nil {
-		return fmt.Errorf("load lockfile: %w", err)
-	}
-
-	entry, ok := moat.FindContentEntry(manifest, itemName)
-	if !ok {
-		return output.NewStructuredError(
-			output.ErrInstallItemNotFound,
-			fmt.Sprintf("registry %q does not list an item named %q in its manifest", reg.Name, itemName),
-			"Run `syllago registry items "+reg.Name+"` to see available content.",
-		)
-	}
-
-	// Gate evaluation. PreInstallCheck is CLI-agnostic — we map its five
-	// decisions to CLI behaviour here (structured errors, Y/n prompts,
-	// G-18 non-interactive exits). Session and RevocationSet are
-	// per-invocation: a fresh CLI process is a fresh session. If the
-	// operator answers Y to a PublisherWarn, the suppression lasts only
-	// for this single `syllago install` call — which is the right
-	// granularity because each install is a discrete authorization act.
-	revSet := moat.NewRevocationSet()
-	revSet.AddFromManifest(manifest, reg.ManifestURI)
-	session := moat.NewSession()
-
-	gate := installer.PreInstallCheck(entry, reg.ManifestURI, lf, revSet, session, moatInstallMinTier)
-
-	// Telemetry on both proceed and refuse paths — ops want to see what
-	// tier users are actually landing on and how often gates fire. Enrich
-	// here rather than at each branch so every exit carries the pair.
-	telemetry.Enrich("moat_tier", entry.TrustTier().String())
-	telemetry.Enrich("moat_gated", gate.Decision.String())
-
-	proceed, gateErr := resolveGateDecision(errW, reg.ManifestURI, entry, session, gate)
-	if gateErr != nil {
-		return gateErr
-	}
-	if !proceed {
-		// A non-interactive refusal or exit(10|12) has already fired via
-		// moatSyncExit; callers below must not execute. Returning nil
-		// matches the TOFU/profile-change/stale paths above — cobra maps
-		// nil to exit 0, but os.Exit has already overridden that.
-		return nil
-	}
-
-	if dryRun {
-		printRegistryItemSummaryWithGate(out, reg.Name, entry, res.RevocationsAdded, staleness, gate.Decision)
-		return nil
-	}
-
-	// Gates cleared. For SIGNED/DUAL-ATTESTED tiers, fetchAndRecord first
-	// fetches the per-item Rekor entry and verifies it against the pinned
-	// signing profile (per-item if present, else the manifest-level
-	// RegistrySigningProfile) before paying for the source-artifact
-	// download. UNSIGNED tiers skip the verification path and land with a
-	// null AttestationBundle. The trustedRoot bytes were already validated
-	// at sync time (rootInfo.Status check above).
-	cacheDir, fetchErr := moatinstall.FetchAndRecord(
-		ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf,
-		&manifest.RegistrySigningProfile, rootInfo.Bytes,
-	)
-	if fetchErr != nil {
-		return fetchErr
-	}
-
-	if targetProv == nil {
+// --yes is intentionally not exposed on install. Accepting TOFU at install
+// time would let a pipeline silently pin a new registry by scheduling one
+// job; the spec's row-1 MUST-exit is meant to prevent exactly that
+// shortcut. Operators run `syllago registry add --yes` interactively first.
+func runInstallFromRegistry(ctx context.Context, out, errW io.Writer, req moatinstall.Request, now time.Time) error {
+	if !req.DryRun && len(req.Targets) == 0 {
 		return output.NewStructuredError(
 			output.ErrInputMissing,
 			"install destination not specified",
 			"Pass --to <provider> to choose where the registry item is installed.",
 		)
 	}
-	ct, ok := moat.FromMOATType(entry.Type)
-	if !ok {
-		return output.NewStructuredErrorDetail(
-			output.ErrInstallNotWritable,
-			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
-			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
-			fmt.Sprintf("unknown MOAT type %q", entry.Type),
-		)
+	req.Frozen = isFrozenFromContext(ctx)
+	// One session for every attempt, so a warning confirmed once stays
+	// confirmed for this `syllago install` call and no longer.
+	req.Session = moat.NewSession()
+	op := moatinstall.Operation{MinTier: moatInstallMinTier, Now: func() time.Time { return now }}
+	for {
+		res, err := op.Install(ctx, req)
+		// Telemetry on both proceed and refuse paths, so ops see which tiers
+		// users land on and how often gates fire.
+		if len(res.Items) > 0 && res.Items[0].Entry != nil {
+			telemetry.Enrich("moat_tier", res.Items[0].Entry.TrustTier().String())
+			telemetry.Enrich("moat_gated", res.Items[0].Gate.Decision.String())
+		}
+		var decision *lifecycle.DecisionRequired
+		if errors.As(err, &decision) {
+			retry, derr := decideRegistryInstall(errW, &req, decision)
+			if retry {
+				continue
+			}
+			return derr
+		}
+		if err != nil {
+			return registryInstallError(errW, req.Registry, err)
+		}
+		return reportRegistryInstall(out, errW, req, res)
 	}
-	if targetProv.SupportsType != nil && !targetProv.SupportsType(ct) {
-		return output.NewStructuredErrorDetail(
-			output.ErrInstallNotWritable,
-			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
-			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
-			fmt.Sprintf("provider %q does not support %s", targetProv.Name, ct.Label()),
-		)
-	}
-
-	// Provider-side install: stage the verified source tree into the
-	// library first, then place it from the library with the regular
-	// installer so symlinks and install records share the normal path model.
-	item, staged, stageErr := moatinstall.StageIntoLibraryRespectingPin(lifecycle.New(), cacheDir, entry, reg.Name, globalDir, now)
-	var decision *lifecycle.DecisionRequired
-	if errors.As(stageErr, &decision) {
-		return output.NewStructuredError(
-			output.ErrInstallConflict,
-			fmt.Sprintf("could not install %s/%s: item is pinned", reg.Name, entry.Name),
-			fmt.Sprintf("syllago unpin %s", entry.Name),
-		)
-	}
-	var structured output.StructuredError
-	if errors.As(stageErr, &structured) {
-		return stageErr
-	}
-	if stageErr != nil {
-		return output.NewStructuredErrorDetail(
-			output.ErrInstallNotWritable,
-			fmt.Sprintf("could not stage %s/%s into the global library", reg.Name, entry.Name),
-			"The source artifact was fetched and verified but could not be added to the global library. Check filesystem permissions in ~/.syllago/content/ and ensure the registry owns any existing item at that path.",
-			stageErr.Error(),
-		)
-	}
-	printLifecycleWarnings(errW, staged)
-
-	outcome, installErr := lifecycle.New().Install(lifecycle.InstallRequest{
-		Item:        item,
-		ProjectRoot: cfgRoot,
-		Targets:     []lifecycle.Target{{Provider: *targetProv, BaseDir: baseDir}},
-		Method:      method,
-		Scan:        scan,
-		Frozen:      isFrozenFromContext(ctx),
-		Provenance: &installstore.MOATProvenance{
-			ManifestURI: reg.ManifestURI,
-			SourceURI:   entry.SourceURI,
-			TrustTier:   entry.TrustTier().String(),
-			AttestedAt:  now,
-		},
-	})
-	printInstallNotices(errW, outcome.Notices)
-	if len(outcome.Unattempted) > 0 {
-		return installErr
-	}
-	if installErr != nil {
-		return output.NewStructuredErrorDetail(
-			output.ErrInstallNotWritable,
-			fmt.Sprintf("could not install %s/%s to %s", reg.Name, entry.Name, targetProv.Name),
-			"The source artifact was fetched and verified but the provider-side install failed. Check filesystem permissions, that the target directory is writable, and that the provider supports this content type.",
-			installErr.Error(),
-		)
-	}
-	printLifecycleWarnings(errW, outcome)
-	placement := outcome.Completed[0].Placement
-
-	fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", reg.Name, entry.Name, entry.TrustTier().String(), placement.String())
-	return nil
 }
 
-// resolveGateDecision maps a GateBlock to proceed/error/exit semantics.
-// Returns (proceed, err):
-//   - proceed==true, err==nil: caller continues to install side-effect.
-//   - proceed==false, err==nil: a G-18 non-interactive exit has already
-//     fired via moatSyncExit, or the user answered No at an interactive
-//     prompt. Caller returns nil.
-//   - err != nil: structured error to surface via cobra (exit 1).
-func resolveGateDecision(
-	errW io.Writer,
-	registryURL string,
-	entry *moat.ContentEntry,
-	session *moat.Session,
-	gate installer.GateBlock,
-) (bool, error) {
-	switch gate.Decision {
-	case installer.MOATGateProceed:
+// decideRegistryInstall answers the choice Install asked for, at a prompt
+// when one is possible. It returns retry when req now carries the answer;
+// otherwise the install stops, and a headless refusal has already exited.
+func decideRegistryInstall(errW io.Writer, req *moatinstall.Request, decision *lifecycle.DecisionRequired) (bool, error) {
+	switch decision.Kind {
+	case lifecycle.TrustOnFirstUse:
+		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureTOFUAcceptance.Message())
+		moatSyncExit(moat.ExitMoatTOFUAcceptance)
+		return false, nil
+
+	case lifecycle.PublisherWarn:
+		if req.Decisions.PublisherWarn == nil {
+			req.Decisions.PublisherWarn = map[string]bool{}
+		}
+		for _, p := range decision.Context.([]moatinstall.GatePrompt) {
+			reason := ""
+			if p.Gate.Revocation != nil {
+				reason = moat.SanitizeForDisplay(p.Gate.Revocation.Reason)
+			}
+			fmt.Fprintf(errW, "\nPublisher-source revocation for %q: %s\n", p.Entry.Name, reason)
+			if !moatInstallInteractiveFn() {
+				fmt.Fprintf(errW, "syllago: %s\n", moat.FailurePublisherRevocation.Message())
+				moatSyncExit(moat.ExitMoatPublisherRevocation)
+				return false, nil
+			}
+			if !moatInstallPromptFn(errW, "Proceed anyway? [Y/n]: ") {
+				fmt.Fprintln(errW, "install refused by operator")
+				return false, nil
+			}
+			req.Decisions.PublisherWarn[p.Entry.ContentHash] = true
+		}
 		return true, nil
 
-	case installer.MOATGateHardBlock:
-		rev := gate.Revocation
-		reason := ""
-		if rev != nil {
-			reason = moat.SanitizeForDisplay(rev.Reason)
+	case lifecycle.PrivateSource:
+		if req.Decisions.PrivateSource == nil {
+			req.Decisions.PrivateSource = map[string]bool{}
 		}
-		return false, output.NewStructuredErrorDetail(
-			output.ErrMoatRevocationBlock,
-			fmt.Sprintf("registry-source revocation refuses install of %q", entry.Name),
-			"Registry-source revocations are permanent. Contact the publisher or choose an alternative item.",
-			"reason="+reason,
-		)
+		for _, p := range decision.Context.([]moatinstall.GatePrompt) {
+			fmt.Fprintf(errW, "\n%q is declared as coming from a private repository.\n", p.Entry.Name)
+			if !moatInstallInteractiveFn() {
+				// Private-prompt acceptance matches TOFU semantically, so it
+				// reuses the TOFU exit and message rather than a new code.
+				fmt.Fprintf(errW, "syllago: %s (private content requires operator acknowledgement)\n", moat.FailureTOFUAcceptance.Message())
+				moatSyncExit(moat.ExitMoatTOFUAcceptance)
+				return false, nil
+			}
+			if !moatInstallPromptFn(errW, "Install from private source? [Y/n]: ") {
+				fmt.Fprintln(errW, "install refused by operator")
+				return false, nil
+			}
+			req.Decisions.PrivateSource[p.Entry.ContentHash] = true
+		}
+		return true, nil
 
-	case installer.MOATGatePublisherWarn:
-		rev := gate.Revocation
-		reason := ""
-		if rev != nil {
-			reason = moat.SanitizeForDisplay(rev.Reason)
-		}
-		fmt.Fprintf(errW, "\nPublisher-source revocation for %q: %s\n", entry.Name, reason)
-		if !moatInstallInteractiveFn() {
-			fmt.Fprintf(errW, "syllago: %s\n", moat.FailurePublisherRevocation.Message())
-			moatSyncExit(moat.ExitMoatPublisherRevocation)
-			return false, nil
-		}
-		if moatInstallPromptFn(errW, "Proceed anyway? [Y/n]: ") {
-			installer.MarkPublisherConfirmed(session, registryURL, entry.ContentHash)
-			return true, nil
-		}
-		fmt.Fprintln(errW, "install refused by operator")
-		return false, nil
-
-	case installer.MOATGatePrivatePrompt:
-		fmt.Fprintf(errW, "\n%q is declared as coming from a private repository.\n", entry.Name)
-		if !moatInstallInteractiveFn() {
-			// Per moat_gate.go docstring: private-prompt's acceptance
-			// shape matches TOFU semantically, so we reuse the TOFU
-			// exit + message rather than inventing a new code.
-			fmt.Fprintf(errW, "syllago: %s (private content requires operator acknowledgement)\n", moat.FailureTOFUAcceptance.Message())
-			moatSyncExit(moat.ExitMoatTOFUAcceptance)
-			return false, nil
-		}
-		if moatInstallPromptFn(errW, "Install from private source? [Y/n]: ") {
-			installer.MarkPrivateConfirmed(session, registryURL, entry.ContentHash)
-			return true, nil
-		}
-		fmt.Fprintln(errW, "install refused by operator")
-		return false, nil
-
-	case installer.MOATGateTierBelowPolicy:
-		return false, output.NewStructuredErrorDetail(
-			output.ErrMoatTierBelowPolicy,
-			fmt.Sprintf("trust tier of %q (%s) is below configured minimum (%s)",
-				entry.Name, gate.ObservedTier.String(), gate.MinTier.String()),
-			"Raise the item's trust tier (ask the publisher to sign / dual-attest), or lower the install-gate minimum.",
-			fmt.Sprintf("observed=%s min=%s", gate.ObservedTier.String(), gate.MinTier.String()),
+	case lifecycle.OverwritePinned:
+		pinned := decision.Context.([]lifecycle.PinnedDestination)
+		return false, output.NewStructuredError(
+			output.ErrInstallConflict,
+			fmt.Sprintf("could not install %s/%s: item is pinned", req.Registry, pinned[0].Name),
+			fmt.Sprintf("syllago unpin %s", pinned[0].Name),
 		)
 	}
-	// Unreachable: MOATGateDecision is a closed enum. Defensive default.
-	return false, fmt.Errorf("install_moat: unhandled gate decision %v", gate.Decision)
+	return false, fmt.Errorf("install_moat: unhandled decision %s", decision.Kind)
+}
+
+// registryInstallError maps a failure of the whole install to its exit or
+// structured error.
+func registryInstallError(errW io.Writer, regName string, err error) error {
+	switch {
+	case errors.Is(err, moatinstall.ErrManifestExpired):
+		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
+		moatSyncExit(moat.ExitMoatManifestStale)
+		return nil
+	case errors.Is(err, moatinstall.ErrProfileChanged):
+		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureSigningProfileChange.Message())
+		moatSyncExit(moat.ExitMoatSigningProfileChange)
+		return nil
+	}
+	var syncErr *moatinstall.SyncError
+	if errors.As(err, &syncErr) {
+		var ve *moat.VerifyError
+		if errors.As(syncErr.Err, &ve) {
+			return classifyVerifyError(regName, syncErr.Err)
+		}
+		return output.NewStructuredErrorDetail(
+			output.ErrMoatInvalid,
+			fmt.Sprintf("sync failed while installing from registry %q", regName),
+			"Run `syllago registry sync` to surface the error in isolation, then retry install.",
+			syncErr.Err.Error(),
+		)
+	}
+	return err
+}
+
+// reportRegistryInstall prints what Install did with the one requested item.
+func reportRegistryInstall(out, errW io.Writer, req moatinstall.Request, res moatinstall.Result) error {
+	ir := res.Items[0]
+	if errors.Is(ir.Err, moatinstall.ErrDeclined) {
+		fmt.Fprintln(errW, "install refused by operator")
+		return nil
+	}
+	if req.DryRun {
+		if ir.Err != nil {
+			return ir.Err
+		}
+		printRegistryItemSummaryWithGate(out, req.Registry, ir.Entry, res.Sync.MoatResult.RevocationsAdded, res.Staleness, ir.Gate.Decision)
+		return nil
+	}
+	// Report what did install before any failure, since one target can
+	// fail after another succeeded.
+	printLifecycleWarnings(errW, res.Stage)
+	printInstallNotices(errW, ir.Install.Notices)
+	printLifecycleWarnings(errW, ir.Install)
+	for _, t := range ir.Unsupported {
+		fmt.Fprintf(errW, "skipped %s: it does not support %s\n", t.Provider.Name, ir.Library.Type.Label())
+	}
+	for _, step := range ir.Install.Completed {
+		fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", req.Registry, ir.Entry.Name, ir.Entry.TrustTier().String(), step.Placement.String())
+	}
+	return ir.Err
 }
 
 // printRegistryItemSummaryWithGate renders the resolved ContentEntry and

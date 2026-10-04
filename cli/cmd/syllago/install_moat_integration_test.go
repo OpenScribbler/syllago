@@ -157,7 +157,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	out := &bytes.Buffer{}
 	cfg := cfgWithPinnedMOATRegistry(t)
 	prov := integrationTestProvider()
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		out,
 		&bytes.Buffer{},
@@ -302,7 +302,7 @@ func TestInstallIntegration_RegistryRevocationRefuses(t *testing.T) {
 	}
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -355,7 +355,7 @@ func TestInstallIntegration_PublisherWarnHeadlessExits12(t *testing.T) {
 	}
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -400,7 +400,7 @@ func TestInstallIntegration_PrivatePromptHeadlessExits10(t *testing.T) {
 	}
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -447,7 +447,7 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 	}
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -506,7 +506,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 	}
 
 	prov := integrationTestProvider()
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -563,7 +563,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 		}, nil
 	}
 
-	err = runInstallFromRegistry(
+	err = installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -671,7 +671,7 @@ func TestInstallIntegration_ReplaceWithoutRecord(t *testing.T) {
 	}
 
 	prov := integrationTestProvider()
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},

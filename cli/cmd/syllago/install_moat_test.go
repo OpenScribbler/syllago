@@ -85,7 +85,7 @@ func TestShortHash_Table(t *testing.T) {
 func TestRunInstallFromRegistry_RegistryNotFound(t *testing.T) {
 	// No t.Parallel — may mutate registryops.SyncOneFn if downstream logic ever calls it.
 	cfg := &config.Config{Registries: []config.Registry{}}
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -110,7 +110,7 @@ func TestRunInstallFromRegistry_NotMOATRegistry(t *testing.T) {
 		URL:  "https://example.com/repo.git",
 		Type: config.RegistryTypeGit,
 	}}}
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -174,7 +174,7 @@ func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -201,7 +201,7 @@ func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -236,7 +236,7 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -270,7 +270,7 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -316,7 +316,7 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 
 	var out bytes.Buffer
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&out,
 		&bytes.Buffer{},
@@ -366,7 +366,7 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -437,7 +437,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 	t.Cleanup(func() { moat.SetRekorBaseURLForTest(origRekor) })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -485,7 +485,7 @@ func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectEr
 	t.Cleanup(func() { moatSyncExit = origExit })
 
 	cfg := cfgWithPinnedMOATRegistry(t)
-	_ = runInstallFromRegistry(
+	_ = installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -621,7 +621,7 @@ func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 	)
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -655,7 +655,7 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 
 	capturedExit := withInstallGateStubs(t, false, false)
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -695,7 +695,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 
 	capturedExit := withInstallGateStubs(t, true, true)
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -733,7 +733,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) 
 	capturedExit := withInstallGateStubs(t, true, false)
 
 	var errBuf bytes.Buffer
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&errBuf,
@@ -773,7 +773,7 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 
 	capturedExit := withInstallGateStubs(t, false, false)
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -809,7 +809,7 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 
 	withInstallGateStubs(t, true, true)
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -844,7 +844,7 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 	moatInstallMinTier = moat.TrustTierDualAttested
 	t.Cleanup(func() { moatInstallMinTier = origMin })
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
@@ -875,7 +875,7 @@ func TestRunInstallFromRegistry_DryRunPreviewsGateDecision(t *testing.T) {
 	)
 	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	err := runInstallFromRegistry(
+	err := installFromRegistryForTest(t,
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
