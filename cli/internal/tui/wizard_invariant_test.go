@@ -153,9 +153,9 @@ func TestInstallWizard_ValidateStep_PanicsOnEmpty(t *testing.T) {
 
 func TestInstallWizard_ValidateStep_AcceptsUnstagedMOATItem(t *testing.T) {
 	t.Parallel()
-	// Unstaged MOAT items have empty Path because the content blob is fetched
-	// from the registry at install time (doMOATInstallCmd). Source is the
-	// discriminator. The wizard must accept these without panicking.
+	// Unstaged MOAT items have empty Path because the moatinstall operation
+	// fetches the content at install time. Source is the discriminator. The
+	// wizard must accept these without panicking.
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("unexpected panic for unstaged MOAT item: %v", r)

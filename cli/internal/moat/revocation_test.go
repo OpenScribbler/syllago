@@ -2,6 +2,7 @@ package moat
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -381,5 +382,21 @@ func TestRevocationRecord_PreservesAllFields(t *testing.T) {
 	}
 	if !reflect.DeepEqual(recs[0], want) {
 		t.Errorf("record fields lost:\n got %+v\nwant %+v", recs[0], want)
+	}
+}
+
+// A TUI install confirms a warning in the background while the UI reads
+// the same Session; run with -race.
+func TestSession_ConcurrentUse(t *testing.T) {
+	sess := NewSession()
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(2)
+		go func() { defer wg.Done(); sess.MarkConfirmed("https://r.example", revHashA) }()
+		go func() { defer wg.Done(); sess.ShouldWarn("https://r.example", revHashA) }()
+	}
+	wg.Wait()
+	if sess.ShouldWarn("https://r.example", revHashA) {
+		t.Error("ShouldWarn after MarkConfirmed = true")
 	}
 }

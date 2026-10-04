@@ -678,6 +678,18 @@ func isUnstagedRegistryItem(item *catalog.ContentItem) bool {
 	return item != nil && item.Path == "" && item.Source != ""
 }
 
+// isMOATRegistryItem reports whether an item is published by a MOAT
+// registry and not yet in the Library, whether or not its files are cached.
+// The moatinstall operation installs it; a git registry item needs an Add
+// first. EnrichCatalog gives every manifest item a trust tier, and a git
+// registry item never has one.
+func isMOATRegistryItem(item *catalog.ContentItem) bool {
+	if item == nil || item.Library {
+		return false
+	}
+	return isUnstagedRegistryItem(item) || (item.Registry != "" && item.TrustTier != catalog.TrustTierUnknown)
+}
+
 // unstagedRegistryItemPreview returns the placeholder body shown in the
 // preview pane for a MOAT-materialized item that has no on-disk files yet.
 // Spelled out so the user understands the empty pane is by design and knows
@@ -909,7 +921,7 @@ func (l libraryModel) renderMetadataContent(width int) string {
 	// for any provider that supports the type and is not already installed,
 	// regardless of detection state. Mirrors metapanel.computeMetaPanelData.
 	canInstall := false
-	if item.Library || item.Registry == "" || isUnstagedRegistryItem(item) {
+	if item.Library || item.Registry == "" || isMOATRegistryItem(item) {
 		for _, prov := range l.table.providers {
 			if installer.CheckStatus(*item, prov, l.table.repoRoot) != installer.StatusInstalled {
 				canInstall = true
