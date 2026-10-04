@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -441,6 +442,29 @@ func TestInstall_ItemFailsAlone(t *testing.T) {
 	}
 	if res.Items[0].Err == nil || res.Items[1].Err != nil || !e.inLibrary("a") {
 		t.Errorf("missing err=%v, a err=%v staged=%v", res.Items[0].Err, res.Items[1].Err, e.inLibrary("a"))
+	}
+}
+
+// An item whose content fails verification reaches neither the Library nor
+// the lockfile, and the item beside it still installs.
+func TestInstall_FailedVerificationNotRecorded(t *testing.T) {
+	e := newOpEnv(t, "a", "b")
+	e.manifest.Content[1].ContentHash = "sha256:" + strings.Repeat("aa", 32)
+	res, err := e.op.Install(context.Background(), e.request("a", "b"))
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if res.Items[0].Err != nil || res.Items[1].Err == nil {
+		t.Fatalf("a err=%v, b err=%v; want only b to fail", res.Items[0].Err, res.Items[1].Err)
+	}
+	if e.inLibrary("b") {
+		t.Error("b was staged despite failing verification")
+	}
+	if got := e.lockedHashes(t, "b"); len(got) != 0 {
+		t.Errorf("lockfile hashes for b = %v, want none", got)
+	}
+	if got := e.lockedHashes(t, "a"); len(got) != 1 || got[0] != e.manifest.Content[0].ContentHash {
+		t.Errorf("lockfile hashes for a = %v, want the manifest's", got)
 	}
 }
 
