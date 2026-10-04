@@ -15,6 +15,10 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 )
 
+// confirmPurposeRegistryDecision marks the confirm modal a registry install
+// opened, so only its own answer reaches the install.
+const confirmPurposeRegistryDecision = "registry-decision"
+
 // registryInstallOp builds the operation a registry install runs. Tests
 // replace it to stub the sync and the clone.
 var registryInstallOp = func(minTier moat.TrustTier) *moatinstall.Operation {
@@ -150,12 +154,10 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 	if errors.As(msg.err, &decision) {
 		return a.askRegistryDecision(p, decision)
 	}
-	// Staging can put the item in the Library before a cancel or a failed
-	// placement stops the install, so a failure reads the catalog again.
+	// Staging can write to the Library before a cancel or a failure stops
+	// the install, even when it then fails itself, so a failure reads the
+	// catalog again.
 	failed := func(m tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
-		if len(msg.res.Stage.Completed) == 0 {
-			return m, cmd
-		}
 		app := m.(App)
 		return app, tea.Batch(cmd, app.rescanCatalog())
 	}
@@ -227,7 +229,7 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 	// The decision arrives in the background, so a prompt the user already
 	// has open keeps the screen: replacing it would strand that prompt's
 	// pending action, or let this answer land on it.
-	if a.anyOverlayActive() {
+	if a.promptOpen() {
 		return a, a.toast.Push(fmt.Sprintf("Installing %q needs your answer, but another prompt is open; install it again after closing that one", p.displayName()), toastWarning)
 	}
 	pending := &pendingRegistryDecision{install: p, decision: decision}
@@ -254,6 +256,7 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 		} else {
 			a.confirm.OpenForItem(privatePromptTitle(item), privatePromptBody(item), verb, false, nil, item)
 		}
+		a.confirm.purpose = confirmPurposeRegistryDecision
 		return a, nil
 
 	case lifecycle.OverwritePinned:
@@ -314,6 +317,12 @@ func (a App) registryManifestURI(name string) string {
 		}
 	}
 	return ""
+}
+
+// promptOpen reports whether a modal or a wizard has the keyboard, so a
+// prompt opened now could not take the user's answer.
+func (a App) promptOpen() bool {
+	return a.wizardMode != wizardNone || a.anyOverlayActive()
 }
 
 // anyOverlayActive reports whether a modal is open to take a key.
