@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -11,7 +12,9 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
 )
 
@@ -73,7 +76,7 @@ func (s *syncedInstall) run(t *testing.T) (string, error) {
 	t.Helper()
 	out := &bytes.Buffer{}
 	prov := integrationTestProvider()
-	err := runInstallFromRegistry(context.Background(), out, &bytes.Buffer{},
+	err := installFromRegistryForTest(t, context.Background(), out, &bytes.Buffer{},
 		cfgWithPinnedMOATRegistry(t), s.env.projectRoot, s.globalDir, "example", "my-skill",
 		&prov, installer.MethodSymlink, "", false, installer.ScanOptions{}, s.now)
 	return out.String(), err
@@ -178,5 +181,77 @@ func TestInstallFromRegistry_NotModifiedExpiredCacheExits13(t *testing.T) {
 	}
 	if strings.Contains(out, "installed example/my-skill") {
 		t.Errorf("output = %q, want no install from an expired manifest", out)
+	}
+}
+
+// Regression: a sync that verified an expired manifest and then failed to
+// save it reported the save failure, exit 1, instead of exit 13.
+func TestInstallFromRegistry_ExpiredManifestSaveFailureExits13(t *testing.T) {
+	s := newSyncedInstall(t)
+	expired := s.now.Add(-time.Hour)
+	s.manifest.Expires = &expired
+	s.env.syncResultFn = func() (moat.SyncResult, error) {
+		r := s.freshSync(t)
+		r.Staleness = moat.StalenessExpired
+		return r, nil
+	}
+	exitCode := withInstallGateStubs(t, false, false)
+	cfgWithPinnedMOATRegistry(t)
+	if err := os.Chmod(s.configDir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(s.configDir, 0o755) })
+
+	out := &bytes.Buffer{}
+	prov := integrationTestProvider()
+	// A nil config keeps the one saved above, which the read-only config
+	// directory would refuse to save again.
+	err := installFromRegistryForTest(t, context.Background(), out, &bytes.Buffer{},
+		nil, s.env.projectRoot, s.globalDir, "example", "my-skill",
+		&prov, installer.MethodSymlink, "", false, installer.ScanOptions{}, s.now)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if *exitCode != moat.ExitMoatManifestStale {
+		t.Errorf("exit code = %d, want %d", *exitCode, moat.ExitMoatManifestStale)
+	}
+}
+
+// --to-all with <registry>/<item> installs the registry item to every
+// detected provider through the same operation as --to.
+func TestInstallToAll_RegistryItem(t *testing.T) {
+	s := newSyncedInstall(t)
+	s.env.syncResultFn = func() (moat.SyncResult, error) { return s.freshSync(t), nil }
+	cfgWithPinnedMOATRegistry(t)
+	withFakeRepoRoot(t, s.env.projectRoot)
+	origNow := moatInstallNow
+	moatInstallNow = func() time.Time { return s.now }
+	t.Cleanup(func() { moatInstallNow = origNow })
+	prov := integrationTestProvider()
+	prov.Detect = func(string) bool { return true }
+	origProviders := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{prov}
+	t.Cleanup(func() { provider.AllProviders = origProviders })
+	stdout, _ := output.SetForTest(t)
+	resetInstallRecordInstallFlags(t)
+	installCmd.Flags().Set("to-all", "true")
+	installCmd.Flags().Set("no-input", "true")
+	t.Cleanup(func() { resetInstallRecordInstallFlags(t); installCmd.Flags().Set("no-input", "false") })
+
+	installCmd.SetContext(context.Background())
+	if err := installCmd.RunE(installCmd, []string{"example/my-skill"}); err != nil {
+		t.Fatalf("install --to-all: %v", err)
+	}
+	if got := stdout.String(); !strings.Contains(got, "installed example/my-skill") || !strings.Contains(got, ".testprovider") {
+		t.Errorf("output = %q, want the registry install confirmation", stdout.String())
+	}
+}
+
+func TestInstallFromRegistry_NoTargetsIsInputError(t *testing.T) {
+	err := runInstallFromRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{},
+		moatinstall.Request{Registry: "example", Items: []string{"my-skill"}}, time.Now())
+	var se output.StructuredError
+	if !errors.As(err, &se) || se.Code != output.ErrInputMissing {
+		t.Fatalf("err = %v, want %s", err, output.ErrInputMissing)
 	}
 }

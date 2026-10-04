@@ -13,6 +13,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
+	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -253,33 +254,24 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
 	}
 
-	// Registry-sourced install dispatch: `syllago install <registry>/<item>`
-	// routes through the MOAT flow (sync + manifest lookup in this slice).
-	// Library install uses the plain `syllago install <item>` form and falls
-	// through to the globalDir scan below. See install_moat.go for the full
-	// rationale and what this slice intentionally defers.
+	// `syllago install <registry>/<item>` installs from a MOAT registry
+	// (see install_moat.go). The plain `syllago install <item>` form installs
+	// from the Library and falls through to the globalDir scan below.
 	if len(args) == 1 {
 		if regName, itemName, ok := parseRegistryItemSyntax(args[0]); ok {
 			ctx := cmd.Context()
 			if frozen {
 				ctx = ContextWithFrozen(ctx, true)
 			}
-			return runInstallFromRegistry(
-				ctx,
-				output.Writer,
-				output.ErrWriter,
-				mergedCfg,
-				projectRoot,
-				globalDir,
-				regName,
-				itemName,
-				prov,
-				method,
-				baseDir,
-				dryRun,
-				scan,
-				moatInstallNow(),
-			)
+			return runInstallFromRegistry(ctx, output.Writer, output.ErrWriter, moatinstall.Request{
+				Registry:    regName,
+				Items:       []string{itemName},
+				ProjectRoot: projectRoot,
+				Targets:     []lifecycle.Target{{Provider: *prov, BaseDir: baseDir}},
+				Method:      method,
+				Scan:        scan,
+				DryRun:      dryRun,
+			}, moatInstallNow())
 		}
 	}
 
@@ -560,6 +552,30 @@ func runInstallToAll(
 				}
 				active = installer.ApplyConflictResolution(active, conflicts, resolution)
 			}
+		}
+	}
+
+	// `<registry>/<item>` installs the registry item to every active
+	// provider, as the --to path installs it to one.
+	if len(args) == 1 {
+		if regName, itemName, ok := parseRegistryItemSyntax(args[0]); ok {
+			ctx := cmd.Context()
+			if frozen {
+				ctx = ContextWithFrozen(ctx, true)
+			}
+			targets := make([]lifecycle.Target, 0, len(active))
+			for _, p := range active {
+				targets = append(targets, lifecycle.Target{Provider: p, Resolver: resolver})
+			}
+			return runInstallFromRegistry(ctx, output.Writer, output.ErrWriter, moatinstall.Request{
+				Registry:    regName,
+				Items:       []string{itemName},
+				ProjectRoot: projectRoot,
+				Targets:     targets,
+				Method:      method,
+				Scan:        scan,
+				DryRun:      dryRun,
+			}, moatInstallNow())
 		}
 	}
 

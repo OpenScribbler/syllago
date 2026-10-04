@@ -95,6 +95,15 @@ const (
 	// OverwritePinned asks the user whether an Overwrite may replace each
 	// pinned Library item it would write over.
 	OverwritePinned DecisionKind = "overwrite_pinned"
+	// TrustOnFirstUse asks the user to trust the signing profile a registry
+	// presented the first time it was synced.
+	TrustOnFirstUse DecisionKind = "trust_on_first_use"
+	// PublisherWarn asks the user whether to install items their publisher
+	// revoked.
+	PublisherWarn DecisionKind = "publisher_warn"
+	// PrivateSource asks the user whether to install items from a private
+	// source repository.
+	PrivateSource DecisionKind = "private_source"
 )
 
 // Decisions carries the choices the user already made, so a verb that would
@@ -110,7 +119,8 @@ type Decisions struct {
 // DecisionRequired is the error a verb returns when it needs a choice from
 // the user first. Nothing has changed when it is returned. Context holds
 // what the user decides on: a RemovePlan for RemoveConfirm, a
-// []PinnedDestination for OverwritePinned.
+// []PinnedDestination for OverwritePinned, and for the registry install
+// kinds the type moatinstall documents.
 type DecisionRequired struct {
 	Kind    DecisionKind
 	Context any
