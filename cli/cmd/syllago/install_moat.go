@@ -210,6 +210,14 @@ func runInstallFromRegistry(
 		Now:          now,
 	})
 	if err != nil {
+		// Sync classifies expiry only after the manifest verified, and it
+		// saves an expired manifest like any other. A failed save still
+		// leaves the install refused for the expiry, under its own exit.
+		if synced.MoatResult.Staleness == moat.StalenessExpired {
+			fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
+			moatSyncExit(moat.ExitMoatManifestStale)
+			return nil
+		}
 		var ve *moat.VerifyError
 		if errors.As(err, &ve) {
 			return classifyVerifyError(reg.Name, err)

@@ -180,3 +180,34 @@ func TestInstallFromRegistry_NotModifiedExpiredCacheExits13(t *testing.T) {
 		t.Errorf("output = %q, want no install from an expired manifest", out)
 	}
 }
+
+// Regression: a sync that verified an expired manifest and then failed to
+// save it reported the save failure, exit 1, instead of exit 13.
+func TestInstallFromRegistry_ExpiredManifestSaveFailureExits13(t *testing.T) {
+	s := newSyncedInstall(t)
+	expired := s.now.Add(-time.Hour)
+	s.manifest.Expires = &expired
+	s.env.syncResultFn = func() (moat.SyncResult, error) {
+		r := s.freshSync(t)
+		r.Staleness = moat.StalenessExpired
+		return r, nil
+	}
+	exitCode := withInstallGateStubs(t, false, false)
+	cfg := cfgWithPinnedMOATRegistry(t)
+	if err := os.Chmod(s.configDir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(s.configDir, 0o755) })
+
+	out := &bytes.Buffer{}
+	prov := integrationTestProvider()
+	err := runInstallFromRegistry(context.Background(), out, &bytes.Buffer{},
+		cfg, s.env.projectRoot, s.globalDir, "example", "my-skill",
+		&prov, installer.MethodSymlink, "", false, installer.ScanOptions{}, s.now)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if *exitCode != moat.ExitMoatManifestStale {
+		t.Errorf("exit code = %d, want %d", *exitCode, moat.ExitMoatManifestStale)
+	}
+}
