@@ -1,8 +1,9 @@
 package moatinstall
 
-// FetchAndRecord — the Proceed-branch action for both CLI and TUI MOAT
-// installs. Extracted from cmd/syllago/install_moat_fetch.go so the TUI can
-// reach it (cmd/syllago is a main package and cannot be imported).
+// Fetch helpers used by Operation.Install (install.go) for a MOAT registry
+// item: verify the registry's (and, for DUAL-ATTESTED items, the
+// publisher's) Rekor attestations, check the source type, clone the source
+// repo, extract the item, and record it in the in-memory lockfile.
 //
 // Behavior follows moat-spec.md §"Dual-Attested" and reference
 // implementation moat_verify.py (_online_step4 + _online_step5):
@@ -10,14 +11,14 @@ package moatinstall
 //   - SIGNED tier: fetch the registry's per-item Rekor entry by index and
 //     verify it against the manifest's RegistrySigningProfile. The
 //     per-item rekor_log_index is the REGISTRY's entry (spec line 786) —
-//     not the publisher's. Then download + hash-verify + extract + record.
+//     not the publisher's.
 //   - DUAL-ATTESTED tier: same as SIGNED for the registry leg, PLUS a
 //     separate fetch of moat-attestation.json from the publisher's source
 //     repo (moat-attestation branch) and verify the publisher's separate
 //     Rekor entry against per-item content[].signing_profile. Both legs
 //     must pass.
-//   - UNSIGNED tier: skip Rekor + verify, download + hash-verify + extract
-//     + record with a null AttestationBundle.
+//   - UNSIGNED tier: skip Rekor + verify; the lockfile entry carries a
+//     null AttestationBundle.
 //
 // Bug-fix history (syllago-cvwj5, 2026-04-25): prior code passed per-item
 // signing_profile as the pin for the registry's per-item Rekor entry,
@@ -29,7 +30,6 @@ package moatinstall
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -79,64 +79,6 @@ var FetchPublisherAttestationFn = moat.FetchPublisherAttestation
 // Now is the clock seam for lockfile pinned_at timestamps. Tests pin to a
 // fixed instant for deterministic snapshots.
 var Now = time.Now
-
-// FetchAndRecord runs the install side-effect for a verified manifest
-// entry. Returns the absolute path of the extracted source-artifact tree
-// on success.
-//
-// Caller responsibilities:
-//   - Gate decision has already cleared (PreInstallCheck returned Proceed
-//     or an interactive prompt was accepted).
-//   - lf is the in-memory lockfile; FetchAndRecord adds a LockEntry via
-//     installer.RecordInstall and persists with lf.Save.
-//   - registryName is the short config.Registry.Name (drives cache pathing);
-//     registryURL is the manifest URI that goes into LockEntry.Registry.
-//   - registryProfile is the manifest-level RegistrySigningProfile, used
-//     as the verification identity for the registry's per-item Rekor
-//     entry on every SIGNED and DUAL-ATTESTED item. Ignored for UNSIGNED
-//     items. The publisher's per-item signing_profile (entry.SigningProfile)
-//     is used separately, only on the Dual-Attested second leg.
-//   - trustedRootJSON is the Sigstore trusted-root bytes (e.g. from
-//     moat.BundledTrustedRoot). Required for SIGNED/DUAL-ATTESTED.
-func FetchAndRecord(
-	ctx context.Context,
-	entry *moat.ContentEntry,
-	registryName, registryURL, lockfilePath string,
-	lf *moat.Lockfile,
-	registryProfile *moat.SigningProfile,
-	trustedRootJSON []byte,
-) (string, error) {
-	if entry == nil {
-		return "", errors.New("FetchAndRecord: entry is nil")
-	}
-	if lf == nil {
-		return "", errors.New("FetchAndRecord: lockfile is nil")
-	}
-	rekorBundle, err := verifyAttestations(ctx, entry, registryName, registryProfile, trustedRootJSON)
-	if err != nil {
-		return "", err
-	}
-	categoryDir, err := checkSource(entry, registryName)
-	if err != nil {
-		return "", err
-	}
-	cloneDir, cleanup, err := cloneSource(ctx, moat.CloneRepoFn, entry, registryName)
-	if err != nil {
-		return "", err
-	}
-	defer cleanup()
-	targetDir, err := extractItem(cloneDir, categoryDir, entry, registryName)
-	if err != nil {
-		return "", err
-	}
-	if err := recordEntry(lf, entry, registryName, registryURL, rekorBundle, Now()); err != nil {
-		return "", err
-	}
-	if err := saveLockfile(lf, lockfilePath, entry, registryName); err != nil {
-		return "", err
-	}
-	return targetDir, nil
-}
 
 // verifyAttestations checks entry's transparency-log entries for its trust
 // tier and returns the registry's Rekor bundle, nil for an UNSIGNED entry.
@@ -371,18 +313,6 @@ func recordEntry(lf *moat.Lockfile, entry *moat.ContentEntry, registryName, regi
 			output.ErrMoatInvalid,
 			fmt.Sprintf("could not record install of %s/%s in lockfile", registryName, entry.Name),
 			"This is a programmer error; re-run with --dry-run and report the issue.",
-			err.Error(),
-		)
-	}
-	return nil
-}
-
-func saveLockfile(lf *moat.Lockfile, lockfilePath string, entry *moat.ContentEntry, registryName string) error {
-	if err := lf.Save(lockfilePath); err != nil {
-		return output.NewStructuredErrorDetail(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("could not save moat lockfile after recording %s/%s", registryName, entry.Name),
-			"Check filesystem permissions on .syllago/moat-lockfile.json.",
 			err.Error(),
 		)
 	}
