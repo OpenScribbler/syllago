@@ -76,7 +76,7 @@ func TestInstallFromRegistry_LockHeldReportsLock(t *testing.T) {
 
 	prov := integrationTestProvider()
 	err := runInstallFromRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(), env.projectRoot, globalDir, "example", "my-skill",
+		cfgWithPinnedMOATRegistry(t), env.projectRoot, globalDir, "example", "my-skill",
 		&prov, installer.MethodSymlink, "", false, installer.ScanOptions{}, now)
 	requireLockedError(t, err)
 }

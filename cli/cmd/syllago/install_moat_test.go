@@ -2,7 +2,7 @@ package main
 
 // Tests for the MOAT registry-sourced install dispatcher (bead
 // syllago-elvv3). Strategy mirrors registry_sync_moat_test.go: stub
-// moatSyncFn with canned SyncResult values for each gate branch, and
+// registryops.SyncOneFn with canned SyncResult values for each gate branch, and
 // capture moatSyncExit through a package-level seam swap so os.Exit does
 // not terminate the test process.
 //
@@ -24,6 +24,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 // --- parseRegistryItemSyntax --------------------------------------------
@@ -82,7 +83,7 @@ func TestShortHash_Table(t *testing.T) {
 // --- runInstallFromRegistry: routing errors ----------------------------
 
 func TestRunInstallFromRegistry_RegistryNotFound(t *testing.T) {
-	// No t.Parallel — may mutate moatSyncFn if downstream logic ever calls it.
+	// No t.Parallel — may mutate registryops.SyncOneFn if downstream logic ever calls it.
 	cfg := &config.Config{Registries: []config.Registry{}}
 	err := runInstallFromRegistry(
 		context.Background(),
@@ -166,13 +167,13 @@ func TestRunInstallFromRegistry_SyncStaleExits13(t *testing.T) {
 // --- runInstallFromRegistry: verify error surfaces as structured --------
 
 func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
-	orig := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{}, &moat.VerifyError{Code: moat.CodeIdentityMismatch, Message: "cert subject mismatch"}
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -193,13 +194,13 @@ func TestRunInstallFromRegistry_VerifyErrorMapsToStructured(t *testing.T) {
 }
 
 func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
-	orig := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{}, errors.New("dial tcp: connection refused")
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -222,8 +223,8 @@ func TestRunInstallFromRegistry_TransportErrorMapsToMoatInvalid(t *testing.T) {
 // --- runInstallFromRegistry: lookup outcomes ---------------------------
 
 func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
-	orig := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
 			ManifestURL: "https://example.com/m",
 			Manifest: &moat.Manifest{Content: []moat.ContentEntry{
@@ -232,9 +233,9 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 			IncomingProfile: incomingProfile(),
 		}, nil
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -255,8 +256,8 @@ func TestRunInstallFromRegistry_ItemNotInManifest(t *testing.T) {
 }
 
 func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
-	orig := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, lf *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, lf *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		// Emulate Sync's 304 side-effect: lockfile fetched_at advances.
 		lf.SetRegistryFetchedAt("https://example.com/m", time.Now().UTC())
 		return moat.SyncResult{
@@ -266,9 +267,9 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 			Staleness:   moat.StalenessFresh,
 		}, nil
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -291,10 +292,10 @@ func TestRunInstallFromRegistry_NotModifiedReturnsHint(t *testing.T) {
 // --- runInstallFromRegistry: dry-run happy path ------------------------
 
 func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
-	orig := moatSyncFn
+	orig := registryops.SyncOneFn
 	hash := "sha256:" + strings.Repeat("ab", 32)
 	rekorIdx := int64(12345)
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
 			ManifestURL: "https://example.com/m",
 			ETag:        `"v1"`,
@@ -311,10 +312,10 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 			RevocationsAdded: 0,
 		}, nil
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	var out bytes.Buffer
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&out,
@@ -347,9 +348,9 @@ func TestRunInstallFromRegistry_DryRunPrintsSummary(t *testing.T) {
 // and unsupported source_uri schemes surface MOAT_004 without touching disk.
 
 func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
-	orig := moatSyncFn
+	orig := registryops.SyncOneFn
 	hash := "sha256:" + strings.Repeat("cd", 32)
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
 			ManifestURL: "https://example.com/m",
 			Manifest: &moat.Manifest{Content: []moat.ContentEntry{{
@@ -362,9 +363,9 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 			Staleness:       moat.StalenessFresh,
 		}, nil
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -399,7 +400,7 @@ func TestRunInstallFromRegistry_NonDryRunGitSchemeUnsupported(t *testing.T) {
 // structured code would shift back to the "per-item Rekor bundle fetching
 // is not yet wired" string.
 func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
-	orig := moatSyncFn
+	orig := registryops.SyncOneFn
 	hash := "sha256:" + strings.Repeat("cd", 32)
 	idx := int64(42)
 	moatSigningProfile := moat.SigningProfile{
@@ -409,7 +410,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 		RepositoryID:      "100",
 		RepositoryOwnerID: "200",
 	}
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return moat.SyncResult{
 			ManifestURL: "https://example.com/m",
 			Manifest: &moat.Manifest{
@@ -426,7 +427,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 			Staleness:       moat.StalenessFresh,
 		}, nil
 	}
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	// Redirect Rekor to an invalid URL so the install fails AT the Rekor
 	// fetch step without creating an httptest listener. This proves the
@@ -435,7 +436,7 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 	moat.SetRekorBaseURLForTest("://invalid-rekor-url")
 	t.Cleanup(func() { moat.SetRekorBaseURLForTest(origRekor) })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -472,18 +473,18 @@ func TestRunInstallFromRegistry_NonDryRunSignedTier_ReachesFetch(t *testing.T) {
 // code (0 if the dispatcher never called moatSyncExit).
 func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectErr error) int {
 	t.Helper()
-	origFn := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	origFn := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		return res, injectErr
 	}
-	t.Cleanup(func() { moatSyncFn = origFn })
+	t.Cleanup(func() { registryops.SyncOneFn = origFn })
 
 	captured := 0
 	origExit := moatSyncExit
 	moatSyncExit = func(code int) { captured = code }
 	t.Cleanup(func() { moatSyncExit = origExit })
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	_ = runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -505,16 +506,27 @@ func runInstallWithStubbedSyncResult(t *testing.T, res moat.SyncResult, injectEr
 
 // cfgWithPinnedMOATRegistry returns a config with one MOAT registry whose
 // SigningProfile matches incomingProfile() — ensures the default stubbed
-// SyncResult doesn't accidentally trip the IsTOFU branch.
-func cfgWithPinnedMOATRegistry() *config.Config {
+// SyncResult doesn't accidentally trip the IsTOFU branch. It also saves the
+// config as the global one, where the install's sync looks the registry up,
+// giving the test its own config dir unless the test already set one.
+func cfgWithPinnedMOATRegistry(t *testing.T) *config.Config {
+	t.Helper()
+	if config.GlobalDirOverride == "" {
+		config.GlobalDirOverride = t.TempDir()
+		t.Cleanup(func() { config.GlobalDirOverride = "" })
+	}
 	pinned := incomingProfile()
-	return &config.Config{Registries: []config.Registry{{
+	cfg := &config.Config{Registries: []config.Registry{{
 		Name:           "example",
 		URL:            "https://example.com/m",
 		Type:           config.RegistryTypeMOAT,
 		ManifestURI:    "https://example.com/m",
 		SigningProfile: &pinned,
 	}}}
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save global config: %v", err)
+	}
+	return cfg
 }
 
 // assertStructuredCode fails the test if err is nil or is not a structured
@@ -535,13 +547,13 @@ func assertStructuredCode(t *testing.T, err error, wantCode string) {
 }
 
 // --- gate-branch tests: HardBlock / PublisherWarn / PrivatePrompt /
-// TierBelowPolicy. Each swaps moatSyncFn to return a manifest whose
+// TierBelowPolicy. Each swaps registryops.SyncOneFn to return a manifest whose
 // content/revocation shape drives the target decision; interactive vs
 // headless is controlled via the moatInstallInteractiveFn seam and the
 // moatInstallPromptFn seam so we never touch real stdin/stdout TTY
 // detection (which varies across CI environments).
 
-// syncResultWithManifest returns a moatSyncFn stub that yields a manifest
+// syncResultWithManifest returns a registryops.SyncOneFn stub that yields a manifest
 // with the given content + revocation rows. The incoming SigningProfile
 // matches cfgWithPinnedMOATRegistry so the TOFU branch is skipped.
 func syncResultWithManifest(entries []moat.ContentEntry, revs []moat.Revocation) func(context.Context, *config.Registry, *moat.Lockfile, []byte, *moat.Fetcher, time.Time) (moat.SyncResult, error) {
@@ -602,18 +614,18 @@ func signedManifestEntry(name, hash string) moat.ContentEntry {
 // MOATGateHardBlock.
 func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("aa", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		[]moat.Revocation{{ContentHash: hash, Reason: moat.RevocationReasonMalicious, Source: moat.RevocationSourceRegistry, DetailsURL: "https://example.com/rev"}},
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -634,12 +646,12 @@ func TestRunInstallFromRegistry_HardBlockReturnsStructured(t *testing.T) {
 // moatSyncExit(12) fires.
 func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("bb", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		[]moat.Revocation{{ContentHash: hash, Reason: moat.RevocationReasonDeprecated, Source: moat.RevocationSourcePublisher, DetailsURL: "https://example.com/rev"}},
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	capturedExit := withInstallGateStubs(t, false, false)
 
@@ -647,7 +659,7 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -674,12 +686,12 @@ func TestRunInstallFromRegistry_PublisherWarnHeadlessExits12(t *testing.T) {
 // suppression + proceed composition works end-to-end.
 func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("cc", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		[]moat.Revocation{{ContentHash: hash, Reason: moat.RevocationReasonMalicious, Source: moat.RevocationSourcePublisher, DetailsURL: "https://example.com/rev"}},
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	capturedExit := withInstallGateStubs(t, true, true)
 
@@ -687,7 +699,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -711,12 +723,12 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveYesProceeds(t *testing.T
 // refusal message is written to stderr for the operator's log).
 func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("dd", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		[]moat.Revocation{{ContentHash: hash, Source: moat.RevocationSourcePublisher, Reason: moat.RevocationReasonMalicious, DetailsURL: "https://example.com/rev"}},
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	capturedExit := withInstallGateStubs(t, true, false)
 
@@ -725,7 +737,7 @@ func TestRunInstallFromRegistry_PublisherWarnInteractiveNoRefuses(t *testing.T) 
 		context.Background(),
 		&bytes.Buffer{},
 		&errBuf,
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -755,9 +767,9 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("ee", 32)
 	entry := signedManifestEntry("my-skill", hash)
 	entry.PrivateRepo = true
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest([]moat.ContentEntry{entry}, nil)
-	t.Cleanup(func() { moatSyncFn = orig })
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest([]moat.ContentEntry{entry}, nil)
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	capturedExit := withInstallGateStubs(t, false, false)
 
@@ -765,7 +777,7 @@ func TestRunInstallFromRegistry_PrivatePromptHeadlessExits10(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -791,9 +803,9 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 	hash := "sha256:" + strings.Repeat("ff", 32)
 	entry := signedManifestEntry("my-skill", hash)
 	entry.PrivateRepo = true
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest([]moat.ContentEntry{entry}, nil)
-	t.Cleanup(func() { moatSyncFn = orig })
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest([]moat.ContentEntry{entry}, nil)
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	withInstallGateStubs(t, true, true)
 
@@ -801,7 +813,7 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -821,12 +833,12 @@ func TestRunInstallFromRegistry_PrivatePromptInteractiveYesProceeds(t *testing.T
 // returns MOATGateTierBelowPolicy and the caller surfaces MOAT_009.
 func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("12", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		nil,
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	origMin := moatInstallMinTier
 	moatInstallMinTier = moat.TrustTierDualAttested
@@ -836,7 +848,7 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
@@ -856,18 +868,18 @@ func TestRunInstallFromRegistry_TierBelowPolicyReturnsStructured(t *testing.T) {
 // non-proceed outcome without triggering the prompt.
 func TestRunInstallFromRegistry_DryRunPreviewsGateDecision(t *testing.T) {
 	hash := "sha256:" + strings.Repeat("34", 32)
-	orig := moatSyncFn
-	moatSyncFn = syncResultWithManifest(
+	orig := registryops.SyncOneFn
+	registryops.SyncOneFn = syncResultWithManifest(
 		[]moat.ContentEntry{signedManifestEntry("my-skill", hash)},
 		[]moat.Revocation{{ContentHash: hash, Source: moat.RevocationSourceRegistry, Reason: moat.RevocationReasonMalicious, DetailsURL: "https://example.com/rev"}},
 	)
-	t.Cleanup(func() { moatSyncFn = orig })
+	t.Cleanup(func() { registryops.SyncOneFn = orig })
 
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		t.TempDir(),
 		t.TempDir(),
 		"example",
