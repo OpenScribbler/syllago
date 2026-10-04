@@ -427,19 +427,22 @@ func TestRegistryInstall_TOFUAnswerMatchesRegistry(t *testing.T) {
 // the Library while the catalog still showed it as a registry item.
 func TestRegistryInstall_FailureAfterStagingRescans(t *testing.T) {
 	staged := moatinstall.Result{Stage: lifecycle.Outcome{Completed: []lifecycle.Step{{}}}}
+	install := registryInstall{req: moatinstall.Request{Targets: []lifecycle.Target{{}}}}
 	for _, tc := range []struct {
 		name   string
+		p      registryInstall
 		res    moatinstall.Result
 		err    error
 		rescan bool
 	}{
-		{"cancelled after staging", staged, context.Canceled, true},
-		{"failed after staging", staged, errors.New("boom"), true},
-		{"failed before staging", moatinstall.Result{}, errors.New("boom"), false},
+		{"cancelled after staging", install, staged, context.Canceled, true},
+		{"failed after staging", install, staged, errors.New("boom"), true},
+		{"failed before staging", install, moatinstall.Result{}, errors.New("boom"), false},
+		{"add failed after staging", registryInstall{}, staged, errors.New("boom"), true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newRegistryEnv(t)
-			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{res: tc.res, err: tc.err})
+			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{install: tc.p, res: tc.res, err: tc.err})
 			if got := yieldsCatalogReady(cmd); got != tc.rescan {
 				t.Errorf("rescanned=%v, want %v", got, tc.rescan)
 			}
@@ -471,5 +474,53 @@ func yieldsCatalogReady(cmd tea.Cmd) bool {
 		return true
 	case <-time.After(2 * time.Second):
 		return false
+	}
+}
+
+// Regression: Add copied a synced MOAT item's cached files into the
+// Library without verifying them against the manifest.
+func TestRegistryAdd_StagesWithoutInstalling(t *testing.T) {
+	e := newRegistryEnv(t)
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if !e.inLibrary() || e.placed() {
+		t.Fatalf("Library=%v placed=%v, want staged and not placed; toasts:\n%s", e.inLibrary(), e.placed(), e.toast())
+	}
+	if !strings.Contains(e.toast(), "Added \"my-skill\" to library") {
+		t.Errorf("toasts:\n%s\nwant the add reported", e.toast())
+	}
+	if e.app.pendingInstallAfterAddName != "" {
+		t.Errorf("a plain add queued the install wizard for %q", e.app.pendingInstallAfterAddName)
+	}
+}
+
+func TestRegistryAdd_HashMismatchRefused(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Content[0].ContentHash = "sha256:" + strings.Repeat("0", 64)
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if e.inLibrary() {
+		t.Fatal("content that does not match the manifest's hash reached the Library")
+	}
+	if !strings.Contains(e.toast(), "Failed to add") {
+		t.Errorf("toasts:\n%s\nwant the add reported failed", e.toast())
+	}
+}
+
+func TestRegistryAdd_InstallAfterQueuesWizard(t *testing.T) {
+	e := newRegistryEnv(t)
+	m, cmd := e.app.handleLibraryAddInstall(&e.item)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if !e.inLibrary() || e.placed() {
+		t.Fatalf("Library=%v placed=%v, want staged and not placed", e.inLibrary(), e.placed())
+	}
+	if e.app.pendingInstallAfterAddName != "my-skill" || e.app.pendingInstallAfterAddType != catalog.Skills {
+		t.Errorf("pending install %q/%q, want skills/my-skill", e.app.pendingInstallAfterAddType, e.app.pendingInstallAfterAddName)
 	}
 }

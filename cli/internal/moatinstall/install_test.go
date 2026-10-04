@@ -159,6 +159,24 @@ func TestInstall_DryRunFetchesNothing(t *testing.T) {
 	}
 }
 
+// A request naming no items lists what the registry offers and fetches
+// nothing.
+func TestInstall_NoItemsReturnsManifest(t *testing.T) {
+	e := newOpEnv(t, "a", "b")
+	req := e.request()
+	req.DryRun = true
+	res, err := e.op.Install(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if res.Manifest == nil || len(res.Manifest.Content) != 2 {
+		t.Fatalf("Manifest = %+v, want both items", res.Manifest)
+	}
+	if e.clones != 0 || len(res.Items) != 0 {
+		t.Errorf("cloned %d times, items=%v; want neither", e.clones, res.Items)
+	}
+}
+
 // An item no target can take fails before its source is downloaded.
 func TestInstall_UnsupportedTargetFailsBeforeFetch(t *testing.T) {
 	e := newOpEnv(t, "a")

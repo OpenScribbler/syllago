@@ -28,6 +28,7 @@ type registryInstall struct {
 	item         catalog.ContentItem // the registry item, for the modals
 	providerName string              // the single target's name; empty for install-all
 	all          bool
+	installAfter bool // an add opens the install wizard once the item is staged
 }
 
 // pendingRegistryDecision is a registry install waiting on the user's
@@ -89,6 +90,26 @@ func (a App) registryInstallAllFor(msg installAllResultMsg) registryInstall {
 	}
 }
 
+// registryAddFor builds the operation's request for an add: the item is
+// fetched, verified and staged into the Library, and placed nowhere.
+func (a App) registryAddFor(item catalog.ContentItem, installAfter bool) registryInstall {
+	return registryInstall{
+		req: moatinstall.Request{
+			Registry:    item.Registry,
+			Items:       []string{item.Name},
+			ProjectRoot: a.projectRoot,
+			Session:     a.moatSession,
+		},
+		item:         item,
+		installAfter: installAfter,
+	}
+}
+
+// addOnly reports whether the request stages the item without installing it.
+func (p registryInstall) addOnly() bool {
+	return len(p.req.Targets) == 0
+}
+
 // displayName names the item in toasts.
 func (p registryInstall) displayName() string {
 	if p.item.DisplayName != "" {
@@ -107,7 +128,11 @@ func (a App) startRegistryInstall(p registryInstall) (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.registryInstallCancel = cancel
 	op := registryInstallOp(a.moatMinTier)
-	toast := a.toast.Push(fmt.Sprintf("Installing %q from %s... (Esc cancels)", p.displayName(), p.req.Registry), toastSuccess)
+	verb := "Installing"
+	if p.addOnly() {
+		verb = "Adding"
+	}
+	toast := a.toast.Push(fmt.Sprintf("%s %q from %s... (Esc cancels)", verb, p.displayName(), p.req.Registry), toastSuccess)
 	run := func() tea.Msg {
 		defer cancel()
 		res, err := op.Install(ctx, p.req)
@@ -135,8 +160,23 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 		return app, tea.Batch(cmd, app.rescanCatalog())
 	}
 	if errors.Is(msg.err, context.Canceled) {
-		cmd := a.toast.Push("Install cancelled", toastWarning)
+		text := "Install cancelled"
+		if p.addOnly() {
+			text = "Add cancelled"
+		}
+		cmd := a.toast.Push(text, toastWarning)
 		return failed(a, cmd)
+	}
+	if p.addOnly() {
+		err := msg.err
+		if err == nil {
+			err = msg.res.Items[0].Err
+		}
+		done := libraryAddDoneMsg{name: p.item.Name, itemType: p.item.Type, err: err, installAfter: p.installAfter}
+		if err != nil {
+			return failed(a.handleLibraryAddDone(done))
+		}
+		return a.handleLibraryAddDone(done)
 	}
 	if msg.err != nil {
 		cmd := a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
@@ -205,10 +245,14 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 		}
 		item := p.item
 		a.pendingRegistryDecision = pending
+		verb := "Install"
+		if p.addOnly() {
+			verb = "Add"
+		}
 		if decision.Kind == lifecycle.PublisherWarn {
-			a.confirm.OpenForItem(publisherWarnTitle(item), publisherWarnBody(item, prompts[0].Gate.Revocation), "Install anyway", true, nil, item)
+			a.confirm.OpenForItem(publisherWarnTitle(item), publisherWarnBody(item, prompts[0].Gate.Revocation), verb+" anyway", true, nil, item)
 		} else {
-			a.confirm.OpenForItem(privatePromptTitle(item), privatePromptBody(item), "Install", false, nil, item)
+			a.confirm.OpenForItem(privatePromptTitle(item), privatePromptBody(item), verb, false, nil, item)
 		}
 		return a, nil
 

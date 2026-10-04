@@ -1273,11 +1273,10 @@ func (a App) handleLibraryAdd(item *catalog.ContentItem, installAfter bool) (tea
 	if item == nil {
 		return a, nil
 	}
-	// MOAT unstaged items (empty Path) need to be fetched at install time,
-	// not copied — direct them to the install wizard.
-	if isUnstagedRegistryItem(item) {
-		cmd := a.toast.Push("Use [i] Install to add this registry item", toastWarning)
-		return a, cmd
+	// A MOAT registry item reaches the Library only after it is fetched and
+	// verified against its manifest; cached files are a preview.
+	if isMOATRegistryItem(item) {
+		return a.startRegistryInstall(a.registryAddFor(*item, installAfter))
 	}
 	if item.Path == "" {
 		cmd := a.toast.Push("Item has no local path; cannot add directly", toastWarning)

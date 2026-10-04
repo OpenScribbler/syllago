@@ -84,6 +84,9 @@ type GatePrompt struct {
 type Result struct {
 	Sync      registryops.SyncOutcome
 	Staleness moat.StalenessStatus // of the manifest the gate read
+	// Manifest is the manifest the gate read, so a caller can list what
+	// the registry offers. Nil when the sync stopped the call.
+	Manifest *moat.Manifest
 	// Stage is the outcome of staging every fetched item into the Library.
 	Stage lifecycle.Outcome
 	Items []ItemResult // in Request.Items order
@@ -173,6 +176,7 @@ func (o *Operation) Install(ctx context.Context, req Request) (Result, error) {
 	if err != nil {
 		return res, err
 	}
+	res.Manifest = manifest
 	lockfilePath := moat.LockfilePath(req.ProjectRoot)
 	passed, err := o.gateItems(req, reg, manifest, lockfilePath, &res)
 	if err != nil || req.DryRun {
