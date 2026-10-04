@@ -32,15 +32,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
-// moatSyncFn is the low-level test seam used by install_moat.go (which runs
-// its own sync inline rather than going through the orchestrator). The
-// `syllago registry sync` path uses registryops.SyncOneFn instead.
-//
-// Keeping both seams is deliberate: install needs to control the sync ↔
-// install ordering itself, while the registry-sync command can delegate the
-// whole orchestration. Tests for either path stub their own seam.
-var moatSyncFn = moat.Sync
-
 // syncMOATRegistry runs one MOAT sync against `reg` and returns a
 // NonInteractiveFailure-shaped exit code.
 //

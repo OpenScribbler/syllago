@@ -27,9 +27,9 @@ package main
 //   - Touch the filesystem. No file copy, no symlink, no audit log.
 //   - Append LockEntry rows. lockfile.Save is never called.
 //
-// Side effects on success: registry.ManifestETag and registry.LastFetchedAt
-// are updated (and cfg saved) exactly as the existing syncMOATRegistry
-// dispatcher does. This mirroring is intentional — an install that begins
+// Side effects on success: the sync runs through registryops.SyncOne, the
+// same orchestrator `syllago registry sync` uses, so it saves the same
+// state to the same places. This is intentional — an install that begins
 // with a 200 + verified sync has legitimately advanced the trust clock,
 // even if the install itself is not yet performed. Pipelines that run
 // `syllago install foo/bar --dry-run` get the same fetched_at advance
@@ -54,6 +54,8 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/regdiff"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
 
@@ -130,8 +132,8 @@ func parseRegistryItemSyntax(arg string) (string, string, bool) {
 // cobra cannot express exit codes beyond 1.
 //
 // The function re-uses the same seams as syncMOATRegistry so test harnesses
-// written for that path (moatSyncFn, moatSyncExit) compose without
-// additional stubbing.
+// written for that path (registryops.SyncOneFn, moatSyncExit) compose
+// without additional stubbing.
 // targetProv is the provider that the resolved MOAT item should be
 // installed to once fetchAndRecord has staged its source-cache directory.
 // May be nil for dry-run paths or when the caller has not yet selected
@@ -183,12 +185,6 @@ func runInstallFromRegistry(
 		)
 	}
 
-	lockfilePath := moat.LockfilePath(cfgRoot)
-	lf, err := moat.LoadLockfile(lockfilePath)
-	if err != nil {
-		return fmt.Errorf("load lockfile: %w", err)
-	}
-
 	// Sync *before* the gate. A stale manifest cannot correctly classify
 	// revocations or tiers; re-fetching here means the gate always reads
 	// from the freshest view the network can provide. TOFU and profile-
@@ -200,8 +196,28 @@ func runInstallFromRegistry(
 	// scheduling one job; the spec's row-1 MUST-exit is meant to prevent
 	// exactly that shortcut. Operators run `syllago registry add --yes`
 	// interactively first; only then can install succeed.
-	res, err := moatSyncFn(ctx, reg, lf, rootInfo.Bytes, nil, now)
+	//
+	// SyncOne persists what `syllago registry sync` persists: the registry's
+	// ETag and fetch time in the global config, where `registry add` saved
+	// the registry, the lockfile, and the manifest and content caches.
+	cacheDir, err := config.GlobalDirPath()
 	if err != nil {
+		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine the syllago config directory", "Set the HOME environment variable")
+	}
+	synced, err := registryops.SyncOne(ctx, reg.Name, registryops.SyncOpts{
+		LockfileRoot: cfgRoot,
+		CacheDir:     cacheDir,
+		Now:          now,
+	})
+	if err != nil {
+		// Sync classifies expiry only after the manifest verified, and it
+		// saves an expired manifest like any other. A failed save still
+		// leaves the install refused for the expiry, under its own exit.
+		if synced.MoatResult.Staleness == moat.StalenessExpired {
+			fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
+			moatSyncExit(moat.ExitMoatManifestStale)
+			return nil
+		}
 		var ve *moat.VerifyError
 		if errors.As(err, &ve) {
 			return classifyVerifyError(reg.Name, err)
@@ -213,60 +229,48 @@ func runInstallFromRegistry(
 			err.Error(),
 		)
 	}
+	res := synced.MoatResult
 
-	if res.ProfileChanged {
+	if synced.GateProfileChanged {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureSigningProfileChange.Message())
 		moatSyncExit(moat.ExitMoatSigningProfileChange)
 		return nil
 	}
-	if res.IsTOFU {
+	if synced.GateTOFUNeeded {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureTOFUAcceptance.Message())
 		moatSyncExit(moat.ExitMoatTOFUAcceptance)
 		return nil
 	}
-	if res.Staleness == moat.StalenessExpired {
+
+	// A 304 returns no manifest body: the copy cached by the sync that
+	// fetched it is still the current one. Sync classified the 304 without
+	// that body, so its expiry is checked here.
+	manifest := res.Manifest
+	staleness := res.Staleness
+	if res.NotModified {
+		manifest, err = regdiff.LoadCachedManifest(cacheDir, reg.Name)
+		if err != nil || manifest == nil {
+			return output.NewStructuredError(
+				output.ErrMoatInvalid,
+				fmt.Sprintf("registry %q is at the pinned revision but the manifest body is not cached locally", reg.Name),
+				"Clear the cached ETag by removing the `manifest_etag` field for registry \""+reg.Name+"\" from ~/.syllago/config.json, then run `syllago registry sync "+reg.Name+"` to force a full re-fetch.",
+			)
+		}
+		staleness = moat.CheckStaleness(res.FetchedAt, manifest.Expires, now)
+	}
+	if staleness == moat.StalenessExpired {
 		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
 		moatSyncExit(moat.ExitMoatManifestStale)
 		return nil
 	}
 
-	// Happy path — persist the sync state before any further action.
-	// Failing to persist here would force the next install to re-fetch +
-	// re-verify, losing the freshness progress we just paid for.
-	reg.ManifestETag = res.ETag
-	fetchedAt := res.FetchedAt
-	reg.LastFetchedAt = &fetchedAt
-	if err := config.Save(cfgRoot, cfg); err != nil {
-		return output.NewStructuredErrorDetail(
-			output.ErrRegistrySaveFailed,
-			fmt.Sprintf("could not persist sync state for registry %q", reg.Name),
-			"Check filesystem permissions on .syllago/config.json.",
-			err.Error(),
-		)
-	}
-	if err := lf.Save(lockfilePath); err != nil {
-		return output.NewStructuredErrorDetail(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("could not persist moat lockfile after syncing %q", reg.Name),
-			"Check filesystem permissions on .syllago/moat-lockfile.json.",
-			err.Error(),
-		)
+	lockfilePath := moat.LockfilePath(cfgRoot)
+	lf, err := moat.LoadLockfile(lockfilePath)
+	if err != nil {
+		return fmt.Errorf("load lockfile: %w", err)
 	}
 
-	// NotModified: the previously-cached manifest is still authoritative,
-	// but res.Manifest is nil (no bytes re-parsed). We currently have no
-	// on-disk cache of the verified manifest body, so we cannot resolve
-	// the ContentEntry without re-fetching. Direct the operator to run a
-	// full sync — a 200 path will repopulate res.Manifest next time.
-	if res.NotModified {
-		return output.NewStructuredError(
-			output.ErrMoatInvalid,
-			fmt.Sprintf("registry %q is at the pinned revision but the manifest body is not cached locally", reg.Name),
-			"Clear the cached ETag by removing the `manifest_etag` field for registry \""+reg.Name+"\" from .syllago/config.json, then run `syllago registry sync "+reg.Name+"` to force a full re-fetch.",
-		)
-	}
-
-	entry, ok := moat.FindContentEntry(res.Manifest, itemName)
+	entry, ok := moat.FindContentEntry(manifest, itemName)
 	if !ok {
 		return output.NewStructuredError(
 			output.ErrInstallItemNotFound,
@@ -283,7 +287,7 @@ func runInstallFromRegistry(
 	// for this single `syllago install` call — which is the right
 	// granularity because each install is a discrete authorization act.
 	revSet := moat.NewRevocationSet()
-	revSet.AddFromManifest(res.Manifest, reg.ManifestURI)
+	revSet.AddFromManifest(manifest, reg.ManifestURI)
 	session := moat.NewSession()
 
 	gate := installer.PreInstallCheck(entry, reg.ManifestURI, lf, revSet, session, moatInstallMinTier)
@@ -307,7 +311,7 @@ func runInstallFromRegistry(
 	}
 
 	if dryRun {
-		printRegistryItemSummaryWithGate(out, reg.Name, entry, res.RevocationsAdded, res.Staleness, gate.Decision)
+		printRegistryItemSummaryWithGate(out, reg.Name, entry, res.RevocationsAdded, staleness, gate.Decision)
 		return nil
 	}
 
@@ -320,7 +324,7 @@ func runInstallFromRegistry(
 	// at sync time (rootInfo.Status check above).
 	cacheDir, fetchErr := moatinstall.FetchAndRecord(
 		ctx, entry, reg.Name, reg.ManifestURI, lockfilePath, lf,
-		&res.Manifest.RegistrySigningProfile, rootInfo.Bytes,
+		&manifest.RegistrySigningProfile, rootInfo.Bytes,
 	)
 	if fetchErr != nil {
 		return fetchErr

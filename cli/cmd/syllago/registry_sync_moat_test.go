@@ -2,7 +2,7 @@ package main
 
 // Tests for the registry-sync MOAT dispatcher (bead syllago-gj7ad).
 //
-// Strategy mirrors registry_verify_test.go: swap moatSyncFn for canned
+// Strategy mirrors registry_verify_test.go: swap registryops.SyncOneFn for canned
 // SyncResult values so each G-18 exit-code branch is exercised without
 // standing up a live httptest + bundle pair per test. One end-to-end test
 // (TestSyncMOAT_EndToEnd_HappyPath) does spin up a real httptest server to
@@ -29,10 +29,6 @@ import (
 // withStubbedMoatSync swaps the orchestrator's SyncOneFn seam (which the
 // CLI's syncMOATRegistry now delegates to). Tests using this helper MUST NOT
 // run in parallel with each other (mutates a shared global).
-//
-// Note: install_moat_test.go and install_moat_integration_test.go still stub
-// the lower-level moatSyncFn directly, since the install path bypasses the
-// orchestrator and runs sync inline.
 func withStubbedMoatSync(
 	t *testing.T,
 	fn func(context.Context, *config.Registry, *moat.Lockfile, []byte, *moat.Fetcher, time.Time) (moat.SyncResult, error),
@@ -118,7 +114,7 @@ func syncMOATDriftEntry(name, digit string) moat.ContentEntry {
 }
 
 func TestSyncMOAT_HappyPath_PinnedProfile(t *testing.T) {
-	// No t.Parallel — swaps package-level moatSyncFn and GlobalDirOverride.
+	// No t.Parallel — swaps package-level registryops.SyncOneFn and GlobalDirOverride.
 	root := tempProjectRoot(t)
 	pinned := incomingProfile()
 	reg := moatRegFixture("https://registry.example.com/manifest.json")

@@ -7,7 +7,7 @@ package main
 //
 //   moatSync (stubbed) -> gate evaluation -> fetchAndRecord -> lockfile
 //
-// The stub at moatSyncFn lets us inject a verified SyncResult without
+// The stub at registryops.SyncOneFn lets us inject a verified SyncResult without
 // standing up real sigstore + Rekor fixtures here — those are covered
 // in cli/internal/moat's unit tests. The integration surface we actually
 // want to exercise end-to-end is the CLI dispatch + gate + fetch +
@@ -47,6 +47,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/registryops"
 )
 
 // integrationTestProvider is a minimal provider stub for the integration
@@ -104,14 +105,14 @@ func setupIntegrationEnv(t *testing.T) *integrationEnv {
 
 	// Fail-closed default: if a test doesn't set syncResultFn, force a
 	// loud error so stub drift is caught.
-	origSync := moatSyncFn
-	moatSyncFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
+	origSync := registryops.SyncOneFn
+	registryops.SyncOneFn = func(_ context.Context, _ *config.Registry, _ *moat.Lockfile, _ []byte, _ *moat.Fetcher, _ time.Time) (moat.SyncResult, error) {
 		if env.syncResultFn == nil {
 			return moat.SyncResult{}, errors.New("integration test did not wire syncResultFn")
 		}
 		return env.syncResultFn()
 	}
-	t.Cleanup(func() { moatSyncFn = origSync })
+	t.Cleanup(func() { registryops.SyncOneFn = origSync })
 
 	return env
 }
@@ -154,7 +155,7 @@ func TestInstallIntegration_CleanUnsignedSucceeds(t *testing.T) {
 	}
 
 	out := &bytes.Buffer{}
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	prov := integrationTestProvider()
 	err := runInstallFromRegistry(
 		context.Background(),
@@ -300,7 +301,7 @@ func TestInstallIntegration_RegistryRevocationRefuses(t *testing.T) {
 		}, nil
 	}
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -353,7 +354,7 @@ func TestInstallIntegration_PublisherWarnHeadlessExits12(t *testing.T) {
 		}, nil
 	}
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -398,7 +399,7 @@ func TestInstallIntegration_PrivatePromptHeadlessExits10(t *testing.T) {
 		}, nil
 	}
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -445,7 +446,7 @@ func TestInstallIntegration_TierBelowPolicyRefuses(t *testing.T) {
 		}, nil
 	}
 
-	cfg := cfgWithPinnedMOATRegistry()
+	cfg := cfgWithPinnedMOATRegistry(t)
 	err := runInstallFromRegistry(
 		context.Background(),
 		&bytes.Buffer{},
@@ -509,7 +510,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		env.projectRoot,
 		globalDir,
 		"example",
@@ -566,7 +567,7 @@ func TestInstallIntegration_ReplaceWithRecord(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		env.projectRoot,
 		globalDir,
 		"example",
@@ -674,7 +675,7 @@ func TestInstallIntegration_ReplaceWithoutRecord(t *testing.T) {
 		context.Background(),
 		&bytes.Buffer{},
 		&bytes.Buffer{},
-		cfgWithPinnedMOATRegistry(),
+		cfgWithPinnedMOATRegistry(t),
 		env.projectRoot,
 		globalDir,
 		"example",
