@@ -245,7 +245,7 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 // pendingInstallAll is ever set (see handleInstallResult /
 // handleInstallAllResult).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
-	if pending := a.pendingRegistryDecision; pending != nil && pending.decision.Kind != lifecycle.TrustOnFirstUse {
+	if pending := a.pendingRegistryDecision; pending != nil && msg.purpose == confirmPurposeRegistryDecision {
 		a.pendingRegistryDecision = nil
 		return a.answerRegistryDecision(*pending, msg.confirmed)
 	}
@@ -686,7 +686,7 @@ func (a App) handleMOATSyncDone(msg moatSyncDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.requiresTOFU {
 		// A registry install's prompt may be open; replacing it would send
 		// this answer to that install.
-		if a.anyOverlayActive() {
+		if a.promptOpen() {
 			return a, a.toast.Push("Syncing "+msg.name+" needs a trust decision, but another prompt is open; sync again after closing that one", toastWarning)
 		}
 		a.tofu.Open(msg.name, msg.manifestURL, msg.incomingProfile)

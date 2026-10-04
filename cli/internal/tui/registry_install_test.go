@@ -14,7 +14,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
-	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -279,7 +278,7 @@ func TestRegistryInstall_PublisherWarning(t *testing.T) {
 		}
 
 		e.app.confirm.active = false
-		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item})
+		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item, purpose: confirmPurposeRegistryDecision})
 		if !confirmed {
 			if len(e.syncs) != 1 || e.inLibrary() {
 				t.Errorf("declined: syncs=%d Library=%v, want no second run", len(e.syncs), e.inLibrary())
@@ -350,7 +349,7 @@ func TestRegistryInstall_PrivateSource(t *testing.T) {
 		}
 
 		e.app.confirm.active = false
-		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item})
+		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item, purpose: confirmPurposeRegistryDecision})
 		if !confirmed {
 			if len(e.syncs) != 1 || e.inLibrary() {
 				t.Errorf("declined: syncs=%d Library=%v, want no second run", len(e.syncs), e.inLibrary())
@@ -426,7 +425,7 @@ func TestRegistryInstall_TOFUAnswerMatchesRegistry(t *testing.T) {
 // Regression: an install cancelled or failed after staging left the item in
 // the Library while the catalog still showed it as a registry item.
 func TestRegistryInstall_FailureAfterStagingRescans(t *testing.T) {
-	staged := moatinstall.Result{Stage: lifecycle.Outcome{Completed: []lifecycle.Step{{}}}}
+	staged := moatinstall.Result{Items: []moatinstall.ItemResult{{Library: catalog.ContentItem{Name: "my-skill"}}}}
 	for _, tc := range []struct {
 		name   string
 		res    moatinstall.Result
@@ -444,6 +443,73 @@ func TestRegistryInstall_FailureAfterStagingRescans(t *testing.T) {
 				t.Errorf("rescanned=%v, want %v", got, tc.rescan)
 			}
 		})
+	}
+}
+
+// Regression: staging records nothing in Result.Stage, so a rescan keyed on
+// it never ran after a real install failed to place a staged item.
+func TestRegistryInstall_PlacementFailureRescans(t *testing.T) {
+	e := newRegistryEnv(t)
+	// A file where the provider's directory belongs makes placement fail.
+	if err := os.WriteFile(filepath.Join(e.home, ".stub"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	msg, ok := waitInstall(cmd)
+	if !ok {
+		t.Fatal("the registry install never reported")
+	}
+	cmd = e.update(msg)
+
+	if !e.inLibrary() || e.placed() {
+		t.Fatalf("Library=%v placed=%v, want staged and not placed", e.inLibrary(), e.placed())
+	}
+	if !strings.Contains(e.toast(), "Install failed") {
+		t.Errorf("toasts:\n%s\nwant the install reported failed", e.toast())
+	}
+	if !yieldsCatalogReady(cmd) {
+		t.Error("the catalog was not read again after staging")
+	}
+}
+
+// Regression: a confirm modal's answer that arrived after a registry
+// decision opened its own prompt was taken as the answer to that decision.
+func TestRegistryInstall_UnrelatedConfirmIsNotTheAnswer(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+	if e.app.pendingRegistryDecision == nil {
+		t.Fatal("no decision pending")
+	}
+
+	e.update(confirmResultMsg{confirmed: true, itemName: "other"})
+	if e.app.pendingRegistryDecision == nil || e.placed() {
+		t.Errorf("pending=%v placed=%v, want the decision still waiting", e.app.pendingRegistryDecision != nil, e.placed())
+	}
+}
+
+// Regression: a decision opened its prompt over a wizard, which kept the
+// keyboard, so the prompt could not be answered.
+func TestRegistryInstall_DecisionWaitsForWizard(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.app.wizardMode = wizardInstall
+	e.awaitInstall(t, cmd)
+
+	if e.app.pendingRegistryDecision != nil || e.app.confirm.active {
+		t.Errorf("pending=%v confirm=%v, want no prompt over the wizard", e.app.pendingRegistryDecision != nil, e.app.confirm.active)
+	}
+	if !strings.Contains(e.toast(), "another prompt is open") {
+		t.Errorf("toasts:\n%s\nwant the deferred decision reported", e.toast())
 	}
 }
 
