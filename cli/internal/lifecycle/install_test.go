@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -294,6 +295,28 @@ func TestInstall_LockFailureAttemptsNothing(t *testing.T) {
 		t.Fatalf("err = %v, want the lock error", err)
 	}
 	if len(p.calls) != 0 || len(out.Unattempted) != 2 || out.Changed {
+		t.Errorf("calls = %v, Unattempted = %d, Changed = %v", p.calls, len(out.Unattempted), out.Changed)
+	}
+}
+
+// Regression: a cancel that landed while Install waited for the lock still
+// placed, recorded and pinned the item.
+func TestInstall_CancelDuringLockWaitAttemptsNothing(t *testing.T) {
+	isolate(t)
+	p := &scriptedPlacer{}
+	m := scriptedModule(p)
+	ctx, cancel := context.WithCancel(context.Background())
+	m.lock = func() (func(), error) {
+		cancel() // the cancel arrives while the caller waits
+		return func() {}, nil
+	}
+
+	out, err := m.Install(InstallRequest{Item: libraryItem(t, "r7", ""), Targets: targets("alpha"), Context: ctx})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	if len(p.calls) != 0 || len(out.Unattempted) != 1 || out.Changed {
 		t.Errorf("calls = %v, Unattempted = %d, Changed = %v", p.calls, len(out.Unattempted), out.Changed)
 	}
 }

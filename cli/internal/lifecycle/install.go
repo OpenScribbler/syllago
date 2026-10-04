@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -22,6 +23,9 @@ type InstallRequest struct {
 	Frozen     bool                         // pin the item after it installs
 	Provenance *installstore.MOATProvenance // nil keeps any recorded provenance
 	Source     string                       // who appended a rule: "manual", "tui"
+	// Context, when set, is checked once the lock is held: a cancel during
+	// the wait for the lock attempts nothing.
+	Context context.Context
 }
 
 var errPinNotRegistry = errors.New("only registry items can be pinned")
@@ -40,6 +44,12 @@ func (m *Module) Install(req InstallRequest) (Outcome, error) {
 		return out, err
 	}
 	defer release()
+	if req.Context != nil {
+		if err := req.Context.Err(); err != nil {
+			out.Unattempted = append(out.Unattempted, req.Targets...)
+			return out, err
+		}
+	}
 
 	coord := recordCoord(req.Item)
 	storePath, storeErr := installstore.DefaultPath()
