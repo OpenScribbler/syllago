@@ -77,6 +77,7 @@ type ContentItem struct {
 	Library     bool           // true if item lives in the global content library (~/.syllago/content/)
 	Registry    string         // non-empty if item came from a git registry (value is the registry name)
 	Source      string         // "project", "global", "library", or registry name
+	MOAT        bool           // listed by a MOAT registry's manifest, whether or not the manifest is fresh
 
 	// MOAT trust state. TrustTier is the normative internal classification
 	// (Dual-Attested / Signed / Unsigned / Unknown); Revoked flips on when

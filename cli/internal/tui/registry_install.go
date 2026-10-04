@@ -125,11 +125,22 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 	if errors.As(msg.err, &decision) {
 		return a.askRegistryDecision(p, decision)
 	}
+	// Staging can put the item in the Library before a cancel or a failed
+	// placement stops the install, so a failure reads the catalog again.
+	failed := func(m tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
+		if len(msg.res.Stage.Completed) == 0 {
+			return m, cmd
+		}
+		app := m.(App)
+		return app, tea.Batch(cmd, app.rescanCatalog())
+	}
 	if errors.Is(msg.err, context.Canceled) {
-		return a, a.toast.Push("Install cancelled", toastWarning)
+		cmd := a.toast.Push("Install cancelled", toastWarning)
+		return failed(a, cmd)
 	}
 	if msg.err != nil {
-		return a, a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
+		cmd := a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
+		return failed(a, cmd)
 	}
 
 	ir := msg.res.Items[0]
@@ -164,12 +175,21 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 	if len(ir.Install.Completed) > 0 {
 		done.targetPath = ir.Install.Completed[0].Placement.String()
 	}
+	if ir.Err != nil {
+		return failed(a.handleInstallDone(done))
+	}
 	return a.handleInstallDone(done)
 }
 
 // askRegistryDecision opens the modal that answers decision. A pinned
 // Library copy has no modal: the user unpins it first, as in the CLI.
 func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.DecisionRequired) (tea.Model, tea.Cmd) {
+	// The decision arrives in the background, so a prompt the user already
+	// has open keeps the screen: replacing it would strand that prompt's
+	// pending action, or let this answer land on it.
+	if a.anyOverlayActive() {
+		return a, a.toast.Push(fmt.Sprintf("Installing %q needs your answer, but another prompt is open; install it again after closing that one", p.displayName()), toastWarning)
+	}
 	pending := &pendingRegistryDecision{install: p, decision: decision}
 	switch decision.Kind {
 	case lifecycle.TrustOnFirstUse:

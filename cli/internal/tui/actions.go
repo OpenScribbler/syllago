@@ -684,6 +684,11 @@ func (a App) handleMOATSyncDone(msg moatSyncDoneMsg) (tea.Model, tea.Cmd) {
 		return a, cmd
 	}
 	if msg.requiresTOFU {
+		// A registry install's prompt may be open; replacing it would send
+		// this answer to that install.
+		if a.anyOverlayActive() {
+			return a, a.toast.Push("Syncing "+msg.name+" needs a trust decision, but another prompt is open; sync again after closing that one", toastWarning)
+		}
 		a.tofu.Open(msg.name, msg.manifestURL, msg.incomingProfile)
 		return a, nil
 	}
@@ -757,7 +762,7 @@ func syncDiffSummary(d *regdiff.Diff) string {
 // pins the wire profile on the second pass; reject surfaces a toast and
 // leaves the registry pinned-less (subsequent syncs will re-prompt).
 func (a App) handleTOFUResult(msg tofuResultMsg) (tea.Model, tea.Cmd) {
-	if pending := a.pendingRegistryDecision; pending != nil && pending.decision.Kind == lifecycle.TrustOnFirstUse {
+	if pending := a.pendingRegistryDecision; pending != nil && pending.decision.Kind == lifecycle.TrustOnFirstUse && pending.install.req.Registry == msg.name {
 		a.pendingRegistryDecision = nil
 		return a.answerRegistryTOFU(*pending, msg.accepted)
 	}

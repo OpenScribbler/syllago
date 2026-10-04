@@ -679,15 +679,14 @@ func isUnstagedRegistryItem(item *catalog.ContentItem) bool {
 }
 
 // isMOATRegistryItem reports whether an item is published by a MOAT
-// registry and not yet in the Library, whether or not its files are cached.
-// The moatinstall operation installs it; a git registry item needs an Add
-// first. EnrichCatalog gives every manifest item a trust tier, and a git
-// registry item never has one.
+// registry and not yet in the Library, whether or not its files are cached
+// or its manifest is fresh. The moatinstall operation installs it; a git
+// registry item needs an Add first.
 func isMOATRegistryItem(item *catalog.ContentItem) bool {
 	if item == nil || item.Library {
 		return false
 	}
-	return isUnstagedRegistryItem(item) || (item.Registry != "" && item.TrustTier != catalog.TrustTierUnknown)
+	return item.MOAT || isUnstagedRegistryItem(item)
 }
 
 // unstagedRegistryItemPreview returns the placeholder body shown in the

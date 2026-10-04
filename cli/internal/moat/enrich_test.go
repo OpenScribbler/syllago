@@ -881,8 +881,8 @@ func TestMaterializeMOATItems_AddsEntries(t *testing.T) {
 		"delta": catalog.Commands,
 	}
 	for _, it := range cat.Items {
-		if it.Registry != "reg" || it.Source != "reg" {
-			t.Errorf("item %q: Registry=%q Source=%q, want reg/reg", it.Name, it.Registry, it.Source)
+		if it.Registry != "reg" || it.Source != "reg" || !it.MOAT {
+			t.Errorf("item %q: Registry=%q Source=%q MOAT=%v, want reg/reg and MOAT", it.Name, it.Registry, it.Source, it.MOAT)
 		}
 		if it.Type != wantTypes[it.Name] {
 			t.Errorf("item %q: Type=%v, want %v", it.Name, it.Type, wantTypes[it.Name])

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -107,7 +109,7 @@ func newRegistryEnv(t *testing.T) *registryEnv {
 	// in the content cache, so Path is set though it is not in the Library.
 	e.item = catalog.ContentItem{
 		Name: "my-skill", Type: catalog.Skills, Registry: "example", Source: "example",
-		Path: itemDir, TrustTier: catalog.TrustTierUnsigned,
+		Path: itemDir, TrustTier: catalog.TrustTierUnsigned, MOAT: true,
 	}
 	e.app = testApp(t)
 	e.app.cfg = &config.Config{Registries: []config.Registry{reg}}
@@ -189,7 +191,9 @@ func (e *registryEnv) toast() string {
 // Regression: the install wizard refused a synced MOAT item, because its
 // files were cached and so it no longer looked unstaged.
 func TestIsMOATRegistryItem(t *testing.T) {
-	synced := catalog.ContentItem{Registry: "example", Path: "/cache/x", TrustTier: catalog.TrustTierUnsigned}
+	synced := catalog.ContentItem{Registry: "example", Path: "/cache/x", TrustTier: catalog.TrustTierUnsigned, MOAT: true}
+	// A stale manifest is not enriched, so its items have no trust tier.
+	stale := catalog.ContentItem{Registry: "example", Path: "/cache/x", MOAT: true}
 	unstaged := catalog.ContentItem{Registry: "example", Source: "example"}
 	gitItem := catalog.ContentItem{Registry: "git-reg", Path: "/clone/x"}
 	library := synced
@@ -200,6 +204,7 @@ func TestIsMOATRegistryItem(t *testing.T) {
 		want bool
 	}{
 		{"synced", synced, true},
+		{"stale manifest", stale, true},
 		{"unstaged", unstaged, true},
 		{"git registry", gitItem, false},
 		{"in the Library", library, false},
@@ -330,5 +335,141 @@ func TestRegistryInstall_OneAtATime(t *testing.T) {
 	e.app = m.(App)
 	if !strings.Contains(e.toast(), "already running") || len(e.syncs) != 0 {
 		t.Errorf("syncs=%d toasts:\n%s\nwant the second install refused", len(e.syncs), e.toast())
+	}
+}
+
+func TestRegistryInstall_PrivateSource(t *testing.T) {
+	for _, confirmed := range []bool{true, false} {
+		e := newRegistryEnv(t)
+		e.manifest.Content[0].PrivateRepo = true
+		m, cmd := e.app.handleInstallResult(e.install())
+		e.app = m.(App)
+		e.awaitInstall(t, cmd)
+		if !e.app.confirm.active || e.app.pendingRegistryDecision == nil {
+			t.Fatalf("confirm modal active=%v, want it open; toasts:\n%s", e.app.confirm.active, e.toast())
+		}
+
+		e.app.confirm.active = false
+		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item})
+		if !confirmed {
+			if len(e.syncs) != 1 || e.inLibrary() {
+				t.Errorf("declined: syncs=%d Library=%v, want no second run", len(e.syncs), e.inLibrary())
+			}
+			continue
+		}
+		e.awaitInstall(t, cmd)
+		if !e.placed() {
+			t.Errorf("confirmed: not placed; toasts:\n%s", e.toast())
+		}
+	}
+}
+
+// Regression: a registry install's warning replaced a prompt the user
+// already had open, stranding that prompt's pending install.
+func TestRegistryInstall_DecisionKeepsOpenPrompt(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.app.confirm.Open("Remove \"other\"?", "", "Remove", true, nil)
+	e.awaitInstall(t, cmd)
+
+	if e.app.pendingRegistryDecision != nil || e.app.confirm.title != "Remove \"other\"?" {
+		t.Errorf("pending=%v title=%q, want the open prompt kept", e.app.pendingRegistryDecision != nil, e.app.confirm.title)
+	}
+	if !strings.Contains(e.toast(), "another prompt is open") {
+		t.Errorf("toasts:\n%s\nwant the deferred decision reported", e.toast())
+	}
+}
+
+// Regression: a sync's TOFU prompt replaced a registry install's, so
+// accepting it approved the install for an identity the user never saw.
+func TestRegistryInstall_SyncTOFUKeepsInstallPrompt(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.sync = func(_ context.Context, opts registryops.SyncOpts) (registryops.SyncOutcome, error) {
+		out := registryops.SyncOutcome{MoatResult: moat.SyncResult{Manifest: e.manifest, Staleness: moat.StalenessFresh}}
+		out.GateTOFUNeeded = !opts.AcceptTOFU
+		return out, nil
+	}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	e.update(moatSyncDoneMsg{name: "other", requiresTOFU: true})
+	if e.app.tofu.name != "example" || e.app.pendingRegistryDecision == nil {
+		t.Errorf("TOFU modal names %q pending=%v, want the install's prompt kept", e.app.tofu.name, e.app.pendingRegistryDecision != nil)
+	}
+}
+
+// Regression: a TOFU answer for one registry answered the pending install
+// from another.
+func TestRegistryInstall_TOFUAnswerMatchesRegistry(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.sync = func(_ context.Context, opts registryops.SyncOpts) (registryops.SyncOutcome, error) {
+		out := registryops.SyncOutcome{MoatResult: moat.SyncResult{Manifest: e.manifest, Staleness: moat.StalenessFresh}}
+		out.GateTOFUNeeded = !opts.AcceptTOFU
+		return out, nil
+	}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	e.app.tofu.active = false
+	e.update(tofuResultMsg{name: "other", accepted: true})
+	if e.app.pendingRegistryDecision == nil || e.app.registryInstallCancel != nil {
+		t.Errorf("pending=%v running=%v, want the install left waiting", e.app.pendingRegistryDecision != nil, e.app.registryInstallCancel != nil)
+	}
+}
+
+// Regression: an install cancelled or failed after staging left the item in
+// the Library while the catalog still showed it as a registry item.
+func TestRegistryInstall_FailureAfterStagingRescans(t *testing.T) {
+	staged := moatinstall.Result{Stage: lifecycle.Outcome{Completed: []lifecycle.Step{{}}}}
+	for _, tc := range []struct {
+		name   string
+		res    moatinstall.Result
+		err    error
+		rescan bool
+	}{
+		{"cancelled after staging", staged, context.Canceled, true},
+		{"failed after staging", staged, errors.New("boom"), true},
+		{"failed before staging", moatinstall.Result{}, errors.New("boom"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newRegistryEnv(t)
+			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{res: tc.res, err: tc.err})
+			if got := yieldsCatalogReady(cmd); got != tc.rescan {
+				t.Errorf("rescanned=%v, want %v", got, tc.rescan)
+			}
+		})
+	}
+}
+
+// yieldsCatalogReady reports whether cmd, or a command it batches, reads
+// the catalog again.
+func yieldsCatalogReady(cmd tea.Cmd) bool {
+	found := make(chan struct{}, 1)
+	var run func(tea.Cmd)
+	run = func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		switch msg := c().(type) {
+		case catalogReadyMsg:
+			found <- struct{}{}
+		case tea.BatchMsg:
+			for _, sub := range msg {
+				go run(sub)
+			}
+		}
+	}
+	go run(cmd)
+	select {
+	case <-found:
+		return true
+	case <-time.After(2 * time.Second):
+		return false
 	}
 }
