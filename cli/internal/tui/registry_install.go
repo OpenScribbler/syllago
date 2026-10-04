@@ -129,16 +129,10 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 	if errors.As(msg.err, &decision) {
 		return a.askRegistryDecision(p, decision)
 	}
-	// Staging can put the item in the Library before a cancel or a failed
-	// placement stops the install, so a failure reads the catalog again.
-	staged := false
-	for _, ir := range msg.res.Items {
-		staged = staged || ir.Library.Name != ""
-	}
+	// Staging can write to the Library before a cancel or a failure stops
+	// the install, even when it then fails itself, so a failure reads the
+	// catalog again.
 	failed := func(m tea.Model, cmd tea.Cmd) (tea.Model, tea.Cmd) {
-		if !staged {
-			return m, cmd
-		}
 		app := m.(App)
 		return app, tea.Batch(cmd, app.rescanCatalog())
 	}

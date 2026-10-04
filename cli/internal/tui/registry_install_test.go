@@ -18,6 +18,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
+	"github.com/OpenScribbler/syllago/cli/internal/rollback"
 )
 
 // registryEnv is one MOAT registry, "example", publishing the skill
@@ -169,6 +170,20 @@ func waitInstall(cmd tea.Cmd) (registryInstallDoneMsg, bool) {
 	}
 }
 
+// answer presses y or n in the open confirm modal and feeds its result to
+// the app.
+func (e *registryEnv) answer(yes bool) tea.Cmd {
+	key := 'n'
+	if yes {
+		key = 'y'
+	}
+	cmd := e.update(keyRune(key))
+	if cmd == nil {
+		return nil
+	}
+	return e.update(cmd())
+}
+
 func (e *registryEnv) placed() bool {
 	_, err := os.Lstat(filepath.Join(e.home, ".stub", string(catalog.Skills), "my-skill"))
 	return err == nil
@@ -277,8 +292,7 @@ func TestRegistryInstall_PublisherWarning(t *testing.T) {
 			t.Fatalf("confirm modal active=%v, want it open; toasts:\n%s", e.app.confirm.active, e.toast())
 		}
 
-		e.app.confirm.active = false
-		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item, purpose: confirmPurposeRegistryDecision})
+		cmd = e.answer(confirmed)
 		if !confirmed {
 			if len(e.syncs) != 1 || e.inLibrary() {
 				t.Errorf("declined: syncs=%d Library=%v, want no second run", len(e.syncs), e.inLibrary())
@@ -348,8 +362,7 @@ func TestRegistryInstall_PrivateSource(t *testing.T) {
 			t.Fatalf("confirm modal active=%v, want it open; toasts:\n%s", e.app.confirm.active, e.toast())
 		}
 
-		e.app.confirm.active = false
-		cmd = e.update(confirmResultMsg{confirmed: confirmed, item: e.item, purpose: confirmPurposeRegistryDecision})
+		cmd = e.answer(confirmed)
 		if !confirmed {
 			if len(e.syncs) != 1 || e.inLibrary() {
 				t.Errorf("declined: syncs=%d Library=%v, want no second run", len(e.syncs), e.inLibrary())
@@ -424,25 +437,42 @@ func TestRegistryInstall_TOFUAnswerMatchesRegistry(t *testing.T) {
 
 // Regression: an install cancelled or failed after staging left the item in
 // the Library while the catalog still showed it as a registry item.
-func TestRegistryInstall_FailureAfterStagingRescans(t *testing.T) {
-	staged := moatinstall.Result{Items: []moatinstall.ItemResult{{Library: catalog.ContentItem{Name: "my-skill"}}}}
+func TestRegistryInstall_FailureRescans(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		res    moatinstall.Result
-		err    error
-		rescan bool
+		name string
+		err  error
 	}{
-		{"cancelled after staging", staged, context.Canceled, true},
-		{"failed after staging", staged, errors.New("boom"), true},
-		{"failed before staging", moatinstall.Result{}, errors.New("boom"), false},
+		{"cancelled", context.Canceled},
+		{"failed", errors.New("boom")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newRegistryEnv(t)
-			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{res: tc.res, err: tc.err})
-			if got := yieldsCatalogReady(cmd); got != tc.rescan {
-				t.Errorf("rescanned=%v, want %v", got, tc.rescan)
+			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{err: tc.err})
+			if !yieldsCatalogReady(cmd) {
+				t.Error("the catalog was not read again")
 			}
 		})
+	}
+}
+
+// Regression: a rollback prompt that opened while a registry decision held
+// the confirm modal replaced it, leaving the install waiting on no prompt.
+func TestRegistryInstall_RollbackWaitsForDecision(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleInstallResult(e.install())
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	e.update(rollbackPlanMsg{plan: &rollback.Plan{Item: e.item}})
+	if e.app.pendingRollback != nil || e.app.confirm.purpose != confirmPurposeRegistryDecision {
+		t.Fatalf("pendingRollback=%v purpose=%q, want the registry prompt kept", e.app.pendingRollback != nil, e.app.confirm.purpose)
+	}
+	e.awaitInstall(t, e.answer(true))
+	if !e.placed() {
+		t.Errorf("not placed after answering; toasts:\n%s", e.toast())
 	}
 }
 

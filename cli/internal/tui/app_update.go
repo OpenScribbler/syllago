@@ -555,6 +555,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			return a, a.toast.Push(msg.err.Error(), toastWarning)
 		}
+		// The plan arrives in the background, after a registry install may
+		// have opened its own prompt; replacing that prompt would strand it.
+		if a.promptOpen() {
+			return a, a.toast.Push("Rollback needs your answer, but another prompt is open; roll back again after closing that one", toastWarning)
+		}
 		plan := msg.plan
 		a.pendingRollback = plan
 
