@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -192,7 +193,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 				"--frozen is not supported when adding from a registry",
 				"Pin at install time instead: syllago install "+fromSlug+"/<item> --to <provider> --frozen")
 		}
-		return runAddFromRegistry(root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
+		return runAddFromRegistry(cmd.Context(), root, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
 	}
 	fromSlug = prov.Slug
 
@@ -1231,7 +1232,7 @@ func findRegistryForSlug(fromSlug string, configs ...*config.Config) *config.Reg
 // runAddFromRegistry handles "syllago add [type] --from <registry-name>".
 // It looks up the registry by short or full name, scans its clone directory,
 // applies type/name filters from args, and writes matching items to the library.
-func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string, trustedRootOverride string) error {
+func runAddFromRegistry(ctx context.Context, projectRoot string, args []string, fromSlug string, addAll, dryRun, force bool, globalDir string, trustedRootOverride string) error {
 	globalCfg, _ := config.LoadGlobal()
 	projectCfg, _ := config.Load(projectRoot)
 
@@ -1252,6 +1253,12 @@ func runAddFromRegistry(projectRoot string, args []string, fromSlug string, addA
 			"unknown provider or registry: "+fromSlug,
 			"Available providers: "+strings.Join(slugs, ", ")+"\nRun 'syllago registry list' to see configured registries",
 		)
+	}
+
+	// A MOAT registry is never cloned: its items are fetched and verified
+	// one by one from the sources its signed manifest names.
+	if reg.IsMOAT() {
+		return runAddFromMOATRegistry(ctx, projectRoot, reg, args, fromSlug, addAll, dryRun, force, globalDir, trustedRootOverride)
 	}
 
 	if !registry.IsCloned(reg.Name) {

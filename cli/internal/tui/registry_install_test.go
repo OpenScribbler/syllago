@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -438,16 +439,19 @@ func TestRegistryInstall_TOFUAnswerMatchesRegistry(t *testing.T) {
 // Regression: an install cancelled or failed after staging left the item in
 // the Library while the catalog still showed it as a registry item.
 func TestRegistryInstall_FailureRescans(t *testing.T) {
+	install := registryInstall{req: moatinstall.Request{Targets: []lifecycle.Target{{}}}}
 	for _, tc := range []struct {
 		name string
+		p    registryInstall
 		err  error
 	}{
-		{"cancelled", context.Canceled},
-		{"failed", errors.New("boom")},
+		{"install cancelled", install, context.Canceled},
+		{"install failed", install, errors.New("boom")},
+		{"add failed", registryInstall{}, errors.New("boom")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newRegistryEnv(t)
-			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{err: tc.err})
+			_, cmd := e.app.handleRegistryInstallDone(registryInstallDoneMsg{install: tc.p, err: tc.err})
 			if !yieldsCatalogReady(cmd) {
 				t.Error("the catalog was not read again")
 			}
@@ -567,5 +571,72 @@ func yieldsCatalogReady(cmd tea.Cmd) bool {
 		return true
 	case <-time.After(2 * time.Second):
 		return false
+	}
+}
+
+// Regression: Add copied a synced MOAT item's cached files into the
+// Library without verifying them against the manifest.
+func TestRegistryAdd_StagesWithoutInstalling(t *testing.T) {
+	e := newRegistryEnv(t)
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if !e.inLibrary() || e.placed() {
+		t.Fatalf("Library=%v placed=%v, want staged and not placed; toasts:\n%s", e.inLibrary(), e.placed(), e.toast())
+	}
+	if !strings.Contains(e.toast(), "Added \"my-skill\" to library") {
+		t.Errorf("toasts:\n%s\nwant the add reported", e.toast())
+	}
+	if e.app.pendingInstallAfterAddName != "" {
+		t.Errorf("a plain add queued the install wizard for %q", e.app.pendingInstallAfterAddName)
+	}
+}
+
+func TestRegistryAdd_HashMismatchRefused(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Content[0].ContentHash = "sha256:" + strings.Repeat("0", 64)
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if e.inLibrary() {
+		t.Fatal("content that does not match the manifest's hash reached the Library")
+	}
+	if !strings.Contains(e.toast(), "Failed to add") {
+		t.Errorf("toasts:\n%s\nwant the add reported failed", e.toast())
+	}
+}
+
+func TestRegistryAdd_InstallAfterQueuesWizard(t *testing.T) {
+	e := newRegistryEnv(t)
+	m, cmd := e.app.handleLibraryAddInstall(&e.item)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+
+	if !e.inLibrary() || e.placed() {
+		t.Fatalf("Library=%v placed=%v, want staged and not placed", e.inLibrary(), e.placed())
+	}
+	if e.app.pendingInstallAfterAddName != "my-skill" || e.app.pendingInstallAfterAddType != catalog.Skills {
+		t.Errorf("pending install %q/%q, want skills/my-skill", e.app.pendingInstallAfterAddType, e.app.pendingInstallAfterAddName)
+	}
+}
+
+// Regression: declining a registry add's prompt reported the install
+// cancelled.
+func TestRegistryAdd_DeclineReportsAdd(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+	if !e.app.confirm.active {
+		t.Fatalf("confirm modal closed, want it open; toasts:\n%s", e.toast())
+	}
+	e.answer(false)
+	if got := e.toast(); !strings.Contains(got, "Add cancelled") || strings.Contains(got, "Install cancelled") {
+		t.Errorf("toasts:\n%s\nwant the add reported cancelled", got)
 	}
 }

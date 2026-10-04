@@ -96,7 +96,7 @@ func publisherWarnApp(t *testing.T, w, h int) App {
 			},
 		}},
 	}
-	m, _ := app.askRegistryDecision(registryInstall{item: item}, decision)
+	m, _ := app.askRegistryDecision(registryInstall{item: item, req: moatinstall.Request{Targets: []lifecycle.Target{{}}}}, decision)
 	a := m.(App)
 	if !a.confirm.active || a.pendingRegistryDecision == nil {
 		t.Fatalf("publisher-warn modal did not open; active=%v pending=%v", a.confirm.active, a.pendingRegistryDecision)

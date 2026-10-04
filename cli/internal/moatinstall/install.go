@@ -38,7 +38,7 @@ type Operation struct {
 // them.
 type Request struct {
 	Registry string
-	Items    []string // names in the registry's manifest
+	Items    []Item
 	// ProjectRoot holds the MOAT lockfile, and project installs land there.
 	ProjectRoot string
 	// Targets are the providers to install to. Empty means fetch, verify
@@ -84,9 +84,20 @@ type GatePrompt struct {
 type Result struct {
 	Sync      registryops.SyncOutcome
 	Staleness moat.StalenessStatus // of the manifest the gate read
+	// Manifest is the manifest the gate read, so a caller can list what
+	// the registry offers. Nil when the sync stopped the call.
+	Manifest *moat.Manifest
 	// Stage is the outcome of staging every fetched item into the Library.
 	Stage lifecycle.Outcome
 	Items []ItemResult // in Request.Items order
+}
+
+// Item names one item in the registry's manifest. A manifest may list one
+// name under several types, so a caller that knows the type sets it; an
+// empty Type takes the first item with the name.
+type Item struct {
+	Name string
+	Type catalog.ContentType
 }
 
 // ItemResult reports one requested item.
@@ -173,6 +184,7 @@ func (o *Operation) Install(ctx context.Context, req Request) (Result, error) {
 	if err != nil {
 		return res, err
 	}
+	res.Manifest = manifest
 	lockfilePath := moat.LockfilePath(req.ProjectRoot)
 	passed, err := o.gateItems(req, reg, manifest, lockfilePath, &res)
 	if err != nil || req.DryRun {
@@ -311,14 +323,18 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 
 	var publisherPrompts, privatePrompts []GatePrompt
 	var passed []int
-	for _, name := range req.Items {
-		res.Items = append(res.Items, ItemResult{Name: name})
+	for _, item := range req.Items {
+		res.Items = append(res.Items, ItemResult{Name: item.Name})
 		ir := &res.Items[len(res.Items)-1]
-		entry, ok := moat.FindContentEntry(manifest, name)
+		entry, ok := findEntry(manifest, item)
 		if !ok {
+			what := fmt.Sprintf("an item named %q", item.Name)
+			if item.Type != "" {
+				what = fmt.Sprintf("a %s named %q", item.Type.Label(), item.Name)
+			}
 			ir.Err = output.NewStructuredError(
 				output.ErrInstallItemNotFound,
-				fmt.Sprintf("registry %q does not list an item named %q in its manifest", reg.Name, name),
+				fmt.Sprintf("registry %q does not list %s in its manifest", reg.Name, what),
 				"Run `syllago registry items "+reg.Name+"` to see available content.",
 			)
 			continue
@@ -510,6 +526,23 @@ func installItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *c
 			)
 		}
 	}
+}
+
+// findEntry finds item in the manifest, matching its type when it has one.
+func findEntry(m *moat.Manifest, item Item) (*moat.ContentEntry, bool) {
+	if item.Type == "" {
+		return moat.FindContentEntry(m, item.Name)
+	}
+	want, ok := moat.ToMOATType(item.Type)
+	if m == nil || !ok {
+		return nil, false
+	}
+	for i := range m.Content {
+		if e := &m.Content[i]; e.Name == item.Name && e.Type == want {
+			return e, true
+		}
+	}
+	return nil, false
 }
 
 // lookupRegistry finds name in the global config, where `registry add`

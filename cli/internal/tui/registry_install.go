@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -32,6 +33,7 @@ type registryInstall struct {
 	item         catalog.ContentItem // the registry item, for the modals
 	providerName string              // the single target's name; empty for install-all
 	all          bool
+	installAfter bool // an add opens the install wizard once the item is staged
 }
 
 // pendingRegistryDecision is a registry install waiting on the user's
@@ -61,7 +63,7 @@ func (a App) registryInstallFor(msg installResultMsg) registryInstall {
 	return registryInstall{
 		req: moatinstall.Request{
 			Registry:    msg.item.Registry,
-			Items:       []string{msg.item.Name},
+			Items:       []moatinstall.Item{{Name: msg.item.Name, Type: msg.item.Type}},
 			ProjectRoot: msg.projectRoot,
 			Targets:     []lifecycle.Target{{Provider: msg.provider, BaseDir: baseDir}},
 			Method:      msg.method,
@@ -82,7 +84,7 @@ func (a App) registryInstallAllFor(msg installAllResultMsg) registryInstall {
 	return registryInstall{
 		req: moatinstall.Request{
 			Registry:    msg.item.Registry,
-			Items:       []string{msg.item.Name},
+			Items:       []moatinstall.Item{{Name: msg.item.Name, Type: msg.item.Type}},
 			ProjectRoot: msg.projectRoot,
 			Targets:     targets,
 			Method:      installer.MethodSymlink,
@@ -91,6 +93,26 @@ func (a App) registryInstallAllFor(msg installAllResultMsg) registryInstall {
 		item: msg.item,
 		all:  true,
 	}
+}
+
+// registryAddFor builds the operation's request for an add: the item is
+// fetched, verified and staged into the Library, and placed nowhere.
+func (a App) registryAddFor(item catalog.ContentItem, installAfter bool) registryInstall {
+	return registryInstall{
+		req: moatinstall.Request{
+			Registry:    item.Registry,
+			Items:       []moatinstall.Item{{Name: item.Name, Type: item.Type}},
+			ProjectRoot: a.projectRoot,
+			Session:     a.moatSession,
+		},
+		item:         item,
+		installAfter: installAfter,
+	}
+}
+
+// addOnly reports whether the request stages the item without installing it.
+func (p registryInstall) addOnly() bool {
+	return len(p.req.Targets) == 0
 }
 
 // displayName names the item in toasts.
@@ -111,7 +133,11 @@ func (a App) startRegistryInstall(p registryInstall) (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a.registryInstallCancel = cancel
 	op := registryInstallOp(a.moatMinTier)
-	toast := a.toast.Push(fmt.Sprintf("Installing %q from %s... (Esc cancels)", p.displayName(), p.req.Registry), toastSuccess)
+	verb := "Installing"
+	if p.addOnly() {
+		verb = "Adding"
+	}
+	toast := a.toast.Push(fmt.Sprintf("%s %q from %s... (Esc cancels)", verb, p.displayName(), p.req.Registry), toastSuccess)
 	run := func() tea.Msg {
 		defer cancel()
 		res, err := op.Install(ctx, p.req)
@@ -137,8 +163,23 @@ func (a App) handleRegistryInstallDone(msg registryInstallDoneMsg) (tea.Model, t
 		return app, tea.Batch(cmd, app.rescanCatalog())
 	}
 	if errors.Is(msg.err, context.Canceled) {
-		cmd := a.toast.Push("Install cancelled", toastWarning)
+		text := "Install cancelled"
+		if p.addOnly() {
+			text = "Add cancelled"
+		}
+		cmd := a.toast.Push(text, toastWarning)
 		return failed(a, cmd)
+	}
+	if p.addOnly() {
+		err := msg.err
+		if err == nil {
+			err = msg.res.Items[0].Err
+		}
+		done := libraryAddDoneMsg{name: p.item.Name, itemType: p.item.Type, err: err, installAfter: p.installAfter}
+		if err != nil {
+			return failed(a.handleLibraryAddDone(done))
+		}
+		return a.handleLibraryAddDone(done)
 	}
 	if msg.err != nil {
 		cmd := a.toast.Push("Install failed: "+formatToastErr(msg.err), toastError)
@@ -190,7 +231,11 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 	// has open keeps the screen: replacing it would strand that prompt's
 	// pending action, or let this answer land on it.
 	if a.promptOpen() {
-		return a, a.toast.Push(fmt.Sprintf("Installing %q needs your answer, but another prompt is open; install it again after closing that one", p.displayName()), toastWarning)
+		verb, again := "Installing", "install"
+		if p.addOnly() {
+			verb, again = "Adding", "add"
+		}
+		return a, a.toast.Push(fmt.Sprintf("%s %q needs your answer, but another prompt is open; %s it again after closing that one", verb, p.displayName(), again), toastWarning)
 	}
 	pending := &pendingRegistryDecision{install: p, decision: decision}
 	switch decision.Kind {
@@ -207,10 +252,14 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 		}
 		item := p.item
 		a.pendingRegistryDecision = pending
+		verb := "Install"
+		if p.addOnly() {
+			verb = "Add"
+		}
 		if decision.Kind == lifecycle.PublisherWarn {
-			a.confirm.OpenForItem(publisherWarnTitle(item), publisherWarnBody(item, prompts[0].Gate.Revocation), "Install anyway", true, nil, item)
+			a.confirm.OpenForItem(publisherWarnTitle(item), publisherWarnBody(item, prompts[0].Gate.Revocation), verb+" anyway", true, nil, item)
 		} else {
-			a.confirm.OpenForItem(privatePromptTitle(item), privatePromptBody(item), "Install", false, nil, item)
+			a.confirm.OpenForItem(privatePromptTitle(item), privatePromptBody(item), verb, false, nil, item)
 		}
 		a.confirm.purpose = confirmPurposeRegistryDecision
 		return a, nil
@@ -234,7 +283,11 @@ func (a App) answerRegistryDecision(pending pendingRegistryDecision, confirmed b
 		kind = gateKindPrivatePrompt
 	}
 	if !confirmed {
-		return a, a.toast.Push(gateCancelledToastText(kind), toastWarning)
+		text := gateCancelledToastText(kind)
+		if pending.install.addOnly() {
+			text = strings.Replace(text, "Install", "Add", 1)
+		}
+		return a, a.toast.Push(text, toastWarning)
 	}
 	p := pending.install
 	prompts, _ := pending.decision.Context.([]moatinstall.GatePrompt)
