@@ -265,7 +265,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			}
 			return runInstallFromRegistry(ctx, output.Writer, output.ErrWriter, moatinstall.Request{
 				Registry:    regName,
-				Items:       []string{itemName},
+				Items:       []moatinstall.Item{{Name: itemName}},
 				ProjectRoot: projectRoot,
 				Targets:     []lifecycle.Target{{Provider: *prov, BaseDir: baseDir}},
 				Method:      method,
@@ -569,7 +569,7 @@ func runInstallToAll(
 			}
 			return runInstallFromRegistry(ctx, output.Writer, output.ErrWriter, moatinstall.Request{
 				Registry:    regName,
-				Items:       []string{itemName},
+				Items:       []moatinstall.Item{{Name: itemName}},
 				ProjectRoot: projectRoot,
 				Targets:     targets,
 				Method:      method,

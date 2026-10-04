@@ -621,3 +621,22 @@ func TestRegistryAdd_InstallAfterQueuesWizard(t *testing.T) {
 		t.Errorf("pending install %q/%q, want skills/my-skill", e.app.pendingInstallAfterAddType, e.app.pendingInstallAfterAddName)
 	}
 }
+
+// Regression: declining a registry add's prompt reported the install
+// cancelled.
+func TestRegistryAdd_DeclineReportsAdd(t *testing.T) {
+	e := newRegistryEnv(t)
+	e.manifest.Revocations = []moat.Revocation{{
+		ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher",
+	}}
+	m, cmd := e.app.handleLibraryAdd(&e.item, false)
+	e.app = m.(App)
+	e.awaitInstall(t, cmd)
+	if !e.app.confirm.active {
+		t.Fatalf("confirm modal closed, want it open; toasts:\n%s", e.toast())
+	}
+	e.answer(false)
+	if got := e.toast(); !strings.Contains(got, "Add cancelled") || strings.Contains(got, "Install cancelled") {
+		t.Errorf("toasts:\n%s\nwant the add reported cancelled", got)
+	}
+}

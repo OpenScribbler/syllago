@@ -45,7 +45,7 @@ func runAddFromMOATRegistry(ctx context.Context, projectRoot string, reg *config
 
 	// A request for no items syncs the registry and reads its manifest.
 	req := moatinstall.Request{Registry: reg.Name, ProjectRoot: projectRoot, DryRun: true, Session: moat.NewSession()}
-	res, ok, err := runRegistryAdd(ctx, errW, &op, &req)
+	res, ok, err := runRegistryAdd(ctx, errW, &op, &req, false)
 	if !ok {
 		return err
 	}
@@ -64,26 +64,34 @@ func runAddFromMOATRegistry(ctx context.Context, projectRoot string, reg *config
 	}
 
 	// The Library already holds this registry's copy of an up-to-date item,
-	// and an outdated one waits for --force, so neither is fetched.
+	// an outdated one waits for --force, and a copy from another source
+	// cannot be replaced, so none of them is fetched.
 	var results []add.AddResult
-	before := map[string]add.ItemStatus{}
+	var failed error
+	outdated := map[moatinstall.Item]bool{}
 	req.Items = nil
 	for _, item := range items {
+		ref := moatinstall.Item{Name: item.Name, Type: item.Type}
 		switch {
 		case item.Status == add.StatusInLibrary:
 			results = append(results, add.AddResult{Name: item.Name, Type: item.Type, Status: add.AddStatusUpToDate})
+		case item.Status == add.StatusOutdated && !fromRegistry(globalDir, item, reg.Name):
+			err := fmt.Errorf("the Library holds %s/%s from another source; remove it to add this registry's copy", item.Type, item.Name)
+			results = append(results, add.AddResult{Name: item.Name, Type: item.Type, Status: add.AddStatusError, Error: err})
+			if failed == nil {
+				failed = err
+			}
 		case item.Status == add.StatusOutdated && !force:
 			results = append(results, add.AddResult{Name: item.Name, Type: item.Type, Status: add.AddStatusSkipped})
 		default:
-			before[item.Name] = item.Status
-			req.Items = append(req.Items, item.Name)
+			outdated[ref] = item.Status == add.StatusOutdated
+			req.Items = append(req.Items, ref)
 		}
 	}
 
-	var failed error
 	if len(req.Items) > 0 {
 		req.DryRun = dryRun
-		res, ok, err = runRegistryAdd(ctx, errW, &op, &req)
+		res, ok, err = runRegistryAdd(ctx, errW, &op, &req, len(results) > 0)
 		if !ok {
 			return err
 		}
@@ -101,7 +109,7 @@ func runAddFromMOATRegistry(ctx context.Context, projectRoot string, reg *config
 				if failed == nil {
 					failed = ir.Err
 				}
-			case before[ir.Name] == add.StatusOutdated:
+			case outdated[moatinstall.Item{Name: ir.Name, Type: r.Type}]:
 				r.Status = add.AddStatusUpdated
 			}
 			results = append(results, r)
@@ -121,15 +129,17 @@ func runAddFromMOATRegistry(ctx context.Context, projectRoot string, reg *config
 	return failed
 }
 
-// runRegistryAdd runs op.Install, answering each decision it asks for. It
-// reports ok=false when the add stops, with the error to return; a
+// runRegistryAdd runs op.Install, answering each decision it asks for.
+// othersReported says the add has results for items it did not request, so
+// a request whose every item is pinned still leaves something to report.
+// It reports ok=false when the add stops, with the error to return; a
 // headless refusal has already exited.
-func runRegistryAdd(ctx context.Context, errW io.Writer, op *moatinstall.Operation, req *moatinstall.Request) (moatinstall.Result, bool, error) {
+func runRegistryAdd(ctx context.Context, errW io.Writer, op *moatinstall.Operation, req *moatinstall.Request, othersReported bool) (moatinstall.Result, bool, error) {
 	for {
 		res, err := op.Install(ctx, *req)
 		var decision *lifecycle.DecisionRequired
 		if errors.As(err, &decision) {
-			retry, derr := decideRegistryAdd(errW, req, decision)
+			retry, derr := decideRegistryAdd(errW, req, decision, othersReported)
 			if retry {
 				continue
 			}
@@ -144,18 +154,11 @@ func runRegistryAdd(ctx context.Context, errW io.Writer, op *moatinstall.Operati
 
 // decideRegistryAdd answers a decision as install does, except that a
 // pinned Library item is left as it is while the other items are added.
-func decideRegistryAdd(errW io.Writer, req *moatinstall.Request, decision *lifecycle.DecisionRequired) (bool, error) {
+func decideRegistryAdd(errW io.Writer, req *moatinstall.Request, decision *lifecycle.DecisionRequired, othersReported bool) (bool, error) {
 	if decision.Kind != lifecycle.OverwritePinned {
 		return decideRegistryInstall(errW, req, decision)
 	}
 	pinned, _ := decision.Context.([]lifecycle.PinnedDestination)
-	if len(pinned) == len(req.Items) {
-		return false, output.NewStructuredError(
-			output.ErrInstallConflict,
-			"all requested items are pinned",
-			"Run 'syllago unpin <name>' first to unpin the items you want to update",
-		)
-	}
 	if req.Decisions.Overwrite == nil {
 		req.Decisions.Overwrite = make(map[string]bool, len(pinned))
 	}
@@ -163,13 +166,27 @@ func decideRegistryAdd(errW io.Writer, req *moatinstall.Request, decision *lifec
 		req.Decisions.Overwrite[p.Path] = false
 		fmt.Fprintf(errW, "  pinned %s/%s; unpin to update: syllago unpin %s\n", p.Type, p.Name, p.Name)
 	}
+	if len(pinned) == len(req.Items) && !othersReported {
+		return false, output.NewStructuredError(
+			output.ErrInstallConflict,
+			"all requested items are pinned",
+			"Run 'syllago unpin <name>' for each item you want to update",
+		)
+	}
 	return true, nil
+}
+
+// fromRegistry reports whether the Library's copy of item came from the
+// registry regName.
+func fromRegistry(globalDir string, item add.DiscoveryItem, regName string) bool {
+	meta, _ := metadata.Load(filepath.Join(globalDir, string(item.Type), item.Name))
+	return meta != nil && meta.SourceRegistry == regName
 }
 
 // moatDiscoveryItems lists the manifest's items with their Library status:
 // in the Library when this registry's copy holds the manifest's hash,
 // outdated when it holds another, and new otherwise. An item the Library
-// holds from another source is outdated too; adding it fails at staging.
+// holds from another source is outdated too, and the add refuses it.
 func moatDiscoveryItems(manifest *moat.Manifest, regName, globalDir string) []add.DiscoveryItem {
 	if manifest == nil {
 		return nil

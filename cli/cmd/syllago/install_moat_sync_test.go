@@ -250,7 +250,7 @@ func TestInstallToAll_RegistryItem(t *testing.T) {
 
 func TestInstallFromRegistry_NoTargetsIsInputError(t *testing.T) {
 	err := runInstallFromRegistry(context.Background(), &bytes.Buffer{}, &bytes.Buffer{},
-		moatinstall.Request{Registry: "example", Items: []string{"my-skill"}}, time.Now())
+		moatinstall.Request{Registry: "example", Items: []moatinstall.Item{{Name: "my-skill"}}}, time.Now())
 	var se output.StructuredError
 	if !errors.As(err, &se) || se.Code != output.ErrInputMissing {
 		t.Fatalf("err = %v, want %s", err, output.ErrInputMissing)

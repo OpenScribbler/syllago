@@ -113,7 +113,7 @@ func installFromRegistryForTest(
 	}
 	return runInstallFromRegistry(ctx, out, errW, moatinstall.Request{
 		Registry:    registryName,
-		Items:       []string{itemName},
+		Items:       []moatinstall.Item{{Name: itemName}},
 		ProjectRoot: projectRoot,
 		Targets:     targets,
 		Method:      method,

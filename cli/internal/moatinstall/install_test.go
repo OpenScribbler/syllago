@@ -100,7 +100,11 @@ func (e *opEnv) setItem(t *testing.T, name, content string) *moat.ContentEntry {
 }
 
 func (e *opEnv) request(names ...string) Request {
-	return Request{Registry: "example", Items: names, ProjectRoot: e.project}
+	items := make([]Item, len(names))
+	for i, name := range names {
+		items[i] = Item{Name: name}
+	}
+	return Request{Registry: "example", Items: items, ProjectRoot: e.project}
 }
 
 func (e *opEnv) inLibrary(name string) bool {
@@ -436,5 +440,30 @@ func TestInstall_ItemFailsAlone(t *testing.T) {
 	}
 	if res.Items[0].Err == nil || res.Items[1].Err != nil || !e.inLibrary("a") {
 		t.Errorf("missing err=%v, a err=%v staged=%v", res.Items[0].Err, res.Items[1].Err, e.inLibrary("a"))
+	}
+}
+
+// Regression: a manifest listing one name under two types gave the caller
+// the first one listed, whatever type it asked for.
+func TestInstall_TypedItemTakesItsType(t *testing.T) {
+	e := newOpEnv(t, "shared")
+	hash := makeRepoFixture(t, e.fixture, "agents", "shared", map[string]string{"AGENT.md": "# agent\n"})
+	e.manifest.Content = append(e.manifest.Content, moat.ContentEntry{
+		Name: "shared", Type: "agent", ContentHash: hash, SourceURI: fakeRepoURL, AttestedAt: e.now,
+	})
+	req := e.request()
+	req.Items = []Item{{Name: "shared", Type: catalog.Agents}}
+	res, err := e.op.Install(context.Background(), req)
+	if err != nil || res.Items[0].Err != nil {
+		t.Fatalf("Install: err=%v item=%v", err, res.Items[0].Err)
+	}
+	if got := res.Items[0].Entry.Type; got != "agent" {
+		t.Errorf("entry type = %q, want agent", got)
+	}
+	if e.inLibrary("shared") {
+		t.Error("the skill reached the Library")
+	}
+	if _, err := os.Stat(filepath.Join(e.library, string(catalog.Agents), "shared", "AGENT.md")); err != nil {
+		t.Errorf("the agent is not in the Library: %v", err)
 	}
 }

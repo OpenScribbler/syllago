@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -62,7 +63,7 @@ func (a App) registryInstallFor(msg installResultMsg) registryInstall {
 	return registryInstall{
 		req: moatinstall.Request{
 			Registry:    msg.item.Registry,
-			Items:       []string{msg.item.Name},
+			Items:       []moatinstall.Item{{Name: msg.item.Name, Type: msg.item.Type}},
 			ProjectRoot: msg.projectRoot,
 			Targets:     []lifecycle.Target{{Provider: msg.provider, BaseDir: baseDir}},
 			Method:      msg.method,
@@ -83,7 +84,7 @@ func (a App) registryInstallAllFor(msg installAllResultMsg) registryInstall {
 	return registryInstall{
 		req: moatinstall.Request{
 			Registry:    msg.item.Registry,
-			Items:       []string{msg.item.Name},
+			Items:       []moatinstall.Item{{Name: msg.item.Name, Type: msg.item.Type}},
 			ProjectRoot: msg.projectRoot,
 			Targets:     targets,
 			Method:      installer.MethodSymlink,
@@ -100,7 +101,7 @@ func (a App) registryAddFor(item catalog.ContentItem, installAfter bool) registr
 	return registryInstall{
 		req: moatinstall.Request{
 			Registry:    item.Registry,
-			Items:       []string{item.Name},
+			Items:       []moatinstall.Item{{Name: item.Name, Type: item.Type}},
 			ProjectRoot: a.projectRoot,
 			Session:     a.moatSession,
 		},
@@ -230,7 +231,11 @@ func (a App) askRegistryDecision(p registryInstall, decision *lifecycle.Decision
 	// has open keeps the screen: replacing it would strand that prompt's
 	// pending action, or let this answer land on it.
 	if a.promptOpen() {
-		return a, a.toast.Push(fmt.Sprintf("Installing %q needs your answer, but another prompt is open; install it again after closing that one", p.displayName()), toastWarning)
+		verb, again := "Installing", "install"
+		if p.addOnly() {
+			verb, again = "Adding", "add"
+		}
+		return a, a.toast.Push(fmt.Sprintf("%s %q needs your answer, but another prompt is open; %s it again after closing that one", verb, p.displayName(), again), toastWarning)
 	}
 	pending := &pendingRegistryDecision{install: p, decision: decision}
 	switch decision.Kind {
@@ -278,7 +283,11 @@ func (a App) answerRegistryDecision(pending pendingRegistryDecision, confirmed b
 		kind = gateKindPrivatePrompt
 	}
 	if !confirmed {
-		return a, a.toast.Push(gateCancelledToastText(kind), toastWarning)
+		text := gateCancelledToastText(kind)
+		if pending.install.addOnly() {
+			text = strings.Replace(text, "Install", "Add", 1)
+		}
+		return a, a.toast.Push(text, toastWarning)
 	}
 	p := pending.install
 	prompts, _ := pending.decision.Context.([]moatinstall.GatePrompt)
