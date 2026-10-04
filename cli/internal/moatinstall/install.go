@@ -223,7 +223,12 @@ func (o *Operation) Install(ctx context.Context, req Request) (Result, error) {
 		if err := ctx.Err(); err != nil {
 			return res, err
 		}
-		installItems(lc, req, reg, ready, start, &res)
+		installItems(ctx, lc, req, reg, ready, start, &res)
+		for _, ir := range res.Items {
+			if errors.Is(ir.Err, context.Canceled) {
+				return res, ir.Err
+			}
+		}
 	}
 	return res, nil
 }
@@ -467,7 +472,7 @@ func stageItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *con
 }
 
 // installItems installs each staged item to the targets that support it.
-func installItems(lc *lifecycle.Module, req Request, reg *config.Registry, ready []fetched, start time.Time, res *Result) {
+func installItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *config.Registry, ready []fetched, start time.Time, res *Result) {
 	for _, f := range ready {
 		ir := &res.Items[f.idx]
 		if ir.Err != nil {
@@ -475,6 +480,7 @@ func installItems(lc *lifecycle.Module, req Request, reg *config.Registry, ready
 		}
 		targets := supportedTargets(ir, req.Targets)
 		out, err := lc.Install(lifecycle.InstallRequest{
+			Context:     ctx,
 			Item:        ir.Library,
 			ProjectRoot: req.ProjectRoot,
 			Targets:     targets,
@@ -492,7 +498,8 @@ func installItems(lc *lifecycle.Module, req Request, reg *config.Registry, ready
 		switch {
 		case err == nil:
 		case len(out.Unattempted) > 0:
-			// The install lock was unavailable; report it as it is.
+			// The install lock was unavailable or the install was
+			// cancelled; report it as it is.
 			ir.Err = err
 		default:
 			ir.Err = output.NewStructuredErrorDetail(
