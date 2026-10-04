@@ -138,7 +138,6 @@ func IsTrustedRootStale(err error) (moat.TrustedRootStatus, bool) {
 }
 
 // SyncOneFn is the indirection point for tests. Production calls moat.Sync.
-// Mirrors the moatSyncFn pattern that previously lived in registry_sync_moat.go.
 var SyncOneFn = moat.Sync
 
 // SyncOne runs the full MOAT sync pipeline for the registry named `name`. It

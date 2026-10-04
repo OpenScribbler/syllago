@@ -1,16 +1,15 @@
 package moatinstall
 
-// Tests for FetchAndRecord and helpers (moved from cmd/syllago when the
-// orchestration was extracted into this package — bead syllago-kdxus
-// Phase 2; rewritten in syllago-cvwj5 to follow the spec-correct
-// clone+tree-hash flow).
+// Tests for the fetch helpers Operation.Install uses, driven through
+// fetchItem and recordEntry.
 //
 // Scope:
-//   - FetchAndRecord — end-to-end Proceed path: clone + content_hash
-//     verify + copyTree + RecordInstall + lf.Save. Also exercises the
-//     two early refusals (non-UNSIGNED tier with no profile, non-https
-//     scheme), the hash-mismatch failure, and the Dual-Attested second
-//     leg failure modes.
+//   - fetchItem — verify attestations, clone, content_hash verify and
+//     extract into the source cache, followed by recordEntry into an
+//     in-memory lockfile. Also exercises the early refusals (non-UNSIGNED
+//     tier with no profile, non-https scheme), the hash-mismatch failure,
+//     and the Dual-Attested second leg failure modes. Saving the lockfile
+//     is Install's job and is covered in install_test.go.
 //
 // Test seam: CloneRepoFn is stubbed with a copyTree-from-fixture function
 // so we exercise the full hash + extract path without spawning git.
@@ -97,7 +96,7 @@ func stubSourceCacheDir(t *testing.T) string {
 
 const fakeRepoURL = "https://github.com/example/repo"
 
-func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
+func TestFetchItem_Happy_Unsigned(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -107,7 +106,6 @@ func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
@@ -121,18 +119,13 @@ func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
 	Now = func() time.Time { return time.Date(2026, 4, 25, 0, 0, 0, 0, time.UTC) }
 	t.Cleanup(func() { Now = origNow })
 
-	dir, err := FetchAndRecord(
-		context.Background(),
-		entry,
-		"example",
-		"https://example.com/manifest.json",
-		moat.LockfilePath(projectRoot),
-		lf,
-		nil,
-		nil,
-	)
+	f, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	if err != nil {
-		t.Fatalf("FetchAndRecord: %v", err)
+		t.Fatalf("fetchItem: %v", err)
+	}
+	dir := f.cacheDir
+	if err := recordEntry(lf, entry, "example", "https://example.com/manifest.json", f.rekorBundle, Now()); err != nil {
+		t.Fatalf("recordEntry: %v", err)
 	}
 
 	if !strings.Contains(dir, "example/my-skill") {
@@ -151,16 +144,9 @@ func TestFetchAndRecord_Happy_Unsigned(t *testing.T) {
 		t.Errorf("lockfile trust_tier = %q, want UNSIGNED", lf.Entries[0].TrustTier)
 	}
 
-	onDisk, err := moat.LoadLockfile(moat.LockfilePath(projectRoot))
-	if err != nil {
-		t.Fatalf("LoadLockfile: %v", err)
-	}
-	if len(onDisk.Entries) != 1 {
-		t.Errorf("on-disk lockfile should have 1 entry, got %d", len(onDisk.Entries))
-	}
 }
 
-func TestFetchAndRecord_HashMismatch(t *testing.T) {
+func TestFetchItem_HashMismatch(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	// Real hash from the fixture, but we set entry.ContentHash to a wrong
 	// value to simulate publisher-source drift.
@@ -173,21 +159,17 @@ func TestFetchAndRecord_HashMismatch(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
 		Type:        "skill",
 		ContentHash: wrongHash,
 		SourceURI:   fakeRepoURL,
 	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", lf, nil, nil)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "content_hash mismatch") {
 		t.Errorf("expected hash-mismatch message; got %+v", err)
-	}
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated on hash-mismatch; got %d entries", len(lf.Entries))
 	}
 }
 
@@ -286,7 +268,7 @@ func signedFixture(srvURL, contentHash string, withProfile bool) *moat.ContentEn
 	return entry
 }
 
-func TestFetchAndRecord_Happy_Signed(t *testing.T) {
+func TestFetchItem_Happy_Signed(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -300,7 +282,6 @@ func TestFetchAndRecord_Happy_Signed(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
@@ -312,18 +293,13 @@ func TestFetchAndRecord_Happy_Signed(t *testing.T) {
 	Now = func() time.Time { return time.Date(2026, 4, 25, 0, 0, 0, 0, time.UTC) }
 	t.Cleanup(func() { Now = origNow })
 
-	dir, err := FetchAndRecord(
-		context.Background(),
-		entry,
-		"example",
-		"https://example.com/manifest.json",
-		moat.LockfilePath(projectRoot),
-		lf,
-		registryProfile,
-		[]byte(`{"trusted":"root"}`),
-	)
+	f, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	if err != nil {
-		t.Fatalf("FetchAndRecord: %v", err)
+		t.Fatalf("fetchItem: %v", err)
+	}
+	dir := f.cacheDir
+	if err := recordEntry(lf, entry, "example", "https://example.com/manifest.json", f.rekorBundle, Now()); err != nil {
+		t.Fatalf("recordEntry: %v", err)
 	}
 	if !strings.Contains(dir, "example/my-skill") {
 		t.Errorf("cache dir path missing registry/item components: %s", dir)
@@ -356,7 +332,7 @@ func TestFetchAndRecord_Happy_Signed(t *testing.T) {
 	}
 }
 
-func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
+func TestFetchItem_Happy_DualAttested(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -382,7 +358,6 @@ func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	projectRoot := t.TempDir()
 	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, true)
 	registryProfile := &moat.SigningProfile{
@@ -390,11 +365,12 @@ func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
 		Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	if _, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		moat.LockfilePath(projectRoot), lf, registryProfile, []byte(`{"trusted":"root"}`),
-	); err != nil {
-		t.Fatalf("FetchAndRecord: %v", err)
+	f, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
+	if err != nil {
+		t.Fatalf("fetchItem: %v", err)
+	}
+	if err := recordEntry(lf, entry, "example", "https://example.com/m", f.rekorBundle, Now()); err != nil {
+		t.Fatalf("recordEntry: %v", err)
 	}
 
 	if pubStub.Called != 1 {
@@ -429,7 +405,7 @@ func TestFetchAndRecord_Happy_DualAttested(t *testing.T) {
 	}
 }
 
-func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
+func TestFetchItem_Signed_RekorFetchFails(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -453,26 +429,19 @@ func TestFetchAndRecord_Signed_RekorFetchFails(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	if verifyCalled != 0 {
 		t.Errorf("verify must not run when Rekor fetch fails; called %d times", verifyCalled)
 	}
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated when Rekor fetch fails; got %d entries", len(lf.Entries))
-	}
 }
 
-func TestFetchAndRecord_Signed_VerifyFails(t *testing.T) {
+func TestFetchItem_Signed_VerifyFails(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -487,23 +456,16 @@ func TestFetchAndRecord_Signed_VerifyFails(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, false)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated when verify fails; got %d entries", len(lf.Entries))
-	}
 }
 
-func TestFetchAndRecord_Signed_RequiresProfile(t *testing.T) {
+func TestFetchItem_Signed_RequiresProfile(t *testing.T) {
 	idx := int64(42)
 	entry := &moat.ContentEntry{
 		Name:          "my-skill",
@@ -512,18 +474,15 @@ func TestFetchAndRecord_Signed_RequiresProfile(t *testing.T) {
 		SourceURI:     fakeRepoURL,
 		RekorLogIndex: &idx,
 	}
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", &moat.Lockfile{}, nil, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 }
 
-// TestFetchAndRecord_DualAttested_PublisherFetchFails covers the case
+// TestFetchItem_DualAttested_PublisherFetchFails covers the case
 // where the registry leg succeeds but moat-attestation.json cannot be
 // retrieved. The whole install must fail-closed — partial trust is not a
 // valid Dual-Attested outcome.
-func TestFetchAndRecord_DualAttested_PublisherFetchFails(t *testing.T) {
+func TestFetchItem_DualAttested_PublisherFetchFails(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -537,32 +496,25 @@ func TestFetchAndRecord_DualAttested_PublisherFetchFails(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, true)
 	registryProfile := &moat.SigningProfile{
 		Issuer:  "https://token.actions.githubusercontent.com",
 		Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "publisher attestation") {
 		t.Errorf("expected publisher-attestation message; got %+v", err)
 	}
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated when publisher leg fails; got %d entries", len(lf.Entries))
-	}
 }
 
-// TestFetchAndRecord_DualAttested_PublisherEntryMissing covers the case
+// TestFetchItem_DualAttested_PublisherEntryMissing covers the case
 // where moat-attestation.json is fetched but contains no items[] entry
 // matching the manifest's content_hash. Indicates the registry indexed
 // content the publisher never attested.
-func TestFetchAndRecord_DualAttested_PublisherEntryMissing(t *testing.T) {
+func TestFetchItem_DualAttested_PublisherEntryMissing(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -577,30 +529,23 @@ func TestFetchAndRecord_DualAttested_PublisherEntryMissing(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, true)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "does not cover") {
 		t.Errorf("expected 'does not cover' message; got %+v", err)
 	}
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated when publisher entry is missing; got %d entries", len(lf.Entries))
-	}
 }
 
-// TestFetchAndRecord_DualAttested_PublisherVerifyFails covers the case
+// TestFetchItem_DualAttested_PublisherVerifyFails covers the case
 // where both Rekor entries fetch fine, but the publisher's separate Rekor
 // entry's cert subject does not match the per-item signing_profile.
-func TestFetchAndRecord_DualAttested_PublisherVerifyFails(t *testing.T) {
+func TestFetchItem_DualAttested_PublisherVerifyFails(t *testing.T) {
 	fixtureRoot := t.TempDir()
 	entryHash := makeRepoFixture(t, fixtureRoot, "skills", "my-skill", map[string]string{
 		"SKILL.md": "# hi\n",
@@ -633,16 +578,12 @@ func TestFetchAndRecord_DualAttested_PublisherVerifyFails(t *testing.T) {
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
 
-	lf := &moat.Lockfile{}
 	entry := signedFixture(fakeRepoURL, entryHash, true)
 	registryProfile := &moat.SigningProfile{
 		Issuer: "https://token.actions.githubusercontent.com", Subject: "https://github.com/example/repo/.github/workflows/registry.yml@refs/heads/main",
 	}
 
-	_, err := FetchAndRecord(
-		context.Background(), entry, "example", "https://example.com/m",
-		"/tmp/lf.json", lf, registryProfile, []byte(`{"trusted":"root"}`),
-	)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", registryProfile, []byte(`{"trusted":"root"}`))
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "publisher attestation verification failed") {
@@ -651,19 +592,16 @@ func TestFetchAndRecord_DualAttested_PublisherVerifyFails(t *testing.T) {
 	if callCount != 2 {
 		t.Errorf("expected 2 verify calls (registry + publisher); got %d", callCount)
 	}
-	if len(lf.Entries) != 0 {
-		t.Errorf("lockfile must not be mutated when publisher verify fails; got %d entries", len(lf.Entries))
-	}
 }
 
-func TestFetchAndRecord_RefusesNonHTTPSScheme(t *testing.T) {
+func TestFetchItem_RefusesNonHTTPSScheme(t *testing.T) {
 	entry := &moat.ContentEntry{
 		Name:        "my-skill",
 		Type:        "skill",
 		ContentHash: "sha256:" + strings.Repeat("cc", 32),
 		SourceURI:   "git+https://example.com/repo.git",
 	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", &moat.Lockfile{}, nil, nil)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "source_uri scheme") {
@@ -671,14 +609,14 @@ func TestFetchAndRecord_RefusesNonHTTPSScheme(t *testing.T) {
 	}
 }
 
-func TestFetchAndRecord_RejectsUnsupportedType(t *testing.T) {
+func TestFetchItem_RejectsUnsupportedType(t *testing.T) {
 	entry := &moat.ContentEntry{
 		Name:        "my-hook",
 		Type:        "hook",
 		ContentHash: "sha256:" + strings.Repeat("cc", 32),
 		SourceURI:   fakeRepoURL,
 	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lockfile.json", &moat.Lockfile{}, nil, nil)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "unsupported MOAT content type") {
@@ -686,17 +624,7 @@ func TestFetchAndRecord_RejectsUnsupportedType(t *testing.T) {
 	}
 }
 
-func TestFetchAndRecord_NilGuards(t *testing.T) {
-	if _, err := FetchAndRecord(context.Background(), nil, "r", "u", "p", &moat.Lockfile{}, nil, nil); err == nil {
-		t.Error("expected error on nil entry")
-	}
-	entry := &moat.ContentEntry{Name: "x", Type: "skill", ContentHash: "sha256:aa", SourceURI: fakeRepoURL}
-	if _, err := FetchAndRecord(context.Background(), entry, "r", "u", "p", nil, nil, nil); err == nil {
-		t.Error("expected error on nil lockfile")
-	}
-}
-
-func TestFetchAndRecord_CloneFailure(t *testing.T) {
+func TestFetchItem_CloneFailure(t *testing.T) {
 	stubCloneRepoErr(t, errors.New("git clone failed: repo not found"))
 	stubCloneScratchDir(t)
 	stubSourceCacheDir(t)
@@ -707,7 +635,7 @@ func TestFetchAndRecord_CloneFailure(t *testing.T) {
 		ContentHash: "sha256:" + strings.Repeat("aa", 32),
 		SourceURI:   fakeRepoURL,
 	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lf.json", &moat.Lockfile{}, nil, nil)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "could not clone source repo") {
@@ -715,7 +643,7 @@ func TestFetchAndRecord_CloneFailure(t *testing.T) {
 	}
 }
 
-func TestFetchAndRecord_ItemNotFoundInRepo(t *testing.T) {
+func TestFetchItem_ItemNotFoundInRepo(t *testing.T) {
 	// Repo exists but has no skills/missing-skill/ subdirectory.
 	fixtureRoot := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(fixtureRoot, "skills", "other-skill"), 0o755); err != nil {
@@ -732,7 +660,7 @@ func TestFetchAndRecord_ItemNotFoundInRepo(t *testing.T) {
 		ContentHash: "sha256:" + strings.Repeat("aa", 32),
 		SourceURI:   fakeRepoURL,
 	}
-	_, err := FetchAndRecord(context.Background(), entry, "example", "https://example.com/m", "/tmp/lf.json", &moat.Lockfile{}, nil, nil)
+	_, err := fetchItem(context.Background(), moat.CloneRepoFn, map[string]string{}, entry, "example", nil, nil)
 	assertStructuredCode(t, err, output.ErrMoatInvalid)
 	var se output.StructuredError
 	if !errors.As(err, &se) || !strings.Contains(se.Message, "item not found in source repo") {

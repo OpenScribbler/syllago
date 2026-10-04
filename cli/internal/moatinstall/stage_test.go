@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/config"
-	"github.com/OpenScribbler/syllago/cli/internal/installstore"
-	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
@@ -28,9 +25,9 @@ func TestStageIntoLibraryFreshStage(t *testing.T) {
 	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
 	entry.DisplayName = "My Skill"
 
-	item, err := StageIntoLibrary(cacheDir, entry, "example", globalDir, now)
+	item, _, err := stageIntoLibrary(cacheDir, entry, "example", globalDir, now)
 	if err != nil {
-		t.Fatalf("StageIntoLibrary: %v", err)
+		t.Fatalf("stageIntoLibrary: %v", err)
 	}
 
 	destDir := filepath.Join(globalDir, "skills", "my-skill")
@@ -69,8 +66,8 @@ func TestStageIntoLibraryIdempotentSameHashDoesNotRewrite(t *testing.T) {
 	now := time.Date(2026, 8, 22, 11, 0, 0, 0, time.UTC)
 	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
 
-	if _, err := StageIntoLibrary(cacheDir, entry, "example", globalDir, now); err != nil {
-		t.Fatalf("first StageIntoLibrary: %v", err)
+	if _, _, err := stageIntoLibrary(cacheDir, entry, "example", globalDir, now); err != nil {
+		t.Fatalf("first stageIntoLibrary: %v", err)
 	}
 	destDir := filepath.Join(globalDir, "skills", "my-skill")
 	canary := filepath.Join(destDir, "canary.txt")
@@ -87,9 +84,9 @@ func TestStageIntoLibraryIdempotentSameHashDoesNotRewrite(t *testing.T) {
 		t.Fatalf("read metadata: %v", err)
 	}
 
-	item, err := StageIntoLibrary(cacheDir, entry, "example", globalDir, now.Add(time.Hour))
+	item, _, err := stageIntoLibrary(cacheDir, entry, "example", globalDir, now.Add(time.Hour))
 	if err != nil {
-		t.Fatalf("second StageIntoLibrary: %v", err)
+		t.Fatalf("second stageIntoLibrary: %v", err)
 	}
 	after, err := os.ReadFile(metaPath)
 	if err != nil {
@@ -112,19 +109,20 @@ func TestStageIntoLibraryIdempotentSameHashDoesNotRewrite(t *testing.T) {
 }
 
 func TestStageIntoLibraryUpdatesSameRegistryDifferentHash(t *testing.T) {
-	t.Parallel()
+	t.Cleanup(func() { PreviousRootOverride = "" })
+	PreviousRootOverride = t.TempDir()
 
 	globalDir := t.TempDir()
 	firstCache := writeStageCache(t, map[string]string{"old.txt": "old\n"})
 	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
-	if _, err := StageIntoLibrary(firstCache, entry, "example", globalDir, time.Date(2026, 8, 22, 12, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("first StageIntoLibrary: %v", err)
+	if _, _, err := stageIntoLibrary(firstCache, entry, "example", globalDir, time.Date(2026, 8, 22, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("first stageIntoLibrary: %v", err)
 	}
 
 	secondCache := writeStageCache(t, map[string]string{"new.txt": "new\n"})
 	entry.ContentHash = "sha256:bbbbbbbb"
-	if _, err := StageIntoLibrary(secondCache, entry, "example", globalDir, time.Date(2026, 8, 22, 13, 0, 0, 0, time.UTC)); err != nil {
-		t.Fatalf("second StageIntoLibrary: %v", err)
+	if _, _, err := stageIntoLibrary(secondCache, entry, "example", globalDir, time.Date(2026, 8, 22, 13, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("second stageIntoLibrary: %v", err)
 	}
 
 	destDir := filepath.Join(globalDir, "skills", "my-skill")
@@ -186,9 +184,9 @@ func TestStageIntoLibraryConflicts(t *testing.T) {
 			destDir := filepath.Join(globalDir, "skills", "my-skill")
 			tc.setup(t, destDir)
 
-			_, err := StageIntoLibrary(cacheDir, stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo"), "example", globalDir, time.Now())
+			_, _, err := stageIntoLibrary(cacheDir, stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo"), "example", globalDir, time.Now())
 			if err == nil {
-				t.Fatal("StageIntoLibrary returned nil error")
+				t.Fatal("stageIntoLibrary returned nil error")
 			}
 			if !strings.Contains(err.Error(), `library already contains skills/my-skill not sourced from registry "example"`) {
 				t.Fatalf("error = %q", err)
@@ -234,9 +232,9 @@ func TestStageIntoLibraryRejectsInvalidInputs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := StageIntoLibrary(tc.cacheDir, tc.entry, "example", globalDir, time.Now())
+			_, _, err := stageIntoLibrary(tc.cacheDir, tc.entry, "example", globalDir, time.Now())
 			if err == nil {
-				t.Fatal("StageIntoLibrary returned nil error")
+				t.Fatal("stageIntoLibrary returned nil error")
 			}
 			if !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error = %q, want substring %q", err, tc.want)
@@ -308,7 +306,7 @@ func TestPreviousDirFor(t *testing.T) {
 	}
 }
 
-func TestStageIntoLibraryKeepPrev(t *testing.T) {
+func TestStageIntoLibraryRotatesPrevious(t *testing.T) {
 	t.Cleanup(func() { PreviousRootOverride = "" })
 	PreviousRootOverride = t.TempDir()
 
@@ -320,7 +318,7 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 		"SKILL.md": "# v1\n",
 	})
 	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
-	item, prevPath, err := StageIntoLibraryKeepPrev(cacheV1, entry, "example", globalDir, now)
+	item, prevPath, err := stageIntoLibrary(cacheV1, entry, "example", globalDir, now)
 	if err != nil {
 		t.Fatalf("Fresh install failed: %v", err)
 	}
@@ -339,7 +337,7 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 	}
 
 	// 2. Idempotent same-hash stage should return prev path "" and not create previous dir.
-	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV1, entry, "example", globalDir, now.Add(time.Hour))
+	_, prevPath, err = stageIntoLibrary(cacheV1, entry, "example", globalDir, now.Add(time.Hour))
 	if err != nil {
 		t.Fatalf("Idempotent stage failed: %v", err)
 	}
@@ -353,7 +351,7 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 		"SKILL.md": "# v2\n",
 	})
 	entry.ContentHash = "sha256:bbbbbbbb"
-	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV2, entry, "example", globalDir, now.Add(2*time.Hour))
+	_, prevPath, err = stageIntoLibrary(cacheV2, entry, "example", globalDir, now.Add(2*time.Hour))
 	if err != nil {
 		t.Fatalf("Replace v2 failed: %v", err)
 	}
@@ -379,7 +377,7 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 		"extra.txt": "extra\n",
 	})
 	entry.ContentHash = "sha256:cccccccc"
-	_, prevPath, err = StageIntoLibraryKeepPrev(cacheV3, entry, "example", globalDir, now.Add(3*time.Hour))
+	_, prevPath, err = stageIntoLibrary(cacheV3, entry, "example", globalDir, now.Add(3*time.Hour))
 	if err != nil {
 		t.Fatalf("Replace v3 failed: %v", err)
 	}
@@ -392,70 +390,5 @@ func TestStageIntoLibraryKeepPrev(t *testing.T) {
 	// Make sure v1 file from first previous copy is NOT in the second previous copy
 	if _, err := os.Stat(filepath.Join(prevPath, "extra.txt")); !os.IsNotExist(err) {
 		t.Errorf("extra.txt should not exist in prevPath for v2 copy, got err: %v", err)
-	}
-
-	// 5. Normal StageIntoLibrary (the wrapper) replacing a path should NOT create a previous dir.
-	// Clean up PreviousRootOverride to isolate.
-	PreviousRootOverride = t.TempDir()
-	cacheV4 := writeStageCache(t, map[string]string{
-		"SKILL.md": "# v4\n",
-	})
-	entry.ContentHash = "sha256:dddddddd"
-	_, err = StageIntoLibrary(cacheV4, entry, "example", globalDir, now.Add(4*time.Hour))
-	if err != nil {
-		t.Fatalf("Wrapper StageIntoLibrary failed: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(PreviousRootOverride, "previous")); !os.IsNotExist(err) {
-		t.Errorf("expected wrapper StageIntoLibrary to not create previous/, got err: %v", err)
-	}
-}
-
-// Regression: staging that replaced the Library copy and then failed left
-// the install record describing the replaced version with no Previous.
-func TestStageIntoLibraryRespectingPin_FailedStageStillRotates(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	configDir := t.TempDir()
-	origConfig := config.GlobalDirOverride
-	config.GlobalDirOverride = configDir
-	t.Cleanup(func() { config.GlobalDirOverride = origConfig })
-	t.Cleanup(func() { PreviousRootOverride = "" })
-	PreviousRootOverride = t.TempDir()
-	globalDir := t.TempDir()
-	now := time.Date(2026, 10, 3, 10, 0, 0, 0, time.UTC)
-
-	entry := stageEntry("my-skill", "skill", "sha256:aaaaaaaa", "https://github.com/example/repo")
-	cacheV1 := writeStageCache(t, map[string]string{"SKILL.md": "# v1\n"})
-	item, _, err := StageIntoLibraryRespectingPin(lifecycle.New(), cacheV1, entry, "example", globalDir, now)
-	if err != nil {
-		t.Fatalf("stage v1: %v", err)
-	}
-	storePath := filepath.Join(configDir, "installs.json")
-	coord := installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"}
-	if err := installstore.RecordInstallMeta(storePath, coord, item.Path, installstore.PlacementInput{
-		Provider: "claude-code", Mechanism: installstore.MechanismSymlink, Path: filepath.Join(t.TempDir(), "my-skill"),
-	}, installstore.InstallMeta{}, now); err != nil {
-		t.Fatal(err)
-	}
-	v1, err := installstore.HashContent(item.Path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// A directory where the metadata file goes makes the metadata save fail
-	// after the new content is copied in.
-	cacheV2 := writeStageCache(t, map[string]string{"SKILL.md": "# v2\n", metadata.FileName + "/x": "x"})
-	entry.ContentHash = "sha256:bbbbbbbb"
-	if _, _, err := StageIntoLibraryRespectingPin(lifecycle.New(), cacheV2, entry, "example", globalDir, now.Add(time.Hour)); err == nil {
-		t.Fatal("want the metadata save error")
-	}
-
-	store, err := installstore.Load(storePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rec := store.Find(coord)
-	prevDir, _ := PreviousDirFor("example", catalog.Skills, "my-skill")
-	if rec == nil || rec.Previous == nil || rec.Previous.ContentHash != v1 || rec.Previous.CopyPath != prevDir {
-		t.Errorf("record = %+v, want it rotated from %s with the copy at %s", rec, v1, prevDir)
 	}
 }

@@ -463,7 +463,7 @@ func stageItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *con
 			for _, d := range recorded {
 				f := byPath[d.Path]
 				ir := &res.Items[f.idx]
-				item, prev, err := StageIntoLibraryKeepPrev(f.cacheDir, ir.Entry, reg.Name, globalDir, start)
+				item, prev, err := stageIntoLibrary(f.cacheDir, ir.Entry, reg.Name, globalDir, start)
 				written = append(written, lifecycle.Written{Path: d.Path, PreviousCopy: prev})
 				if err != nil {
 					ir.Err = stageError(reg.Name, ir.Entry, err)

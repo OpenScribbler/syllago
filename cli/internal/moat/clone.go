@@ -37,7 +37,7 @@ type CloneRepoFunc func(ctx context.Context, sourceURI, destDir string) error
 
 // CloneRepoFn is the package-level seam for callers that want to swap the
 // production cloner without threading a parameter through every layer.
-// moatinstall.FetchAndRecord reads this directly. New callers SHOULD prefer
+// moatinstall.Operation.Install reads this directly. New callers SHOULD prefer
 // passing a CloneRepoFunc explicitly (e.g. WriteContentCache) so test
 // substitution is local rather than global.
 var CloneRepoFn CloneRepoFunc = cloneRepoShallow

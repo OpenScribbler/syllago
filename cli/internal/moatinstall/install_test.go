@@ -12,6 +12,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
@@ -465,5 +466,49 @@ func TestInstall_TypedItemTakesItsType(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(e.library, string(catalog.Agents), "shared", "AGENT.md")); err != nil {
 		t.Errorf("the agent is not in the Library: %v", err)
+	}
+}
+
+// Regression: staging that replaced the Library copy and then failed left
+// the install record describing the replaced version with no Previous.
+func TestInstall_FailedStageStillRotatesRecord(t *testing.T) {
+	e := newOpEnv(t, "my-skill")
+	ctx := context.Background()
+	if res, err := e.op.Install(ctx, e.request("my-skill")); err != nil || res.Items[0].Err != nil {
+		t.Fatalf("install v1: err=%v item=%v", err, res.Items[0].Err)
+	}
+	libPath := filepath.Join(e.library, string(catalog.Skills), "my-skill")
+	storePath := filepath.Join(e.configDir, "installs.json")
+	coord := installstore.Coord{Registry: "example", Type: string(catalog.Skills), Name: "my-skill"}
+	if err := installstore.RecordInstallMeta(storePath, coord, libPath, installstore.PlacementInput{
+		Provider: "claude-code", Mechanism: installstore.MechanismSymlink, Path: filepath.Join(t.TempDir(), "my-skill"),
+	}, installstore.InstallMeta{}, e.now); err != nil {
+		t.Fatal(err)
+	}
+	v1, err := installstore.HashContent(libPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A directory where the metadata file goes makes the metadata save fail
+	// after the new content is copied in.
+	e.manifest.Content[0].ContentHash = makeRepoFixture(t, e.fixture, "skills", "my-skill",
+		map[string]string{"SKILL.md": "# v2\n", metadata.FileName + "/x": "x"})
+	res, err := e.op.Install(ctx, e.request("my-skill"))
+	if err != nil {
+		t.Fatalf("install v2: %v", err)
+	}
+	if res.Items[0].Err == nil {
+		t.Fatal("want the metadata save error on the item")
+	}
+
+	store, err := installstore.Load(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := store.Find(coord)
+	prevDir, _ := PreviousDirFor("example", catalog.Skills, "my-skill")
+	if rec == nil || rec.Previous == nil || rec.Previous.ContentHash != v1 || rec.Previous.CopyPath != prevDir {
+		t.Errorf("record = %+v, want it rotated from %s with the copy at %s", rec, v1, prevDir)
 	}
 }

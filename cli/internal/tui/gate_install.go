@@ -2,11 +2,11 @@ package tui
 
 // TUI install-gate adapter.
 //
-// Mirrors cmd/syllago/install_moat.go:resolveGateDecision but maps each
-// MOATGateDecision to TUI primitives (modals + toasts) instead of stderr +
-// exit codes. The two adapters read from the same installer.PreInstallCheck
-// output so the TUI and CLI cannot disagree about whether a given
-// (registry, hash) is gated.
+// Gates installs of Library copies of MOAT registry items. A registry item's
+// own install goes through moatinstall.Operation, which runs the gate itself.
+// This adapter maps each MOATGateDecision to TUI primitives (modals + toasts).
+// It reads the same installer.PreInstallCheck output as the operation, so the
+// TUI and CLI cannot disagree about whether a given (registry, hash) is gated.
 //
 // Lifecycle:
 //   - resolveInstallGate runs synchronously from handleInstallResult /

@@ -905,8 +905,9 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 
 // handleInstallResult receives the wizard's confirmation and kicks off the async install.
 //
-// The MOAT install gate runs here (mirroring cmd/syllago/install_moat.go:
-// resolveGateDecision) so all 5 decisions are surfaced at wizard time:
+// A registry item's install goes through moatinstall.Operation, which gates
+// it itself. The MOAT install gate below runs for Library items sourced from
+// a MOAT registry, so all 5 decisions are surfaced at wizard time:
 //   - Proceed: straight through to doInstallCmd.
 //   - HardBlock: error toast, no modal — registry-source revocations are
 //     permanent and cannot be operator-overridden.
@@ -915,7 +916,7 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 //   - TierBelowPolicy: error toast, no modal — tier cannot be upgraded
 //     interactively; only the publisher can.
 //
-// Items with no MOAT lineage bypass the gate entirely (legacy install path).
+// Items with no MOAT registry bypass the gate entirely.
 func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
