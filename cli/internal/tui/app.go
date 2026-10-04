@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
@@ -130,6 +131,12 @@ type App struct {
 	pendingGateKind        pendingGateKind
 	pendingGateRegistryURL string
 	pendingGateContentHash string
+
+	// registryInstallCancel cancels the registry install in flight; Esc
+	// calls it. pendingRegistryDecision is a registry install waiting on
+	// the user's answer in the confirm or TOFU modal.
+	registryInstallCancel   context.CancelFunc
+	pendingRegistryDecision *pendingRegistryDecision
 
 	// Set by Add+Install so handleCatalogReady can open the wizard after the
 	// rescan completes and the item is visible as a Library item.

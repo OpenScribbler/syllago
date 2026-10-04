@@ -132,6 +132,7 @@ func materializeMOATItemsWithCache(cat *catalog.Catalog, registryName string, m 
 			Type:        ct,
 			Registry:    registryName,
 			Source:      registryName,
+			MOAT:        true,
 		}
 		if cacheDir != "" {
 			if categoryDir, ok := CategoryDirForMOATType(entry.Type); ok {

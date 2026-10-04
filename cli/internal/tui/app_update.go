@@ -107,6 +107,13 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.telemetryConsent, cmd = a.telemetryConsent.Update(msg)
 			return a, cmd
 		}
+		// Esc cancels a registry install in flight, unless a wizard or
+		// modal is open to take it.
+		if msg.Type == tea.KeyEsc && a.registryInstallCancel != nil && a.wizardMode == wizardNone && !a.anyOverlayActive() {
+			a.registryInstallCancel()
+			return a, a.toast.Push("Cancelling install...", toastWarning)
+		}
+
 		// Toast dismissal takes priority over modals — Esc dismisses toast first.
 		if a.toast.visible && msg.Type == tea.KeyEsc {
 			cmd := a.toast.Dismiss()
@@ -378,6 +385,9 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case installDoneMsg:
 		return a.handleInstallDone(msg)
 
+	case registryInstallDoneMsg:
+		return a.handleRegistryInstallDone(msg)
+
 	case installCloseMsg:
 		a.installWizard = nil
 		a.wizardMode = wizardNone
@@ -544,6 +554,11 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case rollbackPlanMsg:
 		if msg.err != nil {
 			return a, a.toast.Push(msg.err.Error(), toastWarning)
+		}
+		// The plan arrives in the background, after a registry install may
+		// have opened its own prompt; replacing that prompt would strand it.
+		if a.promptOpen() {
+			return a, a.toast.Push("Rollback needs your answer, but another prompt is open; roll back again after closing that one", toastWarning)
 		}
 		plan := msg.plan
 		a.pendingRollback = plan

@@ -18,7 +18,10 @@
 // new reason string still flows through the enforcement path.
 package moat
 
-import "sort"
+import (
+	"sort"
+	"sync"
+)
 
 // RevocationStatus is the effective enforcement decision for a content hash.
 type RevocationStatus int
@@ -140,7 +143,11 @@ func (s *RevocationSet) Len() int {
 //
 // Registry-source revocations never interact with Session — they always
 // block.
+//
+// A Session is safe for concurrent use, since a TUI install can confirm a
+// warning in the background while the UI reads the same Session.
 type Session struct {
+	mu        sync.Mutex
 	confirmed map[string]struct{}
 }
 
@@ -158,6 +165,8 @@ func (sess *Session) ShouldWarn(issuingRegistryURL, contentHash string) bool {
 	if sess == nil {
 		return true
 	}
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
 	_, ok := sess.confirmed[sessionKey(issuingRegistryURL, contentHash)]
 	return !ok
 }
@@ -168,6 +177,8 @@ func (sess *Session) MarkConfirmed(issuingRegistryURL, contentHash string) {
 	if sess == nil {
 		return
 	}
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
 	sess.confirmed[sessionKey(issuingRegistryURL, contentHash)] = struct{}{}
 }
 
