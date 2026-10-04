@@ -146,3 +146,37 @@ func TestInstallFromRegistry_FreshSyncCachesManifest(t *testing.T) {
 		t.Errorf("cached manifest = %+v, want the synced one", cached)
 	}
 }
+
+// Regression: a 304 confirmed a cached manifest whose expiry had passed,
+// and the install went ahead instead of exiting 13.
+func TestInstallFromRegistry_NotModifiedExpiredCacheExits13(t *testing.T) {
+	s := newSyncedInstall(t)
+	expired := s.now.Add(-time.Hour)
+	s.manifest.Expires = &expired
+	if err := moat.WriteManifestCache(s.configDir, "example",
+		syncMOATDriftManifestBytes(t, s.manifest), []byte(`{"bundle":true}`)); err != nil {
+		t.Fatalf("seed manifest cache: %v", err)
+	}
+	s.env.syncResultFn = func() (moat.SyncResult, error) {
+		return moat.SyncResult{
+			ManifestURL:     "https://example.com/m",
+			NotModified:     true,
+			IncomingProfile: incomingProfile(),
+			Staleness:       moat.StalenessFresh,
+			ETag:            `"etag-1"`,
+			FetchedAt:       s.now,
+		}, nil
+	}
+	exitCode := withInstallGateStubs(t, false, false)
+
+	out, err := s.run(t)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if *exitCode != moat.ExitMoatManifestStale {
+		t.Errorf("exit code = %d, want %d", *exitCode, moat.ExitMoatManifestStale)
+	}
+	if strings.Contains(out, "installed example/my-skill") {
+		t.Errorf("output = %q, want no install from an expired manifest", out)
+	}
+}

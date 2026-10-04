@@ -233,15 +233,12 @@ func runInstallFromRegistry(
 		moatSyncExit(moat.ExitMoatTOFUAcceptance)
 		return nil
 	}
-	if res.Staleness == moat.StalenessExpired {
-		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
-		moatSyncExit(moat.ExitMoatManifestStale)
-		return nil
-	}
 
 	// A 304 returns no manifest body: the copy cached by the sync that
-	// fetched it is still the current one.
+	// fetched it is still the current one. Sync classified the 304 without
+	// that body, so its expiry is checked here.
 	manifest := res.Manifest
+	staleness := res.Staleness
 	if res.NotModified {
 		manifest, err = regdiff.LoadCachedManifest(cacheDir, reg.Name)
 		if err != nil || manifest == nil {
@@ -251,6 +248,12 @@ func runInstallFromRegistry(
 				"Clear the cached ETag by removing the `manifest_etag` field for registry \""+reg.Name+"\" from ~/.syllago/config.json, then run `syllago registry sync "+reg.Name+"` to force a full re-fetch.",
 			)
 		}
+		staleness = moat.CheckStaleness(res.FetchedAt, manifest.Expires, now)
+	}
+	if staleness == moat.StalenessExpired {
+		fmt.Fprintf(errW, "syllago: %s\n", moat.FailureManifestStale.Message())
+		moatSyncExit(moat.ExitMoatManifestStale)
+		return nil
 	}
 
 	lockfilePath := moat.LockfilePath(cfgRoot)
@@ -300,7 +303,7 @@ func runInstallFromRegistry(
 	}
 
 	if dryRun {
-		printRegistryItemSummaryWithGate(out, reg.Name, entry, res.RevocationsAdded, res.Staleness, gate.Decision)
+		printRegistryItemSummaryWithGate(out, reg.Name, entry, res.RevocationsAdded, staleness, gate.Decision)
 		return nil
 	}
 
