@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registryops"
+	"github.com/OpenScribbler/syllago/cli/internal/syllagolock"
 )
 
 // opEnv is an Operation over registry "example", whose items are skills in
@@ -213,7 +214,7 @@ func TestInstall_PublisherWarn(t *testing.T) {
 	}
 
 	declined := e.request("a")
-	declined.Decisions.PublisherWarn = map[string]bool{"a": false}
+	declined.Decisions.PublisherWarn = map[string]bool{e.manifest.Content[0].ContentHash: false}
 	res, err := e.op.Install(context.Background(), declined)
 	if err != nil || !errors.Is(res.Items[0].Err, ErrDeclined) {
 		t.Fatalf("declined: err=%v item=%v, want ErrDeclined", err, res.Items[0].Err)
@@ -223,7 +224,7 @@ func TestInstall_PublisherWarn(t *testing.T) {
 	}
 
 	confirmed := e.request("a")
-	confirmed.Decisions.PublisherWarn = map[string]bool{"a": true}
+	confirmed.Decisions.PublisherWarn = map[string]bool{e.manifest.Content[0].ContentHash: true}
 	res, err = e.op.Install(context.Background(), confirmed)
 	if err != nil || res.Items[0].Err != nil || !e.inLibrary("a") {
 		t.Fatalf("confirmed: err=%v item=%v staged=%v", err, res.Items[0].Err, e.inLibrary("a"))
@@ -237,11 +238,11 @@ func TestInstall_PrivateSourceDecidedSeparately(t *testing.T) {
 	e.manifest.Revocations = []moat.Revocation{{ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher"}}
 
 	req := e.request("a")
-	req.Decisions.PublisherWarn = map[string]bool{"a": true}
+	req.Decisions.PublisherWarn = map[string]bool{e.manifest.Content[0].ContentHash: true}
 	_, err := e.op.Install(context.Background(), req)
 	requireDecision(t, err, lifecycle.PrivateSource)
 
-	req.Decisions.PrivateSource = map[string]bool{"a": true}
+	req.Decisions.PrivateSource = map[string]bool{e.manifest.Content[0].ContentHash: true}
 	res, err := e.op.Install(context.Background(), req)
 	if err != nil || res.Items[0].Err != nil || !e.inLibrary("a") {
 		t.Fatalf("err=%v item=%v staged=%v", err, res.Items[0].Err, e.inLibrary("a"))
@@ -323,5 +324,99 @@ func TestInstall_ExpiredManifestSaveFailure(t *testing.T) {
 	}
 	if _, err := e.op.Install(context.Background(), e.request("a")); !errors.Is(err, ErrManifestExpired) {
 		t.Fatalf("err = %v, want ErrManifestExpired", err)
+	}
+}
+
+// Regression: a refusal was dropped when the next sync's manifest no longer
+// carried the warning, and the item installed.
+func TestInstall_RefusalStandsWhenWarningGoes(t *testing.T) {
+	e := newOpEnv(t, "a")
+	hash := e.manifest.Content[0].ContentHash
+	req := e.request("a")
+	req.Decisions.PublisherWarn = map[string]bool{hash: false}
+	res, err := e.op.Install(context.Background(), req)
+	if err != nil || !errors.Is(res.Items[0].Err, ErrDeclined) {
+		t.Fatalf("err=%v item=%v, want ErrDeclined", err, res.Items[0].Err)
+	}
+	if e.inLibrary("a") {
+		t.Error("a refused item was staged")
+	}
+}
+
+// Regression: an answer keyed by item name approved new content published
+// under the same name.
+func TestInstall_ApprovalCoversOnlyTheContentShown(t *testing.T) {
+	e := newOpEnv(t, "a")
+	approved := e.manifest.Content[0].ContentHash
+	e.setItem(t, "a", "# a v2\n")
+	e.manifest.Revocations = []moat.Revocation{{ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher"}}
+	req := e.request("a")
+	req.Decisions.PublisherWarn = map[string]bool{approved: true}
+	_, err := e.op.Install(context.Background(), req)
+	requireDecision(t, err, lifecycle.PublisherWarn)
+	if e.clones != 0 {
+		t.Error("cloned content the user had not approved")
+	}
+}
+
+// Regression: a cancel while Install waited for the install lock still
+// wrote the Library and the lockfile once the lock came free.
+func TestInstall_CancelWhileWaitingForLockStagesNothing(t *testing.T) {
+	e := newOpEnv(t, "a")
+	release, err := syllagolock.Acquire(time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := e.op.Install(ctx, e.request("a"))
+		done <- err
+	}()
+	time.Sleep(300 * time.Millisecond) // long enough to reach the lock
+	cancel()
+	release()
+	if err := <-done; !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	if e.inLibrary("a") || len(e.lockedHashes(t, "a")) != 0 {
+		t.Errorf("staged=%v locked=%v after cancel", e.inLibrary("a"), e.lockedHashes(t, "a"))
+	}
+}
+
+// Regression: an unsupported target turned a trust warning into a target
+// error, and a dry run refused to preview the item.
+func TestInstall_GateBeforeTargets(t *testing.T) {
+	rulesOnly := []lifecycle.Target{{Provider: provider.Provider{
+		Name: "Rules Only", Slug: "rules-only",
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Rules },
+	}}}
+	e := newOpEnv(t, "a")
+	e.manifest.Revocations = []moat.Revocation{{ContentHash: e.manifest.Content[0].ContentHash, Reason: "deprecated", Source: "publisher"}}
+	req := e.request("a")
+	req.Targets = rulesOnly
+	_, err := e.op.Install(context.Background(), req)
+	requireDecision(t, err, lifecycle.PublisherWarn)
+
+	e = newOpEnv(t, "a")
+	req = e.request("a")
+	req.Targets = rulesOnly
+	req.DryRun = true
+	res, err := e.op.Install(context.Background(), req)
+	if err != nil || res.Items[0].Err != nil {
+		t.Fatalf("dry run: err=%v item=%v", err, res.Items[0].Err)
+	}
+}
+
+// One item's failure leaves the others to install.
+func TestInstall_ItemFailsAlone(t *testing.T) {
+	e := newOpEnv(t, "a")
+	res, err := e.op.Install(context.Background(), e.request("missing", "a"))
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if res.Items[0].Err == nil || res.Items[1].Err != nil || !e.inLibrary("a") {
+		t.Errorf("missing err=%v, a err=%v staged=%v", res.Items[0].Err, res.Items[1].Err, e.inLibrary("a"))
 	}
 }

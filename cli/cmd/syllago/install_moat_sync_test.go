@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/moatinstall"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -253,5 +254,51 @@ func TestInstallFromRegistry_NoTargetsIsInputError(t *testing.T) {
 	var se output.StructuredError
 	if !errors.As(err, &se) || se.Code != output.ErrInputMissing {
 		t.Fatalf("err = %v, want %s", err, output.ErrInputMissing)
+	}
+}
+
+// Regression: a declined publisher warning was recorded and the install
+// retried, so a second sync whose manifest dropped the warning installed it.
+func TestInstallFromRegistry_DeclineStopsWithoutRetry(t *testing.T) {
+	s := newSyncedInstall(t)
+	s.manifest.Revocations = []moat.Revocation{{
+		ContentHash: s.manifest.Content[0].ContentHash,
+		Reason:      "deprecated",
+		Source:      "publisher",
+	}}
+	syncs := 0
+	s.env.syncResultFn = func() (moat.SyncResult, error) {
+		syncs++
+		return s.freshSync(t), nil
+	}
+	withInstallGateStubs(t, true, false)
+
+	out, err := s.run(t)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if syncs != 1 || strings.Contains(out, "installed") {
+		t.Errorf("syncs = %d, output = %q; want one sync and no install", syncs, out)
+	}
+}
+
+// Regression: a failure on one target hid the targets that did install.
+func TestReportRegistryInstall_ReportsCompletedBeforeFailure(t *testing.T) {
+	output.SetForTest(t)
+	failure := errors.New("second target failed")
+	out := &bytes.Buffer{}
+	res := moatinstall.Result{Items: []moatinstall.ItemResult{{
+		Name:    "my-skill",
+		Entry:   &moat.ContentEntry{Name: "my-skill"},
+		Install: lifecycle.Outcome{Completed: []lifecycle.Step{{Placement: installer.Placement{Path: "/x"}}}},
+		Err:     failure,
+	}}}
+
+	err := reportRegistryInstall(out, &bytes.Buffer{}, moatinstall.Request{Registry: "example"}, res)
+	if !errors.Is(err, failure) {
+		t.Errorf("err = %v, want the target failure", err)
+	}
+	if !strings.Contains(out.String(), "installed example/my-skill") {
+		t.Errorf("output = %q, want the completed install reported", out.String())
 	}
 }

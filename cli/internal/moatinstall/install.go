@@ -63,10 +63,11 @@ type Decisions struct {
 	// AcceptTOFU trusts the signing profile a registry presents on its
 	// first sync.
 	AcceptTOFU bool
-	// PublisherWarn answers PublisherWarn by item name: true installs the
-	// revoked item, false declines it.
+	// PublisherWarn answers PublisherWarn by content hash, so an answer
+	// covers only the content the user saw: true installs the revoked
+	// item, false declines it.
 	PublisherWarn map[string]bool
-	// PrivateSource answers PrivateSource by item name.
+	// PrivateSource answers PrivateSource by content hash.
 	PrivateSource map[string]bool
 }
 
@@ -145,8 +146,9 @@ type fetched struct {
 // before anything is fetched, except OverwritePinned, which comes after the
 // fetch and before anything is staged. Re-invoke with the answer in
 // req.Decisions. An item that fails stops alone, with ItemResult.Err set;
-// the error return is for failures of the whole call. A cancelled ctx
-// stops the fetch, and nothing is staged.
+// the error return is for failures of the whole call. A ctx cancelled
+// before staging stages nothing; one cancelled after staging skips the
+// provider installs.
 func (o *Operation) Install(ctx context.Context, req Request) (Result, error) {
 	var res Result
 	now := time.Now
@@ -214,10 +216,13 @@ func (o *Operation) Install(ctx context.Context, req Request) (Result, error) {
 	if lc == nil {
 		lc = lifecycle.New()
 	}
-	if err := stageItems(lc, req, reg, lockfilePath, ready, start, &res); err != nil {
+	if err := stageItems(ctx, lc, req, reg, lockfilePath, ready, start, &res); err != nil {
 		return res, err
 	}
 	if len(req.Targets) > 0 {
+		if err := ctx.Err(); err != nil {
+			return res, err
+		}
 		installItems(lc, req, reg, ready, start, &res)
 	}
 	return res, nil
@@ -314,7 +319,9 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 			continue
 		}
 		ir.Entry = entry
-		if ir.Err = checkTargets(ir, reg.Name, req.Targets); ir.Err != nil {
+		// A refusal stands even when a newer manifest no longer asks.
+		if req.Decisions.refused(entry.ContentHash) {
+			ir.Err = ErrDeclined
 			continue
 		}
 
@@ -323,7 +330,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 		for ir.Err == nil {
 			switch gate.Decision {
 			case installer.MOATGatePublisherWarn:
-				ok, decided := req.Decisions.PublisherWarn[name]
+				ok, decided := req.Decisions.PublisherWarn[entry.ContentHash]
 				if !decided {
 					publisherPrompts = append(publisherPrompts, GatePrompt{Entry: entry, Gate: gate})
 					break
@@ -336,7 +343,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 				gate = installer.PreInstallCheck(entry, reg.ManifestURI, lf, revSet, session, o.MinTier)
 				continue
 			case installer.MOATGatePrivatePrompt:
-				ok, decided := req.Decisions.PrivateSource[name]
+				ok, decided := req.Decisions.PrivateSource[entry.ContentHash]
 				if !decided {
 					privatePrompts = append(privatePrompts, GatePrompt{Entry: entry, Gate: gate})
 					break
@@ -349,7 +356,14 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 				gate = installer.PreInstallCheck(entry, reg.ManifestURI, lf, revSet, session, o.MinTier)
 				continue
 			case installer.MOATGateProceed:
-				passed = append(passed, len(res.Items)-1)
+				// Targets are checked after the gate, so a trust warning is
+				// reported whatever the targets, and a dry run checks none.
+				if !req.DryRun {
+					ir.Err = checkTargets(ir, reg.Name, req.Targets)
+				}
+				if ir.Err == nil {
+					passed = append(passed, len(res.Items)-1)
+				}
 			default:
 				ir.Err = gateError(entry, gate)
 			}
@@ -368,7 +382,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 // stageItems records the fetched items in the lockfile and stages them into
 // the Library under one lc.Overwrite. An item the user declined to
 // overwrite gets ErrDeclined.
-func stageItems(lc *lifecycle.Module, req Request, reg *config.Registry, lockfilePath string, ready []fetched, start time.Time, res *Result) error {
+func stageItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *config.Registry, lockfilePath string, ready []fetched, start time.Time, res *Result) error {
 	globalDir := catalog.GlobalContentDir()
 	if globalDir == "" {
 		return output.NewStructuredError(output.ErrSystemHomedir, "cannot determine home directory", "Set the HOME environment variable")
@@ -391,6 +405,10 @@ func stageItems(lc *lifecycle.Module, req Request, reg *config.Registry, lockfil
 		// Library copy land together, and a pinned item the user declined
 		// gets neither.
 		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			// The wait for the lock can outlast a cancel.
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			lf, err := moat.LoadLockfile(lockfilePath)
 			if err != nil {
 				return nil, fmt.Errorf("load lockfile: %w", err)
@@ -645,4 +663,14 @@ func fetchItem(ctx context.Context, clone moat.CloneRepoFunc, clones map[string]
 		return fetched{}, err
 	}
 	return fetched{cacheDir: cacheDir, rekorBundle: rekorBundle}, nil
+}
+
+// refused reports whether the user declined a warning about the content
+// at hash.
+func (d Decisions) refused(hash string) bool {
+	if ok, decided := d.PublisherWarn[hash]; decided && !ok {
+		return true
+	}
+	ok, decided := d.PrivateSource[hash]
+	return decided && !ok
 }

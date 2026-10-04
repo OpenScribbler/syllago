@@ -166,7 +166,11 @@ func decideRegistryInstall(errW io.Writer, req *moatinstall.Request, decision *l
 				moatSyncExit(moat.ExitMoatPublisherRevocation)
 				return false, nil
 			}
-			req.Decisions.PublisherWarn[p.Entry.Name] = moatInstallPromptFn(errW, "Proceed anyway? [Y/n]: ")
+			if !moatInstallPromptFn(errW, "Proceed anyway? [Y/n]: ") {
+				fmt.Fprintln(errW, "install refused by operator")
+				return false, nil
+			}
+			req.Decisions.PublisherWarn[p.Entry.ContentHash] = true
 		}
 		return true, nil
 
@@ -183,7 +187,11 @@ func decideRegistryInstall(errW io.Writer, req *moatinstall.Request, decision *l
 				moatSyncExit(moat.ExitMoatTOFUAcceptance)
 				return false, nil
 			}
-			req.Decisions.PrivateSource[p.Entry.Name] = moatInstallPromptFn(errW, "Install from private source? [Y/n]: ")
+			if !moatInstallPromptFn(errW, "Install from private source? [Y/n]: ") {
+				fmt.Fprintln(errW, "install refused by operator")
+				return false, nil
+			}
+			req.Decisions.PrivateSource[p.Entry.ContentHash] = true
 		}
 		return true, nil
 
@@ -241,11 +249,10 @@ func reportRegistryInstall(out, errW io.Writer, req moatinstall.Request, res moa
 		printRegistryItemSummaryWithGate(out, req.Registry, ir.Entry, res.Sync.MoatResult.RevocationsAdded, res.Staleness, ir.Gate.Decision)
 		return nil
 	}
+	// Report what did install before any failure, since one target can
+	// fail after another succeeded.
 	printLifecycleWarnings(errW, res.Stage)
 	printInstallNotices(errW, ir.Install.Notices)
-	if ir.Err != nil {
-		return ir.Err
-	}
 	printLifecycleWarnings(errW, ir.Install)
 	for _, t := range ir.Unsupported {
 		fmt.Fprintf(errW, "skipped %s: it does not support %s\n", t.Provider.Name, ir.Library.Type.Label())
@@ -253,7 +260,7 @@ func reportRegistryInstall(out, errW io.Writer, req moatinstall.Request, res moa
 	for _, step := range ir.Install.Completed {
 		fmt.Fprintf(out, "installed %s/%s (%s) to %s\n", req.Registry, ir.Entry.Name, ir.Entry.TrustTier().String(), step.Placement.String())
 	}
-	return nil
+	return ir.Err
 }
 
 // printRegistryItemSummaryWithGate renders the resolved ContentEntry and
