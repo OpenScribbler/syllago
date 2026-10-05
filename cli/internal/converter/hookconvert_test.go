@@ -157,6 +157,16 @@ func TestConvertHooksWrappingLLM(t *testing.T) {
 		}
 	})
 
+	t.Run("drops it for crush, which has no CLI to wrap it in", func(t *testing.T) {
+		res, err := ConvertHooksWrappingLLM(raw, "claude-code", "crush")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Content != nil || len(res.ExtraFiles) != 0 {
+			t.Errorf("want the prompt hook dropped, got %s %v", res.Content, res.ExtraFiles)
+		}
+	})
+
 	t.Run("keeps it for a target with LLM hooks", func(t *testing.T) {
 		res, err := ConvertHooksWrappingLLM(raw, "claude-code", "claude-code")
 		if err != nil {

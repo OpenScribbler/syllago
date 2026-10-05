@@ -648,6 +648,41 @@ func TestRunExportOp_SkipModeSuggestsGenerate(t *testing.T) {
 	}
 }
 
+func TestRunExportOp_AllHooksDroppedExplainsWhy(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(string, catalog.ContentType) string {
+				return provider.JSONMergeSentinel
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeSkip, "", false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	got := stderr.String()
+	if !strings.Contains(got, "--llm-hooks=generate") || strings.Contains(got, "use the TUI") {
+		t.Errorf("want the drop explained with the --llm-hooks hint, got:\n%s", got)
+	}
+}
+
 func TestRunExportOp_FilterBySourceExcludes(t *testing.T) {
 	// With source=library and no library items, filterBySource skips every item.
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})

@@ -279,6 +279,21 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 								continue
 							}
 						}
+						if renderErr == nil && rendered.Content == nil {
+							// The warnings say why nothing converted.
+							result.Skipped = append(result.Skipped, syncSkippedItem{
+								Name:   item.Name,
+								Type:   string(item.Type),
+								Reason: fmt.Sprintf("nothing in it converts to %s: %s", prov.Name, strings.Join(rendered.Warnings, "; ")),
+							})
+							if !output.JSON {
+								fmt.Fprintf(output.ErrWriter, "Skipping %s (%s): nothing in it converts to %s\n", item.Name, item.Type.Label(), prov.Name)
+								for _, w := range rendered.Warnings {
+									fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+								}
+							}
+							continue
+						}
 					}
 				}
 			}

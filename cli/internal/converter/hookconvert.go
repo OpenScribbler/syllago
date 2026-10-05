@@ -42,7 +42,9 @@ func convertHooks(raw []byte, fromSlug, toSlug string, wrapLLM bool) (*Result, e
 	}
 	var wrappers map[string][]byte
 	var wrapWarnings []ConversionWarning
-	if wrapLLM && !adapter.Capabilities().SupportsLLMHooks {
+	// Crush hooks run only shell commands and syllago has no Crush CLI call
+	// to wrap a prompt in, so its LLM hooks are dropped, as they always were.
+	if wrapLLM && !adapter.Capabilities().SupportsLLMHooks && toSlug != "crush" {
 		wrappers, wrapWarnings = wrapLLMHooks(hooks, toSlug)
 	}
 	enc, err := adapter.Encode(hooks)
