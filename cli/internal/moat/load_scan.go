@@ -31,8 +31,11 @@ import (
 // callers that dispatch installs (TUI) read every field so the gate
 // sees the same snapshot the user just saw.
 type ScanResult struct {
-	Catalog         *catalog.Catalog
-	Lockfile        *Lockfile
+	Catalog  *catalog.Catalog
+	Lockfile *Lockfile
+	// LockfileErr is why the lockfile could not be read. Lockfile is nil
+	// then, and the revocations it archives cannot be checked.
+	LockfileErr     error
 	GateInputs      *GateInputs
 	RegistrySources []catalog.RegistrySource
 	Config          *config.Config
@@ -84,7 +87,7 @@ func LoadAndScan(root, projectRoot string, now time.Time) (*ScanResult, error) {
 		}
 	}
 
-	lf, _ := LoadLockfile(LockfilePath(projectRoot))
+	lf, lfErr := LoadLockfile(LockfilePath(projectRoot))
 
 	cat, err := ScanAndEnrich(merged, root, projectRoot, regSources, lf, cacheDir, now)
 	if err != nil {
@@ -94,6 +97,7 @@ func LoadAndScan(root, projectRoot string, now time.Time) (*ScanResult, error) {
 	return &ScanResult{
 		Catalog:         cat,
 		Lockfile:        lf,
+		LockfileErr:     lfErr,
 		GateInputs:      BuildGateInputs(merged, cacheDir),
 		RegistrySources: regSources,
 		Config:          merged,

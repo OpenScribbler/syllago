@@ -314,15 +314,21 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	items, refused, stop, refusal := gateLibraryItems(output.ErrWriter, items, mergedCfg, projectRoot)
+	if stop {
+		return nil
+	}
+
 	if len(items) > 1 && !output.Quiet && !output.JSON {
 		fmt.Fprintf(output.Writer, "Installing %d items to %s...\n", len(items), prov.Name)
 	}
 
 	result, _ := installToProvider(items, *prov, method, dryRun, resolver, toSlug, projectRoot, frozen, scan)
+	result.Skipped = append(refused, result.Skipped...)
 
 	if output.JSON {
 		output.Print(result)
-		return nil
+		return refusal
 	}
 
 	if len(result.Installed) > 0 && !output.Quiet {
@@ -336,7 +342,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	telemetry.Enrich("content_type", typeFilter)
 	telemetry.Enrich("content_count", len(result.Installed))
 	telemetry.Enrich("dry_run", dryRun)
-	return nil
+	// An item the trust gate refused fails the command, so a script never
+	// reads the refusal as success.
+	return refusal
 }
 
 // installToProvider installs the given items to a single provider and returns
@@ -615,6 +623,11 @@ func runInstallToAll(
 		return nil
 	}
 
+	items, _, stop, refusal := gateLibraryItems(output.ErrWriter, items, mergedCfg, projectRoot)
+	if stop || len(items) == 0 {
+		return refusal
+	}
+
 	if !output.Quiet && !output.JSON {
 		fmt.Fprintf(output.Writer, "Installing %d item(s) to %d detected provider(s)...\n\n", len(items), len(active))
 	}
@@ -680,7 +693,7 @@ func runInstallToAll(
 
 	if output.JSON {
 		output.Print(provResults)
-		return nil
+		return refusal
 	}
 
 	if !output.Quiet {
@@ -698,6 +711,9 @@ func runInstallToAll(
 	telemetry.Enrich("content_count", len(items))
 	telemetry.Enrich("dry_run", dryRun)
 
+	if refusal != nil {
+		return refusal
+	}
 	if anyFailed {
 		return output.NewStructuredError(output.ErrInstallNotWritable, "one or more providers had install failures", "Check the output above for details per provider")
 	}

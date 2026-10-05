@@ -14,14 +14,15 @@ package tui
 //     are already done in rescanCatalog, so this layer is CPU-only.
 //   - When the decision requires operator input (PublisherWarn /
 //     PrivatePrompt), the caller stashes the install msg on App and opens
-//     the shared confirmModal. handleConfirmResult re-dispatches on Y and
-//     calls the correct MarkConfirmed variant based on pendingGateKind.
+//     the shared confirmModal. On Y, handleConfirmResult calls the correct
+//     MarkConfirmed variant based on pendingGateKind and runs the gate
+//     again, so a second question (a private prompt after a recall) is
+//     still asked.
 //   - When the decision hard-refuses (HardBlock / TierBelowPolicy), the
 //     caller pushes an error toast and returns without stashing.
 //
-// Non-MOAT items (local library content with no Registry, or items whose
-// registry is not MOAT-backed) bypass the gate entirely — the same safe
-// default the legacy install path has always had.
+// Items with no MOAT lineage (local content, or content from a registry
+// that is not MOAT-backed) bypass the gate entirely.
 
 import (
 	"fmt"
@@ -54,44 +55,29 @@ type gateEvaluation struct {
 }
 
 // evaluateInstallGate resolves the MOAT gate for an install attempt on
-// `item`. Returns (eval, true) when the item has a MOAT lineage that yields
-// a gate decision, or (_, false) when the item is not MOAT-backed and should
-// bypass gating entirely (legacy install path).
-//
-// A missing manifest entry (item.Registry is MOAT but the name was not
-// listed in the manifest at scan time) is treated as bypass: the library
-// copy was presumably added outside the MOAT flow, and gating a phantom
-// entry would be more confusing than helpful. This matches
-// BuildGateInputs's silent-skip policy for unparseable manifests.
+// `item`, a registry item or a Library copy of one. Returns (eval, true)
+// when the item has a MOAT lineage that yields a gate decision, or
+// (_, false) when it should bypass gating (see installer.CheckItem).
 func evaluateInstallGate(a *App, item catalog.ContentItem) (gateEvaluation, bool) {
-	if a == nil || a.moatGate == nil {
+	if a == nil {
 		return gateEvaluation{}, false
 	}
-	if item.Registry == "" {
-		return gateEvaluation{}, false
-	}
-	if !a.moatGate.HasRegistry(item.Registry) {
-		return gateEvaluation{}, false
-	}
-	manifest := a.moatGate.Manifests[item.Registry]
-	entry, ok := moat.FindContentEntry(manifest, item.Name)
+	check, ok := installer.CheckItem(item, a.moatGate, a.moatLockfile, a.moatSession, a.moatMinTier)
 	if !ok {
 		return gateEvaluation{}, false
 	}
-	registryURL := a.moatGate.ManifestURIs[item.Registry]
-	gate := installer.PreInstallCheck(
-		entry,
-		registryURL,
-		a.moatLockfile,
-		a.moatGate.RevSet,
-		a.moatSession,
-		a.moatMinTier,
-	)
+	// A publisher confirmation is keyed by the registry that issued the
+	// revocation, which the check looks up, and that may not be the
+	// registry the item came from.
+	registryURL := check.RegistryURL
+	if check.Decision == installer.MOATGatePublisherWarn {
+		registryURL = check.Revocation.IssuingRegistryURL
+	}
 	return gateEvaluation{
-		decision:    gate,
+		decision:    check.GateBlock,
 		registryURL: registryURL,
-		contentHash: entry.ContentHash,
-		entryName:   entry.Name,
+		contentHash: check.Entry.ContentHash,
+		entryName:   check.Entry.Name,
 	}, true
 }
 
@@ -104,6 +90,13 @@ func tierBelowPolicyMessage(name string, observed, min moat.TrustTier) string {
 		"Refused %q: trust tier %s is below policy minimum %s",
 		name, observed.String(), min.String(),
 	)
+}
+
+// lockfileUnreadableMessage renders the toast that refuses an install of
+// registry content while the lockfile, whose archived revocations the
+// gate checks, cannot be read. The CLI refuses the same install.
+func lockfileUnreadableMessage(name string, err error) string {
+	return fmt.Sprintf("Refused %q: the MOAT lockfile could not be read (%v)", name, err)
 }
 
 // hardBlockMessage renders a user-facing toast string for the

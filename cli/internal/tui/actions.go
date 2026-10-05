@@ -239,9 +239,9 @@ func (a App) handleUninstall() (tea.Model, tea.Cmd) {
 // handleConfirmResult handles confirmModal results (uninstall + loadout simple removes).
 //
 // MOAT install-gate stash has priority: if the operator just answered a
-// publisher-warn or private-prompt, dispatch the stashed install (recording
-// the MarkConfirmed so subsequent same-session installs of the same
-// (registry, hash) skip the modal) or cancel. Only one of pendingInstall /
+// publisher-warn or private-prompt, record the MarkConfirmed (so later
+// same-session installs of the same (registry, hash) skip the modal) and
+// run the gate again on the stashed install, or cancel. Only one of pendingInstall /
 // pendingInstallAll is ever set (see handleInstallResult /
 // handleInstallAllResult).
 func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
@@ -271,10 +271,19 @@ func (a App) handleConfirmResult(msg confirmResultMsg) (tea.Model, tea.Cmd) {
 		case gateKindPrivatePrompt:
 			installer.MarkPrivateConfirmed(a.moatSession, registryURL, contentHash)
 		}
-		if pendingSingle != nil {
-			return a, a.doInstallCmd(*pendingSingle)
+		// Re-run the gate, so a confirmed warning gives way to the next
+		// question it raises. A stash from the scan-time fallback has no
+		// live gate to re-run.
+		if contentHash == "" {
+			if pendingSingle != nil {
+				return a, a.doInstallCmd(*pendingSingle)
+			}
+			return a, a.doInstallAllCmd(*pendingAll)
 		}
-		return a, a.doInstallAllCmd(*pendingAll)
+		if pendingSingle != nil {
+			return a.handleInstallResult(*pendingSingle)
+		}
+		return a.handleInstallAllResult(*pendingAll)
 	}
 
 	if msg.purpose == confirmPurposeRollback {
@@ -916,7 +925,9 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 //   - TierBelowPolicy: error toast, no modal — tier cannot be upgraded
 //     interactively; only the publisher can.
 //
-// Items with no MOAT registry bypass the gate entirely.
+// Items with no MOAT registry bypass the gate entirely. While the lockfile
+// cannot be read, any item from a registry is refused, since the
+// revocations the lockfile archives cannot be checked.
 func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
@@ -928,6 +939,9 @@ func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 		return a.startRegistryInstall(a.registryInstallFor(msg))
 	}
 
+	if a.moatLockfileErr != nil && installer.HasRegistryLineage(msg.item) {
+		return a, a.toast.Push(lockfileUnreadableMessage(msg.item.Name, a.moatLockfileErr), toastError)
+	}
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
 		// No live gate (no moatGate configured or item has no MOAT lineage).
@@ -1101,6 +1115,9 @@ func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd
 		return a.startRegistryInstall(a.registryInstallAllFor(msg))
 	}
 
+	if a.moatLockfileErr != nil && installer.HasRegistryLineage(msg.item) {
+		return a, a.toast.Push(lockfileUnreadableMessage(msg.item.Name, a.moatLockfileErr), toastError)
+	}
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
 		// No live gate — fall back to ContentItem fields set at scan time.

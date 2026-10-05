@@ -116,13 +116,15 @@ type App struct {
 	// publisher-warn acknowledgement survives rescans (warn-once-per-
 	// session); rebuilding it on 'R' would re-prompt on every redraw.
 	// moatGate and moatLockfile are refreshed in rescanCatalog so they track
-	// the freshest manifest + lockfile. moatMinTier is the project's policy
+	// the freshest manifest + lockfile; moatLockfileErr is set when the
+	// lockfile could not be read. moatMinTier is the project's policy
 	// floor; defaults to TrustTierUnsigned (accept any tier) to match
 	// moatInstallMinTier in the CLI install path.
-	moatSession  *moat.Session
-	moatGate     *moat.GateInputs
-	moatLockfile *moat.Lockfile
-	moatMinTier  moat.TrustTier
+	moatSession     *moat.Session
+	moatGate        *moat.GateInputs
+	moatLockfile    *moat.Lockfile
+	moatLockfileErr error
+	moatMinTier     moat.TrustTier
 
 	// pendingGateKind disambiguates which MarkConfirmed variant to call when
 	// the user confirms the stashed install. PublisherWarn and PrivatePrompt
@@ -208,10 +210,11 @@ func NewApp(scan *moat.ScanResult, providers []provider.Provider, version string
 		telemetryConsent: consent,
 		hint:             newHintModal(),
 
-		moatSession:  moat.NewSession(),
-		moatGate:     scan.GateInputs,
-		moatLockfile: scan.Lockfile,
-		moatMinTier:  moat.TrustTierUnsigned,
+		moatSession:     moat.NewSession(),
+		moatGate:        scan.GateInputs,
+		moatLockfile:    scan.Lockfile,
+		moatLockfileErr: scan.LockfileErr,
+		moatMinTier:     moat.TrustTierUnsigned,
 	}
 
 	// Extract registry names for settings display
@@ -362,6 +365,7 @@ func (a App) handleCatalogReady(msg catalogReadyMsg) (tea.Model, tea.Cmd) {
 	}
 	a.catalog = msg.result.Catalog
 	a.moatLockfile = msg.result.Lockfile
+	a.moatLockfileErr = msg.result.LockfileErr
 	a.moatGate = msg.result.GateInputs
 	a.registrySources = msg.result.RegistrySources
 	a.cfg = msg.result.Config

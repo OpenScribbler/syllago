@@ -17,6 +17,7 @@ package tui
 //     handleConfirmResult coherent across rescan.
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -220,6 +222,122 @@ func TestInstallGate_NewAppAppliesScanGate(t *testing.T) {
 				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
 			}
 		})
+	}
+}
+
+// libraryCopyOf turns a registry item into the Library copy a registry add
+// stages: no Registry, with the registry and hash in its metadata.
+func libraryCopyOf(item catalog.ContentItem, hash string) catalog.ContentItem {
+	item.Library = true
+	item.Meta = &metadata.Meta{SourceRegistry: item.Registry, SourceHash: hash}
+	item.Registry = ""
+	return item
+}
+
+// A Library copy of a registry item is gated at the hash it holds, even
+// after the registry has moved on to a newer version.
+func TestInstallGate_LibraryCopyOfRevokedVersionRefused(t *testing.T) {
+	for name, fx := range map[string]gateFixture{
+		"manifest": {revocationSource: moat.RevocationSourceRegistry, revocationReason: "malicious"},
+		"lockfile": {lockfileRevoked: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			app, item := gateTestApp(t, fx)
+			app.moatGate.Manifests[testRegistryName].Content[0].ContentHash = "sha256:" + strings.Repeat("f", 64)
+			m, _ := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+			a := m.(App)
+
+			if a.pendingInstall != nil {
+				t.Error("a revoked Library copy must not be stashed for install")
+			}
+			if !strings.Contains(currentToastText(a), "Refused") {
+				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
+			}
+		})
+	}
+}
+
+// While the lockfile cannot be read, a Library copy of registry content is
+// refused, since the revocations it archives cannot be checked.
+func TestInstallGate_UnreadableLockfileRefusesLibraryCopy(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{})
+	app.moatLockfile = nil
+	app.moatLockfileErr = errors.New("unexpected end of JSON input")
+	m, cmd := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+	a := m.(App)
+
+	if cmd != nil || a.pendingInstall != nil {
+		t.Error("a copy was dispatched or stashed with the lockfile unreadable")
+	}
+	if !strings.Contains(currentToastText(a), "lockfile could not be read") {
+		t.Errorf("expected a lockfile refusal toast; got %q", currentToastText(a))
+	}
+}
+
+// Confirming a recalled Library copy records the copy's own hash, so the
+// confirmation covers the content that installs.
+func TestInstallGate_LibraryCopyPublisherWarnStashesCopyHash(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{
+		revocationSource: moat.RevocationSourcePublisher,
+		revocationReason: "deprecated",
+	})
+	app.moatGate.Manifests[testRegistryName].Content[0].ContentHash = "sha256:" + strings.Repeat("f", 64)
+	m, _ := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+	a := m.(App)
+
+	if !a.confirm.active || a.pendingGateKind != gateKindPublisherWarn {
+		t.Fatal("expected the publisher-warn modal for a recalled Library copy")
+	}
+	if a.pendingGateContentHash != testContentHash {
+		t.Errorf("pendingGateContentHash = %q, want the copy's hash %q", a.pendingGateContentHash, testContentHash)
+	}
+}
+
+// Confirming a recall runs the gate again, so a recalled item from a
+// private repository still asks about the private source.
+func TestInstallGate_PublisherConfirmThenPrivatePrompt(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{
+		revocationSource: moat.RevocationSourcePublisher,
+		revocationReason: "deprecated",
+		privateRepo:      true,
+	})
+	m, _ := app.Update(gateInstallMsg(item))
+	a, cmd := confirmModalResult(t, m.(App), true, item)
+
+	if cmd != nil {
+		t.Error("expected no install cmd before the private source is confirmed")
+	}
+	if !a.confirm.active || a.pendingGateKind != gateKindPrivatePrompt {
+		t.Fatalf("expected the private-prompt modal after the recall was confirmed; kind = %v", a.pendingGateKind)
+	}
+
+	a, cmd = confirmModalResult(t, a, true, item)
+	if cmd == nil {
+		t.Error("expected the install cmd once both questions were answered")
+	}
+}
+
+// A recall issued by another registry is confirmed under that registry,
+// so the confirmation holds for the rest of the session.
+func TestInstallGate_PublisherConfirmKeyedByIssuingRegistry(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{})
+	const otherURL = "https://other.example.com/manifest.json"
+	app.moatGate.RevSet.AddFromManifest(&moat.Manifest{Revocations: []moat.Revocation{{
+		ContentHash: testContentHash,
+		Reason:      "deprecated",
+		DetailsURL:  "https://other.example.com/recall",
+		Source:      moat.RevocationSourcePublisher,
+	}}}, otherURL)
+
+	m, _ := app.Update(gateInstallMsg(item))
+	a, cmd := confirmModalResult(t, m.(App), true, item)
+	if a.confirm.active || cmd == nil {
+		t.Fatal("expected the confirmed install to dispatch")
+	}
+
+	m, cmd = a.Update(gateInstallMsg(item))
+	if m.(App).confirm.active || cmd == nil {
+		t.Error("expected a second install in the session to skip the modal")
 	}
 }
 

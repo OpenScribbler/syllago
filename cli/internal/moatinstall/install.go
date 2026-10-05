@@ -326,7 +326,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 	for _, item := range req.Items {
 		res.Items = append(res.Items, ItemResult{Name: item.Name})
 		ir := &res.Items[len(res.Items)-1]
-		entry, ok := findEntry(manifest, item)
+		entry, ok := moat.FindTypedEntry(manifest, item.Name, item.Type)
 		if !ok {
 			what := fmt.Sprintf("an item named %q", item.Name)
 			if item.Type != "" {
@@ -386,7 +386,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 					passed = append(passed, len(res.Items)-1)
 				}
 			default:
-				ir.Err = gateError(entry, gate)
+				ir.Err = GateError(entry, gate)
 			}
 			break
 		}
@@ -528,23 +528,6 @@ func installItems(ctx context.Context, lc *lifecycle.Module, req Request, reg *c
 	}
 }
 
-// findEntry finds item in the manifest, matching its type when it has one.
-func findEntry(m *moat.Manifest, item Item) (*moat.ContentEntry, bool) {
-	if item.Type == "" {
-		return moat.FindContentEntry(m, item.Name)
-	}
-	want, ok := moat.ToMOATType(item.Type)
-	if m == nil || !ok {
-		return nil, false
-	}
-	for i := range m.Content {
-		if e := &m.Content[i]; e.Name == item.Name && e.Type == want {
-			return e, true
-		}
-	}
-	return nil, false
-}
-
 // lookupRegistry finds name in the global config, where `registry add`
 // saves every registry and where the sync reads it.
 func lookupRegistry(name string) (*config.Registry, error) {
@@ -639,8 +622,8 @@ func joinNames(names []string) string {
 	return s
 }
 
-// gateError is the item error for a gate that refuses outright.
-func gateError(entry *moat.ContentEntry, gate installer.GateBlock) error {
+// GateError is the item error for a gate that refuses outright.
+func GateError(entry *moat.ContentEntry, gate installer.GateBlock) error {
 	switch gate.Decision {
 	case installer.MOATGateHardBlock:
 		reason := ""
