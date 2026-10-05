@@ -76,9 +76,9 @@ func (a *CursorAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "cursor")
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := plainMatcherString(translatedMatcher, "cursor")
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> Cursor milliseconds)

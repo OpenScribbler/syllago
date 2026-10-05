@@ -178,6 +178,24 @@ func regexMatcherString(m json.RawMessage, slug string) (string, []ConversionWar
 	}}
 }
 
+// plainMatcherString renders a translated matcher for a provider whose matcher
+// field is a single tool name. A shape that is not one string cannot be
+// written, so the hook matches all tools and the caller hears about it.
+func plainMatcherString(m json.RawMessage, slug string) (string, []ConversionWarning) {
+	if len(m) == 0 {
+		return "", nil
+	}
+	var s string
+	if json.Unmarshal(m, &s) == nil {
+		return s, nil
+	}
+	return "", []ConversionWarning{{
+		Severity:    "warning",
+		Capability:  "matcher",
+		Description: fmt.Sprintf("matcher shape not representable by %s; hook will match all tools", slug),
+	}}
+}
+
 func hasMCPToolName(names []string, slug string) bool {
 	for _, name := range names {
 		if server, _ := parseMCPToolName(name, slug); server != "" {

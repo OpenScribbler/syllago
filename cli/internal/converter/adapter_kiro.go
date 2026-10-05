@@ -90,9 +90,9 @@ func (a *KiroAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "kiro")
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := plainMatcherString(translatedMatcher, "kiro")
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> Kiro milliseconds)

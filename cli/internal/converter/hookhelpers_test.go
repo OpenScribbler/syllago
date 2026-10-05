@@ -266,6 +266,32 @@ func TestClaudeCodeAdapterEncode_ArrayMatcherBecomesAlternation(t *testing.T) {
 	}
 }
 
+func TestPlainMatcherAdapters_WarnWhenAnArrayMatcherIsDropped(t *testing.T) {
+	hooks := &CanonicalHooks{
+		Spec: SpecVersion,
+		Hooks: []CanonicalHook{
+			{Event: "before_tool_execute", Matcher: json.RawMessage(`["shell","file_write"]`), Handler: HookHandler{Type: "command", Command: "echo guard"}},
+		},
+	}
+	for _, slug := range []string{"cursor", "kiro", "copilot-cli", "vs-code-copilot"} {
+		t.Run(slug, func(t *testing.T) {
+			encoded, err := AdapterFor(slug).Encode(hooks)
+			if err != nil {
+				t.Fatalf("Encode: %v", err)
+			}
+			found := false
+			for _, w := range encoded.Warnings {
+				if w.Capability == "matcher" && strings.Contains(w.Description, "match all tools") {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("expected a match-all warning, got %v", encoded.Warnings)
+			}
+		})
+	}
+}
+
 func TestTranslateMatcherToProvider_NilMatcher(t *testing.T) {
 	result, warnings := TranslateMatcherToProvider(nil, "claude-code")
 	if result != nil {

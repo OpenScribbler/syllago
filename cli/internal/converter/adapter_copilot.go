@@ -78,9 +78,9 @@ func (a *CopilotCLIAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, "copilot-cli")
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := plainMatcherString(translatedMatcher, "copilot-cli")
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> Copilot seconds, no conversion)

@@ -2,6 +2,7 @@ package converter
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -31,6 +32,28 @@ func TestConvertHooks_ReadsEachHookFormat(t *testing.T) {
 				if !strings.Contains(string(r.Content), want) {
 					t.Errorf("content missing %s:\n%s", want, r.Content)
 				}
+			}
+		})
+	}
+}
+
+// Regression: a legacy hook.json copied from a provider kept that provider's
+// milliseconds as canonical seconds, so a 5-second timeout became 5000.
+func TestConvertHooks_LegacyTimeoutKeepsItsLength(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		raw  string
+	}{
+		{"copied from the provider", `{"event":"PostToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hi","timeout":5000}]}`},
+		{"written by syllago", `{"event":"after_tool_execute","matcher":"shell","sourceProvider":"claude-code","hooks":[{"type":"command","command":"echo hi","timeout":5}]}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := ConvertHooks([]byte(tc.raw), "claude-code", "gemini-cli")
+			if err != nil {
+				t.Fatalf("ConvertHooks: %v", err)
+			}
+			if !regexp.MustCompile(`"timeout": 5000\b`).Match(r.Content) {
+				t.Errorf("want a 5000 ms timeout:\n%s", r.Content)
 			}
 		})
 	}

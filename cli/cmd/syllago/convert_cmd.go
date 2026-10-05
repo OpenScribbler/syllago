@@ -219,7 +219,8 @@ func convertHooks(raw []byte, fromSlug string, toProv provider.Provider) (*conve
 // emitConvertOutput writes the conversion result to stdout, a file, or JSON.
 func emitConvertOutput(name, fromSlug, toSlug, outputPath string, rendered *converter.Result, sourceContent []byte, showDiff bool) error {
 	if rendered.Content == nil {
-		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, toSlug), "Try a different target provider")
+		// The warnings say why nothing converted, so the error carries them.
+		return output.NewStructuredErrorDetail(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", name, toSlug), "Try a different target provider", strings.Join(rendered.Warnings, "\n"))
 	}
 
 	if showDiff {

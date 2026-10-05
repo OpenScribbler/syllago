@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -690,6 +691,18 @@ func TestEmitConvertOutput_NilContent(t *testing.T) {
 		&converter.Result{Content: nil}, nil, false)
 	if err == nil {
 		t.Fatal("expected error for nil content")
+	}
+}
+
+func TestEmitConvertOutput_NilContentKeepsTheWarnings(t *testing.T) {
+	rendered := &converter.Result{Warnings: []string{"hook event \"after_tool_execute\" not supported by crush; skipped"}}
+	err := emitConvertOutput("h", "claude-code", "crush", "", rendered, nil, false)
+	var se output.StructuredError
+	if !errors.As(err, &se) {
+		t.Fatalf("expected a structured error, got %v", err)
+	}
+	if !strings.Contains(se.Details, "not supported by crush") {
+		t.Errorf("Details = %q, want the adapter's warning", se.Details)
 	}
 }
 

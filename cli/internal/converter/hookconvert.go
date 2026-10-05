@@ -69,6 +69,13 @@ func DecodeHooks(raw []byte, fromSlug string) (*CanonicalHooks, error) {
 		if err != nil {
 			return nil, err
 		}
+		// A file syllago wrote names its source provider and holds seconds;
+		// one without that name holds its provider's unit.
+		if hd.SourceProvider == "" && fromSlug != "" {
+			for i := range hd.Hooks {
+				hd.Hooks[i].Timeout = TranslateTimeoutFromProvider(hd.Hooks[i].Timeout, fromSlug)
+			}
+		}
 		if fromSlug == "" {
 			fromSlug = hd.SourceProvider
 		}

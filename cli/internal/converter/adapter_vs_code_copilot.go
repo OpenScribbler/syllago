@@ -56,9 +56,9 @@ func (a *VSCodeCopilotAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, er
 		if hook.Matcher != nil {
 			translatedMatcher, mWarnings := TranslateMatcherToProvider(hook.Matcher, slug)
 			warnings = append(warnings, mWarnings...)
-			if translatedMatcher != nil {
-				_ = json.Unmarshal(translatedMatcher, &matcherStr)
-			}
+			s, sWarnings := plainMatcherString(translatedMatcher, slug)
+			matcherStr = s
+			warnings = append(warnings, sWarnings...)
 		}
 
 		// 4. Translate timeout (canonical seconds -> milliseconds)
