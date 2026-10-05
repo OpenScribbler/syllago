@@ -69,8 +69,13 @@ func SourceFilePath(item catalog.ContentItem) string {
 }
 
 // ResolveContentFile finds the canonical content file for a content item.
-// Looks for known canonical filenames first, then falls back to extension matching.
+// An item stored as a single file is its own content file. Otherwise it
+// looks for known canonical filenames first, then falls back to extension
+// matching.
 func ResolveContentFile(item catalog.ContentItem) string {
+	if info, err := os.Stat(item.Path); err == nil && info.Mode().IsRegular() {
+		return item.Path
+	}
 	// Try known canonical filenames in priority order
 	knownNames := []string{"rule.md", "command.md", "SKILL.md", "agent.md", "hooks.json", "mcp.json"}
 	for _, name := range knownNames {

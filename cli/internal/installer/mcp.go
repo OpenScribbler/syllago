@@ -3,8 +3,12 @@ package installer
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -254,57 +258,97 @@ func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 	return data, nil
 }
 
-// extractServerEntries reads config.json and returns a map of server names to
-// their whitelisted config. Handles two formats:
-//
-//   - Nested: {"mcpServers": {"name": {...}}} — extracts each entry
-//   - Flat: {"command": "node", ...} — uses itemName as the key
-//
 // ExtractServerEntries reads config.json and returns a map of server names to
 // their whitelisted config. Handles two formats:
 //
 //   - Nested: {"mcpServers": {"name": {...}}} — extracts each entry
 //   - Flat: {"command": "node", ...} — uses itemName as the key
+//
+// The jsonKey parameter specifies the provider's top-level key (e.g., "mcpServers",
+// "servers", "context_servers"); a file without it is read under mcpServers.
 func ExtractServerEntries(rawData []byte, itemName string, jsonKey string) (map[string]json.RawMessage, error) {
-	entries := make(map[string]json.RawMessage)
+	sources, err := serverSources(rawData, itemName, jsonKey)
+	if err != nil {
+		return nil, err
+	}
+	entries := make(map[string]json.RawMessage, len(sources))
+	for name, source := range sources {
+		var cfg MCPConfig
+		if err := json.Unmarshal([]byte(source.Raw), &cfg); err != nil {
+			return nil, fmt.Errorf("parsing server %q: %w", name, err)
+		}
+		cleaned, err := json.Marshal(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("serializing config: %w", err)
+		}
+		entries[name] = cleaned
+	}
+	return entries, nil
+}
 
-	// Check for nested format: config.json wraps entries in the provider
-	// key, or in mcpServers, the key settings adds write to the Library.
+// serverSources returns the stored entry an install reads for each server.
+// A nested entry that does not decode as a server is skipped, and a file with
+// no nested entry left is read as one flat server.
+func serverSources(rawData []byte, itemName string, jsonKey string) (map[string]gjson.Result, error) {
+	sources := make(map[string]gjson.Result)
 	wrapper := gjson.GetBytes(rawData, jsonKey)
 	if !wrapper.Exists() {
 		wrapper = gjson.GetBytes(rawData, "mcpServers")
 	}
 	if wrapper.Exists() && wrapper.Type == gjson.JSON {
-		// Nested format — extract each server entry
 		wrapper.ForEach(func(key, value gjson.Result) bool {
-			// Whitelist fields for each server entry
 			var cfg MCPConfig
-			if err := json.Unmarshal([]byte(value.Raw), &cfg); err != nil {
-				return true // skip malformed entries
+			if json.Unmarshal([]byte(value.Raw), &cfg) == nil {
+				sources[key.String()] = value
 			}
-			cleaned, err := json.Marshal(cfg)
-			if err != nil {
-				return true
-			}
-			entries[key.String()] = cleaned
 			return true
 		})
-		if len(entries) > 0 {
-			return entries, nil
+		if len(sources) > 0 {
+			return sources, nil
 		}
 	}
 
-	// Flat format — the entire config.json is a single server definition
 	var cfg MCPConfig
 	if err := json.Unmarshal(rawData, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing config.json: %w", err)
 	}
-	cleaned, err := json.Marshal(cfg)
+	sources[itemName] = gjson.ParseBytes(rawData)
+	return sources, nil
+}
+
+// mcpEntryFields are the server fields MCPConfig keeps, so the only ones an
+// install writes.
+var mcpEntryFields = []string{"type", "command", "args", "url", "env"}
+
+// droppedServerFields says, for each named server an install writes, which
+// of its stored fields the install leaves out. The merge writes the same
+// fields for every provider, so the warning holds whatever the target reads.
+func droppedServerFields(rawData []byte, itemName string, jsonKey string, names []string) []string {
+	sources, err := serverSources(rawData, itemName, jsonKey)
 	if err != nil {
-		return nil, fmt.Errorf("serializing config: %w", err)
+		return nil
 	}
-	entries[itemName] = cleaned
-	return entries, nil
+	names = slices.Sorted(slices.Values(names))
+	var warnings []string
+	for _, name := range names {
+		source := sources[name]
+		if !source.IsObject() {
+			continue
+		}
+		var dropped []string
+		source.ForEach(func(key, _ gjson.Result) bool {
+			// encoding/json matches field names in any case.
+			if !slices.ContainsFunc(mcpEntryFields, func(f string) bool { return strings.EqualFold(f, key.String()) }) {
+				dropped = append(dropped, key.String())
+			}
+			return true
+		})
+		if len(dropped) > 0 {
+			sort.Strings(dropped)
+			warnings = append(warnings, fmt.Sprintf("server %q: %s not installed (syllago writes only %s)", name, strings.Join(dropped, ", "), strings.Join(mcpEntryFields, ", ")))
+		}
+	}
+	return warnings
 }
 
 func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
@@ -415,6 +459,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		Mechanism: MechanismMCPMerge,
 		Path:      cfgPath,
 		Keys:      keys,
+		Notices:   conversionNotices(item, droppedServerFields(rawData, item.Name, jsonKey, slices.Collect(maps.Keys(entries)))),
 		desc:      desc,
 	}, nil
 }

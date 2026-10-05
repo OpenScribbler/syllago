@@ -166,3 +166,17 @@ func TestCompatLibraryHook(t *testing.T) {
 		t.Errorf("gemini-cli warnings = %s, want the event it cannot hold", w)
 	}
 }
+
+func TestCompatUnreadableItemFails(t *testing.T) {
+	lib := t.TempDir()
+	dir := filepath.Join(lib, "mcp", "broken")
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "mcp.json"), []byte("{not json"), 0644)
+	withCompatLibrary(t, lib)
+	_, _ = output.SetForTest(t)
+
+	err := compatCmd.RunE(compatCmd, []string{"broken"})
+	if err == nil || !strings.Contains(err.Error(), "canonicalizing content failed") {
+		t.Fatalf("compat on an unreadable item = %v, want the parse failure", err)
+	}
+}

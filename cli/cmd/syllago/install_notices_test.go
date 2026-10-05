@@ -195,3 +195,37 @@ func TestInstallToProvider_WarningsReadEventsThroughTheItemProvider(t *testing.T
 		t.Errorf("warnings = %q, want none about the event the install wrote", w)
 	}
 }
+
+// TestInstallToProvider_ReportsEachWarningOnce: the installer's warnings are
+// printed once, and the JSON result carries the same warnings without the
+// item name the printed line leads with.
+func TestInstallToProvider_ReportsEachWarningOnce(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	projectRoot := t.TempDir()
+	skillDir := filepath.Join(projectRoot, "skills", "fmt")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: fmt\ndescription: Formats code\nhooks:\n  PreToolUse:\n    - matcher: Bash\n      hooks:\n        - type: command\n          command: echo hi\n---\n\nFormat it.\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(skill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	items := []catalog.ContentItem{{Name: "fmt", Type: catalog.Skills, Path: skillDir}}
+
+	_, stderr := output.SetForTest(t)
+	res, err := installToProvider(items, provider.GeminiCLI, installer.MethodSymlink,
+		false, config.NewResolver(nil, ""), provider.GeminiCLI.Slug, projectRoot, false, installer.ScanOptions{})
+	if err != nil {
+		t.Fatalf("installToProvider: %v", err)
+	}
+	if len(res.Installed) != 1 {
+		t.Fatalf("installed = %+v, skipped = %+v", res.Installed, res.Skipped)
+	}
+	want := `skill "fmt" has hooks requiring separate configuration:`
+	if w := res.Installed[0].Warnings; len(w) == 0 || w[0] != want {
+		t.Errorf("warnings = %q, want the first to be %q", w, want)
+	}
+	if n := strings.Count(stderr.String(), want); n != 1 {
+		t.Errorf("warning printed %d times, want once:\n%s", n, stderr.String())
+	}
+}

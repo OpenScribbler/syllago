@@ -426,31 +426,12 @@ func installToProvider(
 			usedMethod = installer.MethodCopy
 		}
 
-		// Check for portability warnings by running the converter.
+		// The installer already printed what the target loses; the JSON
+		// result carries the same warnings.
 		var warnings []string
-		if conv := converter.For(item.Type); conv != nil || item.Type == catalog.Hooks {
-			contentFile := converter.ResolveContentFile(item)
-			if contentFile != "" {
-				if raw, readErr := os.ReadFile(contentFile); readErr == nil {
-					srcProv := ""
-					if item.Meta != nil {
-						srcProv = item.Meta.SourceProvider
-					}
-					if item.Type == catalog.Hooks {
-						// Install reads the hook's events through the provider it came from,
-						// so the warnings do too.
-						if srcProv == "" {
-							srcProv = item.Provider
-						}
-						if rendered, hErr := converter.ConvertHooks(raw, srcProv, prov.Slug); hErr == nil {
-							warnings = rendered.Warnings
-						}
-					} else if canonical, cErr := conv.Canonicalize(raw, srcProv); cErr == nil {
-						if rendered, rErr := conv.Render(canonical.Content, prov); rErr == nil {
-							warnings = rendered.Warnings
-						}
-					}
-				}
+		for _, n := range outcome.Notices {
+			if n.Kind == installer.NoticeConversionWarning {
+				warnings = append(warnings, strings.TrimPrefix(n.Message, item.Name+": "))
 			}
 		}
 
@@ -484,9 +465,6 @@ func installToProvider(
 				fmt.Fprintf(output.Writer, "  Symlinked %s to %s\n", item.Name, desc)
 			} else {
 				fmt.Fprintf(output.Writer, "  Copied %s to %s\n", item.Name, desc)
-			}
-			for _, w := range warnings {
-				fmt.Fprintf(output.ErrWriter, "    - %s\n", w)
 			}
 		}
 	}

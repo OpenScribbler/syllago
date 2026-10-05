@@ -54,6 +54,7 @@ const (
 	FeatureAsync
 	FeatureStatusMessage
 	FeatureLLMHook
+	FeatureHTTPHook
 	FeatureTimeout // fine-grained (ms) vs coarse (seconds)
 )
 
@@ -69,6 +70,7 @@ var featureLoss = map[HookFeature]struct {
 	FeatureAsync:         {CompatBroken, "hook will block execution"},
 	FeatureStatusMessage: {CompatDegraded, "no user-visible status"},
 	FeatureLLMHook:       {CompatNone, "no prompt or agent hooks"},
+	FeatureHTTPHook:      {CompatNone, "no HTTP hooks"},
 }
 
 // supportsFeature reports whether caps covers feature. Every adapter writes
@@ -83,6 +85,8 @@ func supportsFeature(caps ProviderCapabilities, feature HookFeature) bool {
 		return caps.SupportsStatusMessage
 	case FeatureLLMHook:
 		return caps.SupportsLLMHooks
+	case FeatureHTTPHook:
+		return caps.SupportsHTTPHooks
 	}
 	return true
 }
@@ -169,15 +173,13 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 	}
 
 	// 1. Check event support
+	if _, supported := TranslateHookEvent(hook.Event, targetProvider); !supported {
+		result.Level = CompatNone
+		result.Notes = "Event not supported"
+		return result
+	}
 	if targetProvider == "claude-code" {
 		result.Notes = "Native format"
-	} else {
-		_, supported := TranslateHookEvent(hook.Event, targetProvider)
-		if !supported {
-			result.Level = CompatNone
-			result.Notes = "Event not supported"
-			return result
-		}
 	}
 
 	adapter := AdapterFor(targetProvider)
@@ -191,12 +193,16 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 	// 2. Check features present in the source hook
 	// LLM hook check
 	hasLLM := false
+	hasHTTP := false
 	hasAsync := false
 	hasStatusMessage := false
 	hasTimeout := false
 	for _, h := range hook.Hooks {
 		if h.Type == "prompt" || h.Type == "agent" {
 			hasLLM = true
+		}
+		if h.Type == "http" {
+			hasHTTP = true
 		}
 		if h.Async {
 			hasAsync = true
@@ -216,6 +222,7 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 	checks := []featureCheck{
 		{FeatureMatcher, hook.Matcher != ""},
 		{FeatureLLMHook, hasLLM},
+		{FeatureHTTPHook, hasHTTP},
 		{FeatureAsync, hasAsync},
 		{FeatureStatusMessage, hasStatusMessage},
 		{FeatureTimeout, hasTimeout},

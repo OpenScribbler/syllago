@@ -65,20 +65,28 @@ func convertHooks(raw []byte, fromSlug, toSlug string, wrapLLM bool) (*Result, e
 		}
 		res.ExtraFiles[name] = content
 	}
-	warnings := append(wrapWarnings, enc.Warnings...)
-	for _, w := range append(warnings, CheckStructuredOutputLoss(fromSlug, toSlug)...) {
-		text := w.Description
-		if w.Suggestion != "" {
-			text += " (" + w.Suggestion + ")"
-		}
-		res.Warnings = append(res.Warnings, text)
-	}
+	res.Warnings = HookWarnings(append(wrapWarnings, enc.Warnings...), fromSlug, toSlug)
 	// An adapter drops what its provider cannot hold, which can be every
 	// hook; reading its own output back tells.
 	if back, err := adapter.Decode(enc.Content); err != nil || len(back.Hooks) == 0 {
 		res.Content = nil
 	}
 	return res, nil
+}
+
+// HookWarnings is the text of an encode's warnings for hooks read as
+// fromSlug's and written as toSlug's, with what toSlug loses of fromSlug's
+// structured hook output.
+func HookWarnings(encodeWarnings []ConversionWarning, fromSlug, toSlug string) []string {
+	var text []string
+	for _, w := range append(encodeWarnings, CheckStructuredOutputLoss(fromSlug, toSlug)...) {
+		t := w.Description
+		if w.Suggestion != "" {
+			t += " (" + w.Suggestion + ")"
+		}
+		text = append(text, t)
+	}
+	return text
 }
 
 // DecodeHooks reads hook content into canonical hooks: a hooks/0.1

@@ -45,7 +45,7 @@ Path formats:
 func init() {
 	rootCmd.AddCommand(inspectCmd)
 	inspectCmd.Flags().Bool("files", false, "Show file contents")
-	inspectCmd.Flags().Bool("compatibility", false, "Show per-provider compatibility matrix (hooks only)")
+	inspectCmd.Flags().Bool("compatibility", false, "Show per-provider compatibility matrix")
 	inspectCmd.Flags().Bool("risk", false, "Show detailed risk analysis")
 	inspectCmd.Flags().String("as", "", "Preview content converted to a provider's format")
 }
@@ -155,17 +155,17 @@ func runInspect(cmd *cobra.Command, args []string) error {
 
 	showCompat, _ := cmd.Flags().GetBool("compatibility")
 
-	if showCompat && item.Type == catalog.Hooks {
-		hookData, err := converter.LoadHookData(*item)
-		if err == nil {
-			for _, prov := range converter.HookProviders() {
-				cr := converter.AnalyzeHookCompat(hookData, prov)
-				result.Compatibility = append(result.Compatibility, compatResult{
-					Provider: cr.Provider,
-					Level:    strings.ToLower(cr.Level.Label()),
-					Notes:    cr.Notes,
-				})
-			}
+	if showCompat {
+		report, err := converter.CompatReport(*item)
+		if err != nil {
+			return convertItemError(err, *item, provider.Provider{})
+		}
+		for _, row := range report {
+			result.Compatibility = append(result.Compatibility, compatResult{
+				Provider: row.Provider.Slug,
+				Level:    strings.ToLower(row.Level.Label()),
+				Notes:    strings.Join(row.Warnings, "; "),
+			})
 		}
 	}
 
@@ -273,9 +273,7 @@ func runInspect(cmd *cobra.Command, args []string) error {
 	}
 
 	if showCompat {
-		if item.Type != catalog.Hooks {
-			fmt.Fprintf(output.Writer, "\nCompatibility: not applicable for %s (hooks only)\n", item.Type.Label())
-		} else if len(result.Compatibility) > 0 {
+		if len(result.Compatibility) > 0 {
 			fmt.Fprintf(output.Writer, "\nCompatibility:\n")
 			for _, cr := range result.Compatibility {
 				symbol := compatSymbol(cr.Level)
@@ -447,45 +445,11 @@ func renderAsProvider(item catalog.ContentItem, provSlug string) (*converter.Res
 		return nil, "", output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+provSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
-	conv := converter.For(item.Type)
-	if conv == nil && item.Type != catalog.Hooks {
-		return nil, "", output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "")
-	}
-
-	contentFile := converter.ResolveContentFile(item)
-	if contentFile == "" {
-		return nil, "", output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", item.Name), "")
-	}
-
-	raw, err := os.ReadFile(contentFile)
+	c, err := converter.ConvertItem(item, *prov, "")
 	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "", err.Error())
+		return nil, "", convertItemError(err, item, *prov)
 	}
-
-	srcProvider := ""
-	if item.Meta != nil {
-		srcProvider = item.Meta.SourceProvider
-	}
-	if srcProvider == "" && item.Provider != "" {
-		srcProvider = item.Provider
-	}
-
-	if item.Type == catalog.Hooks {
-		rendered, err := convertHooks(raw, srcProvider, *prov)
-		return rendered, prov.Name, err
-	}
-
-	canonical, err := conv.Canonicalize(raw, srcProvider)
-	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "", err.Error())
-	}
-
-	rendered, err := conv.Render(canonical.Content, *prov)
-	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", prov.Name), "", err.Error())
-	}
-
-	return rendered, prov.Name, nil
+	return &c.Result, prov.Name, nil
 }
 
 // compatSymbol returns a colored status symbol for a compat level label.
