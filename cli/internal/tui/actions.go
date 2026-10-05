@@ -850,12 +850,21 @@ func (a App) handleAdd() (tea.Model, tea.Cmd) {
 		preFilterType = tabToContentType(a.topBar.ActiveTabLabel())
 	}
 
+	// The wizard adds to the Library, as `syllago add` does. a.contentRoot
+	// is the project content root, which the catalog scans as project
+	// content rather than Library content.
+	libraryDir := catalog.GlobalContentDir()
+	if libraryDir == "" {
+		cmd := a.toast.Push("Could not locate library directory (~/.syllago/content/)", toastError)
+		return a, cmd
+	}
+
 	a.addWizard = openAddWizard(
 		a.providers,
 		a.registrySources,
 		a.cfg,
 		a.projectRoot,
-		a.contentRoot,
+		libraryDir,
 		preFilterType,
 	)
 	a.addWizard.width = a.width
