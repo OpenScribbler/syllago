@@ -66,8 +66,9 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 
 		if len(manifest.BackedUpFiles) > 0 {
 			fmt.Fprintln(output.Writer, "\nFiles to restore from snapshot:")
+			home, _ := os.UserHomeDir()
 			for _, f := range manifest.BackedUpFiles {
-				fmt.Fprintf(output.Writer, "  %s\n", f)
+				fmt.Fprintf(output.Writer, "  %s\n", manifest.Destination(home, f))
 			}
 		}
 

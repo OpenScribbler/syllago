@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -37,6 +38,19 @@ type SnapshotManifest struct {
 	BackedUpHashes map[string]string `json:"backedUpHashes,omitempty"` // rel path -> hex sha256 at Create time
 	Symlinks       []SymlinkRecord   `json:"symlinks"`
 	HookScripts    []string          `json:"hookScripts,omitempty"` // informational only
+	// Destinations maps each backup's path inside files/ to the absolute
+	// path it was copied from. Manifests written before it existed back up
+	// only files under the home directory, which restore to the home
+	// directory joined with the backup's path.
+	Destinations map[string]string `json:"destinations,omitempty"`
+}
+
+// Destination returns the absolute path the backup at rel restores to.
+func (m *SnapshotManifest) Destination(home, rel string) string {
+	if dest, ok := m.Destinations[rel]; ok {
+		return dest
+	}
+	return filepath.Join(home, rel)
 }
 
 // SymlinkRecord tracks a symlink created during apply.
@@ -72,12 +86,14 @@ func Create(projectRoot string, loadoutName string, mode string,
 
 	var backedUp []string
 	hashes := make(map[string]string)
-	for _, absPath := range filesToBackup {
-		// Compute relative path from home dir for storage
+	destinations := make(map[string]string)
+	for i, absPath := range filesToBackup {
 		rel, err := filepath.Rel(home, absPath)
-		if err != nil {
-			// If not relative to home, use the full path as a fallback
-			rel = absPath
+		if err != nil || !filepath.IsLocal(rel) {
+			// A file outside the home directory has no path under it, and
+			// its absolute path cannot sit under files/ on Windows, so it
+			// is stored under a numbered key.
+			rel = filepath.Join("outside-home", strconv.Itoa(i), filepath.Base(absPath))
 		}
 
 		destPath := filepath.Join(filesDir, rel)
@@ -89,6 +105,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 			return "", fmt.Errorf("backing up %s: %w", absPath, err)
 		}
 		backedUp = append(backedUp, rel)
+		destinations[rel] = absPath
 
 		// Hash the backup we just wrote, not the source — if anything
 		// corrupted the content during the copy, this anchor catches that
@@ -109,6 +126,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 		BackedUpHashes: hashes,
 		Symlinks:       symlinks,
 		HookScripts:    hookScripts,
+		Destinations:   destinations,
 	}
 
 	manifestData, err := json.MarshalIndent(manifest, "", "  ")
@@ -143,10 +161,16 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		return nil, "", fmt.Errorf("reading snapshots dir: %w", err)
 	}
 
-	// Filter to directories only and sort by name (timestamp-based, newest last)
+	// Filter to snapshots and sort by name (timestamp-based, newest last).
+	// Earlier versions wrote backups of files outside the home directory
+	// beside the snapshots rather than inside one, and a directory without
+	// a manifest is one of those.
 	var dirs []os.DirEntry
 	for _, e := range entries {
-		if e.IsDir() {
+		if !e.IsDir() {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(dir, e.Name(), "manifest.json")); err == nil {
 			dirs = append(dirs, e)
 		}
 	}
@@ -197,7 +221,7 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 	filesDir := filepath.Join(snapshotDir, "files")
 	for _, rel := range manifest.BackedUpFiles {
 		srcPath := filepath.Join(filesDir, rel)
-		destPath := filepath.Join(home, rel)
+		destPath := manifest.Destination(home, rel)
 
 		// Integrity check: if the manifest recorded a sha256 for this path,
 		// recompute it against the backup on disk and refuse the restore if

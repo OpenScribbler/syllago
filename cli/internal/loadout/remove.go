@@ -63,11 +63,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 	home, _ := os.UserHomeDir()
 	for _, rel := range manifest.BackedUpFiles {
-		if home != "" {
-			result.RestoredFiles = append(result.RestoredFiles, home+"/"+rel)
-		} else {
-			result.RestoredFiles = append(result.RestoredFiles, rel)
-		}
+		result.RestoredFiles = append(result.RestoredFiles, manifest.Destination(home, rel))
 	}
 
 	// Step 2: Delete symlinks

@@ -23,6 +23,7 @@ func withNonInteractiveLoadout(t *testing.T) {
 
 func TestRunLoadoutRemove(t *testing.T) {
 	fixedTime := time.Date(2026, 3, 25, 14, 30, 0, 0, time.UTC)
+	var outsideCfg string // set by the case that backs up a file outside HOME
 
 	tests := []struct {
 		name       string
@@ -158,6 +159,23 @@ func TestRunLoadoutRemove(t *testing.T) {
 				}
 				if !strings.Contains(stdout, ".claude/settings.json") {
 					t.Errorf("expected backed-up file in output, got: %s", stdout)
+				}
+			},
+		},
+		{
+			name: "non-auto lists a file outside the home directory where it restores",
+			setup: func(t *testing.T, root string) {
+				outsideCfg = filepath.Join(root, ".cursor", "mcp.json")
+				os.MkdirAll(filepath.Dir(outsideCfg), 0755)
+				os.WriteFile(outsideCfg, []byte("{}"), 0644)
+				if _, err := snapshot.Create(root, "dev", "keep", []string{outsideCfg}, nil, nil); err != nil {
+					t.Fatal(err)
+				}
+			},
+			check: func(t *testing.T, stdout, stderr string) {
+				t.Helper()
+				if !strings.Contains(stdout, "  "+outsideCfg+"\n") {
+					t.Errorf("expected %s in the files to restore, got: %s", outsideCfg, stdout)
 				}
 			},
 		},
