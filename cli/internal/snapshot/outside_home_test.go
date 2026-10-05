@@ -62,7 +62,7 @@ func TestCreate_FileOutsideHomeRestoresInPlace(t *testing.T) {
 }
 
 // TestDestination_FallsBackToHome: a manifest written before destinations
-// were recorded backs up only files under the home directory.
+// were recorded keys each backup by its path relative to the home directory.
 func TestDestination_FallsBackToHome(t *testing.T) {
 	t.Parallel()
 	home := filepath.Join(string(filepath.Separator), "home", "u")
@@ -237,4 +237,63 @@ func TestLoad_ReportsASnapshotItCannotRead(t *testing.T) {
 func readString(path string) string {
 	data, _ := os.ReadFile(path)
 	return string(data)
+}
+
+// TestRestore_AManifestFromBeforeDestinations: earlier versions keyed a file
+// outside the home directory as a "../" path, which put its backup beside
+// the snapshot rather than in it. Such a snapshot still loads and restores
+// the file in place.
+func TestRestore_AManifestFromBeforeDestinations(t *testing.T) {
+	home, outside := outsideHome(t)
+	cfgPath := filepath.Join(outside, "proj", ".cursor", "mcp.json")
+	os.MkdirAll(filepath.Dir(cfgPath), 0755)
+	os.WriteFile(cfgPath, []byte("after"), 0644)
+	key, err := filepath.Rel(home, cfgPath)
+	if err != nil || !strings.HasPrefix(key, "..") {
+		t.Fatalf("Rel: got %q (err %v), want a path out of home", key, err)
+	}
+
+	projectRoot := t.TempDir()
+	snapDir := filepath.Join(snapshotsDir(projectRoot), "20260101T000000")
+	backup := filepath.Join(snapDir, "files", key)
+	os.MkdirAll(filepath.Dir(backup), 0755)
+	os.WriteFile(backup, []byte("before"), 0644)
+	data, _ := json.Marshal(SnapshotManifest{LoadoutName: "dev", Mode: "keep", BackedUpFiles: []string{key}})
+	os.WriteFile(filepath.Join(snapDir, "manifest.json"), data, 0644)
+
+	m, dir, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(dir, m); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if got := readString(cfgPath); got != "before" {
+		t.Errorf("restored %q, want %q", got, "before")
+	}
+}
+
+// TestLoad_SkipsALeftoverHookSnapshot: earlier versions left a snapshot of
+// the settings file after every hook install and uninstall. Load passes
+// over them to the loadout's snapshot, and finds none when only they remain.
+func TestLoad_SkipsALeftoverHookSnapshot(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	write := func(name, loadout string) {
+		dir := filepath.Join(snapshotsDir(projectRoot), name)
+		os.MkdirAll(dir, 0755)
+		data, _ := json.Marshal(SnapshotManifest{Source: loadout, LoadoutName: loadout, Mode: "keep"})
+		os.WriteFile(filepath.Join(dir, "manifest.json"), data, 0644)
+	}
+	write("20260102T000000", "hook-install:guard")
+	write("20260103T000000", "hook-uninstall:guard")
+	if _, _, err := Load(projectRoot); !errors.Is(err, ErrNoSnapshot) {
+		t.Errorf("only hook snapshots: got %v, want ErrNoSnapshot", err)
+	}
+
+	write("20260101T000000", "dev")
+	m, dir, err := Load(projectRoot)
+	if err != nil || m.LoadoutName != "dev" || filepath.Base(dir) != "20260101T000000" {
+		t.Errorf("Load: got %+v in %s (err %v), want the dev snapshot", m, dir, err)
+	}
 }

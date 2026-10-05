@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -39,9 +40,9 @@ type SnapshotManifest struct {
 	Symlinks       []SymlinkRecord   `json:"symlinks"`
 	HookScripts    []string          `json:"hookScripts,omitempty"` // informational only
 	// Destinations maps each backup's path inside files/ to the absolute
-	// path it was copied from. Manifests written before it existed back up
-	// only files under the home directory, which restore to the home
-	// directory joined with the backup's path.
+	// path it was copied from. Manifests written before it existed key each
+	// backup by its path relative to the home directory, with "../" for a
+	// file outside it, and restore to the home directory joined with it.
 	Destinations map[string]string `json:"destinations,omitempty"`
 	// CreatedFiles holds the absolute paths that did not exist at Create.
 	// Restore removes them, so a config the apply created goes with it.
@@ -193,25 +194,33 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		return dirs[i].Name() > dirs[j].Name() // newest first
 	})
 
-	snapshotDir := filepath.Join(dir, dirs[0].Name())
-	manifestPath := filepath.Join(snapshotDir, "manifest.json")
+	for _, d := range dirs {
+		snapshotDir := filepath.Join(dir, d.Name())
+		data, err := os.ReadFile(filepath.Join(snapshotDir, "manifest.json"))
+		if err != nil {
+			return nil, "", fmt.Errorf("reading manifest: %w", err)
+		}
 
-	data, err := os.ReadFile(manifestPath)
-	if err != nil {
-		return nil, "", fmt.Errorf("reading manifest: %w", err)
+		var manifest SnapshotManifest
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return nil, "", fmt.Errorf("parsing manifest: %w", err)
+		}
+
+		// Earlier versions took a snapshot for every hook install and
+		// uninstall and never deleted it. None is a loadout, and restoring
+		// one would drop every hook installed since.
+		if strings.HasPrefix(manifest.LoadoutName, "hook-install:") || strings.HasPrefix(manifest.LoadoutName, "hook-uninstall:") {
+			continue
+		}
+
+		// Backwards compat: old manifests have LoadoutName but no Source.
+		if manifest.Source == "" && manifest.LoadoutName != "" {
+			manifest.Source = "loadout:" + manifest.LoadoutName
+		}
+
+		return &manifest, snapshotDir, nil
 	}
-
-	var manifest SnapshotManifest
-	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil, "", fmt.Errorf("parsing manifest: %w", err)
-	}
-
-	// Backwards compat: old manifests have LoadoutName but no Source.
-	if manifest.Source == "" && manifest.LoadoutName != "" {
-		manifest.Source = "loadout:" + manifest.LoadoutName
-	}
-
-	return &manifest, snapshotDir, nil
+	return nil, "", ErrNoSnapshot
 }
 
 // Restore reads backed-up files from snapshotDir and writes them back to their

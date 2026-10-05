@@ -3,6 +3,7 @@ package loadout
 import (
 	"errors"
 	"os"
+	"slices"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -81,11 +82,13 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	// The snapshot restore already put back the pre-apply installed.json,
 	// but if anything was added to installed.json after the loadout apply,
 	// we want to keep those entries. So we load the current state and remove
-	// only the loadout-tagged entries.
+	// only the loadout-tagged entries, along with the records of anything
+	// installed after the apply into a file step 1 restored or deleted.
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err == nil {
 		source := "loadout:" + manifest.LoadoutName
 		inst = cleanInstalledEntries(inst, source)
+		installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles))
 		_ = installer.SaveInstalled(opts.ProjectRoot, inst)
 	}
 

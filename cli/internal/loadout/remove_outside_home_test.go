@@ -1,11 +1,14 @@
 package loadout
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
@@ -91,5 +94,41 @@ func TestRemove_KeepsInstallsMadeAfterTheApply(t *testing.T) {
 	inst, err = installer.LoadInstalled(projectRoot)
 	if err != nil || len(inst.Hooks) != 0 || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {
 		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
+	}
+}
+
+// TestRemove_ForgetsAnInstallTheRevertTookOut: a hook installed after the
+// apply into the settings file the apply created goes when remove deletes
+// that file, and so does its record, which would otherwise block a later
+// apply or install of the same hook.
+func TestRemove_ForgetsAnInstallTheRevertTookOut(t *testing.T) {
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+	t.Setenv("HOME", homeDir)
+	t.Setenv("USERPROFILE", homeDir)
+	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
+	if _, err := os.Stat(settingsPath); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("settings.json before apply: stat err %v, want none", err)
+	}
+	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+
+	laterDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "later-hook")
+	os.MkdirAll(laterDir, 0755)
+	os.WriteFile(filepath.Join(laterDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":".*","handler":{"type":"command","command":"echo later"}}]}`), 0644)
+	later := catalog.ContentItem{Name: "later-hook", Type: catalog.Hooks, Provider: "claude-code", Path: laterDir}
+	if _, err := installer.Install(later, prov, projectRoot, installer.MethodSymlink, "", installer.ScanOptions{}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if _, err := os.Stat(settingsPath); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("settings.json after remove: stat err %v, want deleted", err)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.Hooks) != 0 {
+		t.Errorf("installed.json after remove: got %+v (err %v), want no hooks", inst, err)
 	}
 }
