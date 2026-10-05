@@ -71,7 +71,9 @@ linters:
             - "${config-path}/internal/**/*.go"
             - "!${config-path}/internal/tui/**"
           deny:
-            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui"
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui$"
+              desc: shared packages must not depend on the TUI
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui/"
               desc: shared packages must not depend on the TUI
             - pkg: github.com/charmbracelet
               desc: terminal UI belongs in internal/tui
