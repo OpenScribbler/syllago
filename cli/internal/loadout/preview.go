@@ -1,6 +1,7 @@
 package loadout
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -197,6 +198,8 @@ func hookEvent(itemDir string) (string, bool) {
 
 // previewMCP checks installed.json for an existing MCP entry, then whether
 // the merge would refuse the item, such as for a server the user defined.
+// A server already installed under the legacy root is skipped, as one in
+// this project's installed.json is.
 func previewMCP(ref ResolvedRef, prov provider.Provider, repoRoot string, inst *installer.Installed) PlannedAction {
 	if inst.FindMCP(ref.Name, prov.Slug) >= 0 {
 		return PlannedAction{
@@ -206,7 +209,16 @@ func previewMCP(ref ResolvedRef, prov provider.Provider, repoRoot string, inst *
 			Detail: fmt.Sprintf("MCP server %s already installed", ref.Name),
 		}
 	}
-	if err := installer.CheckMCP(ref.Item, prov, repoRoot, inst); err != nil {
+	err := installer.CheckMCP(ref.Item, prov, repoRoot, inst)
+	if errors.Is(err, installer.ErrMCPInstalled) {
+		return PlannedAction{
+			Type:   ref.Type,
+			Name:   ref.Name,
+			Action: "skip-exists",
+			Detail: err.Error(),
+		}
+	}
+	if err != nil {
 		return PlannedAction{
 			Type:    ref.Type,
 			Name:    ref.Name,

@@ -135,8 +135,9 @@ func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
 			if tt.existing == "" {
 				os.Remove(cfgPath)
 			}
-			// installed.json is saved after every placement, so a .syllago
-			// the apply cannot write to fails it once both servers are in.
+			// installed.json is saved once, after every placement, so a
+			// .syllago the apply cannot write to fails it once both servers
+			// are in.
 			dir := filepath.Join(projectRoot, ".syllago")
 			os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
 			os.Chmod(dir, 0555)
@@ -163,5 +164,68 @@ func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
 				t.Errorf("retry: config is %s, want srv and two", got)
 			}
 		})
+	}
+}
+
+// TestApply_FailedRollbackKeepsTheSnapshot: a snapshot that did not restore
+// holds the only copy of the files the apply changed, so the apply keeps it
+// and says so, and loadout remove restores them from it.
+func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
+	existing := `{"mcpServers":{"mine":{"command":"x"}}}`
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, existing)
+	dir := filepath.Join(projectRoot, ".syllago")
+	os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
+	os.Chmod(dir, 0555)
+	t.Cleanup(func() { os.Chmod(dir, 0755) })
+	restoreSnapshot = func(string, *snapshot.SnapshotManifest) error { return errors.New("disk full") }
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+
+	_, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || !strings.Contains(err.Error(), "syllago loadout remove") {
+		t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove", err)
+	}
+	if _, _, err := snapshot.Load(projectRoot); err != nil {
+		t.Fatalf("snapshot.Load after the failed rollback: %v", err)
+	}
+
+	os.Chmod(dir, 0755)
+	restoreSnapshot = snapshot.Restore
+	if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != existing {
+		t.Errorf("config after remove: got %s, want %s", got, existing)
+	}
+}
+
+// TestApply_SkipsAServerInstalledUnderTheLegacyRoot: a server a record
+// under the global content dir placed is installed already, so the apply
+// skips it as it skips one this project's installed.json records.
+func TestApply_SkipsAServerInstalledUnderTheLegacyRoot(t *testing.T) {
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, `{"mcpServers":{"legacy-srv":{"command":"node"}}}`)
+	cat.Items[0].Name, cat.Items[0].ServerKey = "legacy-srv", "legacy-srv"
+	manifest.MCP = []ItemRef{{Name: "legacy-srv"}}
+	legacyRoot := catalog.GlobalContentDirOverride
+	legacy := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "legacy-srv", ServerKey: "legacy-srv", Source: "manual", Provider: "cursor"}}}
+	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
+	before, _ := os.ReadFile(cfgPath)
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	result, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].Action != "skip-exists" {
+		t.Fatalf("preview actions: got %+v, want one skip-exists", result.Actions)
+	}
+	opts.Mode = "keep"
+	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != string(before) {
+		t.Errorf("config: got %s, want it unchanged as %s", got, before)
 	}
 }

@@ -55,6 +55,9 @@ type ApplyResult struct {
 	AutoRevertArmed bool
 }
 
+// restoreSnapshot is replaced in tests to fail a rollback.
+var restoreSnapshot = snapshot.Restore
+
 // Apply resolves, validates, and applies a loadout to the provider.
 //
 // The sequence is: Resolve -> Validate -> Preview -> Snapshot -> Apply items -> Record.
@@ -161,13 +164,18 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up. Read this apply's own
 		// snapshot, so another one in the directory cannot stop the restore.
-		sm, readErr := snapshot.ReadManifest(snapshotDir)
-		if readErr == nil {
-			_ = snapshot.Restore(snapshotDir, sm)
+		sm, restoreErr := snapshot.ReadManifest(snapshotDir)
+		if restoreErr == nil {
+			restoreErr = restoreSnapshot(snapshotDir, sm)
 			// Remove any symlinks we may have partially created
 			for _, sr := range symlinkRecords {
 				_ = os.Remove(sr.Path)
 			}
+		}
+		// A snapshot that did not restore is the only copy of the files the
+		// apply changed, so it stays for loadout remove to retry.
+		if restoreErr != nil {
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it", applyErr, restoreErr)
 		}
 		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)

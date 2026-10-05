@@ -3,6 +3,7 @@ package installer
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -462,7 +463,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	}
 
 	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov.Slug, fileData, jsonKey); ok {
-		return mcpMerge{}, fmt.Errorf("MCP server %q already installed", serverName)
+		return mcpMerge{}, fmt.Errorf("MCP server %q %w", serverName, ErrMCPInstalled)
 	}
 
 	// Merge each server entry into the target config
@@ -492,6 +493,10 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	}
 	return mcpMerge{rawData: rawData, entries: entries, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
 }
+
+// ErrMCPInstalled is the merge's error for a server a record under the
+// legacy root already placed.
+var ErrMCPInstalled = errors.New("already installed")
 
 // CheckMCP reports the error PlaceMCP would return for an item, without
 // writing anything.
