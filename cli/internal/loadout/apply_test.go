@@ -1,8 +1,11 @@
 package loadout
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -791,5 +794,37 @@ func TestApplyMCP_RecordsProvider(t *testing.T) {
 	}
 	if len(inst.MCP) != 1 || inst.MCP[0].Provider != "cursor" {
 		t.Fatalf("expected one cursor record, got %+v", inst.MCP)
+	}
+}
+
+// TestApply_RollbackReadsItsOwnSnapshot: a failed apply restores from the
+// snapshot it took, so an unreadable directory another run left among the
+// snapshots does not stop the rollback.
+func TestApply_RollbackReadsItsOwnSnapshot(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot read")
+	}
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+	syllagoDir := filepath.Join(projectRoot, ".syllago")
+	leftover := filepath.Join(syllagoDir, "snapshots", "leftover")
+	os.MkdirAll(leftover, 0755)
+	os.Chmod(leftover, 0)
+	// installed.json cannot be saved, which fails the apply after its writes.
+	os.Chmod(syllagoDir, 0555)
+	t.Cleanup(func() {
+		os.Chmod(syllagoDir, 0755)
+		os.Chmod(leftover, 0755)
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolled back") {
+		t.Fatalf("Apply: got %v, want a rolled-back error", err)
+	}
+	if _, err := os.Lstat(filepath.Join(homeDir, ".claude", "settings.json")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("settings.json the apply created is still there (lstat err %v)", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(homeDir, ".claude", "rules")); len(entries) != 0 {
+		t.Errorf("rule symlink still there: %v", entries)
 	}
 }

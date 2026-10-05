@@ -64,16 +64,25 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		loadout.SkipInstalledBackup(manifest, projectRoot)
 		if len(manifest.BackedUpFiles) > 0 {
 			fmt.Fprintln(output.Writer, "\nFiles to restore from snapshot:")
+			home, _ := os.UserHomeDir()
 			for _, f := range manifest.BackedUpFiles {
+				fmt.Fprintf(output.Writer, "  %s\n", manifest.Destination(home, f))
+			}
+		}
+
+		if len(manifest.CreatedFiles) > 0 {
+			fmt.Fprintln(output.Writer, "\nFiles the loadout created, to delete:")
+			for _, f := range manifest.CreatedFiles {
 				fmt.Fprintf(output.Writer, "  %s\n", f)
 			}
 		}
 
-		fmt.Fprintln(output.Writer, "\nNote: Any changes you made to settings.json or .claude.json after")
-		fmt.Fprintln(output.Writer, "applying the loadout will be lost — the original files are restored")
-		fmt.Fprintln(output.Writer, "from a snapshot.")
+		fmt.Fprintln(output.Writer, "\nNote: Any changes you made to these files after applying the loadout")
+		fmt.Fprintln(output.Writer, "will be lost — the original files are restored from a snapshot, and")
+		fmt.Fprintln(output.Writer, "the files the loadout created are deleted.")
 
 		if isInteractive() {
 			fmt.Fprintf(output.Writer, "\nRemove loadout? [y/N]: ")

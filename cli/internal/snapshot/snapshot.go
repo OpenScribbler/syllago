@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -37,6 +39,22 @@ type SnapshotManifest struct {
 	BackedUpHashes map[string]string `json:"backedUpHashes,omitempty"` // rel path -> hex sha256 at Create time
 	Symlinks       []SymlinkRecord   `json:"symlinks"`
 	HookScripts    []string          `json:"hookScripts,omitempty"` // informational only
+	// Destinations maps each backup's path inside files/ to the absolute
+	// path it was copied from. Manifests written before it existed key each
+	// backup by its path relative to the home directory, with "../" for a
+	// file outside it, and restore to the home directory joined with it.
+	Destinations map[string]string `json:"destinations,omitempty"`
+	// CreatedFiles holds the absolute paths that did not exist at Create.
+	// Restore removes them, so a config the apply created goes with it.
+	CreatedFiles []string `json:"createdFiles,omitempty"`
+}
+
+// Destination returns the absolute path the backup at rel restores to.
+func (m *SnapshotManifest) Destination(home, rel string) string {
+	if dest, ok := m.Destinations[rel]; ok {
+		return dest
+	}
+	return filepath.Join(home, rel)
 }
 
 // SymlinkRecord tracks a symlink created during apply.
@@ -72,23 +90,32 @@ func Create(projectRoot string, loadoutName string, mode string,
 
 	var backedUp []string
 	hashes := make(map[string]string)
-	for _, absPath := range filesToBackup {
-		// Compute relative path from home dir for storage
-		rel, err := filepath.Rel(home, absPath)
-		if err != nil {
-			// If not relative to home, use the full path as a fallback
-			rel = absPath
+	destinations := make(map[string]string)
+	var created []string
+	absPaths := make([]string, len(filesToBackup))
+	for i, path := range filesToBackup {
+		if absPaths[i], err = filepath.Abs(path); err != nil {
+			return "", fmt.Errorf("backing up %s: %w", path, err)
 		}
-
+	}
+	keys := backupKeys(home, absPaths)
+	for i, absPath := range absPaths {
+		rel := keys[i]
 		destPath := filepath.Join(filesDir, rel)
 
 		if err := copyFile(absPath, destPath); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				continue // skip files that don't exist
+				// A symlink to a missing target reads as missing too, but
+				// it is the user's, so only an empty path counts as created.
+				if _, err := os.Lstat(absPath); errors.Is(err, fs.ErrNotExist) {
+					created = append(created, absPath)
+				}
+				continue
 			}
 			return "", fmt.Errorf("backing up %s: %w", absPath, err)
 		}
 		backedUp = append(backedUp, rel)
+		destinations[rel] = absPath
 
 		// Hash the backup we just wrote, not the source — if anything
 		// corrupted the content during the copy, this anchor catches that
@@ -109,26 +136,57 @@ func Create(projectRoot string, loadoutName string, mode string,
 		BackedUpHashes: hashes,
 		Symlinks:       symlinks,
 		HookScripts:    hookScripts,
+		Destinations:   destinations,
+		CreatedFiles:   created,
 	}
 
-	manifestData, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshaling manifest: %w", err)
-	}
-
-	manifestPath := filepath.Join(snapshotDir, "manifest.json")
-	if err := os.WriteFile(manifestPath, manifestData, 0644); err != nil {
-		return "", fmt.Errorf("writing manifest: %w", err)
+	if err := writeManifest(snapshotDir, &manifest); err != nil {
+		return "", err
 	}
 
 	return snapshotDir, nil
 }
 
-// CreateForHook creates a snapshot for a hook operation. It records the source
-// identifier (e.g. "hook:some-hook-name") and backs up the given files.
-// Mode is always "keep" since hook snapshots are not trial installs.
-func CreateForHook(projectRoot, source string, filesToBackup []string) (string, error) {
-	return Create(projectRoot, source, "keep", filesToBackup, nil, nil)
+// writeManifest replaces the snapshot's manifest through a rename, so a
+// failed write leaves the previous one readable.
+func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling manifest: %w", err)
+	}
+
+	manifestPath := filepath.Join(snapshotDir, "manifest.json")
+	tmp := manifestPath + ".tmp"
+	if err := os.WriteFile(tmp, manifestData, 0644); err != nil {
+		return fmt.Errorf("writing manifest: %w", err)
+	}
+	if err := os.Rename(tmp, manifestPath); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("writing manifest: %w", err)
+	}
+	return nil
+}
+
+// DropUncreated drops from the snapshot's CreatedFiles each path that
+// still does not exist. An apply calls it once its writes are done: a write
+// that failed without stopping the apply created nothing, and a file that
+// appears there later belongs to whoever made it.
+func DropUncreated(snapshotDir string) error {
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	var created []string
+	for _, p := range manifest.CreatedFiles {
+		if _, err := os.Lstat(p); !errors.Is(err, fs.ErrNotExist) {
+			created = append(created, p)
+		}
+	}
+	if len(created) == len(manifest.CreatedFiles) {
+		return nil
+	}
+	manifest.CreatedFiles = created
+	return writeManifest(snapshotDir, manifest)
 }
 
 // Load reads the manifest from the most recent snapshot directory.
@@ -143,11 +201,20 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		return nil, "", fmt.Errorf("reading snapshots dir: %w", err)
 	}
 
-	// Filter to directories only and sort by name (timestamp-based, newest last)
+	// Filter to snapshots and sort by name (timestamp-based, newest last).
+	// Earlier versions wrote backups of files outside the home directory
+	// beside the snapshots rather than inside one, and a directory without
+	// a manifest is one of those.
 	var dirs []os.DirEntry
 	for _, e := range entries {
-		if e.IsDir() {
+		if !e.IsDir() {
+			continue
+		}
+		_, err := os.Stat(filepath.Join(dir, e.Name(), "manifest.json"))
+		if err == nil {
 			dirs = append(dirs, e)
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return nil, "", fmt.Errorf("reading snapshot %s: %w", e.Name(), err)
 		}
 	}
 	if len(dirs) == 0 {
@@ -158,29 +225,77 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		return dirs[i].Name() > dirs[j].Name() // newest first
 	})
 
-	snapshotDir := filepath.Join(dir, dirs[0].Name())
-	manifestPath := filepath.Join(snapshotDir, "manifest.json")
+	for _, d := range dirs {
+		snapshotDir := filepath.Join(dir, d.Name())
+		manifest, err := ReadManifest(snapshotDir)
+		if err != nil {
+			return nil, "", err
+		}
 
-	data, err := os.ReadFile(manifestPath)
+		// Earlier versions took a snapshot for every hook install and
+		// uninstall and never deleted it. None is a loadout, and restoring
+		// one would drop every hook installed since.
+		if strings.HasPrefix(manifest.LoadoutName, "hook-install:") || strings.HasPrefix(manifest.LoadoutName, "hook-uninstall:") {
+			continue
+		}
+
+		return manifest, snapshotDir, nil
+	}
+	return nil, "", ErrNoSnapshot
+}
+
+// ReadManifest reads the manifest of the snapshot in snapshotDir.
+func ReadManifest(snapshotDir string) (*SnapshotManifest, error) {
+	data, err := os.ReadFile(filepath.Join(snapshotDir, "manifest.json"))
 	if err != nil {
-		return nil, "", fmt.Errorf("reading manifest: %w", err)
+		return nil, fmt.Errorf("reading manifest: %w", err)
 	}
 
 	var manifest SnapshotManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return nil, "", fmt.Errorf("parsing manifest: %w", err)
+		return nil, fmt.Errorf("parsing manifest: %w", err)
 	}
 
 	// Backwards compat: old manifests have LoadoutName but no Source.
 	if manifest.Source == "" && manifest.LoadoutName != "" {
 		manifest.Source = "loadout:" + manifest.LoadoutName
 	}
+	return &manifest, nil
+}
 
-	return &manifest, snapshotDir, nil
+// backupKeys names each file's backup under files/. A file in the home
+// directory keys by its path under it, which earlier versions restore
+// correctly too. A file outside it has no such path, and its absolute path
+// cannot sit under files/ on Windows, so it takes a numbered outside-home
+// key, skipping any number a home path already uses there.
+func backupKeys(home string, absPaths []string) []string {
+	keys := make([]string, len(absPaths))
+	used := make(map[string]bool)
+	for i, p := range absPaths {
+		if r, err := filepath.Rel(home, p); err == nil && filepath.IsLocal(r) {
+			keys[i] = r
+			if parts := strings.Split(strings.ToLower(filepath.ToSlash(r)), "/"); len(parts) > 1 && parts[0] == "outside-home" {
+				used[parts[1]] = true
+			}
+		}
+	}
+	n := 0
+	for i, p := range absPaths {
+		if keys[i] != "" {
+			continue
+		}
+		for used[strconv.Itoa(n)] {
+			n++
+		}
+		keys[i] = filepath.Join("outside-home", strconv.Itoa(n), filepath.Base(p))
+		n++
+	}
+	return keys
 }
 
 // Restore reads backed-up files from snapshotDir and writes them back to their
-// original absolute paths. Does not remove symlinks (caller does that).
+// original absolute paths, then removes the files that did not exist at
+// Create. Does not remove symlinks (caller does that).
 //
 // Each destination is lstat'd before it is opened for write: if a path is
 // currently a symlink, Restore refuses to write through it. This blocks the
@@ -194,10 +309,23 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 		return fmt.Errorf("getting home dir: %w", err)
 	}
 
+	// Every path syllago records is absolute, so a relative one came from a
+	// hand edit and would resolve against wherever syllago runs.
+	for rel, dest := range manifest.Destinations {
+		if !filepath.IsAbs(dest) {
+			return fmt.Errorf("restoring %s: destination %q is not an absolute path", rel, dest)
+		}
+	}
+	for _, path := range manifest.CreatedFiles {
+		if !filepath.IsAbs(path) {
+			return fmt.Errorf("removing %q: not an absolute path", path)
+		}
+	}
+
 	filesDir := filepath.Join(snapshotDir, "files")
 	for _, rel := range manifest.BackedUpFiles {
 		srcPath := filepath.Join(filesDir, rel)
-		destPath := filepath.Join(home, rel)
+		destPath := manifest.Destination(home, rel)
 
 		// Integrity check: if the manifest recorded a sha256 for this path,
 		// recompute it against the backup on disk and refuse the restore if
@@ -215,6 +343,11 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 
 		if err := restoreToFile(srcPath, destPath); err != nil {
 			return fmt.Errorf("restoring %s: %w", rel, err)
+		}
+	}
+	for _, path := range manifest.CreatedFiles {
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("removing %s: %w", path, err)
 		}
 	}
 

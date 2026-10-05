@@ -163,9 +163,10 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}
 	applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
 	if applyErr != nil {
-		// Rollback: restore snapshot and clean up
-		sm, _, loadErr := snapshot.Load(opts.ProjectRoot)
-		if loadErr == nil {
+		// Rollback: restore snapshot and clean up. Read this apply's own
+		// snapshot, so another one in the directory cannot stop the restore.
+		sm, readErr := snapshot.ReadManifest(snapshotDir)
+		if readErr == nil {
 			_ = snapshot.Restore(snapshotDir, sm)
 			// Remove any symlinks we may have partially created
 			for _, sr := range symlinkRecords {
@@ -186,6 +187,9 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			warnings = append(warnings, fmt.Sprintf("%s has no session-end hook event, so this loadout cannot auto-revert; run 'syllago loadout remove' to undo it", prov.Name))
 		}
 		autoRevertArmed = injected
+	}
+	if err := snapshot.DropUncreated(snapshotDir); err != nil {
+		warnings = append(warnings, fmt.Sprintf("files this apply did not create may be deleted by loadout remove: %v", err))
 	}
 
 	return &ApplyResult{
@@ -464,8 +468,10 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		}
 	}
 
-	// Also back up installed.json
-	files = append(files, filepath.Join(opts.ProjectRoot, ".syllago", "installed.json"))
+	// installed.json is not backed up. Apply only adds records, and writes
+	// them last, so a failed apply leaves the file alone; remove deletes the
+	// loadout's records, which keeps the ones a later install adds, where
+	// restoring the file would drop them.
 
 	return files
 }
