@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -130,6 +131,11 @@ func addSettingsEntry(item addDiscoveryItem, contentRoot, projectRoot, srcReg, s
 	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
 		Destinations: []lifecycle.Destination{{Type: item.itemType, Name: planned.LibraryName, Path: planned.Dest}},
 		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
+			// The pin check covered planned.Dest alone, so an item the
+			// Library moved since the plan is not written elsewhere.
+			if again := add.AddPlacedSettings([]add.SettingsItem{s}, plan, projectRoot, contentRoot)[0]; again.Dest != planned.Dest {
+				return nil, fmt.Errorf("the Library changed while %s was being added; add it again", item.name)
+			}
 			r = add.AddPlacedSettings([]add.SettingsItem{s}, opts, projectRoot, contentRoot)[0]
 			return []lifecycle.Written{{Path: r.Dest, SourceSHA: srcSHA}}, nil
 		},

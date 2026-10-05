@@ -234,13 +234,38 @@ func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalD
 
 // AddPlacedSettings adds items as AddFromSettings does, each at the Dest
 // and with the Status DiscoverSettings gave it, so an add of some of the
-// discovered items lands each where discovery reported it.
+// discovered items lands each where discovery reported it. An item whose
+// directory has changed since, taken by other content or emptied, is
+// placed again rather than written over what is there now.
 func AddPlacedSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
+	claimed := map[string]bool{}
+	for _, item := range items {
+		claimed[item.Dest] = true
+	}
 	results := make([]SettingsResult, 0, len(items))
 	for _, item := range items {
+		if !stillPlaced(&item) {
+			delete(claimed, item.Dest)
+			item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
+			claimed[item.Dest] = true
+		}
 		results = append(results, addSettingsItem(item, opts, projectRoot, globalDir))
 	}
 	return results
+}
+
+// stillPlaced reports whether item's Dest is as discovery found it: free
+// for a new item, and holding the item for one already in the Library.
+func stillPlaced(item *SettingsItem) bool {
+	_, err := os.Stat(item.Dest)
+	if item.Status == StatusNew {
+		return err != nil
+	}
+	i := 1
+	if filepath.Base(item.Dest) != item.Name {
+		i = 2
+	}
+	return err == nil && holdsItem(item.Dest, i, item)
 }
 
 func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir string) SettingsResult {

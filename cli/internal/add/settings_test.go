@@ -802,6 +802,63 @@ func TestAddPlacedSettings_LandsWhereDiscoveryPlacedIt(t *testing.T) {
 	}
 }
 
+// Regression: an add trusted the placement discovery made, so a server
+// discovered for a free db-2 overwrote whatever took db-2 since.
+func TestAddPlacedSettings_PlacesAgainWhenTheDirectoryWasTaken(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"mcpServers": {"db": {"command": "one"}}}`)
+	writeFile(t, filepath.Join(projectRoot, ".mcp.json"), `{"mcpServers": {"db": {"command": "two"}}}`)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(items) != 2 || items[1].Status != StatusNew {
+		t.Fatalf("DiscoverSettings: items %v err %v, want two new servers", itemNames(items), err)
+	}
+	taken := filepath.Join(globalDir, "mcp", "claude-code", "db-2")
+	if items[1].Dest != taken {
+		t.Fatalf("second server placed at %s, want %s", items[1].Dest, taken)
+	}
+	saveNamed(t, taken, "project", "db-2")
+	writeFile(t, filepath.Join(taken, "config.json"), `{"mcpServers": {"db-2": {"command": "other"}}}`)
+
+	r := AddPlacedSettings(items[1:], AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
+	if r.Status != AddStatusAdded || r.Dest == taken {
+		t.Fatalf("status %v dest %s, want added beside %s", r.Status, r.Dest, taken)
+	}
+	if data, _ := os.ReadFile(filepath.Join(r.Dest, "config.json")); !strings.Contains(string(data), `"two"`) {
+		t.Errorf("%s/config.json = %s, want the added server", r.Dest, data)
+	}
+	if data, _ := os.ReadFile(filepath.Join(taken, "config.json")); !strings.Contains(string(data), `"other"`) {
+		t.Errorf("db-2/config.json = %s, want the server that took it left alone", data)
+	}
+}
+
+// Regression: an item discovered in the Library and removed from it since
+// was reported up to date and not added back.
+func TestAddPlacedSettings_AddsBackAnItemRemovedSinceDiscovery(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"mcpServers": {"db": {"command": "one"}}}`)
+	opts := AddOptions{Provider: "claude-code"}
+	first, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(first) != 1 {
+		t.Fatalf("DiscoverSettings: items %v err %v", itemNames(first), err)
+	}
+	AddFromSettings(first, opts, projectRoot, globalDir)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(items) != 1 || items[0].Status != StatusInLibrary {
+		t.Fatalf("DiscoverSettings: items %v err %v, want the server in the Library", itemNames(items), err)
+	}
+	if err := os.RemoveAll(items[0].Dest); err != nil {
+		t.Fatal(err)
+	}
+
+	r := AddPlacedSettings(items, opts, projectRoot, globalDir)[0]
+	if r.Status != AddStatusAdded || r.Dest != items[0].Dest {
+		t.Fatalf("status %v dest %s, want added at %s", r.Status, r.Dest, items[0].Dest)
+	}
+	if _, err := os.Stat(filepath.Join(r.Dest, "config.json")); err != nil {
+		t.Errorf("server not added back: %v", err)
+	}
+}
+
 // Regression: an add naming its registry recorded no hash, so the same
 // settings added again from a plain file did not find the private item
 // and lost its registry.

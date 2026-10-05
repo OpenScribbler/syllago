@@ -336,6 +336,30 @@ func TestAddItemCmd_AddsANewServerBesideAnUnselectedOne(t *testing.T) {
 	}
 }
 
+// Regression: a server discovered for a free db-2 overwrote the server that
+// took db-2 before the add ran.
+func TestAddItemCmd_LeavesADirectoryTakenSinceDiscovery(t *testing.T) {
+	projectRoot, library, _ := providerSettingsEnv(t)
+	writeTUITestFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), []byte(`{"mcpServers": {"db": {"command": "from-settings"}}}`))
+	writeTUITestFile(t, filepath.Join(projectRoot, ".mcp.json"), []byte(`{"mcpServers": {"db": {"command": "from-mcp-json"}}}`))
+	items, _ := discoverSettingsFromProvider(provider.ClaudeCode, projectRoot, "", library, catalog.MCP)
+	taken := filepath.Join(library, string(catalog.MCP), "claude-code", "db-2")
+	if len(items) != 2 || items[1].settings.Dest != taken {
+		t.Fatalf("discovered %d items, want the second placed at db-2", len(items))
+	}
+	writeTUITestFile(t, filepath.Join(taken, "config.json"), []byte(`{"mcpServers": {"db-2": {"command": "other"}}}`))
+	if err := metadata.Save(taken, &metadata.Meta{Name: "db-2", SourceScope: "project", SourceName: "db-2"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if r := addSingleItem(items[1], library, projectRoot, "", "", "claude-code", ""); r.status != "added" {
+		t.Fatalf("status %q err %v, want added", r.status, r.err)
+	}
+	if data, _ := os.ReadFile(filepath.Join(taken, "config.json")); !strings.Contains(string(data), `"other"`) {
+		t.Errorf("db-2/config.json = %s, want the server that took it left alone", data)
+	}
+}
+
 // Regression: a broken settings file that holds both hooks and servers was
 // reported once per content type, so one file read as two.
 func TestDiscoverFromProvider_ReportsABrokenFileOnce(t *testing.T) {
