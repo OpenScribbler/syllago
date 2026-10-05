@@ -379,7 +379,7 @@ func TestInstallMCP_PlacesTheServersASharedConfigLacks(t *testing.T) {
 	if err := os.MkdirAll(itemDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node"},"b":{"command":"y"}}}`), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node","cwd":"/srv"},"b":{"command":"y","cwd":"/b"}}}`), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"a":{"command":"node"}}}`), 0644); err != nil {
@@ -387,8 +387,18 @@ func TestInstallMCP_PlacesTheServersASharedConfigLacks(t *testing.T) {
 	}
 	item := catalog.ContentItem{Name: "bundle", Type: catalog.MCP, Path: itemDir}
 
-	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+	placement, err := installMCP(item, provider.ClaudeCode, projectRoot)
+	if err != nil {
 		t.Fatalf("install: %v", err)
+	}
+	// The merge left a out, so only b's dropped cwd is a notice of this
+	// install.
+	var notices []string
+	for _, n := range placement.Notices {
+		notices = append(notices, n.Message)
+	}
+	if len(notices) != 1 || !strings.Contains(notices[0], `server "b"`) {
+		t.Errorf("notices: got %q, want one, for b", notices)
 	}
 	got, _ := os.ReadFile(paths["claude-code"])
 	if gjson.GetBytes(got, "mcpServers.b.command").String() != "y" {

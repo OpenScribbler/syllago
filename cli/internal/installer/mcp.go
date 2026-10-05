@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -417,7 +416,6 @@ func PlaceMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 // yet written.
 type mcpMerge struct {
 	rawData     []byte // the item's config.json
-	entries     map[string]json.RawMessage
 	jsonKey     string
 	cfgPath     string
 	data        []byte // the merged config
@@ -514,7 +512,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	if len(serverNames) == 0 {
 		return mcpMerge{}, fmt.Errorf("MCP server %q %w", sameName, ErrMCPInstalled)
 	}
-	return mcpMerge{rawData: rawData, entries: entries, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
+	return mcpMerge{rawData: rawData, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
 }
 
 // ErrMCPInstalled is the merge's error for an item whose servers the target
@@ -580,7 +578,7 @@ func placeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		Mechanism: MechanismMCPMerge,
 		Path:      m.cfgPath,
 		Keys:      m.keys,
-		Notices:   conversionNotices(item, droppedServerFields(m.rawData, item.Name, m.jsonKey, slices.Collect(maps.Keys(m.entries)))),
+		Notices:   conversionNotices(item, droppedServerFields(m.rawData, item.Name, m.jsonKey, m.serverNames)),
 		desc:      desc,
 	}, nil
 }

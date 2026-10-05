@@ -381,4 +381,13 @@ func TestApply_LegacyRecordYieldsToAServerTheApplyPlaced(t *testing.T) {
 	if got, _ := os.ReadFile(cfgPath); gjson.GetBytes(got, "mcpServers.x.command").String() != "node" {
 		t.Errorf("config: got %s, want x placed", got)
 	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 2 {
+		t.Fatalf("installed.json: got %+v (err %v), want a record for each item", inst, err)
+	}
+	for _, m := range inst.MCP {
+		if !slices.Equal(m.ServerNames, []string{"x"}) {
+			t.Errorf("record %s: got servers %q, want x", m.Name, m.ServerNames)
+		}
+	}
 }
