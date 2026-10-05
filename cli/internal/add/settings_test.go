@@ -607,3 +607,18 @@ func TestDiscoverSettings_ReportsUnparseableFile(t *testing.T) {
 		t.Errorf("items %d unread %v, want none and one error naming the file", len(items), unread)
 	}
 }
+
+// gjson reads truncated JSON as holding no servers, so an MCP settings
+// file is checked for validity before its servers are read.
+func TestDiscoverSettings_ReportsUnparseableMCPFile(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"mcpServers": {"db": {"command": "db-server"}`)
+
+	items, unread, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if len(items) != 0 || len(unread) != 1 || !strings.Contains(unread[0].Error(), "settings.json") {
+		t.Errorf("items %d unread %v, want none and one error naming the file", len(items), unread)
+	}
+}

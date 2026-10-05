@@ -88,6 +88,10 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 			if prov.Slug == "opencode" {
 				data = converter.StripJSONCComments(data)
 			}
+			if !gjson.ValidBytes(data) {
+				unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", loc.Path))
+				continue
+			}
 			servers := gjson.GetBytes(data, loc.JSONKey)
 			if !servers.Exists() || servers.Type != gjson.JSON {
 				continue
