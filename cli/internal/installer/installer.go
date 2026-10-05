@@ -299,15 +299,16 @@ func Install(item catalog.ContentItem, prov provider.Provider, repoRoot string, 
 
 	sourcePath := SourcePathFor(item)
 
+	notices := placedNotices(item, prov)
 	switch method {
 	case MethodCopy:
-		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: notices, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
 			note := Notice{Kind: NoticeNote, Message: targetPath + " is on a Windows mount, using copy instead of symlink"}
-			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: []Notice{note}, desc: targetPath}, CopyContent(sourcePath, targetPath)
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: append(notices, note), desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
-		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismSymlink, Path: targetPath, Notices: notices, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
 }
 
@@ -370,15 +371,16 @@ func InstallWithResolver(item catalog.ContentItem, prov provider.Provider, repoR
 
 	sourcePath := SourcePathFor(item)
 
+	notices := placedNotices(item, prov)
 	switch method {
 	case MethodCopy:
-		return Placement{Mechanism: MechanismCopy, Path: targetPath, desc: targetPath}, CopyContent(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: notices, desc: targetPath}, CopyContent(sourcePath, targetPath)
 	default:
 		if IsWindowsMount(targetPath) {
 			note := Notice{Kind: NoticeNote, Message: targetPath + " is on a Windows mount, using copy instead of symlink"}
-			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: []Notice{note}, desc: targetPath}, CopyContent(sourcePath, targetPath)
+			return Placement{Mechanism: MechanismCopy, Path: targetPath, Notices: append(notices, note), desc: targetPath}, CopyContent(sourcePath, targetPath)
 		}
-		return Placement{Mechanism: MechanismSymlink, Path: targetPath, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
+		return Placement{Mechanism: MechanismSymlink, Path: targetPath, Notices: notices, desc: targetPath}, CreateSymlink(sourcePath, targetPath)
 	}
 }
 
@@ -610,6 +612,31 @@ func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv 
 		return "", notices, err
 	}
 	return targetPath, notices, os.WriteFile(targetPath, result.Content, 0644)
+}
+
+// placedNotices is what prov loses from an item placed as it is, without
+// conversion: the warnings rendering it for prov gives, such as a skill's
+// hooks that prov runs only from its own settings. An item placed for the
+// provider it came from loses nothing. The warnings are advisory, so a
+// render that fails reports none.
+func placedNotices(item catalog.ContentItem, prov provider.Provider) []Notice {
+	conv := converter.For(item.Type)
+	if conv == nil || item.Provider == prov.Slug {
+		return nil
+	}
+	contentFile := converter.ResolveContentFile(item)
+	if contentFile == "" {
+		return nil
+	}
+	content, err := os.ReadFile(contentFile)
+	if err != nil {
+		return nil
+	}
+	result, err := conv.Render(content, prov)
+	if err != nil {
+		return nil
+	}
+	return conversionNotices(item, result.Warnings)
 }
 
 // conversionNotices turns a render's warnings into notices about item.

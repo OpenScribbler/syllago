@@ -123,19 +123,19 @@ func hookIdentity(h converter.CanonicalHook) string {
 // same adapter, and returns the identity of the result. Returns an error if the
 // adapter drops the hook entirely (e.g. a non-command handler on crush), which
 // callers treat as "provider cannot represent this hook".
-func roundTripIdentity(adapter converter.HookAdapter, canonHook converter.CanonicalHook) (string, error) {
+func roundTripIdentity(adapter converter.HookAdapter, canonHook converter.CanonicalHook) (string, []converter.ConversionWarning, error) {
 	enc, err := adapter.Encode(&converter.CanonicalHooks{Spec: converter.SpecVersion, Hooks: []converter.CanonicalHook{canonHook}})
 	if err != nil {
-		return "", fmt.Errorf("encoding hook: %w", err)
+		return "", nil, fmt.Errorf("encoding hook: %w", err)
 	}
 	rt, err := adapter.Decode(enc.Content)
 	if err != nil {
-		return "", fmt.Errorf("verifying encoded hook: %w", err)
+		return "", nil, fmt.Errorf("verifying encoded hook: %w", err)
 	}
 	if len(rt.Hooks) == 0 {
-		return "", fmt.Errorf("hook cannot be represented by %s", adapter.ProviderSlug())
+		return "", nil, fmt.Errorf("hook cannot be represented by %s", adapter.ProviderSlug())
 	}
-	return hookIdentity(rt.Hooks[0]), nil
+	return hookIdentity(rt.Hooks[0]), enc.Warnings, nil
 }
 
 // decodeExistingHooks reads the provider's hook file and decodes it through
@@ -252,7 +252,7 @@ func ApplyCanonicalHook(prov provider.Provider, h converter.Hook, path, resolved
 		return ApplyHookResult{}, fmt.Errorf("hook %q: %s does not support hook event %q", h.Name, prov.Name, h.Event)
 	}
 
-	groupHash, err := roundTripIdentity(adapter, canonHook)
+	groupHash, _, err := roundTripIdentity(adapter, canonHook)
 	if err != nil {
 		return ApplyHookResult{}, err
 	}

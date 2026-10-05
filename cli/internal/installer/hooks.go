@@ -127,10 +127,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	// Stable identity from the post-round-trip canonical form. Also rejects
 	// hooks the adapter drops (e.g. non-command handler on crush) before any
 	// file is touched.
-	groupHash, err := roundTripIdentity(adapter, canonHook)
+	groupHash, encodeWarnings, err := roundTripIdentity(adapter, canonHook)
 	if err != nil {
 		return Placement{Notices: notices}, fmt.Errorf("hook %q: %w", item.Name, err)
 	}
+	notices = append(notices, conversionNotices(item, converter.HookWarnings(encodeWarnings, hookSourceProvider(item), prov.Slug))...)
 
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
