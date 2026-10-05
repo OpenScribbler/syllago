@@ -342,3 +342,43 @@ func TestApply_SkipsAServerInstalledUnderTheLegacyRoot(t *testing.T) {
 		})
 	}
 }
+
+// TestApply_LegacyRecordYieldsToAServerTheApplyPlaced: two items hold the
+// same server, which a record under the global content dir names. The
+// config lacks it, so preview passes both; the first item places it, and
+// the second overwrites a server this project now records rather than
+// failing the apply as already installed.
+func TestApply_LegacyRecordYieldsToAServerTheApplyPlaced(t *testing.T) {
+	legacyRoot := catalog.GlobalContentDirOverride
+	legacy := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "x", ServerKey: "x", Source: "manual", Provider: "cursor"}}}
+	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
+
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"mcpServers":{"x":{"command":"node"}}}`, `{}`)
+	cat.Items[0].ServerKey = ""
+	second := filepath.Join(projectRoot, "content", "mcp", "srv2")
+	os.MkdirAll(second, 0755)
+	os.WriteFile(filepath.Join(second, "config.json"), []byte(`{"mcpServers":{"x":{"command":"node"}}}`), 0644)
+	cat.Items = append(cat.Items, catalog.ContentItem{Name: "srv2", Type: catalog.MCP, Path: second})
+	manifest.MCP = []ItemRef{{Name: "srv"}, {Name: "srv2"}}
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	result, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	for _, a := range result.Actions {
+		if a.Action != "merge-mcp" {
+			t.Fatalf("preview actions: got %+v, want both merge-mcp", result.Actions)
+		}
+	}
+	opts.Mode = "keep"
+	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); gjson.GetBytes(got, "mcpServers.x.command").String() != "node" {
+		t.Errorf("config: got %s, want x placed", got)
+	}
+}

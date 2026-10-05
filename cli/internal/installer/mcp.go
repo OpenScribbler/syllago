@@ -479,16 +479,18 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 
 		// H2: Check for collision with user-defined (non-syllago) server keys
 		if existing := gjson.GetBytes(fileData, key); existing.Exists() {
+			// Check if this key was installed by syllago (safe to overwrite)
+			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			// A record under the legacy root can outlive its server, and
 			// one for a provider whose config lives in the project
 			// describes another file, so it counts only for a server this
-			// file holds, as status reports it.
-			if legacy[name] {
+			// file holds, as status reports it. A server this project
+			// placed, as an earlier item of the same apply can, is this
+			// project's to overwrite.
+			if legacy[name] && !syllagoManaged {
 				sameName = name
 				continue
 			}
-			// Check if this key was installed by syllago (safe to overwrite)
-			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			if !syllagoManaged {
 				// A config shared by every project can hold this server
 				// from another project, so the same settings count as
