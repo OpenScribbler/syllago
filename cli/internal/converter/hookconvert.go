@@ -28,6 +28,15 @@ func ConvertHooksWrappingLLM(raw []byte, fromSlug, toSlug string) (*Result, erro
 	return convertHooks(raw, fromSlug, toSlug, true)
 }
 
+// WrapsLLMHooks reports whether ConvertHooksWrappingLLM keeps toSlug's
+// prompt and agent hooks as wrapper scripts. A provider that runs LLM hooks
+// natively needs no wrapper. Crush hooks run only shell commands and syllago
+// has no Crush CLI call to wrap a prompt in, so its LLM hooks are dropped.
+func WrapsLLMHooks(toSlug string) bool {
+	adapter := AdapterFor(toSlug)
+	return adapter != nil && !adapter.Capabilities().SupportsLLMHooks && toSlug != "crush"
+}
+
 func convertHooks(raw []byte, fromSlug, toSlug string, wrapLLM bool) (*Result, error) {
 	hooks, err := DecodeHooks(raw, fromSlug)
 	if err != nil {
@@ -42,9 +51,7 @@ func convertHooks(raw []byte, fromSlug, toSlug string, wrapLLM bool) (*Result, e
 	}
 	var wrappers map[string][]byte
 	var wrapWarnings []ConversionWarning
-	// Crush hooks run only shell commands and syllago has no Crush CLI call
-	// to wrap a prompt in, so its LLM hooks are dropped, as they always were.
-	if wrapLLM && !adapter.Capabilities().SupportsLLMHooks && toSlug != "crush" {
+	if wrapLLM && WrapsLLMHooks(toSlug) {
 		wrappers, wrapWarnings = wrapLLMHooks(hooks, toSlug)
 	}
 	enc, err := adapter.Encode(hooks)

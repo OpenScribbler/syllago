@@ -1775,7 +1775,7 @@ func TestLLMHookGenerateMode_AllProviders(t *testing.T) {
 	}
 }
 
-func TestLLMHookSkipMode_WarnsAboutGenerate(t *testing.T) {
+func TestLLMHookSkipMode_ExplainsTheDrop(t *testing.T) {
 	input := []byte(`{
 		"hooks": {
 			"PreToolUse": [

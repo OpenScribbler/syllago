@@ -721,6 +721,44 @@ func TestRunExportOp_AllHooksDroppedExplainsWhy_FileProvider(t *testing.T) {
 	}
 }
 
+func TestRunExportOp_HookWithNoEncoderIsSkippedNotCopied(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"./check.sh"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	baseDir := t.TempDir()
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Codex",
+			Slug: "codex",
+			InstallDir: func(base string, _ catalog.ContentType) string {
+				return filepath.Join(base, ".codex")
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "codex", "hooks", "", "shared", converter.LLMHooksModeSkip, baseDir, false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	if !strings.Contains(stderr.String(), "cannot write hooks") {
+		t.Errorf("want the skip to say syllago cannot write Codex hooks, got:\n%s", stderr.String())
+	}
+	if entries, _ := os.ReadDir(filepath.Join(baseDir, ".codex")); len(entries) != 0 {
+		t.Errorf("nothing should be placed for codex, found %d entries", len(entries))
+	}
+}
+
 func TestRunExportOp_FilterBySourceExcludes(t *testing.T) {
 	// With source=library and no library items, filterBySource skips every item.
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})
@@ -949,5 +987,29 @@ func TestSyncAndExportNoRegistries(t *testing.T) {
 	out := stdout.String()
 	if !strings.Contains(out, "greeting") {
 		t.Errorf("expected exported skill 'greeting' in output, got: %s", out)
+	}
+}
+
+func TestConvertHooksForExport_GenerateHintOnlyWhereGenerateHelps(t *testing.T) {
+	content := []byte(`{"hooks":{"PreToolUse":[{"hooks":[{"type":"prompt","prompt":"Check safety"}]}]}}`)
+	cases := []struct {
+		toSlug   string
+		wantHint bool
+	}{
+		{"gemini-cli", true},
+		// Crush runs only shell commands, so generate mode drops the hook too.
+		{"crush", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.toSlug, func(t *testing.T) {
+			res, err := convertHooksForExport(content, "claude-code", tc.toSlug, converter.LLMHooksModeSkip)
+			if err != nil {
+				t.Fatalf("convertHooksForExport: %v", err)
+			}
+			gotHint := strings.Contains(strings.Join(res.Warnings, "\n"), "--llm-hooks=generate")
+			if gotHint != tc.wantHint {
+				t.Errorf("generate hint = %v, want %v; warnings: %v", gotHint, tc.wantHint, res.Warnings)
+			}
+		})
 	}
 }

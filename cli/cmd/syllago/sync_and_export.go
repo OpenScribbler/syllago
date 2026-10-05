@@ -517,6 +517,11 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 		var rendered *converter.Result
 		if item.Type == catalog.Hooks {
 			rendered, err = convertHooksForExport(content, srcProvider, toSlug, llmHooksMode)
+			if err != nil {
+				// A hook that cannot convert must not fall through to the
+				// raw copy, which would place the source provider's file.
+				return nil, []string{err.Error()}, true
+			}
 		} else {
 			// Canonicalize from source provider format, then render to target
 			var canonical *converter.Result
@@ -572,18 +577,17 @@ func convertHooksForExport(content []byte, srcProv, toSlug, llmHooksMode string)
 		return converter.ConvertHooksWrappingLLM(content, srcProv, toSlug)
 	}
 	res, err := converter.ConvertHooks(content, srcProv, toSlug)
-	if err != nil || !dropsLLMHooks(content, srcProv, toSlug) {
+	if err != nil || !generateKeepsDroppedHooks(content, srcProv, toSlug) {
 		return res, err
 	}
 	res.Warnings = append(res.Warnings, "use --llm-hooks=generate to keep LLM-evaluated hooks as wrapper scripts")
 	return res, nil
 }
 
-// dropsLLMHooks reports whether content holds a prompt or agent hook that
-// toSlug cannot run, so the skip mode drops it.
-func dropsLLMHooks(content []byte, srcProv, toSlug string) bool {
-	adapter := converter.AdapterFor(toSlug)
-	if adapter == nil || adapter.Capabilities().SupportsLLMHooks {
+// generateKeepsDroppedHooks reports whether content holds a prompt or agent
+// hook that skip mode drops for toSlug and --llm-hooks=generate would keep.
+func generateKeepsDroppedHooks(content []byte, srcProv, toSlug string) bool {
+	if !converter.WrapsLLMHooks(toSlug) {
 		return false
 	}
 	hooks, err := converter.DecodeHooks(content, srcProv)
