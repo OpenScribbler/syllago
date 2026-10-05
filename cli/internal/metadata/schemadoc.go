@@ -75,6 +75,7 @@ var fieldGroups = map[string]string{
 	// scope
 	"SourceScope":   "scope",
 	"SourceProject": "scope",
+	"SourceName":    "scope",
 
 	// lifecycle
 	"CreatedAt":  "lifecycle",
