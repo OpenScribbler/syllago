@@ -16,7 +16,7 @@ import (
 func ForgetReverted(inst *Installed, repoRoot string, paths []string) {
 	reverted := make(map[string]bool, len(paths))
 	for _, p := range paths {
-		reverted[filepath.Clean(p)] = true
+		reverted[revertedKey(p)] = true
 	}
 
 	var hooks []InstalledHook
@@ -36,13 +36,24 @@ func ForgetReverted(inst *Installed, repoRoot string, paths []string) {
 	inst.MCP = mcp
 }
 
+// revertedKey names a provider file the same way whichever path reaches
+// it, such as through a symlink to the project directory. The revert may
+// have deleted the file, so only its directory is resolved.
+func revertedKey(p string) string {
+	p = filepath.Clean(p)
+	if dir, err := filepath.EvalSymlinks(filepath.Dir(p)); err == nil {
+		return filepath.Join(dir, filepath.Base(p))
+	}
+	return p
+}
+
 func hookReverted(h InstalledHook, reverted map[string]bool) bool {
 	prov, ok := providerBySlug(h.Provider)
 	if !ok || h.GroupHash == "" {
 		return false
 	}
 	path, err := hookSettingsPath(prov)
-	if err != nil || !reverted[filepath.Clean(path)] {
+	if err != nil || !reverted[revertedKey(path)] {
 		return false
 	}
 	adapter := converter.AdapterFor(prov.Slug)
@@ -68,7 +79,7 @@ func mcpReverted(m InstalledMCP, repoRoot string, reverted map[string]bool) bool
 		return false
 	}
 	path, err := mcpConfigPath(prov, repoRoot)
-	if err != nil || !reverted[filepath.Clean(path)] {
+	if err != nil || !reverted[revertedKey(path)] {
 		return false
 	}
 	data, err := readMCPConfig(path, prov)

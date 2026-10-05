@@ -92,22 +92,15 @@ func Create(projectRoot string, loadoutName string, mode string,
 	hashes := make(map[string]string)
 	destinations := make(map[string]string)
 	var created []string
+	absPaths := make([]string, len(filesToBackup))
 	for i, path := range filesToBackup {
-		absPath, err := filepath.Abs(path)
-		if err != nil {
+		if absPaths[i], err = filepath.Abs(path); err != nil {
 			return "", fmt.Errorf("backing up %s: %w", path, err)
 		}
-		// A file in the home directory keys by its path under it, which
-		// earlier versions restore correctly too. A file outside it has no
-		// such path, and its absolute path cannot sit under files/ on
-		// Windows, so it is stored under a numbered outside-home key, as is
-		// a home path that starts with outside-home, so no two share one.
-		rel := filepath.Join("outside-home", strconv.Itoa(i), filepath.Base(absPath))
-		if r, err := filepath.Rel(home, absPath); err == nil && filepath.IsLocal(r) &&
-			!strings.EqualFold(strings.SplitN(filepath.ToSlash(r), "/", 2)[0], "outside-home") {
-			rel = r
-		}
-
+	}
+	keys := backupKeys(home, absPaths)
+	for i, absPath := range absPaths {
+		rel := keys[i]
 		destPath := filepath.Join(filesDir, rel)
 
 		if err := copyFile(absPath, destPath); err != nil {
@@ -232,6 +225,36 @@ func ReadManifest(snapshotDir string) (*SnapshotManifest, error) {
 		manifest.Source = "loadout:" + manifest.LoadoutName
 	}
 	return &manifest, nil
+}
+
+// backupKeys names each file's backup under files/. A file in the home
+// directory keys by its path under it, which earlier versions restore
+// correctly too. A file outside it has no such path, and its absolute path
+// cannot sit under files/ on Windows, so it takes a numbered outside-home
+// key, skipping any number a home path already uses there.
+func backupKeys(home string, absPaths []string) []string {
+	keys := make([]string, len(absPaths))
+	used := make(map[string]bool)
+	for i, p := range absPaths {
+		if r, err := filepath.Rel(home, p); err == nil && filepath.IsLocal(r) {
+			keys[i] = r
+			if parts := strings.Split(strings.ToLower(filepath.ToSlash(r)), "/"); len(parts) > 1 && parts[0] == "outside-home" {
+				used[parts[1]] = true
+			}
+		}
+	}
+	n := 0
+	for i, p := range absPaths {
+		if keys[i] != "" {
+			continue
+		}
+		for used[strconv.Itoa(n)] {
+			n++
+		}
+		keys[i] = filepath.Join("outside-home", strconv.Itoa(n), filepath.Base(p))
+		n++
+	}
+	return keys
 }
 
 // Restore reads backed-up files from snapshotDir and writes them back to their

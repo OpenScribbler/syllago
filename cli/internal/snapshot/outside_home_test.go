@@ -133,34 +133,45 @@ func TestRestore_RemovesAFileTheApplyCreated(t *testing.T) {
 }
 
 // TestCreate_KeysAFileInHomeApartFromOneOutside: a file in the home
-// directory whose path matches the key of one outside it keeps its own
-// backup, so both restore.
+// directory whose path matches the key of one outside it keeps its path
+// under home as its key, which earlier versions restore correctly, and the
+// file outside takes another number, so both restore.
 func TestCreate_KeysAFileInHomeApartFromOneOutside(t *testing.T) {
-	home, outside := outsideHome(t)
-	files := []string{filepath.Join(outside, "settings.json"), filepath.Join(home, "outside-home", "0", "settings.json")}
-	for i, f := range files {
-		os.MkdirAll(filepath.Dir(f), 0755)
-		os.WriteFile(f, []byte(fmt.Sprintf(`{"n":%d}`, i)), 0644)
-	}
-	snapshotDir, err := Create(outside, "dev", "keep", files, nil, nil)
-	if err != nil {
-		t.Fatalf("Create: %v", err)
-	}
-	for _, f := range files {
-		os.WriteFile(f, []byte(`{"changed":true}`), 0644)
-	}
+	// Windows and macOS file systems fold case, so a differently cased
+	// home path shares the key all the same.
+	for _, dir := range []string{"outside-home", "Outside-Home"} {
+		t.Run(dir, func(t *testing.T) {
+			home, outside := outsideHome(t)
+			files := []string{filepath.Join(outside, "settings.json"), filepath.Join(home, dir, "0", "settings.json")}
+			for i, f := range files {
+				os.MkdirAll(filepath.Dir(f), 0755)
+				os.WriteFile(f, []byte(fmt.Sprintf(`{"n":%d}`, i)), 0644)
+			}
+			snapshotDir, err := Create(outside, "dev", "keep", files, nil, nil)
+			if err != nil {
+				t.Fatalf("Create: %v", err)
+			}
+			for _, f := range files {
+				os.WriteFile(f, []byte(`{"changed":true}`), 0644)
+			}
 
-	manifest, _, err := Load(outside)
-	if err != nil {
-		t.Fatalf("Load: %v", err)
-	}
-	if err := Restore(snapshotDir, manifest); err != nil {
-		t.Fatalf("Restore: %v", err)
-	}
-	for i, f := range files {
-		if got, want := readString(f), fmt.Sprintf(`{"n":%d}`, i); got != want {
-			t.Errorf("%s: got %s, want %s", f, got, want)
-		}
+			manifest, _, err := Load(outside)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			keys := manifest.BackedUpFiles
+			if len(keys) != 2 || filepath.Join(home, keys[1]) != files[1] || strings.EqualFold(keys[0], keys[1]) {
+				t.Errorf("keys: got %q, want the home file under its path in home and the other apart from it", keys)
+			}
+			if err := Restore(snapshotDir, manifest); err != nil {
+				t.Fatalf("Restore: %v", err)
+			}
+			for i, f := range files {
+				if got, want := readString(f), fmt.Sprintf(`{"n":%d}`, i); got != want {
+					t.Errorf("%s: got %s, want %s", f, got, want)
+				}
+			}
+		})
 	}
 }
 
