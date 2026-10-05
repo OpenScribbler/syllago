@@ -19,9 +19,8 @@ package tui
 //   - When the decision hard-refuses (HardBlock / TierBelowPolicy), the
 //     caller pushes an error toast and returns without stashing.
 //
-// Non-MOAT items (local library content with no Registry, or items whose
-// registry is not MOAT-backed) bypass the gate entirely — the same safe
-// default the legacy install path has always had.
+// Items with no MOAT lineage (local content, or content from a registry
+// that is not MOAT-backed) bypass the gate entirely.
 
 import (
 	"fmt"
@@ -54,44 +53,22 @@ type gateEvaluation struct {
 }
 
 // evaluateInstallGate resolves the MOAT gate for an install attempt on
-// `item`. Returns (eval, true) when the item has a MOAT lineage that yields
-// a gate decision, or (_, false) when the item is not MOAT-backed and should
-// bypass gating entirely (legacy install path).
-//
-// A missing manifest entry (item.Registry is MOAT but the name was not
-// listed in the manifest at scan time) is treated as bypass: the library
-// copy was presumably added outside the MOAT flow, and gating a phantom
-// entry would be more confusing than helpful. This matches
-// BuildGateInputs's silent-skip policy for unparseable manifests.
+// `item`, a registry item or a Library copy of one. Returns (eval, true)
+// when the item has a MOAT lineage that yields a gate decision, or
+// (_, false) when it should bypass gating (see installer.CheckItem).
 func evaluateInstallGate(a *App, item catalog.ContentItem) (gateEvaluation, bool) {
-	if a == nil || a.moatGate == nil {
+	if a == nil {
 		return gateEvaluation{}, false
 	}
-	if item.Registry == "" {
-		return gateEvaluation{}, false
-	}
-	if !a.moatGate.HasRegistry(item.Registry) {
-		return gateEvaluation{}, false
-	}
-	manifest := a.moatGate.Manifests[item.Registry]
-	entry, ok := moat.FindContentEntry(manifest, item.Name)
+	check, ok := installer.CheckItem(item, a.moatGate, a.moatLockfile, a.moatSession, a.moatMinTier)
 	if !ok {
 		return gateEvaluation{}, false
 	}
-	registryURL := a.moatGate.ManifestURIs[item.Registry]
-	gate := installer.PreInstallCheck(
-		entry,
-		registryURL,
-		a.moatLockfile,
-		a.moatGate.RevSet,
-		a.moatSession,
-		a.moatMinTier,
-	)
 	return gateEvaluation{
-		decision:    gate,
-		registryURL: registryURL,
-		contentHash: entry.ContentHash,
-		entryName:   entry.Name,
+		decision:    check.GateBlock,
+		registryURL: check.RegistryURL,
+		contentHash: check.Entry.ContentHash,
+		entryName:   check.Entry.Name,
 	}, true
 }
 

@@ -386,7 +386,7 @@ func (o *Operation) gateItems(req Request, reg *config.Registry, manifest *moat.
 					passed = append(passed, len(res.Items)-1)
 				}
 			default:
-				ir.Err = gateError(entry, gate)
+				ir.Err = GateError(entry, gate)
 			}
 			break
 		}
@@ -639,8 +639,8 @@ func joinNames(names []string) string {
 	return s
 }
 
-// gateError is the item error for a gate that refuses outright.
-func gateError(entry *moat.ContentEntry, gate installer.GateBlock) error {
+// GateError is the item error for a gate that refuses outright.
+func GateError(entry *moat.ContentEntry, gate installer.GateBlock) error {
 	switch gate.Decision {
 	case installer.MOATGateHardBlock:
 		reason := ""

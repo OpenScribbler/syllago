@@ -25,6 +25,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -220,6 +221,57 @@ func TestInstallGate_NewAppAppliesScanGate(t *testing.T) {
 				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
 			}
 		})
+	}
+}
+
+// libraryCopyOf turns a registry item into the Library copy a registry add
+// stages: no Registry, with the registry and hash in its metadata.
+func libraryCopyOf(item catalog.ContentItem, hash string) catalog.ContentItem {
+	item.Library = true
+	item.Meta = &metadata.Meta{SourceRegistry: item.Registry, SourceHash: hash}
+	item.Registry = ""
+	return item
+}
+
+// A Library copy of a registry item is gated at the hash it holds, even
+// after the registry has moved on to a newer version.
+func TestInstallGate_LibraryCopyOfRevokedVersionRefused(t *testing.T) {
+	for name, fx := range map[string]gateFixture{
+		"manifest": {revocationSource: moat.RevocationSourceRegistry, revocationReason: "malicious"},
+		"lockfile": {lockfileRevoked: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			app, item := gateTestApp(t, fx)
+			app.moatGate.Manifests[testRegistryName].Content[0].ContentHash = "sha256:" + strings.Repeat("f", 64)
+			m, _ := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+			a := m.(App)
+
+			if a.pendingInstall != nil {
+				t.Error("a revoked Library copy must not be stashed for install")
+			}
+			if !strings.Contains(currentToastText(a), "Refused") {
+				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
+			}
+		})
+	}
+}
+
+// Confirming a recalled Library copy records the copy's own hash, so the
+// confirmation covers the content that installs.
+func TestInstallGate_LibraryCopyPublisherWarnStashesCopyHash(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{
+		revocationSource: moat.RevocationSourcePublisher,
+		revocationReason: "deprecated",
+	})
+	app.moatGate.Manifests[testRegistryName].Content[0].ContentHash = "sha256:" + strings.Repeat("f", 64)
+	m, _ := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+	a := m.(App)
+
+	if !a.confirm.active || a.pendingGateKind != gateKindPublisherWarn {
+		t.Fatal("expected the publisher-warn modal for a recalled Library copy")
+	}
+	if a.pendingGateContentHash != testContentHash {
+		t.Errorf("pendingGateContentHash = %q, want the copy's hash %q", a.pendingGateContentHash, testContentHash)
 	}
 }
 
