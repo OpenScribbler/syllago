@@ -541,7 +541,7 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 			configPath := filepath.Join(itemDir, "config.json")
 			data, readErr := os.ReadFile(configPath)
 			if readErr == nil {
-				servers := gjson.GetBytes(data, "mcpServers")
+				servers := MCPServersWrapper(data)
 				if servers.Exists() && servers.IsObject() {
 					// Nested format — explode into one item per server entry.
 					servers.ForEach(func(key, value gjson.Result) bool {
@@ -596,6 +596,15 @@ func scanUniversal(cat *Catalog, typeDir string, ct ContentType, entries []os.Di
 	return nil
 }
 
+// MCPServersWrapper returns the servers an MCP config.json holds under
+// "mcpServers" or, as Zed writes them, "context_servers".
+func MCPServersWrapper(data []byte) gjson.Result {
+	if servers := gjson.GetBytes(data, "mcpServers"); servers.Exists() {
+		return servers
+	}
+	return gjson.GetBytes(data, "context_servers")
+}
+
 // hasMCPSubdirs checks if any subdirectory contains a config.json file,
 // indicating this is a provider grouping directory (e.g., mcp/claude-code/).
 func hasMCPSubdirs(parentDir string, entries []os.DirEntry) bool {
@@ -648,7 +657,7 @@ func scanMCPSubdirs(cat *Catalog, groupDir string, entries []os.DirEntry, local 
 		configPath := filepath.Join(serverDir, "config.json")
 		data, readErr := os.ReadFile(configPath)
 		if readErr == nil {
-			servers := gjson.GetBytes(data, "mcpServers")
+			servers := MCPServersWrapper(data)
 			if servers.Exists() && servers.IsObject() {
 				// Nested format — explode into one item per server entry.
 				servers.ForEach(func(key, value gjson.Result) bool {

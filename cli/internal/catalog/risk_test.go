@@ -167,6 +167,23 @@ func TestRiskIndicators_MCP_NoEnv(t *testing.T) {
 	}
 }
 
+func TestRiskIndicators_MCP_ContextServersWithEnv(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	mcpJSON := `{"context_servers":{"db":{"command":"npx","env":{"DB_URL":"postgres://..."}}}}`
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(mcpJSON), 0644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	risks := RiskIndicators(ContentItem{Type: MCP, Path: dir, Files: []string{"config.json"}})
+	for _, r := range risks {
+		if r.Label == "Environment variables" {
+			return
+		}
+	}
+	t.Errorf("expected risk label 'Environment variables' for a context_servers config, got %+v", risks)
+}
+
 func TestRiskIndicators_Skill_WithBash(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

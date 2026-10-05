@@ -221,24 +221,10 @@ func TestPreview_NewHook(t *testing.T) {
 
 func TestPreview_NewMCP(t *testing.T) {
 	t.Parallel()
-	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
+	repoRoot, _, _, cat := setupMCPEnv(t, `{"command":"node"}`, `{}`)
+	refs := []ResolvedRef{{Type: catalog.MCP, Name: "srv", Item: cat.Items[0]}}
 
-	prov := provider.Provider{
-		Name: "test-provider",
-		Slug: "test",
-		InstallDir: func(home string, ct catalog.ContentType) string {
-			return ""
-		},
-	}
-
-	refs := []ResolvedRef{
-		{Type: catalog.MCP, Name: "new-server", Item: catalog.ContentItem{
-			Name: "new-server", Type: catalog.MCP,
-		}},
-	}
-
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	actions, err := Preview(refs, provider.Cursor, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -293,33 +279,25 @@ func TestPreview_MCPAlreadyInstalled(t *testing.T) {
 // this one.
 func TestPreview_OtherProviderRecordIsNew(t *testing.T) {
 	t.Parallel()
-	repoRoot := t.TempDir()
-	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
+	repoRoot, _, _, cat := setupMCPEnv(t, `{"command":"node"}`, `{}`)
 	inst := &installer.Installed{
 		Hooks: []installer.InstalledHook{
 			{Name: "my-hook", Event: "PostToolUse", Command: "echo test", Source: "export", Provider: "other"},
 		},
 		MCP: []installer.InstalledMCP{
-			{Name: "my-server", Source: "export", Provider: "other"},
+			{Name: "srv", Source: "export", Provider: "other"},
 		},
 	}
 	if err := installer.SaveInstalled(repoRoot, inst); err != nil {
 		t.Fatalf("failed to save installed.json: %v", err)
 	}
 
-	prov := provider.Provider{
-		Name: "test-provider",
-		Slug: "test",
-		InstallDir: func(home string, ct catalog.ContentType) string {
-			return ""
-		},
-	}
 	refs := []ResolvedRef{
 		{Type: catalog.Hooks, Name: "my-hook", Item: catalog.ContentItem{Name: "my-hook", Type: catalog.Hooks}},
-		{Type: catalog.MCP, Name: "my-server", Item: catalog.ContentItem{Name: "my-server", Type: catalog.MCP}},
+		{Type: catalog.MCP, Name: "srv", Item: cat.Items[0]},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	actions, err := Preview(refs, provider.Cursor, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

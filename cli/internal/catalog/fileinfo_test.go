@@ -370,6 +370,17 @@ func TestMCPSummary(t *testing.T) {
 			t.Errorf("expected Command: b, got: %q", got)
 		}
 	})
+	t.Run("reads Zed's context_servers", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		data := []byte(`{"context_servers":{"alpha":{"command":"a"},"my.server":{"command":"npx","args":["serve"]}}}`)
+		os.WriteFile(filepath.Join(dir, "config.json"), data, 0644)
+
+		got := MCPSummary(ContentItem{Path: dir, ServerKey: "my.server"})
+		if got != "Server: my.server · Command: npx serve" {
+			t.Errorf("unexpected summary: %q", got)
+		}
+	})
 	t.Run("missing file returns empty", func(t *testing.T) {
 		t.Parallel()
 		got := MCPSummary(ContentItem{Path: "/tmp/does-not-exist-syllago-test"})

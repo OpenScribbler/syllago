@@ -117,7 +117,7 @@ func MCPSummary(item ContentItem) string {
 	if err != nil {
 		return ""
 	}
-	servers := gjson.GetBytes(data, "mcpServers")
+	servers := MCPServersWrapper(data)
 	if !servers.Exists() || !servers.IsObject() {
 		return ""
 	}
@@ -133,8 +133,9 @@ func MCPSummary(item ContentItem) string {
 	if key != "" {
 		parts = append(parts, "Server: "+key)
 	}
-	cmd := gjson.GetBytes(data, "mcpServers."+key+".command").String()
-	args := gjson.GetBytes(data, "mcpServers."+key+".args")
+	server := servers.Get(gjson.Escape(key))
+	cmd := server.Get("command").String()
+	args := server.Get("args")
 	if cmd != "" {
 		cmdStr := cmd
 		if args.Exists() && args.IsArray() {

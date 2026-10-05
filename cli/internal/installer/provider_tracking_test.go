@@ -1,8 +1,10 @@
 package installer
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -306,6 +308,190 @@ func TestInstallMCP_OtherProviderRecordDoesNotClaimServer(t *testing.T) {
 	}
 	if got := gjson.GetBytes(cursor, "mcpServers.shared-mcp.command").String(); got != "mine" {
 		t.Errorf("hand-written server overwritten: command = %q", got)
+	}
+}
+
+// A config every project shares can hold a server syllago placed from
+// another project, whose installed.json this project cannot see. The same
+// settings count as installed, so install leaves the file and records
+// nothing; other settings are still refused.
+func TestInstallMCP_SameServerFromAnotherProject(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "shared-mcp")
+
+	same := []byte("{\n  \"mcpServers\": {\"shared-mcp\": { \"command\": \"node\" }}\n}")
+	if err := os.WriteFile(paths["claude-code"], same, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); !errors.Is(err, ErrMCPInstalled) {
+		t.Fatalf("install over the same settings: got %v, want ErrMCPInstalled", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); string(got) != string(same) {
+		t.Errorf("config: got %s, want it unchanged", got)
+	}
+	if inst, err := LoadInstalled(projectRoot); err != nil || len(inst.MCP) != 0 {
+		t.Errorf("records: got %+v (%v), want none", inst, err)
+	}
+
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"shared-mcp":{"command":"other"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err == nil || errors.Is(err, ErrMCPInstalled) || !strings.Contains(err.Error(), "with other settings") {
+		t.Fatalf("install over other settings: got %v, want a collision error", err)
+	}
+}
+
+// A Windows editor can save a config with a UTF-8 byte order mark, which
+// is not JSON. Install reads past it rather than refusing the file.
+func TestInstallMCP_ReadsPastAByteOrderMark(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"cursor": filepath.Join(dir, "mcp.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["cursor"], []byte("\xef\xbb\xbf{\"mcpServers\":{\"mine\":{\"command\":\"x\"}}}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "bom-mcp")
+
+	if _, err := installMCP(item, provider.Cursor, projectRoot); err != nil {
+		t.Fatalf("install into a config with a byte order mark: %v", err)
+	}
+	got, _ := os.ReadFile(paths["cursor"])
+	if !gjson.GetBytes(got, "mcpServers.bom-mcp").Exists() || !gjson.GetBytes(got, "mcpServers.mine").Exists() {
+		t.Errorf("config: got %s, want both servers", got)
+	}
+}
+
+// An item that bundles several servers places the ones a shared config
+// lacks and leaves the one it already holds unchanged to whoever placed it.
+func TestInstallMCP_PlacesTheServersASharedConfigLacks(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node","cwd":"/srv"},"b":{"command":"y","cwd":"/b"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"a":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "bundle", Type: catalog.MCP, Path: itemDir}
+
+	placement, err := installMCP(item, provider.ClaudeCode, projectRoot)
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	// The merge left a out, so only b's dropped cwd is a notice of this
+	// install.
+	var notices []string
+	for _, n := range placement.Notices {
+		notices = append(notices, n.Message)
+	}
+	if len(notices) != 1 || !strings.Contains(notices[0], `server "b"`) {
+		t.Errorf("notices: got %q, want one, for b", notices)
+	}
+	got, _ := os.ReadFile(paths["claude-code"])
+	if gjson.GetBytes(got, "mcpServers.b.command").String() != "y" {
+		t.Errorf("config: got %s, want b placed", got)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || !slices.Equal(inst.MCP[0].ServerNames, []string{"b"}) {
+		t.Errorf("records: got %+v (%v), want one claiming only b", inst, err)
+	}
+}
+
+// A server of a bundle that a legacy record placed in the target config is
+// left out, and the bundle's other servers are placed.
+func TestInstallMCP_PlacesTheServersALegacyRecordLacks(t *testing.T) {
+	legacyRoot := isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"a":{"command":"old"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{MCP: []InstalledMCP{{Name: "a", ServerKey: "a", Provider: "claude-code"}}}); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node"},"b":{"command":"y"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "bundle", Type: catalog.MCP, Path: itemDir}
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	got, _ := os.ReadFile(paths["claude-code"])
+	if gjson.GetBytes(got, "mcpServers.a.command").String() != "old" || gjson.GetBytes(got, "mcpServers.b.command").String() != "y" {
+		t.Errorf("config: got %s, want a unchanged and b placed", got)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || !slices.Equal(inst.MCP[0].ServerNames, []string{"b"}) {
+		t.Errorf("records: got %+v (%v), want one claiming only b", inst, err)
+	}
+}
+
+// A legacy record for a config every project shares can outlive its server.
+// Status then reports the server missing, so install places it.
+func TestInstallMCP_StaleLegacyRecordOnASharedConfig(t *testing.T) {
+	legacyRoot := isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{MCP: []InstalledMCP{{Name: "gone", ServerKey: "gone", Provider: "claude-code"}}}); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "gone")
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); !gjson.GetBytes(got, "mcpServers.gone").Exists() {
+		t.Errorf("config: got %s, want the server placed", got)
+	}
+}
+
+// Zed keeps its servers under context_servers, and an item stored that way
+// installs to a provider that reads mcpServers.
+func TestInstallMCP_ReadsAContextServersBundle(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "zed-bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"context_servers":{"fs":{"command":"npx"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "fs", Type: catalog.MCP, Path: itemDir, ServerKey: "fs"}
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); gjson.GetBytes(got, "mcpServers.fs.command").String() != "npx" {
+		t.Errorf("config: got %s, want fs placed", got)
 	}
 }
 

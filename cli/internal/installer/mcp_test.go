@@ -775,7 +775,12 @@ func TestUninstallMCP_LegacyRootFallback(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(legacyRoot, ".cursor"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+	// The project's own config is not JSON. The uninstall edits the
+	// legacy root's file, so that does not stop it.
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".cursor"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(projectRoot, ".cursor", "mcp.json"), []byte("{not json"), 0644); err != nil {
 		t.Fatal(err)
 	}
 

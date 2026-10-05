@@ -856,6 +856,29 @@ func TestScanMCP_NestedSingleServer(t *testing.T) {
 	}
 }
 
+// Zed writes its servers under context_servers, and the scanner splits
+// that wrapper as it splits mcpServers.
+func TestScanMCP_ContextServersExplode(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "mcp", "zed-bundle", "config.json"), `{
+		"context_servers": {
+			"fs": {"command": "npx"}
+		}
+	}`)
+
+	cat, err := Scan(root, root)
+	if err != nil {
+		t.Fatalf("Scan error: %v", err)
+	}
+
+	mcps := cat.ByType(MCP)
+	if len(mcps) != 1 || mcps[0].Name != "fs" || mcps[0].ServerKey != "fs" {
+		t.Fatalf("items: got %+v, want one named fs with ServerKey fs", mcps)
+	}
+}
+
 func TestScanMCP_FlatConfig(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

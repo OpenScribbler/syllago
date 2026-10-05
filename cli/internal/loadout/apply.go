@@ -1,9 +1,6 @@
 package loadout
 
 import (
-	cryptorand "crypto/rand"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +13,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
-	"github.com/tidwall/sjson"
 )
 
 // ApplyOptions configures a loadout apply operation.
@@ -58,6 +54,9 @@ type ApplyResult struct {
 	// event — the CLI must not then promise auto-revert.
 	AutoRevertArmed bool
 }
+
+// restoreSnapshot is replaced in tests to fail a rollback.
+var restoreSnapshot = snapshot.Restore
 
 // Apply resolves, validates, and applies a loadout to the provider.
 //
@@ -161,21 +160,40 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			warnings = append(warnings, fmt.Sprintf("skipped %s: %s", a.Name, a.Problem))
 		}
 	}
-	applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
+	placeWarnings, applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up. Read this apply's own
 		// snapshot, so another one in the directory cannot stop the restore.
 		sm, readErr := snapshot.ReadManifest(snapshotDir)
+		var restoreErr error
 		if readErr == nil {
-			_ = snapshot.Restore(snapshotDir, sm)
-			// Remove any symlinks we may have partially created
-			for _, sr := range symlinkRecords {
-				_ = os.Remove(sr.Path)
+			restoreErr = restoreSnapshot(snapshotDir, sm)
+		}
+		// Remove any symlinks we may have partially created
+		for _, sr := range symlinkRecords {
+			_ = os.Remove(sr.Path)
+		}
+		// A snapshot that did not restore is the only copy of the files the
+		// apply changed, so it stays: loadout remove retries the restore, and
+		// a restore that keeps failing leaves the backups to copy by hand and
+		// the files and symlinks the apply created to delete. The directory blocks the
+		// next apply until it is gone, so each message says to delete it.
+		if readErr != nil {
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, readErr, snapshotDir)
+		}
+		if restoreErr != nil {
+			// A file or symlink it lists that is gone now is not the apply's
+			// to delete if it appears again. Until that is recorded, remove
+			// could delete one, so it is not offered.
+			if err := snapshot.DropUncreated(snapshotDir); err != nil {
+				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
 			}
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
 		}
 		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
+	warnings = append(warnings, placeWarnings...)
 
 	// Step 6 (C7): For "try" mode, inject a session-end hook for auto-revert.
 	autoRevertArmed := false
@@ -200,12 +218,14 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}, nil
 }
 
-// applyActions executes each planned action against the filesystem.
-func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) error {
+// applyActions executes each planned action against the filesystem and
+// returns what the placements warn about.
+func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) ([]string, error) {
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err != nil {
-		return fmt.Errorf("loading installed.json: %w", err)
+		return nil, fmt.Errorf("loading installed.json: %w", err)
 	}
+	var warnings []string
 
 	source := "loadout:" + loadoutName
 
@@ -216,7 +236,7 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		ref := findRefByName(refs, a.Type, a.Name)
 		if ref == nil {
-			return fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
+			return nil, fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
 		}
 
 		switch a.Action {
@@ -224,11 +244,11 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 			srcPath := symlinkSource(*ref)
 			if opts.Method == installer.MethodCopy {
 				if err := installer.CopyContent(srcPath, a.Detail); err != nil {
-					return fmt.Errorf("copying %s: %w", a.Name, err)
+					return nil, fmt.Errorf("copying %s: %w", a.Name, err)
 				}
 			} else {
 				if err := installer.CreateSymlink(srcPath, a.Detail); err != nil {
-					return fmt.Errorf("creating symlink for %s: %w", a.Name, err)
+					return nil, fmt.Errorf("creating symlink for %s: %w", a.Name, err)
 				}
 			}
 			inst.Symlinks = append(inst.Symlinks, installer.InstalledSymlink{
@@ -240,22 +260,26 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		case "merge-hook":
 			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
-				return fmt.Errorf("merging hook %s: %w", a.Name, err)
+				return nil, fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
 		case "merge-mcp":
-			if err := applyMCP(*ref, prov, opts.ProjectRoot, inst, source); err != nil {
-				return fmt.Errorf("merging MCP %s: %w", a.Name, err)
+			placement, err := installer.PlaceMCP(ref.Item, prov, opts.ProjectRoot, inst, source)
+			if err != nil {
+				return nil, fmt.Errorf("merging MCP %s: %w", a.Name, err)
+			}
+			for _, n := range placement.Notices {
+				warnings = append(warnings, n.Message)
 			}
 		}
 	}
 
 	// Save all tracking in one write
 	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
-		return fmt.Errorf("saving installed.json: %w", err)
+		return nil, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return nil
+	return warnings, nil
 }
 
 // settingsPathFor computes a provider's hook config path via the shared
@@ -333,58 +357,6 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 		Event:       res.NativeEvent,
 		GroupHash:   res.GroupHash,
 		Command:     res.Command,
-		Source:      source,
-		Provider:    prov.Slug,
-		InstalledAt: time.Now(),
-	})
-
-	return nil
-}
-
-// applyMCP reads MCP config.json and merges it into the provider's MCP config file.
-func applyMCP(ref ResolvedRef, prov provider.Provider, projectRoot string, inst *installer.Installed, source string) error {
-	rawData, err := os.ReadFile(filepath.Join(ref.Item.Path, "config.json"))
-	if err != nil {
-		return fmt.Errorf("reading config.json: %w", err)
-	}
-
-	jsonKey := installer.MCPConfigKey(prov)
-
-	// Extract server entries — handles both nested and flat config.json formats
-	entries, err := installer.ExtractServerEntries(rawData, ref.Name, jsonKey)
-	if err != nil {
-		return err
-	}
-
-	// Determine config file path
-	cfgPath, err := installer.MCPConfigPathFor(prov, projectRoot)
-	if err != nil {
-		return fmt.Errorf("MCP config path: %w", err)
-	}
-
-	fileData, err := readJSONFileOrEmpty(cfgPath)
-	if err != nil {
-		return fmt.Errorf("reading %s: %w", cfgPath, err)
-	}
-
-	// Merge each server entry
-	var serverNames []string
-	for name, configData := range entries {
-		key := jsonKey + "." + name
-		fileData, err = sjson.SetRawBytes(fileData, key, configData)
-		if err != nil {
-			return fmt.Errorf("setting %s: %w", key, err)
-		}
-		serverNames = append(serverNames, name)
-	}
-
-	if err := writeJSONFileAtomic(cfgPath, fileData); err != nil {
-		return fmt.Errorf("writing %s: %w", cfgPath, err)
-	}
-
-	inst.MCP = append(inst.MCP, installer.InstalledMCP{
-		Name:        ref.Name,
-		ServerNames: serverNames,
 		Source:      source,
 		Provider:    prov.Slug,
 		InstalledAt: time.Now(),
@@ -503,42 +475,4 @@ func findHookFile(itemDir string) string {
 		}
 	}
 	return ""
-}
-
-// readJSONFileOrEmpty reads a JSON file, returning {} if it doesn't exist.
-// Returns an error if the file exists but contains invalid JSON.
-func readJSONFileOrEmpty(path string) ([]byte, error) {
-	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return []byte("{}"), nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if !json.Valid(data) {
-		return nil, fmt.Errorf("%s contains invalid JSON; fix or delete the file before applying a loadout", filepath.Base(path))
-	}
-	return data, nil
-}
-
-// writeJSONFileAtomic writes JSON data atomically using a temp file and rename.
-func writeJSONFileAtomic(path string, data []byte) error {
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	// Use random suffix to prevent predictable temp path attacks
-	suffix := make([]byte, 8)
-	if _, err := cryptorand.Read(suffix); err != nil {
-		return fmt.Errorf("generating temp suffix: %w", err)
-	}
-	tmpPath := path + ".tmp." + hex.EncodeToString(suffix)
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return nil
 }

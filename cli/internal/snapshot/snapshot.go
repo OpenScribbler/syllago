@@ -167,25 +167,36 @@ func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
 	return nil
 }
 
-// DropUncreated drops from the snapshot's CreatedFiles each path that
-// still does not exist. An apply calls it once its writes are done: a write
-// that failed without stopping the apply created nothing, and a file that
-// appears there later belongs to whoever made it.
+// DropUncreated drops from the snapshot's CreatedFiles and Symlinks each
+// path that does not exist. An apply calls it once its writes are done, or
+// once a failed apply has undone some of them: a path the apply did not
+// write, or has since removed, belongs to whoever makes it later.
 func DropUncreated(snapshotDir string) error {
 	manifest, err := ReadManifest(snapshotDir)
 	if err != nil {
 		return err
 	}
+	exists := func(p string) bool {
+		_, err := os.Lstat(p)
+		return !errors.Is(err, fs.ErrNotExist)
+	}
 	var created []string
 	for _, p := range manifest.CreatedFiles {
-		if _, err := os.Lstat(p); !errors.Is(err, fs.ErrNotExist) {
+		if exists(p) {
 			created = append(created, p)
 		}
 	}
-	if len(created) == len(manifest.CreatedFiles) {
+	var symlinks []SymlinkRecord
+	for _, sr := range manifest.Symlinks {
+		if exists(sr.Path) {
+			symlinks = append(symlinks, sr)
+		}
+	}
+	if len(created) == len(manifest.CreatedFiles) && len(symlinks) == len(manifest.Symlinks) {
 		return nil
 	}
 	manifest.CreatedFiles = created
+	manifest.Symlinks = symlinks
 	return writeManifest(snapshotDir, manifest)
 }
 

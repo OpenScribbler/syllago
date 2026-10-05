@@ -1,11 +1,13 @@
 package installer
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -247,15 +249,51 @@ func isUnder(path, dir string) bool {
 }
 
 // readMCPConfig reads and returns the JSON bytes from a provider's MCP config file.
-// Strips JSONC comments for all providers — sjson requires valid JSON input.
-// This permanently removes comments from settings files that use JSONC (e.g. Zed, OpenCode).
+// Strips a UTF-8 byte order mark, JSONC comments and trailing commas for all providers — sjson
+// requires valid JSON input. This permanently removes comments from settings files that use JSONC
+// (e.g. Zed, OpenCode), and the mark from files a Windows editor saved with one.
 func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 	data, err := readJSONFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	data = converter.StripJSONCComments(data)
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
+	data = stripTrailingCommas(converter.StripJSONCComments(data))
+	if len(bytes.TrimSpace(data)) == 0 {
+		return []byte("{}"), nil
+	}
 	return data, nil
+}
+
+// stripTrailingCommas removes each comma that closes an object or array,
+// which JSONC settings files such as Zed's and VS Code's allow.
+func stripTrailingCommas(src []byte) []byte {
+	out := make([]byte, 0, len(src))
+	inString := false
+	for i := 0; i < len(src); i++ {
+		c := src[i]
+		if inString {
+			out = append(out, c)
+			if c == '\\' && i+1 < len(src) {
+				i++
+				out = append(out, src[i])
+			} else if c == '"' {
+				inString = false
+			}
+			continue
+		}
+		if c == ',' {
+			rest := bytes.TrimLeft(src[i+1:], " \t\r\n")
+			if len(rest) > 0 && (rest[0] == '}' || rest[0] == ']') {
+				continue
+			}
+		}
+		if c == '"' {
+			inString = true
+		}
+		out = append(out, c)
+	}
+	return out
 }
 
 // ExtractServerEntries reads config.json and returns a map of server names to
@@ -293,7 +331,7 @@ func serverSources(rawData []byte, itemName string, jsonKey string) (map[string]
 	sources := make(map[string]gjson.Result)
 	wrapper := gjson.GetBytes(rawData, jsonKey)
 	if !wrapper.Exists() {
-		wrapper = gjson.GetBytes(rawData, "mcpServers")
+		wrapper = catalog.MCPServersWrapper(rawData)
 	}
 	if wrapper.Exists() && wrapper.Type == gjson.JSON {
 		wrapper.ForEach(func(key, value gjson.Result) bool {
@@ -352,10 +390,44 @@ func droppedServerFields(rawData []byte, itemName string, jsonKey string, names 
 }
 
 func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
+	}
+	placement, err := placeMCP(item, prov, repoRoot, inst, "export", true)
+	if err != nil {
+		return Placement{}, err
+	}
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
+	}
+	return placement, nil
+}
+
+// PlaceMCP merges an MCP item's servers into the provider's MCP config and
+// appends their record to inst under source. The caller loads and saves
+// inst, so several placements share one write of installed.json, and the
+// caller keeps any backup of the config, so none is written beside it.
+func PlaceMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed, source string) (Placement, error) {
+	return placeMCP(item, prov, repoRoot, inst, source, false)
+}
+
+// mcpMerge is an MCP item's servers merged into its provider's config, not
+// yet written.
+type mcpMerge struct {
+	rawData     []byte // the item's config.json
+	jsonKey     string
+	cfgPath     string
+	data        []byte // the merged config
+	serverNames []string
+	keys        []string
+}
+
+func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed) (mcpMerge, error) {
 	// Read the MCP config from the content item
 	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
 	if err != nil {
-		return Placement{}, fmt.Errorf("reading config.json: %w", err)
+		return mcpMerge{}, fmt.Errorf("reading config.json: %w", err)
 	}
 
 	jsonKey := MCPConfigKey(prov)
@@ -363,14 +435,14 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	// Extract server entries — handles both nested and flat config.json formats
 	entries, err := ExtractServerEntries(rawData, item.Name, jsonKey)
 	if err != nil {
-		return Placement{}, err
+		return mcpMerge{}, err
 	}
 
 	// If item has a ServerKey, filter to just that one server.
 	if item.ServerKey != "" {
 		configData, ok := entries[item.ServerKey]
 		if !ok {
-			return Placement{}, fmt.Errorf("server %q not found in config.json", item.ServerKey)
+			return mcpMerge{}, fmt.Errorf("server %q not found in config.json", item.ServerKey)
 		}
 		entries = map[string]json.RawMessage{item.ServerKey: configData}
 	}
@@ -378,64 +450,115 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 	// Read target config file
 	cfgPath, err := mcpConfigPath(prov, repoRoot)
 	if err != nil {
-		return Placement{}, err
+		return mcpMerge{}, err
 	}
 
 	fileData, err := readMCPConfig(cfgPath, prov)
 	if err != nil {
-		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
+		return mcpMerge{}, fmt.Errorf("reading %s: %w", cfgPath, err)
+	}
+	// sjson writes into invalid JSON without complaint, so a write would
+	// corrupt the file rather than fail.
+	if !json.Valid(fileData) {
+		return mcpMerge{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
 	}
 
-	// Load installed.json to check for syllago-managed entries
-	inst, err := LoadInstalled(repoRoot)
-	if err != nil {
-		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
-	}
-	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov.Slug, fileData, jsonKey); ok {
-		return Placement{}, fmt.Errorf("MCP server %q already installed", serverName)
-	}
+	legacy := legacyMCPServers(repoRoot, item, entries, prov.Slug)
 
 	// Merge each server entry into the target config
 	var serverNames []string
 	var keys []string
+	var sameName string
 	for name, configData := range entries {
 		if !catalog.IsValidItemName(name) {
-			return Placement{}, fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
+			return mcpMerge{}, fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
 		}
 		key := jsonKey + "." + name
 
 		// H2: Check for collision with user-defined (non-syllago) server keys
-		if gjson.GetBytes(fileData, key).Exists() {
+		if existing := gjson.GetBytes(fileData, key); existing.Exists() {
 			// Check if this key was installed by syllago (safe to overwrite)
 			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
+			// A record under the legacy root can outlive its server, and
+			// one for a provider whose config lives in the project
+			// describes another file, so it counts only for a server this
+			// file holds, as status reports it. A server this project
+			// placed, as an earlier item of the same apply can, is this
+			// project's to overwrite.
+			if legacy[name] && !syllagoManaged {
+				sameName = name
+				continue
+			}
 			if !syllagoManaged {
-				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
+				// A config shared by every project can hold this server
+				// from another project, so the same settings count as
+				// installed and are left out of the merge; whoever placed
+				// them keeps them.
+				if !jsonEqual([]byte(existing.Raw), configData) {
+					return mcpMerge{}, fmt.Errorf("MCP server %q already exists in %s with other settings and was not installed by syllago for this project; rename or remove it there first", name, cfgPath)
+				}
+				sameName = name
+				continue
 			}
 		}
 
 		fileData, err = sjson.SetRawBytes(fileData, key, configData)
 		if err != nil {
-			return Placement{}, fmt.Errorf("setting %s: %w", key, err)
+			return mcpMerge{}, fmt.Errorf("setting %s: %w", key, err)
 		}
 		serverNames = append(serverNames, name)
 		keys = append(keys, key)
 	}
+	if len(serverNames) == 0 {
+		return mcpMerge{}, fmt.Errorf("MCP server %q %w", sameName, ErrMCPInstalled)
+	}
+	return mcpMerge{rawData: rawData, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
+}
 
-	if err := backupFile(cfgPath); err != nil {
-		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
+// ErrMCPInstalled is the merge's error for an item whose servers the target
+// config already holds, each placed by a record under the legacy root or
+// with the same settings.
+var ErrMCPInstalled = errors.New("already installed")
+
+// jsonEqual reports whether a and b decode to the same JSON value, so a
+// config its provider reformatted still matches.
+func jsonEqual(a, b []byte) bool {
+	var va, vb any
+	if json.Unmarshal(a, &va) != nil || json.Unmarshal(b, &vb) != nil {
+		return false
+	}
+	return reflect.DeepEqual(va, vb)
+}
+
+// CheckMCP reports the error PlaceMCP would return for an item, without
+// writing anything.
+func CheckMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed) error {
+	_, err := mergeMCP(item, prov, repoRoot, inst)
+	return err
+}
+
+func placeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed, source string, backup bool) (Placement, error) {
+	m, err := mergeMCP(item, prov, repoRoot, inst)
+	if err != nil {
+		return Placement{}, err
 	}
 
-	if err := writeJSONFile(cfgPath, fileData); err != nil {
-		return Placement{}, fmt.Errorf("writing %s: %w", cfgPath, err)
+	if backup {
+		if err := backupFile(m.cfgPath); err != nil {
+			return Placement{}, fmt.Errorf("backing up %s: %w", m.cfgPath, err)
+		}
 	}
 
-	// Record in installed.json (inst already loaded above for collision check)
+	if err := writeJSONFile(m.cfgPath, m.data); err != nil {
+		return Placement{}, fmt.Errorf("writing %s: %w", m.cfgPath, err)
+	}
+
 	if item.ServerKey != "" {
 		// Per-server install: one entry per server key
 		inst.MCP = append(inst.MCP, InstalledMCP{
 			Name:        item.Name,
 			ServerKey:   item.ServerKey,
-			Source:      "export",
+			Source:      source,
 			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
@@ -443,23 +566,19 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		// Legacy bulk install: track all server names together
 		inst.MCP = append(inst.MCP, InstalledMCP{
 			Name:        item.Name,
-			ServerNames: serverNames,
-			Source:      "export",
+			ServerNames: m.serverNames,
+			Source:      source,
 			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
 	}
 
-	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
-	}
-
-	desc := fmt.Sprintf("%s in %s", jsonKey, cfgPath)
+	desc := fmt.Sprintf("%s in %s", m.jsonKey, m.cfgPath)
 	return Placement{
 		Mechanism: MechanismMCPMerge,
-		Path:      cfgPath,
-		Keys:      keys,
-		Notices:   conversionNotices(item, droppedServerFields(rawData, item.Name, jsonKey, slices.Collect(maps.Keys(entries)))),
+		Path:      m.cfgPath,
+		Keys:      m.keys,
+		Notices:   conversionNotices(item, droppedServerFields(m.rawData, item.Name, m.jsonKey, m.serverNames)),
 		desc:      desc,
 	}, nil
 }
@@ -502,6 +621,12 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 	// matching hook in the target settings.
 	if entry := inst.MCP[instIdx]; entry.Provider == "" && !mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
 		return Placement{}, fmt.Errorf("%s was not installed by syllago for %s", item.Name, prov.Name)
+	}
+	// sjson writes into invalid JSON without complaint, so a write would
+	// corrupt the file rather than fail. The check waits for the legacy
+	// fallback above, which edits another root's file.
+	if !json.Valid(fileData) {
+		return Placement{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
 	}
 
 	if err := backupFile(cfgPath); err != nil {
@@ -610,32 +735,29 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	return StatusNotInstalled, instErr
 }
 
-// legacyMCPInstalled reports whether the legacy root's installed.json
-// records item, or one of its servers, as installed on the provider with
-// slug provSlug. fileData is that provider's MCP config and jsonKey its
-// servers key. An entry with no provider counts only when its server is
-// already in fileData, as hookTracked explains for hooks.
-func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, provSlug string, fileData []byte, jsonKey string) (string, bool) {
+// legacyMCPServers returns the names in entries that the legacy root's
+// installed.json records as installed on the provider with slug provSlug,
+// by a record for item or by any record that names the server.
+func legacyMCPServers(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, provSlug string) map[string]bool {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
-		return "", false
+		return nil
 	}
 	inst, err := LoadInstalled(legacyRoot)
 	if err != nil {
-		return "", false
+		return nil
 	}
+	var itemKeys []string
 	if idx := findMCPInstallRecord(inst, item, provSlug); idx >= 0 {
-		entry := inst.MCP[idx]
-		if entry.Provider != "" || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
-			return item.Name, true
-		}
+		itemKeys = inst.MCP[idx].serverKeys(item.Name)
 	}
+	claimed := make(map[string]bool)
 	for name := range entries {
-		if mcpServerClaimed(inst, name, provSlug, gjson.GetBytes(fileData, jsonKey+"."+name).Exists()) {
-			return name, true
+		if slices.Contains(itemKeys, name) || mcpServerClaimed(inst, name, provSlug, true) {
+			claimed[name] = true
 		}
 	}
-	return "", false
+	return claimed
 }
 
 // mcpRecordInConfig reports whether any server the entry placed is in

@@ -1,0 +1,393 @@
+package loadout
+
+import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/tidwall/gjson"
+)
+
+// setupMCPEnv builds a Cursor loadout holding one MCP item whose
+// config.json is config, with Cursor's MCP config in the project holding
+// existing.
+func setupMCPEnv(t *testing.T, config, existing string) (projectRoot, cfgPath string, manifest *Manifest, cat *catalog.Catalog) {
+	t.Helper()
+	projectRoot = t.TempDir()
+	itemDir := filepath.Join(projectRoot, "content", "mcp", "srv")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(config), 0644)
+	cfgPath = filepath.Join(projectRoot, ".cursor", "mcp.json")
+	os.MkdirAll(filepath.Dir(cfgPath), 0755)
+	os.WriteFile(cfgPath, []byte(existing), 0644)
+
+	manifest = &Manifest{Kind: "loadout", Version: 1, Provider: "cursor", Name: "mcp-loadout", MCP: []ItemRef{{Name: "srv"}}}
+	cat = &catalog.Catalog{
+		RepoRoot: projectRoot,
+		Items:    []catalog.ContentItem{{Name: "srv", Type: catalog.MCP, Path: itemDir, ServerKey: "srv"}},
+	}
+	return projectRoot, cfgPath, manifest, cat
+}
+
+// TestApply_MCPReportsWhatTheMergeLeavesOut: a loadout's MCP server goes
+// through install's merge, so the fields that merge does not write reach
+// the apply's warnings, and the record carries the loadout.
+func TestApply_MCPReportsWhatTheMergeLeavesOut(t *testing.T) {
+	t.Parallel()
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node","cwd":"/srv"}`, `{"mcpServers":{"mine":{"command":"x"}}}`)
+
+	result, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
+	if err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	want := `srv: server "srv": cwd not installed (syllago writes only type, command, args, url, env)`
+	if !slices.Contains(result.Warnings, want) {
+		t.Errorf("warnings: got %q, want one %q", result.Warnings, want)
+	}
+	got, _ := os.ReadFile(cfgPath)
+	if !strings.Contains(string(got), `"srv":{"command":"node"}`) || !strings.Contains(string(got), `"mine"`) {
+		t.Errorf("config: got %s, want srv merged beside mine", got)
+	}
+	if _, err := os.Stat(cfgPath + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("apply wrote a backup beside the config (stat err %v)", err)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || inst.MCP[0].Source != "loadout:mcp-loadout" || inst.MCP[0].ServerKey != "srv" {
+		t.Errorf("installed.json: got %+v (err %v), want one srv record from loadout:mcp-loadout", inst, err)
+	}
+}
+
+// TestApply_MCPPlacesOnlyItsOwnServer: the scanner makes an item of each
+// server in a shared config.json, so a loadout naming one server installs
+// that server alone.
+func TestApply_MCPPlacesOnlyItsOwnServer(t *testing.T) {
+	t.Parallel()
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"mcpServers":{"srv":{"command":"node"},"other":{"command":"x"}}}`, `{}`)
+
+	if _, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	got, _ := os.ReadFile(cfgPath)
+	if !strings.Contains(string(got), `"srv"`) || strings.Contains(string(got), `"other"`) {
+		t.Errorf("config: got %s, want srv alone", got)
+	}
+}
+
+// TestApply_MCPRefusesAServerTheUserDefined: a server of the same name the
+// user defined stays. Preview predicts the refusal, so apply stops before it
+// takes a snapshot or writes anything.
+func TestApply_MCPRefusesAServerTheUserDefined(t *testing.T) {
+	t.Parallel()
+	const mine = `{"mcpServers":{"srv":{"command":"my-srv"}}}`
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, mine)
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	preview, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(preview.Actions) != 1 || preview.Actions[0].Action != "error-conflict" || !strings.Contains(preview.Actions[0].Problem, "not installed by syllago") {
+		t.Errorf("preview: got %+v, want an error-conflict naming the user's server", preview.Actions)
+	}
+
+	opts.Mode = "keep"
+	_, err = Apply(manifest, cat, provider.Cursor, opts)
+	if err == nil || !strings.HasPrefix(err.Error(), "conflict: ") || !strings.Contains(err.Error(), "not installed by syllago") {
+		t.Fatalf("Apply: got %v, want a conflict refusing the user's server", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != mine {
+		t.Errorf("config changed to %s", got)
+	}
+	if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot: got %v, want none", err)
+	}
+}
+
+// TestApply_RollbackLetsARetrySucceed: a failure after the MCP writes puts
+// the config back as it was, deleting one the apply created, so a retry
+// does not find the loadout's own servers and refuse them as the user's.
+func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	tests := []struct {
+		name     string
+		existing string
+	}{
+		{"existing config", `{"mcpServers":{"mine":{"command":"x"}}}`},
+		{"absent config", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"mcpServers":{"srv":{"command":"node"},"two":{"command":"y"}}}`, tt.existing)
+			cat.Items = append(cat.Items, catalog.ContentItem{Name: "two", Type: catalog.MCP, Path: cat.Items[0].Path, ServerKey: "two"})
+			manifest.MCP = append(manifest.MCP, ItemRef{Name: "two"})
+			if tt.existing == "" {
+				os.Remove(cfgPath)
+			}
+			// installed.json is saved once, after every placement, so a
+			// .syllago the apply cannot write to fails it once both servers
+			// are in.
+			dir := filepath.Join(projectRoot, ".syllago")
+			os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
+			os.Chmod(dir, 0555)
+			t.Cleanup(func() { os.Chmod(dir, 0755) })
+			opts := ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err == nil || !strings.Contains(err.Error(), "rolled back") || !strings.Contains(err.Error(), "saving installed.json") {
+				t.Fatalf("Apply: got %v, want a rolled-back failure to save installed.json", err)
+			}
+			got, err := os.ReadFile(cfgPath)
+			if tt.existing == "" && !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("rollback left the config the apply created: %s (err %v)", got, err)
+			}
+			if tt.existing != "" && string(got) != tt.existing {
+				t.Errorf("rollback left the config as %s, want %s", got, tt.existing)
+			}
+
+			os.Chmod(dir, 0755)
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+				t.Fatalf("retry: %v", err)
+			}
+			got, _ = os.ReadFile(cfgPath)
+			if !strings.Contains(string(got), `"srv"`) || !strings.Contains(string(got), `"two"`) {
+				t.Errorf("retry: config is %s, want srv and two", got)
+			}
+		})
+	}
+}
+
+// TestApply_FailedRollbackKeepsTheSnapshot: a snapshot that did not restore
+// holds the only copy of the files the apply changed, so the apply keeps it
+// and says so, and loadout remove restores them from it. A created file
+// the failed restore did delete is no longer the apply's, so remove leaves
+// one the user writes there afterward.
+func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	tests := []struct {
+		name     string
+		existing string
+		// restore stands in for the failed restore; it gets the config path.
+		restore func(cfgPath string) error
+		// after is what the user writes to the config before remove.
+		after string
+		want  string
+		// noRemove is set when the apply cannot record what remove may
+		// delete, so its message must not offer remove.
+		noRemove bool
+	}{
+		{
+			name:     "restore changed nothing",
+			existing: `{"mcpServers":{"mine":{"command":"x"}}}`,
+			restore:  func(string) error { return errors.New("disk full") },
+			want:     `{"mcpServers":{"mine":{"command":"x"}}}`,
+		},
+		{
+			name: "snapshot cannot be pruned",
+			restore: func(cfgPath string) error {
+				os.Remove(cfgPath)
+				snapshotDirs, _ := filepath.Glob(filepath.Join(filepath.Dir(filepath.Dir(cfgPath)), ".syllago", "snapshots", "*"))
+				os.Chmod(snapshotDirs[0], 0555)
+				return errors.New("disk full")
+			},
+			noRemove: true,
+		},
+		{
+			name:    "restore left the created config",
+			restore: func(string) error { return errors.New("disk full") },
+		},
+		{
+			name:    "restore deleted the created config",
+			restore: func(cfgPath string) error { os.Remove(cfgPath); return errors.New("disk full") },
+			after:   `{"mcpServers":{"user":{"command":"u"}}}`,
+			want:    `{"mcpServers":{"user":{"command":"u"}}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, tt.existing)
+			if tt.existing == "" {
+				os.Remove(cfgPath)
+			}
+			dir := filepath.Join(projectRoot, ".syllago")
+			os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
+			os.Chmod(dir, 0555)
+			t.Cleanup(func() { os.Chmod(dir, 0755) })
+			restoreSnapshot = func(string, *snapshot.SnapshotManifest) error { return tt.restore(cfgPath) }
+			t.Cleanup(func() {
+				snapshotDirs, _ := filepath.Glob(filepath.Join(dir, "snapshots", "*"))
+				for _, d := range snapshotDirs {
+					os.Chmod(d, 0755)
+				}
+			})
+
+			_, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
+			if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || strings.Contains(err.Error(), "syllago loadout remove") == tt.noRemove {
+				t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove only when it is safe (noRemove %v)", err, tt.noRemove)
+			}
+			_, snapDir, loadErr := snapshot.Load(projectRoot)
+			if loadErr != nil {
+				t.Fatalf("snapshot.Load after the failed rollback: %v", loadErr)
+			}
+			if !strings.Contains(err.Error(), "createdFiles and symlinks") {
+				t.Errorf("Apply: got %v, want the by-hand steps to name the created files and symlinks", err)
+			}
+			if !strings.Contains(err.Error(), snapDir) {
+				t.Errorf("Apply: got %v, want it to name the kept snapshot %s", err, snapDir)
+			}
+
+			os.Chmod(dir, 0755)
+			os.Chmod(snapDir, 0755)
+			restoreSnapshot = snapshot.Restore
+			if tt.after != "" {
+				os.WriteFile(cfgPath, []byte(tt.after), 0644)
+			}
+			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
+				t.Fatalf("Remove: %v", err)
+			}
+			got, readErr := os.ReadFile(cfgPath)
+			if tt.want == "" && !os.IsNotExist(readErr) {
+				t.Errorf("config after remove: got %s (%v), want it deleted", got, readErr)
+			} else if tt.want != "" && string(got) != tt.want {
+				t.Errorf("config after remove: got %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestApply_SkipsTheSameServerFromAnotherProject: a config every project
+// shares can hold this server from another project's apply. The same
+// settings count as installed, so the apply skips the server, and remove
+// leaves it to the project that placed it.
+func TestApply_SkipsTheSameServerFromAnotherProject(t *testing.T) {
+	t.Parallel()
+	const shared = `{"mcpServers": {"srv": { "command": "node" }}}`
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, shared)
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	result, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].Action != "skip-exists" {
+		t.Fatalf("preview actions: got %+v, want one skip-exists", result.Actions)
+	}
+	opts.Mode = "keep"
+	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != shared {
+		t.Errorf("config: got %s, want it unchanged as %s", got, shared)
+	}
+}
+
+// TestApply_SkipsAServerInstalledUnderTheLegacyRoot: a server a record
+// under the global content dir placed is installed already, so the apply
+// skips it as it skips one this project's installed.json records, even
+// with other settings. Cursor's config lives in the project, so the record
+// describes another file, and a project config without the server gets it.
+func TestApply_SkipsAServerInstalledUnderTheLegacyRoot(t *testing.T) {
+	legacyRoot := catalog.GlobalContentDirOverride
+	legacy := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "legacy-srv", ServerKey: "legacy-srv", Source: "manual", Provider: "cursor"}}}
+	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
+	tests := []struct {
+		name, existing, want string
+	}{
+		{"config holds the server", `{"mcpServers":{"legacy-srv":{"command":"old"}}}`, "skip-exists"},
+		{"config lacks the server", `{"mcpServers":{}}`, "merge-mcp"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, tt.existing)
+			cat.Items[0].Name, cat.Items[0].ServerKey = "legacy-srv", "legacy-srv"
+			manifest.MCP = []ItemRef{{Name: "legacy-srv"}}
+			opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+			result, err := Apply(manifest, cat, provider.Cursor, opts)
+			if err != nil {
+				t.Fatalf("preview: %v", err)
+			}
+			if len(result.Actions) != 1 || result.Actions[0].Action != tt.want {
+				t.Fatalf("preview actions: got %+v, want one %s", result.Actions, tt.want)
+			}
+			opts.Mode = "keep"
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			got, _ := os.ReadFile(cfgPath)
+			placed := gjson.GetBytes(got, "mcpServers.legacy-srv.command").String() == "node"
+			if placed != (tt.want == "merge-mcp") {
+				t.Errorf("config: got %s, want the server placed only when the config lacked it", got)
+			}
+		})
+	}
+}
+
+// TestApply_LegacyRecordYieldsToAServerTheApplyPlaced: two items hold the
+// same server, which a record under the global content dir names. The
+// config lacks it, so preview passes both; the first item places it, and
+// the second overwrites a server this project now records rather than
+// failing the apply as already installed.
+func TestApply_LegacyRecordYieldsToAServerTheApplyPlaced(t *testing.T) {
+	legacyRoot := catalog.GlobalContentDirOverride
+	legacy := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "x", ServerKey: "x", Source: "manual", Provider: "cursor"}}}
+	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
+
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"mcpServers":{"x":{"command":"node"}}}`, `{}`)
+	cat.Items[0].ServerKey = ""
+	second := filepath.Join(projectRoot, "content", "mcp", "srv2")
+	os.MkdirAll(second, 0755)
+	os.WriteFile(filepath.Join(second, "config.json"), []byte(`{"mcpServers":{"x":{"command":"node"}}}`), 0644)
+	cat.Items = append(cat.Items, catalog.ContentItem{Name: "srv2", Type: catalog.MCP, Path: second})
+	manifest.MCP = []ItemRef{{Name: "srv"}, {Name: "srv2"}}
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	result, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	for _, a := range result.Actions {
+		if a.Action != "merge-mcp" {
+			t.Fatalf("preview actions: got %+v, want both merge-mcp", result.Actions)
+		}
+	}
+	opts.Mode = "keep"
+	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); gjson.GetBytes(got, "mcpServers.x.command").String() != "node" {
+		t.Errorf("config: got %s, want x placed", got)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 2 {
+		t.Fatalf("installed.json: got %+v (err %v), want a record for each item", inst, err)
+	}
+	for _, m := range inst.MCP {
+		if !slices.Equal(m.ServerNames, []string{"x"}) {
+			t.Errorf("record %s: got servers %q, want x", m.Name, m.ServerNames)
+		}
+	}
+}
