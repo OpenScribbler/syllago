@@ -76,7 +76,13 @@ func (s Status) String() string {
 }
 
 // IsJSONMerge returns true if the provider uses JSON merge for the given content type.
+// Hooks always do: every hook install encodes through the provider's
+// HookAdapter, including Pi's extension file, and a provider with no adapter
+// refuses the install rather than receiving the Library folder unconverted.
 func IsJSONMerge(prov provider.Provider, itemType catalog.ContentType) bool {
+	if itemType == catalog.Hooks {
+		return true
+	}
 	var resolver *config.PathResolver
 	return resolver.InstallDir(prov, itemType, "") == provider.JSONMergeSentinel
 }

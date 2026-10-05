@@ -382,3 +382,34 @@ func assertFileContent(t *testing.T, path, want string) {
 		t.Fatalf("sibling changed: got %q, want %q", got, want)
 	}
 }
+
+// Install is the entry point the CLI and TUI call, so a hook must reach the
+// adapter through it, not only through installHook: Pi's install directory is
+// not a shared settings file, and Codex has no hook encoder at all.
+func TestInstall_HooksAlwaysEncodeThroughTheAdapter(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	resetHookSettingsPath(t)
+
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatalf("MkdirAll .syllago: %v", err)
+	}
+	item := writeCanonicalHookItemInProject(t, projectRoot, "guard", "before_tool_execute", "shell", "echo guard")
+	item.Provider = "claude-code"
+
+	if _, err := Install(item, provider.Pi, projectRoot, MethodSymlink, "", ScanOptions{}); err != nil {
+		t.Fatalf("Install to pi: %v", err)
+	}
+	assertDecodedCommands(t, provider.Pi, filepath.Join(home, ".pi", "agent", "extensions", "syllago-hooks.ts"), []string{"echo guard"})
+	if status := CheckStatus(item, provider.Pi, projectRoot); status != StatusInstalled {
+		t.Errorf("pi status after install: got %v, want Installed", status)
+	}
+
+	if _, err := Install(item, provider.Codex, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil || !strings.Contains(err.Error(), "no encoder") {
+		t.Errorf("Install to codex: want a no-encoder error, got %v", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(home, ".codex")); len(entries) != 0 {
+		t.Errorf("codex install should place nothing, found %d entries", len(entries))
+	}
+}
