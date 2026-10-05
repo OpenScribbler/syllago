@@ -428,7 +428,7 @@ func installToProvider(
 
 		// Check for portability warnings by running the converter.
 		var warnings []string
-		if conv := converter.For(item.Type); conv != nil {
+		if conv := converter.For(item.Type); conv != nil || item.Type == catalog.Hooks {
 			contentFile := converter.ResolveContentFile(item)
 			if contentFile != "" {
 				if raw, readErr := os.ReadFile(contentFile); readErr == nil {

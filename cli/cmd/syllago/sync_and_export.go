@@ -238,7 +238,7 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 		if installDir == provider.JSONMergeSentinel {
 			// Allow converter-based cross-provider export for JSON merge types
 			srcProv := effectiveProvider(item)
-			if conv := converter.For(item.Type); conv != nil && srcProv != "" && srcProv != toSlug {
+			if conv := converter.For(item.Type); (conv != nil || item.Type == catalog.Hooks) && srcProv != "" && srcProv != toSlug {
 				contentFile := converter.ResolveContentFile(item)
 				if contentFile != "" {
 					content, readErr := os.ReadFile(contentFile)
@@ -342,7 +342,7 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 		}
 
 		// Try cross-provider rendering via converter
-		if conv := converter.For(item.Type); conv != nil {
+		if conv := converter.For(item.Type); conv != nil || item.Type == catalog.Hooks {
 			exported, handled := exportWithConverter(item, *prov, toSlug, conv, installDir, llmHooksMode)
 			if handled {
 				if exported != nil {
@@ -542,5 +542,29 @@ func convertHooksForExport(content []byte, srcProv, toSlug, llmHooksMode string)
 	if llmHooksMode == converter.LLMHooksModeGenerate {
 		return converter.ConvertHooksWrappingLLM(content, srcProv, toSlug)
 	}
-	return converter.ConvertHooks(content, srcProv, toSlug)
+	res, err := converter.ConvertHooks(content, srcProv, toSlug)
+	if err != nil || !dropsLLMHooks(content, srcProv, toSlug) {
+		return res, err
+	}
+	res.Warnings = append(res.Warnings, "use --llm-hooks=generate to keep LLM-evaluated hooks as wrapper scripts")
+	return res, nil
+}
+
+// dropsLLMHooks reports whether content holds a prompt or agent hook that
+// toSlug cannot run, so the skip mode drops it.
+func dropsLLMHooks(content []byte, srcProv, toSlug string) bool {
+	adapter := converter.AdapterFor(toSlug)
+	if adapter == nil || adapter.Capabilities().SupportsLLMHooks {
+		return false
+	}
+	hooks, err := converter.DecodeHooks(content, srcProv)
+	if err != nil {
+		return false
+	}
+	for _, h := range hooks.Hooks {
+		if h.Handler.Type == "prompt" || h.Handler.Type == "agent" {
+			return true
+		}
+	}
+	return false
 }

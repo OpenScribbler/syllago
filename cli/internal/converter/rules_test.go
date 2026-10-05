@@ -989,8 +989,10 @@ func TestConverterFor(t *testing.T) {
 	if For(catalog.Skills) == nil {
 		t.Error("expected Skills converter to be registered")
 	}
-	if For(catalog.Hooks) == nil {
-		t.Error("expected Hooks converter to be registered")
+	// Hooks convert through the per-provider HookAdapters (ConvertHooks),
+	// so no Converter is registered for them.
+	if For(catalog.Hooks) != nil {
+		t.Error("expected no Hooks converter; hooks convert through ConvertHooks")
 	}
 }
 

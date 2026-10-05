@@ -207,7 +207,7 @@ func wrapLLMHooks(hooks *CanonicalHooks, toSlug string) (map[string][]byte, []Co
 		if h.Handler.Type != "prompt" && h.Handler.Type != "agent" {
 			continue
 		}
-		name, content := generateLLMWrapperScript(HookEntry{Type: h.Handler.Type, Prompt: h.Handler.Prompt}, toSlug, h.Event, len(scripts))
+		name, content := generateLLMWrapperScript(HookEntry{Type: h.Handler.Type, Command: h.Handler.Command, Prompt: h.Handler.Prompt}, toSlug, h.Event, len(scripts))
 		scripts[name] = content
 		hooks.Hooks[i].Handler = HookHandler{
 			Type:          "command",

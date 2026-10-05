@@ -184,3 +184,14 @@ func scriptBasename(cmd string) string {
 	}
 	return ""
 }
+
+// copilotHookEntry represents a single hook in Copilot CLI format.
+type copilotHookEntry struct {
+	Type       string            `json:"type,omitempty"`
+	Bash       string            `json:"bash,omitempty"`
+	PowerShell string            `json:"powershell,omitempty"`
+	TimeoutSec int               `json:"timeoutSec,omitempty"`
+	Comment    string            `json:"comment,omitempty"`
+	Env        map[string]string `json:"env,omitempty"`
+	Cwd        string            `json:"cwd,omitempty"`
+}
