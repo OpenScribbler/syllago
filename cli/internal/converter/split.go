@@ -3,14 +3,17 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
 // SplitSettingsHooks reads the hooks section of a settings.json-style file
 // and returns one HookData per (event, matcher, handler) triple. Each result
 // HookData has exactly one entry in its Hooks slice, matching the canonical
-// hooks/0.1 spec shape (one hook = one handler).
+// hooks/0.1 spec shape (one hook = one handler). Results run in event-name
+// order, then in file order within an event.
 //
 // sourceProvider is used to reverse-translate event and tool names to canonical.
 func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, error) {
@@ -31,7 +34,10 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 
 	var items []HookData
 
-	for event, matchersRaw := range eventMap {
+	// Events in name order, so the same file always splits the same way and
+	// callers that number same-named hooks number them stably.
+	for _, event := range slices.Sorted(maps.Keys(eventMap)) {
+		matchersRaw := eventMap[event]
 		canonicalEvent := ReverseTranslateHookEvent(event, sourceProvider)
 
 		switch sourceProvider {

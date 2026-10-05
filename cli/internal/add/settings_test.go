@@ -1,0 +1,450 @@
+package add
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
+)
+
+// Two PreToolUse handlers that derive the same name, and one PostToolUse
+// handler that runs a script beside the settings file.
+const settingsHooksJSON = `{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo one", "statusMessage": "guard"}]},
+      {"matcher": "Edit", "hooks": [{"type": "command", "command": "echo two", "statusMessage": "guard"}]}
+    ],
+    "PostToolUse": [
+      {"matcher": "Write", "hooks": [{"type": "command", "command": "./check.sh"}]}
+    ]
+  }
+}`
+
+// settingsEnv isolates HOME so discovery never reads the real user's
+// provider files, and returns a project root and a Library directory.
+func settingsEnv(t *testing.T) (projectRoot, globalDir string) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	return t.TempDir(), t.TempDir()
+}
+
+func writeFile(t *testing.T, path, data string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func itemNames(items []SettingsItem) []string {
+	var names []string
+	for _, it := range items {
+		names = append(names, it.Name)
+	}
+	return names
+}
+
+func TestDiscoverSettings_HooksSuffixSameNameWithinFile(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
+
+	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	got := strings.Join(itemNames(items), ",")
+	if got != "after-tool-execute-check,guard,guard-2" {
+		t.Fatalf("names = %s, want after-tool-execute-check,guard,guard-2", got)
+	}
+	for _, it := range items {
+		if it.Scope != "project" || it.Status != StatusNew {
+			t.Errorf("%s: scope %q status %v, want project and new", it.Name, it.Scope, it.Status)
+		}
+		if want := filepath.Join(globalDir, "hooks", "claude-code", it.Name); it.Dest != want {
+			t.Errorf("%s: Dest = %s, want %s", it.Name, it.Dest, want)
+		}
+		if it.Hook == nil {
+			t.Errorf("%s: Hook is nil", it.Name)
+		}
+	}
+	if items[1].Hook.Matcher == items[2].Hook.Matcher {
+		t.Error("the two guard items hold the same hook")
+	}
+}
+
+// Same-named hooks under different events keep their suffixes from one
+// discovery to the next, so a re-run finds each hook where it was added.
+func TestDiscoverSettings_HookSuffixesAreStable(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
+  "hooks": {
+    "PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "echo pre", "statusMessage": "guard"}]}],
+    "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "echo post", "statusMessage": "guard"}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "echo stop", "statusMessage": "guard"}]}]
+  }
+}`)
+	var first string
+	for i := 0; i < 30; i++ {
+		items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+		if err != nil {
+			t.Fatalf("DiscoverSettings: %v", err)
+		}
+		var b strings.Builder
+		for _, it := range items {
+			b.WriteString(it.Name + "=" + it.Hook.Hooks[0].Command + ";")
+		}
+		if i == 0 {
+			first = b.String()
+		} else if b.String() != first {
+			t.Fatalf("discovery %d numbered hooks %s, first numbered %s", i, b.String(), first)
+		}
+	}
+}
+
+func TestDiscoverSettings_MCPServers(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
+  "mcpServers": {
+    "db": {"command": "db-server", "env": {"TOKEN": "secret"}},
+    "web": {"url": "https://example.com/mcp"}
+  },
+  "unrelated": {"keep": "out"}
+}`)
+
+	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if got := strings.Join(itemNames(items), ","); got != "db,web" {
+		t.Fatalf("names = %s, want db,web", got)
+	}
+	db := items[0]
+	if db.JSONKey != "mcpServers" || db.ServerKey != "db" {
+		t.Errorf("JSONKey %q ServerKey %q, want mcpServers and db", db.JSONKey, db.ServerKey)
+	}
+	if !strings.Contains(string(db.Server), "db-server") || strings.Contains(string(db.Server), "web") {
+		t.Errorf("Server = %s, want the db entry alone", db.Server)
+	}
+	if want := filepath.Join(globalDir, "mcp", "claude-code", "db"); db.Dest != want {
+		t.Errorf("Dest = %s, want %s", db.Dest, want)
+	}
+}
+
+func TestDiscoverSettings_OpenCodeJSONC(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, "opencode.json"), `{
+  // servers for this repo
+  "mcp": {
+    "lint": {"type": "local", "command": ["lint-mcp"]}
+  }
+}`)
+
+	items, err := DiscoverSettings(provider.OpenCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "lint" || items[0].JSONKey != "mcp" {
+		t.Fatalf("items = %+v, want one lint server under mcp", items)
+	}
+	if items[0].Scope != "project" {
+		t.Errorf("Scope = %q, want project", items[0].Scope)
+	}
+}
+
+func TestDiscoverSettings_RejectsOtherTypes(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	if _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Rules); err == nil {
+		t.Error("DiscoverSettings for rules: err = nil, want an error")
+	}
+}
+
+// saveScoped writes a Library item directory holding an item added from scope.
+func saveScoped(t *testing.T, dir, scope string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := metadata.Save(dir, &metadata.Meta{Name: filepath.Base(dir), SourceScope: scope}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSettingsDest(t *testing.T) {
+	base := func(globalDir string) string { return filepath.Join(globalDir, "hooks", "claude-code", "guard") }
+	tests := []struct {
+		name       string
+		setup      func(t *testing.T, globalDir string)
+		claimed    func(globalDir string) map[string]bool
+		wantSuffix string
+		wantStatus ItemStatus
+	}{
+		{
+			name:       "nothing there is new at the base",
+			wantStatus: StatusNew,
+		},
+		{
+			name:       "same scope is in the Library at the base",
+			setup:      func(t *testing.T, g string) { saveScoped(t, base(g), "project") },
+			wantStatus: StatusInLibrary,
+		},
+		{
+			name:       "no recorded scope counts as this item",
+			setup:      func(t *testing.T, g string) { saveScoped(t, base(g), "") },
+			wantStatus: StatusInLibrary,
+		},
+		{
+			name:       "another scope moves to -2",
+			setup:      func(t *testing.T, g string) { saveScoped(t, base(g), "global") },
+			wantSuffix: "-2",
+			wantStatus: StatusNew,
+		},
+		{
+			name: "a re-run finds the earlier -2",
+			setup: func(t *testing.T, g string) {
+				saveScoped(t, base(g), "global")
+				saveScoped(t, base(g)+"-2", "project")
+			},
+			wantSuffix: "-2",
+			wantStatus: StatusInLibrary,
+		},
+		{
+			name:       "a directory claimed in this run is skipped",
+			claimed:    func(g string) map[string]bool { return map[string]bool{base(g): true} },
+			wantSuffix: "-2",
+			wantStatus: StatusNew,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			globalDir := t.TempDir()
+			if tc.setup != nil {
+				tc.setup(t, globalDir)
+			}
+			claimed := map[string]bool{}
+			if tc.claimed != nil {
+				claimed = tc.claimed(globalDir)
+			}
+			item := SettingsItem{DiscoveryItem: DiscoveryItem{Name: "guard", Type: catalog.Hooks, Scope: "project"}}
+			dest, status := settingsDest(globalDir, "claude-code", &item, claimed)
+			if want := base(globalDir) + tc.wantSuffix; dest != want {
+				t.Errorf("dest = %s, want %s", dest, want)
+			}
+			if status != tc.wantStatus {
+				t.Errorf("status = %v, want %v", status, tc.wantStatus)
+			}
+		})
+	}
+}
+
+func discoverHooks(t *testing.T) (items []SettingsItem, projectRoot, globalDir string) {
+	t.Helper()
+	projectRoot, globalDir = settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "check.sh"), "#!/bin/sh\nexit 0\n")
+	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	return items, projectRoot, globalDir
+}
+
+func TestAddFromSettings_HooksWriteManifestsAndScripts(t *testing.T) {
+	items, projectRoot, _ := discoverHooks(t)
+	results := AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot)
+
+	for _, r := range results {
+		if r.Status != AddStatusAdded {
+			t.Fatalf("%s: status %v err %v, want added", r.Name, r.Status, r.Error)
+		}
+	}
+	var manifest map[string]any
+	data, err := os.ReadFile(filepath.Join(results[2].Dest, "hook.json"))
+	if err != nil {
+		t.Fatalf("read guard-2 hook.json: %v", err)
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatalf("hook.json is not JSON: %v", err)
+	}
+	if !strings.Contains(string(data), "before_tool_execute") || !strings.Contains(string(data), "echo two") {
+		t.Errorf("guard-2 hook.json = %s, want the second PreToolUse handler", data)
+	}
+
+	script := results[0]
+	if script.Bundled != 1 || script.BundleErr != nil {
+		t.Errorf("bundled %d err %v, want 1 script", script.Bundled, script.BundleErr)
+	}
+	if _, err := os.Stat(filepath.Join(script.Dest, "check.sh")); err != nil {
+		t.Errorf("check.sh was not copied beside the hook: %v", err)
+	}
+	meta, err := metadata.Load(script.Dest)
+	if err != nil || meta == nil {
+		t.Fatalf("load metadata: %v", err)
+	}
+	if len(meta.BundledScripts) != 1 || meta.BundledScripts[0].Filename != "check.sh" {
+		t.Errorf("BundledScripts = %+v, want check.sh", meta.BundledScripts)
+	}
+	if meta.Name != "after-tool-execute-check" || meta.SourceScope != "project" || meta.SourceProject != filepath.Base(projectRoot) {
+		t.Errorf("meta name %q scope %q project %q", meta.Name, meta.SourceScope, meta.SourceProject)
+	}
+	if meta.SourceProvider != "claude-code" || meta.SourceType != "provider" || meta.SourceFormat != "json" {
+		t.Errorf("meta source %q/%q/%q, want claude-code/provider/json", meta.SourceProvider, meta.SourceType, meta.SourceFormat)
+	}
+}
+
+func TestAddFromSettings_MCPConfigHoldsOneServer(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
+  "mcpServers": {
+    "db": {"command": "db-server"},
+    "web": {"url": "https://example.com/mcp"}
+  },
+  "permissions": {"allow": ["Bash"]}
+}`)
+	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	results := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot)
+	if results[0].Status != AddStatusAdded {
+		t.Fatalf("status %v err %v, want added", results[0].Status, results[0].Error)
+	}
+
+	data, err := os.ReadFile(filepath.Join(results[0].Dest, "config.json"))
+	if err != nil {
+		t.Fatalf("read config.json: %v", err)
+	}
+	var cfg map[string]map[string]json.RawMessage
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("config.json is not JSON: %v\n%s", err, data)
+	}
+	if len(cfg) != 1 || len(cfg["mcpServers"]) != 1 || cfg["mcpServers"]["db"] == nil {
+		t.Errorf("config.json = %s, want mcpServers holding db alone", data)
+	}
+
+	// The scanner reads the provider-grouped layout as one MCP item.
+	cat, err := catalog.Scan(globalDir, t.TempDir())
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	found := false
+	for _, it := range cat.Items {
+		if it.Type == catalog.MCP && it.Name == "db" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the scanned Library holds no db MCP item")
+	}
+}
+
+func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
+	items, projectRoot, _ := discoverHooks(t)
+	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot)
+	hookPath := filepath.Join(items[0].Dest, "hook.json")
+	writeFile(t, hookPath, `{"edited": true}`)
+
+	again, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", filepath.Dir(filepath.Dir(filepath.Dir(items[0].Dest))), catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if again[0].Status != StatusInLibrary || again[0].Dest != items[0].Dest {
+		t.Fatalf("re-discovery: status %v dest %s, want in library at %s", again[0].Status, again[0].Dest, items[0].Dest)
+	}
+
+	r := AddFromSettings(again[:1], AddOptions{Provider: "claude-code"}, projectRoot)[0]
+	if r.Status != AddStatusUpToDate {
+		t.Errorf("status = %v, want up to date", r.Status)
+	}
+	if data, _ := os.ReadFile(hookPath); string(data) != `{"edited": true}` {
+		t.Errorf("hook.json changed without force: %s", data)
+	}
+
+	r = AddFromSettings(again[:1], AddOptions{Provider: "claude-code", Force: true}, projectRoot)[0]
+	if r.Status != AddStatusUpdated {
+		t.Errorf("forced status = %v, want updated", r.Status)
+	}
+	if data, _ := os.ReadFile(hookPath); !strings.Contains(string(data), "check.sh") {
+		t.Errorf("forced hook.json = %s, want the settings handler", data)
+	}
+}
+
+func TestAddFromSettings_DryRunWritesNothing(t *testing.T) {
+	items, projectRoot, _ := discoverHooks(t)
+	results := AddFromSettings(items, AddOptions{Provider: "claude-code", DryRun: true}, projectRoot)
+	for i, r := range results {
+		if r.Status != AddStatusAdded {
+			t.Errorf("%s: status %v, want added", r.Name, r.Status)
+		}
+		if _, err := os.Stat(items[i].Dest); !os.IsNotExist(err) {
+			t.Errorf("%s: dry run created %s", r.Name, items[i].Dest)
+		}
+	}
+}
+
+func TestAddFromSettings_RegistryAndDisplayName(t *testing.T) {
+	items, projectRoot, _ := discoverHooks(t)
+	item := items[0]
+	item.DisplayName = "Bash guard"
+	r := AddFromSettings([]SettingsItem{item}, AddOptions{
+		Provider:         "claude-code",
+		SourceRegistry:   "team-reg",
+		SourceVisibility: "private",
+		SourceSHA:        "abc123",
+	}, projectRoot)[0]
+	if r.Status != AddStatusAdded {
+		t.Fatalf("status %v err %v, want added", r.Status, r.Error)
+	}
+	meta, err := metadata.Load(item.Dest)
+	if err != nil || meta == nil {
+		t.Fatalf("load metadata: %v", err)
+	}
+	if meta.Name != "Bash guard" {
+		t.Errorf("Name = %q, want the display name", meta.Name)
+	}
+	if meta.SourceType != "registry" || meta.SourceRegistry != "team-reg" || meta.SourceSHA != "abc123" || meta.SourceVisibility != "private" {
+		t.Errorf("registry fields = %q %q %q %q", meta.SourceType, meta.SourceRegistry, meta.SourceSHA, meta.SourceVisibility)
+	}
+}
+
+func TestAddFromSettings_UnwritableDestIsAnError(t *testing.T) {
+	items, projectRoot, globalDir := discoverHooks(t)
+	// A file where the provider directory should be blocks MkdirAll.
+	writeFile(t, filepath.Join(globalDir, "hooks", "claude-code"), "not a dir")
+	r := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot)[0]
+	if r.Status != AddStatusError || r.Error == nil {
+		t.Errorf("status %v err %v, want an error", r.Status, r.Error)
+	}
+}
+
+// A hook added beside one from another scope is named after its own
+// directory, so the two read apart in the Library.
+func TestAddFromSettings_CrossScopeHookNamedForItsDir(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
+	saveScoped(t, filepath.Join(globalDir, "hooks", "claude-code", "guard"), "global")
+
+	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	guard := items[1]
+	if filepath.Base(guard.Dest) != "guard-2" {
+		t.Fatalf("Dest = %s, want guard-2 beside the global guard", guard.Dest)
+	}
+	AddFromSettings([]SettingsItem{guard}, AddOptions{Provider: "claude-code"}, projectRoot)
+	meta, err := metadata.Load(guard.Dest)
+	if err != nil || meta == nil {
+		t.Fatalf("load metadata: %v", err)
+	}
+	if meta.Name != "guard-2" {
+		t.Errorf("Name = %q, want guard-2", meta.Name)
+	}
+}
