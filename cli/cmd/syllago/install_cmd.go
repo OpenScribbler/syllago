@@ -436,7 +436,11 @@ func installToProvider(
 					if item.Meta != nil {
 						srcProv = item.Meta.SourceProvider
 					}
-					if canonical, cErr := conv.Canonicalize(raw, srcProv); cErr == nil {
+					if item.Type == catalog.Hooks {
+						if rendered, hErr := converter.ConvertHooks(raw, srcProv, prov.Slug); hErr == nil {
+							warnings = rendered.Warnings
+						}
+					} else if canonical, cErr := conv.Canonicalize(raw, srcProv); cErr == nil {
 						if rendered, rErr := conv.Render(canonical.Content, prov); rErr == nil {
 							warnings = rendered.Warnings
 						}

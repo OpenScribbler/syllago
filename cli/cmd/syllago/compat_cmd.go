@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -80,12 +81,14 @@ func runCompat(cmd *cobra.Command, args []string) error {
 	}
 
 	// Pre-read and canonicalize content once (if a converter exists).
+	var raw []byte
 	var canonical *converter.Result
 	if conv != nil {
 		contentFile := converter.ResolveContentFile(*item)
 		if contentFile != "" {
-			raw, readErr := os.ReadFile(contentFile)
-			if readErr == nil {
+			var readErr error
+			raw, readErr = os.ReadFile(contentFile)
+			if readErr == nil && item.Type != catalog.Hooks {
 				canonical, _ = conv.Canonicalize(raw, srcProvider)
 			}
 		}
@@ -109,15 +112,26 @@ func runCompat(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// No converter registered for this type — supported but no conversion needed.
-		if conv == nil || canonical == nil {
+		// Hooks are encoded by the provider's hook adapter, as install
+		// encodes them.
+		var rendered *converter.Result
+		var renderErr error
+		switch {
+		case item.Type == catalog.Hooks && raw != nil:
+			rendered, renderErr = convertHooks(raw, srcProvider, prov)
+			var se output.StructuredError
+			if errors.As(renderErr, &se) {
+				renderErr = errors.New(se.Message)
+			}
+		case conv == nil || canonical == nil:
+			// No converter registered for this type — supported but no conversion needed.
 			entry.Supported = true
 			result.Entries = append(result.Entries, entry)
 			continue
+		default:
+			// Attempt render to this provider's format.
+			rendered, renderErr = conv.Render(canonical.Content, prov)
 		}
-
-		// Attempt render to this provider's format.
-		rendered, renderErr := conv.Render(canonical.Content, prov)
 		if renderErr != nil {
 			entry.Supported = false
 			entry.Warnings = []string{renderErr.Error()}
@@ -127,7 +141,10 @@ func runCompat(cmd *cobra.Command, args []string) error {
 
 		if rendered.Content == nil {
 			entry.Supported = false
-			entry.Warnings = []string{"conversion produced no output"}
+			entry.Warnings = rendered.Warnings
+			if len(entry.Warnings) == 0 {
+				entry.Warnings = []string{"conversion produced no output"}
+			}
 			result.Entries = append(result.Entries, entry)
 			continue
 		}

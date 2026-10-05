@@ -25,6 +25,13 @@ func ConvertHooks(raw []byte, fromSlug, toSlug string) (*Result, error) {
 	if adapter == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNoHookEncoder, toSlug)
 	}
+	// Install reads an event name it does not know as the target's own, so
+	// a conversion does the same.
+	for i, h := range hooks.Hooks {
+		if _, ok := HookEvents[h.Event]; !ok {
+			hooks.Hooks[i].Event = ReverseTranslateHookEvent(h.Event, toSlug)
+		}
+	}
 	enc, err := adapter.Encode(hooks)
 	if err != nil {
 		return nil, err

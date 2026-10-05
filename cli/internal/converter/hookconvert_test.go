@@ -91,3 +91,17 @@ func TestDecodeHooks_ManifestWithProviderEvent(t *testing.T) {
 		t.Errorf("event = %q, want after_tool_execute", h.Hooks[0].Event)
 	}
 }
+
+// Regression: install reads a manifest event it does not know as the
+// target's own name, and conversion did not, so install warned that a hook
+// it wrote had been skipped.
+func TestConvertHooks_ReadsUnknownEventAsTheTargets(t *testing.T) {
+	raw := []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hi"}}]}`)
+	res, err := ConvertHooks(raw, "", "claude-code")
+	if err != nil {
+		t.Fatalf("ConvertHooks: %v", err)
+	}
+	if res.Content == nil || len(res.Warnings) != 0 {
+		t.Errorf("content nil = %v, warnings = %q; want the hook kept with no warning", res.Content == nil, res.Warnings)
+	}
+}
