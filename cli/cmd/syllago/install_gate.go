@@ -29,7 +29,7 @@ func gateLibraryItems(errW io.Writer, items []catalog.ContentItem, cfg *config.C
 	cacheDir, _ := config.GlobalDirPath()
 	in := moat.BuildGateInputs(cfg, cacheDir)
 	lf, err := moat.LoadLockfile(moat.LockfilePath(projectRoot))
-	if err != nil && slices.ContainsFunc(items, hasRegistryLineage) {
+	if err != nil && slices.ContainsFunc(items, installer.HasRegistryLineage) {
 		return nil, nil, false, err
 	}
 	session := moat.NewSession()
@@ -96,10 +96,4 @@ func gateLibraryItem(errW io.Writer, item catalog.ContentItem, in *moat.GateInpu
 			return false, moatinstall.GateError(check.Entry, check.GateBlock)
 		}
 	}
-}
-
-// hasRegistryLineage reports whether item came from a registry, as a registry
-// item or a Library copy of one.
-func hasRegistryLineage(item catalog.ContentItem) bool {
-	return item.Registry != "" || item.Meta != nil && item.Meta.SourceRegistry != ""
 }

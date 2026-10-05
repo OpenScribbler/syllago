@@ -17,6 +17,7 @@ package tui
 //     handleConfirmResult coherent across rescan.
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -253,6 +254,23 @@ func TestInstallGate_LibraryCopyOfRevokedVersionRefused(t *testing.T) {
 				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
 			}
 		})
+	}
+}
+
+// While the lockfile cannot be read, a Library copy of registry content is
+// refused, since the revocations it archives cannot be checked.
+func TestInstallGate_UnreadableLockfileRefusesLibraryCopy(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{})
+	app.moatLockfile = nil
+	app.moatLockfileErr = errors.New("unexpected end of JSON input")
+	m, cmd := app.Update(gateInstallMsg(libraryCopyOf(item, testContentHash)))
+	a := m.(App)
+
+	if cmd != nil || a.pendingInstall != nil {
+		t.Error("a copy was dispatched or stashed with the lockfile unreadable")
+	}
+	if !strings.Contains(currentToastText(a), "lockfile could not be read") {
+		t.Errorf("expected a lockfile refusal toast; got %q", currentToastText(a))
 	}
 }
 

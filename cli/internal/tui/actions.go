@@ -925,7 +925,9 @@ func (a App) handleInstall() (tea.Model, tea.Cmd) {
 //   - TierBelowPolicy: error toast, no modal — tier cannot be upgraded
 //     interactively; only the publisher can.
 //
-// Items with no MOAT registry bypass the gate entirely.
+// Items with no MOAT registry bypass the gate entirely. While the lockfile
+// cannot be read, any item from a registry is refused, since the
+// revocations the lockfile archives cannot be checked.
 func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 	// Close wizard immediately — the install happens async.
 	a.installWizard = nil
@@ -937,6 +939,9 @@ func (a App) handleInstallResult(msg installResultMsg) (tea.Model, tea.Cmd) {
 		return a.startRegistryInstall(a.registryInstallFor(msg))
 	}
 
+	if a.moatLockfileErr != nil && installer.HasRegistryLineage(msg.item) {
+		return a, a.toast.Push(lockfileUnreadableMessage(msg.item.Name, a.moatLockfileErr), toastError)
+	}
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
 		// No live gate (no moatGate configured or item has no MOAT lineage).
@@ -1110,6 +1115,9 @@ func (a App) handleInstallAllResult(msg installAllResultMsg) (tea.Model, tea.Cmd
 		return a.startRegistryInstall(a.registryInstallAllFor(msg))
 	}
 
+	if a.moatLockfileErr != nil && installer.HasRegistryLineage(msg.item) {
+		return a, a.toast.Push(lockfileUnreadableMessage(msg.item.Name, a.moatLockfileErr), toastError)
+	}
 	eval, ok := evaluateInstallGate(&a, msg.item)
 	if !ok {
 		// No live gate — fall back to ContentItem fields set at scan time.

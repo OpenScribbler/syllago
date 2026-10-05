@@ -23,14 +23,14 @@ type ItemGate struct {
 // registry has published a newer one.
 //
 // The registry's attestations vouch only for the hash it lists. A copy
-// staged at another hash, or one the registry no longer lists, is checked
-// for revocations and for the listing's privacy declaration, and skips
-// the tier floor, since no attestation of its own hash is at hand. A copy
-// whose registry has no cached manifest is still refused when the
-// lockfile has archived a revocation of its hash.
+// staged at another hash, or one the registry no longer lists, carries no
+// attestation, so a tier floor above unsigned refuses it; it is checked
+// for revocations and for the listing's privacy declaration as well. A
+// copy whose registry has no cached manifest is still checked when the
+// lockfile or any cached registry revokes its hash.
 //
-// ok is false for an item no MOAT registry or lockfile accounts for,
-// which installs ungated.
+// ok is false for an item no MOAT registry, lockfile or revocation
+// accounts for, which installs ungated.
 func CheckItem(item catalog.ContentItem, in *moat.GateInputs, lf *moat.Lockfile, session *moat.Session, minTier moat.TrustTier) (ItemGate, bool) {
 	regName, hash := item.Registry, ""
 	if regName == "" && item.Meta != nil {
@@ -55,8 +55,11 @@ func CheckItem(item catalog.ContentItem, in *moat.GateInputs, lf *moat.Lockfile,
 		entry = *listed
 	case ok:
 		entry = moat.ContentEntry{Name: listed.Name, Type: listed.Type, ContentHash: hash, PrivateRepo: listed.PrivateRepo}
-		minTier = moat.TrustTierUnsigned
-	case hash != "" && (in.HasRegistry(regName) || lf != nil && lf.IsRevoked(hash)):
+	case hash != "" && in.HasRegistry(regName):
+		entry = moat.ContentEntry{Name: item.Name, ContentHash: hash}
+	case hash != "" && (lf != nil && lf.IsRevoked(hash) || in != nil && len(in.RevSet.Lookup(hash)) > 0):
+		// Only the revocation is known; the copy's registry may not be a
+		// MOAT registry at all, so no tier floor applies.
 		entry = moat.ContentEntry{Name: item.Name, ContentHash: hash}
 		minTier = moat.TrustTierUnsigned
 	default:
@@ -69,4 +72,10 @@ func CheckItem(item catalog.ContentItem, in *moat.GateInputs, lf *moat.Lockfile,
 	}
 	gate := PreInstallCheck(&entry, registryURL, lf, revSet, session, minTier)
 	return ItemGate{GateBlock: gate, Entry: &entry, RegistryURL: registryURL}, true
+}
+
+// HasRegistryLineage reports whether item came from a registry, as a
+// registry item or a Library copy of one.
+func HasRegistryLineage(item catalog.ContentItem) bool {
+	return item.Registry != "" || item.Meta != nil && item.Meta.SourceRegistry != ""
 }

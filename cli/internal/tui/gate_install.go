@@ -92,6 +92,13 @@ func tierBelowPolicyMessage(name string, observed, min moat.TrustTier) string {
 	)
 }
 
+// lockfileUnreadableMessage renders the toast that refuses an install of
+// registry content while the lockfile, whose archived revocations the
+// gate checks, cannot be read. The CLI refuses the same install.
+func lockfileUnreadableMessage(name string, err error) string {
+	return fmt.Sprintf("Refused %q: the MOAT lockfile could not be read (%v)", name, err)
+}
+
 // hardBlockMessage renders a user-facing toast string for the
 // MOATGateHardBlock branch. Registry-source revocations are permanent — a
 // modal would be deceptive since confirm cannot override

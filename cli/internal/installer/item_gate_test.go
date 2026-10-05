@@ -92,9 +92,24 @@ func TestCheckItem(t *testing.T) {
 			wantHash: oldHash,
 		},
 		{
-			name:     "unlisted copy is checked for revocations only",
+			name:     "unlisted copy has no attestation to meet the policy floor",
 			item:     libraryCopy("delisted", oldHash),
-			minTier:  moat.TrustTierDualAttested,
+			minTier:  moat.TrustTierSigned,
+			wantOK:   true,
+			wantGate: MOATGateTierBelowPolicy,
+			wantHash: oldHash,
+		},
+		{
+			name:     "older copy has no attestation to meet the policy floor",
+			item:     libraryCopy("listed", oldHash),
+			minTier:  moat.TrustTierSigned,
+			wantOK:   true,
+			wantGate: MOATGateTierBelowPolicy,
+			wantHash: oldHash,
+		},
+		{
+			name:     "unlisted copy proceeds at an unsigned floor",
+			item:     libraryCopy("delisted", oldHash),
 			wantOK:   true,
 			wantGate: MOATGateProceed,
 			wantHash: oldHash,
@@ -232,6 +247,34 @@ func TestCheckItem_LockfileRevocationWithoutManifest(t *testing.T) {
 
 	if _, ok := CheckItem(item, nil, moat.NewLockfile(), moat.NewSession(), moat.TrustTierUnsigned); ok {
 		t.Error("an unrevoked copy without a cached manifest was gated; want it to bypass")
+	}
+}
+
+// A copy whose registry has no cached manifest is refused when another
+// cached registry revokes its hash.
+func TestCheckItem_RevocationFromAnotherRegistry(t *testing.T) {
+	hash := "sha256:" + strings.Repeat("a", 64)
+	in := &moat.GateInputs{
+		RevSet:       moat.NewRevocationSet(),
+		Manifests:    map[string]*moat.Manifest{},
+		ManifestURIs: map[string]string{},
+	}
+	in.RevSet.AddFromManifest(&moat.Manifest{Revocations: []moat.Revocation{{
+		ContentHash: hash,
+		Reason:      "malicious",
+		DetailsURL:  "https://other.example.com/recall",
+		Source:      moat.RevocationSourceRegistry,
+	}}}, "https://other.example.com/manifest.json")
+	item := catalog.ContentItem{
+		Name:    "copy",
+		Type:    catalog.Skills,
+		Library: true,
+		Meta:    &metadata.Meta{SourceRegistry: "uncached-reg", SourceHash: hash},
+	}
+
+	got, ok := CheckItem(item, in, moat.NewLockfile(), moat.NewSession(), moat.TrustTierSigned)
+	if !ok || got.Decision != MOATGateHardBlock {
+		t.Errorf("ok = %v, decision = %v; want a hard block", ok, got.Decision)
 	}
 }
 
