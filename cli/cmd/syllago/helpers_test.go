@@ -72,3 +72,20 @@ func TestFindProjectRootFallbackWarning(t *testing.T) {
 		})
 	}
 }
+
+// Stdin redirected from /dev/null is a character device but not a
+// terminal, so a command run that way must not wait on a prompt.
+func TestIsInteractive_DevNullIsNotATerminal(t *testing.T) {
+	devNull, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatalf("open %s: %v", os.DevNull, err)
+	}
+	defer devNull.Close()
+	orig := os.Stdin
+	os.Stdin = devNull
+	defer func() { os.Stdin = orig }()
+
+	if isInteractiveImpl() {
+		t.Errorf("isInteractive() = true with stdin from %s", os.DevNull)
+	}
+}

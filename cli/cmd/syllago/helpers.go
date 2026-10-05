@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"golang.org/x/term"
 )
 
 // findProjectRoot walks up from cwd looking for common project markers.
@@ -69,15 +70,12 @@ func findProjectRootFrom(start, stopAt string) (string, error) {
 
 // isInteractive reports whether stdin is connected to a terminal.
 // Returns false when stdin is piped or redirected (e.g. CI, scripts),
-// which lets commands auto-accept prompts instead of hanging.
+// which lets commands auto-accept prompts instead of hanging. A character
+// device is not enough: /dev/null is one, and a prompt reading it gets EOF.
 var isInteractive = isInteractiveImpl
 
 func isInteractiveImpl() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
+	return term.IsTerminal(int(os.Stdin.Fd()))
 }
 
 // findProviderBySlug returns a pointer to the matching provider, or nil.
