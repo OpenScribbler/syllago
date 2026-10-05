@@ -1,6 +1,9 @@
 package converter
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestSplitSettingsHooks_ClaudeCode(t *testing.T) {
 	input := `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo check","statusMessage":"Checking..."}]}],"PostToolUse":[{"matcher":"Write|Edit","hooks":[{"type":"command","command":"echo lint"}]}]}}`
@@ -37,6 +40,29 @@ func TestSplitSettingsHooks_GeminiCLI(t *testing.T) {
 	}
 	if items[0].Matcher != "shell" {
 		t.Errorf("expected matcher shell, got %q", items[0].Matcher)
+	}
+}
+
+func TestSplitSettingsHooks_TimeoutsReadInTheProvidersUnit(t *testing.T) {
+	tests := []struct {
+		slug    string
+		timeout int
+		want    int
+	}{
+		{"claude-code", 30000, 30},
+		{"devin", 30, 30}, // Devin writes seconds, so 30 must not become 0
+	}
+	for _, tt := range tests {
+		t.Run(tt.slug, func(t *testing.T) {
+			input := fmt.Sprintf(`{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi","timeout":%d}]}]}}`, tt.timeout)
+			items, err := SplitSettingsHooks([]byte(input), tt.slug)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(items) != 1 || items[0].Hooks[0].Timeout != tt.want {
+				t.Fatalf("got %+v, want one hook with timeout %d", items, tt.want)
+			}
+		})
 	}
 }
 

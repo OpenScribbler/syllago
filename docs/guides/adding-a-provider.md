@@ -123,11 +123,11 @@ If the provider uses different tool names, add mappings to `cli/internal/convert
 
 ## Step 4: Hook Capabilities (if applicable)
 
-If the provider supports hooks, add entries to:
-- `HookCapabilities` in `cli/internal/converter/compat.go`
-- `HookOutputCapabilities` in the same file
-- `HookProviders()` function
-- `hookConfigHints` and `hookScopingNotes` in `cli/internal/converter/skills.go`
+If the provider supports hooks:
+- Add its event and tool names to `HookEvents` and `ToolNames` in `cli/internal/converter/toolmap.go`. The adapter's supported events come from `HookEvents`.
+- Write an adapter in `cli/internal/converter/adapter_<slug>.go` and register it with `RegisterAdapter` in an `init()`. Registering it adds the provider to `HookProviders()`.
+- Add an entry to `providerHookCapabilities` in `cli/internal/converter/capabilities.go` that describes what the adapter writes: matchers, async, timeout unit, output fields, and LLM or HTTP hooks. Compatibility reports read this entry, so test each claim against the encoder.
+- Add `hookConfigHints` and `hookScopingNotes` entries in `cli/internal/converter/skills.go`.
 
 ---
 

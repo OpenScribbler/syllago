@@ -179,5 +179,5 @@ func (a *KiroAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *KiroAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

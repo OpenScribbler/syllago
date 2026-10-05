@@ -157,5 +157,5 @@ func (a *FactoryDroidAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *FactoryDroidAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

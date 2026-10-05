@@ -1,24 +1,19 @@
 package converter
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
-func TestHookCapabilities_AllProvidersPresent(t *testing.T) {
+func TestHookProviders_ListsEveryAdapter(t *testing.T) {
 	t.Parallel()
-	for _, slug := range HookProviders() {
-		if _, ok := HookCapabilities[slug]; !ok {
-			t.Errorf("HookCapabilities missing provider %q", slug)
-		}
+	got := HookProviders()
+	if len(got) != len(adapterRegistry) {
+		t.Fatalf("HookProviders() = %v, want all %d adapters", got, len(adapterRegistry))
 	}
-}
-
-func TestHookCapabilities_AllFeaturesPresent(t *testing.T) {
-	t.Parallel()
-	allFeatures := []HookFeature{FeatureMatcher, FeatureAsync, FeatureStatusMessage, FeatureLLMHook, FeatureTimeout}
-	for slug, cap := range HookCapabilities {
-		for _, f := range allFeatures {
-			if _, ok := cap.Features[f]; !ok {
-				t.Errorf("provider %q missing feature %d", slug, f)
-			}
+	for _, slug := range []string{"cursor", "devin", "factory-droid", "pi"} {
+		if !slices.Contains(got, slug) {
+			t.Errorf("HookProviders() is missing %s", slug)
 		}
 	}
 }
@@ -200,31 +195,26 @@ func TestAnalyzeHookCompat_UnknownProvider(t *testing.T) {
 	}
 }
 
-func TestHookOutputCapabilities_VSCodeCopilot(t *testing.T) {
+func TestOutputFields_VSCodeCopilot(t *testing.T) {
 	t.Parallel()
-	caps, ok := HookOutputCapabilities["vs-code-copilot"]
-	if !ok {
-		t.Fatal("expected vs-code-copilot in HookOutputCapabilities")
-	}
+	got := AdapterFor("vs-code-copilot").Capabilities().OutputFields
 	for _, field := range AllOutputFields {
-		if !caps[field] {
+		if !slices.Contains(got, field) {
 			t.Errorf("expected vs-code-copilot to support output field %q", field)
 		}
 	}
 }
 
-func TestHookCapabilities_VSCodeCopilot(t *testing.T) {
+// The VS Code adapter writes only command hooks, so compat must not promise
+// a prompt hook will work there.
+func TestAnalyzeHookCompat_LLMHook_NoneForVSCodeCopilot(t *testing.T) {
 	t.Parallel()
-	cap, ok := HookCapabilities["vs-code-copilot"]
-	if !ok {
-		t.Fatal("expected vs-code-copilot in HookCapabilities")
+	hook := HookData{
+		Event: "before_tool_execute",
+		Hooks: []HookEntry{{Type: "prompt", Command: "Is this safe?"}},
 	}
-	// VS Code Copilot should support all features like Claude Code
-	for _, feat := range []HookFeature{FeatureMatcher, FeatureAsync, FeatureStatusMessage, FeatureLLMHook, FeatureTimeout} {
-		fs := cap.Features[feat]
-		if !fs.Supported {
-			t.Errorf("expected vs-code-copilot to support feature %d", feat)
-		}
+	if r := AnalyzeHookCompat(hook, "vs-code-copilot"); r.Level != CompatNone {
+		t.Errorf("expected None, got %v (%s)", r.Level, r.Notes)
 	}
 }
 
@@ -238,5 +228,33 @@ func TestAnalyzeHookCompat_VSCodeCopilotFull(t *testing.T) {
 	r := AnalyzeHookCompat(hook, "vs-code-copilot")
 	if r.Level != CompatFull {
 		t.Errorf("expected Full compat for vs-code-copilot, got %v", r.Level)
+	}
+}
+
+// Pi compares tool names exactly: a wildcard and an alternation encode, and
+// any other regular expression leaves the hook matching every tool.
+func TestAnalyzeHookCompat_PiMatcherShapes(t *testing.T) {
+	cases := []struct {
+		matcher string
+		want    CompatLevel
+	}{
+		{"shell", CompatFull},
+		{"*", CompatFull},
+		{"shell|file_read", CompatFull},
+		{"file_.*", CompatBroken},
+		{"file_.*|.*", CompatFull},
+		{".*|file_.*", CompatFull},
+	}
+	for _, tc := range cases {
+		t.Run(tc.matcher, func(t *testing.T) {
+			hook := HookData{
+				Event:   "before_tool_execute",
+				Matcher: tc.matcher,
+				Hooks:   []HookEntry{{Type: "command", Command: "./check.sh"}},
+			}
+			if r := AnalyzeHookCompat(hook, "pi"); r.Level != tc.want {
+				t.Errorf("level = %v, want %v (%+v)", r.Level, tc.want, r.Features)
+			}
+		})
 	}
 }

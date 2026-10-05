@@ -112,8 +112,8 @@ func TestRenderPiExtension_NonBlockingNoThrow(t *testing.T) {
 func TestRenderPiExtension_ToolMatcherGuardOnlyForToolEvents(t *testing.T) {
 	data := piExtensionTemplateData{
 		Hooks: []piHookTemplateData{
-			{PiEvent: "tool_call", Command: "echo tool", ToolMatcher: "bash", HasToolName: true},
-			{PiEvent: "session_start", Command: "echo init", ToolMatcher: "bash", HasToolName: false},
+			{PiEvent: "tool_call", Command: "echo tool", ToolMatcher: "bash", ToolNames: []string{"bash"}, HasToolName: true},
+			{PiEvent: "session_start", Command: "echo init", ToolMatcher: "bash", ToolNames: []string{"bash"}, HasToolName: false},
 		},
 	}
 

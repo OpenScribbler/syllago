@@ -40,32 +40,23 @@ func TranslateEventFromProvider(event, slug string) (string, []ConversionWarning
 
 // --- Timeout translation ---
 
-// TranslateTimeoutToProvider converts canonical seconds to the target provider's
-// native timeout unit. Most providers use milliseconds; Copilot uses seconds.
+// TranslateTimeoutToProvider converts canonical seconds to the target
+// provider's native timeout unit, read from its capabilities. A slug with no
+// adapter is treated as milliseconds, the most common unit.
 func TranslateTimeoutToProvider(seconds int, slug string) int {
-	if seconds == 0 {
-		return 0
+	if providerHookCapabilities[slug].TimeoutUnit == "seconds" {
+		return seconds
 	}
-	switch slug {
-	case "copilot-cli", "crush", "devin":
-		return seconds // Copilot, Crush, and Devin use seconds natively
-	default:
-		return seconds * 1000 // CC, Gemini, Cursor, Kiro all use milliseconds
-	}
+	return seconds * 1000
 }
 
-// TranslateTimeoutFromProvider converts a provider-native timeout value to canonical
-// seconds. Most providers use milliseconds; Copilot uses seconds.
+// TranslateTimeoutFromProvider converts a provider-native timeout value to
+// canonical seconds, the inverse of TranslateTimeoutToProvider.
 func TranslateTimeoutFromProvider(value int, slug string) int {
-	if value == 0 {
-		return 0
+	if providerHookCapabilities[slug].TimeoutUnit == "seconds" {
+		return value
 	}
-	switch slug {
-	case "copilot-cli", "crush", "devin":
-		return value // Copilot, Crush, and Devin already in seconds
-	default:
-		return value / 1000 // CC, Gemini, Cursor, Kiro use milliseconds
-	}
+	return value / 1000
 }
 
 // --- Matcher translation ---
@@ -194,6 +185,25 @@ func plainMatcherString(m json.RawMessage, slug string) (string, []ConversionWar
 		Capability:  "matcher",
 		Description: fmt.Sprintf("matcher shape not representable by %s; hook will match all tools", slug),
 	}}
+}
+
+// exactToolNames splits a string matcher into the tool names it accepts, for
+// a provider that compares names exactly. It returns nil names for a matcher
+// that accepts every tool, and ok false when a part is a regular expression
+// beyond a wildcard, which exact comparison cannot represent.
+func exactToolNames(matcher string) (names []string, ok bool) {
+	parts := strings.Split(matcher, "|")
+	for _, part := range parts {
+		if part == "*" || part == ".*" {
+			return nil, true
+		}
+	}
+	for _, part := range parts {
+		if strings.ContainsAny(part, `.*+?()[]{}^$\`) {
+			return nil, false
+		}
+	}
+	return parts, true
 }
 
 func hasMCPToolName(names []string, slug string) bool {

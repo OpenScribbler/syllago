@@ -223,5 +223,5 @@ func (a *CursorAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *CursorAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

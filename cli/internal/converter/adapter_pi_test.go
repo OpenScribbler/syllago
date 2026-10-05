@@ -71,7 +71,83 @@ func TestPiAdapterEncode_MatcherBecomesTool(t *testing.T) {
 	assertNotContains(t, out, "event.tool !==")
 }
 
-func TestPiAdapterEncode_SubagentStopMapsToAgentEnd(t *testing.T) {
+// Pi compares tool names exactly, so a wildcard must leave the hook unguarded
+// and an alternation must accept each name, or the hook never fires.
+func TestPiAdapterEncode_WildcardAndAlternationMatchers(t *testing.T) {
+	cases := []struct {
+		matcher   string
+		wantGuard string
+	}{
+		{"*", ""},
+		{".*", ""},
+		{"shell|file_read", `if (!["bash", "read"].includes(event.toolName)) return;`},
+		{"file_.*", ""},
+	}
+	adapter := AdapterFor("pi")
+	for _, tc := range cases {
+		t.Run(tc.matcher, func(t *testing.T) {
+			matcherJSON, _ := json.Marshal(tc.matcher)
+			hooks := &CanonicalHooks{Spec: SpecVersion, Hooks: []CanonicalHook{{
+				Event:   "before_tool_execute",
+				Matcher: matcherJSON,
+				Handler: HookHandler{Type: "command", Command: "echo check"},
+			}}}
+			encoded, err := adapter.Encode(hooks)
+			if err != nil {
+				t.Fatalf("Encode: %v", err)
+			}
+			out := string(encoded.Content)
+			regex := tc.matcher == "file_.*"
+			if warned := hasWarningContaining(encoded.Warnings, "match all tools"); warned != regex {
+				t.Errorf("match-all warning = %v, want %v: %v", warned, regex, encoded.Warnings)
+			}
+			if tc.wantGuard == "" {
+				assertNotContains(t, out, "event.toolName")
+			} else {
+				assertContains(t, out, tc.wantGuard)
+			}
+
+			decoded, err := adapter.Decode(encoded.Content)
+			if err != nil {
+				t.Fatalf("Decode: %v", err)
+			}
+			if got := string(decoded.Hooks[0].Matcher); got != string(matcherJSON) {
+				t.Errorf("round-trip matcher = %s, want %s", got, matcherJSON)
+			}
+		})
+	}
+}
+
+func TestPiAdapterDecode_HeuristicReadsMultiToolGuard(t *testing.T) {
+	adapter := AdapterFor("pi")
+	encoded, err := adapter.Encode(&CanonicalHooks{Spec: SpecVersion, Hooks: []CanonicalHook{{
+		Event:   "before_tool_execute",
+		Matcher: json.RawMessage(`"shell|file_read"`),
+		Handler: HookHandler{Type: "command", Command: "echo check"},
+	}}})
+	if err != nil {
+		t.Fatalf("Encode: %v", err)
+	}
+	// A comment ahead of the generated header sends decode down the
+	// heuristic path, as a hand-edited extension would.
+	edited := append([]byte("// Licensed under MIT.\n"), encoded.Content...)
+	parsed, err := parseByHeuristic(edited)
+	if err != nil {
+		t.Fatalf("parseByHeuristic: %v", err)
+	}
+	if len(parsed.Hooks) != 1 || parsed.Hooks[0].ToolMatcher != "bash|read" {
+		t.Fatalf("heuristic hooks = %+v, want one hook guarded on bash|read", parsed.Hooks)
+	}
+	decoded, err := adapter.Decode(edited)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if got := string(decoded.Hooks[0].Matcher); got != `"shell|file_read"` {
+		t.Errorf("decoded matcher = %s, want \"shell|file_read\"", got)
+	}
+}
+
+func TestPiAdapterEncode_SubagentStopIsSkipped(t *testing.T) {
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
 		Hooks: []CanonicalHook{
@@ -88,8 +164,10 @@ func TestPiAdapterEncode_SubagentStopMapsToAgentEnd(t *testing.T) {
 		t.Fatalf("Encode: %v", err)
 	}
 
-	out := string(encoded.Content)
-	assertContains(t, out, "agent_end")
+	assertNotContains(t, string(encoded.Content), "sub-stop")
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected a warning that pi cannot run subagent_stop")
+	}
 }
 
 func TestPiAdapterEncode_TimeoutInMs(t *testing.T) {
@@ -328,9 +406,6 @@ func TestPiAdapterCapabilities(t *testing.T) {
 	}
 	if !caps.SupportsMatchers {
 		t.Error("Pi should support matchers")
-	}
-	if caps.SupportsEnv {
-		t.Error("Pi should not support env")
 	}
 	if caps.SupportsLLMHooks {
 		t.Error("Pi should not support LLM hooks")

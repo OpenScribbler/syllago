@@ -24,6 +24,7 @@ func jsStringNoNewlines(s string) string {
 
 type piHookTemplateData struct {
 	Name, PiEvent, Command, ToolMatcher string
+	ToolNames                           []string
 	HasToolName                         bool
 	TimeoutMs                           int
 	Blocking                            bool
@@ -53,8 +54,10 @@ export default function (pi: ExtensionAPI) {
 // @syllago:timeout={{.TimeoutMs}}
 {{- end}}
   pi.on({{jsString .PiEvent}}, (event, ctx) => {
-{{- if and .ToolMatcher .HasToolName}}
-    if (event.toolName !== {{jsString .ToolMatcher}}) return;
+{{- if and .HasToolName (eq (len .ToolNames) 1)}}
+    if (event.toolName !== {{jsString (index .ToolNames 0)}}) return;
+{{- else if and .HasToolName .ToolNames}}
+    if (![{{range $i, $n := .ToolNames}}{{if $i}}, {{end}}{{jsString $n}}{{end}}].includes(event.toolName)) return;
 {{- end}}
 {{- if .Blocking}}
     try {

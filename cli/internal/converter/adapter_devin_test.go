@@ -249,7 +249,7 @@ func TestDevinAdapterCapabilities(t *testing.T) {
 	if caps.TimeoutUnit != "seconds" {
 		t.Errorf("timeout unit: got %q, want seconds", caps.TimeoutUnit)
 	}
-	if !caps.SupportsMatchers || !caps.SupportsBlocking || !caps.SupportsStructuredOutput {
+	if !caps.SupportsMatchers || !caps.SupportsBlocking || len(caps.OutputFields) == 0 {
 		t.Errorf("devin supports matchers, blocking, and structured output: got %+v", caps)
 	}
 	for _, ev := range []string{"before_tool_execute", "after_compact", "permission_request"} {

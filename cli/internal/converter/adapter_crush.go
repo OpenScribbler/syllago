@@ -149,5 +149,5 @@ func (a *CrushAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *CrushAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }
