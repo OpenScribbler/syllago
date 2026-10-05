@@ -3,12 +3,9 @@ package converter
 import (
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/tidwall/gjson"
 )
 
@@ -586,41 +583,6 @@ func TestCanonicalize_Crush(t *testing.T) {
 	// Crush timeouts are seconds — canonical unit, no /1000.
 	if h.Handler.Timeout != 5 {
 		t.Errorf("timeout: got %d, want 5", h.Handler.Timeout)
-	}
-}
-
-func TestLoadHookData_DirectoryFormat(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	hookJSON := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"go vet ./..."}]}`
-	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
-	item := catalog.ContentItem{Type: catalog.Hooks, Path: dir}
-
-	hd, err := LoadHookData(item)
-	if err != nil {
-		t.Fatalf("LoadHookData: %v", err)
-	}
-	if hd.Event != "PreToolUse" {
-		t.Errorf("event: %q", hd.Event)
-	}
-	if hd.Matcher != "Bash" {
-		t.Errorf("matcher: %q", hd.Matcher)
-	}
-}
-
-func TestLoadHookData_NestedFallback(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	hookJSON := `{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"echo lint"}]}]}}`
-	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
-	item := catalog.ContentItem{Type: catalog.Hooks, Path: dir}
-
-	hd, err := LoadHookData(item)
-	if err != nil {
-		t.Fatalf("LoadHookData nested: %v", err)
-	}
-	if hd.Event != "PostToolUse" {
-		t.Errorf("event: %q", hd.Event)
 	}
 }
 

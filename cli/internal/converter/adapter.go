@@ -157,8 +157,8 @@ const SpecVersion = "hooks/0.1"
 // --- Legacy bridge removed (Tier 2) ---
 // ToLegacyHooksConfig and FromLegacyHooksConfig were removed in Tier 2.
 // All 5 adapters now encode/decode directly with CanonicalHook structs.
-// The HookEntry/hooksConfig types remain for LoadHookData and the HooksConverter
-// file-level pipeline (used by the CLI convert command).
+// The HookEntry/hooksConfig types remain for the flat and nested hook.json
+// readers and the compatibility analyzer.
 
 // Verify re-decodes encoded output with the target adapter to check fidelity.
 // Returns nil if verification passes, or an error describing the mismatch.

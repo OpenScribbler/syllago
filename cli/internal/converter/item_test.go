@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -131,6 +132,72 @@ func TestCompatReport_TypeWithoutConversion(t *testing.T) {
 		holds := r.Provider.SupportsType != nil && r.Provider.SupportsType(catalog.Loadouts)
 		if r.Supported != holds {
 			t.Errorf("%s supported = %v, want %v", r.Provider.Slug, r.Supported, holds)
+		}
+	}
+}
+
+func compatRows(t *testing.T, item catalog.ContentItem) map[string]ProviderCompat {
+	t.Helper()
+	report, err := CompatReport(item)
+	if err != nil {
+		t.Fatalf("CompatReport: %v", err)
+	}
+	rows := map[string]ProviderCompat{}
+	for _, r := range report {
+		rows[r.Provider.Slug] = r
+	}
+	return rows
+}
+
+func TestCompatReport_LevelIsTheWorstHook(t *testing.T) {
+	// Copilot CLI ignores matchers, so only the second hook loses anything.
+	item := writeItem(t, catalog.Hooks, "hook.json", `{"spec":"hooks/0.1","hooks":[`+
+		`{"event":"session_start","handler":{"type":"command","command":"./a.sh"}},`+
+		`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"./b.sh"}}]}`)
+	rows := compatRows(t, item)
+
+	copilot := rows["copilot-cli"]
+	if copilot.Level != CompatBroken || !slices.Contains(copilot.Warnings, "hook fires on ALL tool calls") {
+		t.Errorf("copilot-cli = %+v, want broken because the second hook's matcher is ignored", copilot)
+	}
+	// Crush drops the session_start hook and writes the other one.
+	crush := rows["crush"]
+	if !crush.Supported || crush.Level != CompatBroken {
+		t.Errorf("crush = %+v, want supported and broken because one hook is dropped", crush)
+	}
+	if cc := rows["claude-code"]; cc.Level != CompatFull {
+		t.Errorf("claude-code = %+v, want full", cc)
+	}
+}
+
+func TestCompatReport_HookReadAsItsSourceProvider(t *testing.T) {
+	// A legacy hook.json copied from Claude Code settings names Claude
+	// Code's event and tool.
+	item := writeItem(t, catalog.Hooks, "hook.json",
+		`{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`)
+	item.Provider = "claude-code"
+	rows := compatRows(t, item)
+	if g := rows["gemini-cli"]; !g.Supported || g.Level >= CompatBroken {
+		t.Errorf("gemini-cli = %+v, want the hook read as before_tool_execute on shell", g)
+	}
+	if k := rows["kiro"]; !k.Supported || k.Level >= CompatBroken {
+		t.Errorf("kiro = %+v, want the hook read as before_tool_execute on shell", k)
+	}
+}
+
+func TestCompatReport_LevelFollowsSupport(t *testing.T) {
+	for _, item := range []catalog.ContentItem{
+		writeItem(t, catalog.Hooks, "hook.json", libraryHook),
+		writeItem(t, catalog.Rules, "rule.md", "Always write tests.\n"),
+		writeItem(t, catalog.Loadouts, "loadout.yaml", "name: x\n"),
+	} {
+		for slug, r := range compatRows(t, item) {
+			if (r.Level == CompatNone) == r.Supported {
+				t.Errorf("%s %s: supported = %v with level %s", item.Type, slug, r.Supported, r.Level.Label())
+			}
+			if r.Supported && r.Level == CompatFull && len(r.Warnings) > 0 {
+				t.Errorf("%s %s: full with warnings %v", item.Type, slug, r.Warnings)
+			}
 		}
 	}
 }

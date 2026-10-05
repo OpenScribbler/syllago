@@ -1,7 +1,7 @@
 {
   "version": "1",
-  "generatedAt": "2026-09-30T11:18:54Z",
-  "syllagoVersion": "0.14.0",
+  "generatedAt": "2026-10-05T17:26:26Z",
+  "syllagoVersion": "0.15.0",
   "commands": [
     {
       "name": "add",
@@ -1488,7 +1488,7 @@
           "type": "bool",
           "default": null,
           "required": false,
-          "description": "Show per-provider compatibility matrix (hooks only)"
+          "description": "Show per-provider compatibility matrix"
         },
         {
           "name": "--files",

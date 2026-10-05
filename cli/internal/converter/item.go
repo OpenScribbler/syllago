@@ -1,9 +1,11 @@
 package converter
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -88,7 +90,11 @@ func ConvertItem(item catalog.ContentItem, to provider.Provider, from string) (*
 type ProviderCompat struct {
 	Provider  provider.Provider
 	Supported bool
-	Warnings  []string
+	// Level is how much of the item survives: CompatNone exactly when
+	// Supported is false, and for hooks the worst level of any hook the
+	// item holds.
+	Level    CompatLevel
+	Warnings []string
 }
 
 // CompatReport converts an item to every known provider's format and
@@ -98,7 +104,7 @@ type ProviderCompat struct {
 func CompatReport(item catalog.ContentItem) ([]ProviderCompat, error) {
 	var report []ProviderCompat
 	for _, prov := range provider.AllProviders {
-		row := ProviderCompat{Provider: prov}
+		row := ProviderCompat{Provider: prov, Level: CompatNone}
 		if prov.SupportsType == nil || !prov.SupportsType(item.Type) {
 			row.Warnings = []string{item.Type.Label() + " not supported"}
 			report = append(report, row)
@@ -109,6 +115,7 @@ func CompatReport(item catalog.ContentItem) ([]ProviderCompat, error) {
 		case errors.Is(err, ErrNotConvertible):
 			// The type installs as is, so a provider that holds it takes it.
 			row.Supported = true
+			row.Level = CompatFull
 		case errors.Is(err, ErrNoHookEncoder):
 			row.Warnings = []string{"syllago cannot write hooks for " + prov.Name}
 		case errors.Is(err, ErrRender):
@@ -123,8 +130,67 @@ func CompatReport(item catalog.ContentItem) ([]ProviderCompat, error) {
 		default:
 			row.Supported = true
 			row.Warnings = c.Warnings
+			row.Level = CompatFull
+			if len(c.Warnings) > 0 {
+				row.Level = CompatDegraded
+			}
+			if item.Type == catalog.Hooks {
+				level, notes, err := hookCompat(c, prov.Slug)
+				if err != nil {
+					return nil, err
+				}
+				// Some of the item's hooks were written, so a hook the
+				// target cannot hold leaves the item broken rather than
+				// uninstallable.
+				row.Level = max(row.Level, min(level, CompatBroken))
+				for _, note := range notes {
+					if !slices.Contains(row.Warnings, note) {
+						row.Warnings = append(row.Warnings, note)
+					}
+				}
+			}
 		}
 		report = append(report, row)
 	}
 	return report, nil
+}
+
+// hookCompat is the lowest compatibility of any hook in a converted hook
+// item on the target provider, with the note for each hook that loses
+// something. The analyzer catches losses the encoder does not warn about,
+// such as a matcher the target ignores.
+func hookCompat(c *Conversion, slug string) (CompatLevel, []string, error) {
+	hooks, err := DecodeHooks(c.Source, c.From)
+	if err != nil {
+		return CompatNone, nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
+	}
+	worst := CompatFull
+	var notes []string
+	for _, h := range hooks.Hooks {
+		cr := AnalyzeHookCompat(hookDataFromCanonical(h), slug)
+		worst = max(worst, cr.Level)
+		if cr.Level > CompatFull && cr.Notes != "" && !slices.Contains(notes, cr.Notes) {
+			notes = append(notes, cr.Notes)
+		}
+	}
+	return worst, notes, nil
+}
+
+// hookDataFromCanonical carries the fields AnalyzeHookCompat reads. A
+// matcher that is not a plain string keeps its JSON text.
+func hookDataFromCanonical(h CanonicalHook) HookData {
+	var matcher string
+	if len(h.Matcher) > 0 && json.Unmarshal(h.Matcher, &matcher) != nil {
+		matcher = string(h.Matcher)
+	}
+	return HookData{
+		Event:   h.Event,
+		Matcher: matcher,
+		Hooks: []HookEntry{{
+			Type:          h.Handler.Type,
+			Timeout:       h.Handler.Timeout,
+			StatusMessage: h.Handler.StatusMessage,
+			Async:         h.Handler.Async,
+		}},
+	}
 }

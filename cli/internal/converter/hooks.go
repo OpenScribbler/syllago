@@ -3,11 +3,7 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-
-	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 )
 
 // HookEntry represents a single hook action in syllago canonical format.
@@ -113,53 +109,6 @@ func ParseNested(content []byte) ([]HookData, error) {
 		}
 	}
 	return items, nil
-}
-
-// LoadHookData reads and parses the hook.json from a hook content item.
-// If item.Path is a directory, resolves hook.json inside it.
-// Returns a HookData for flat format, or the first group for nested format.
-func LoadHookData(item catalog.ContentItem) (HookData, error) {
-	if item.Type != catalog.Hooks {
-		return HookData{}, fmt.Errorf("item is not a hook")
-	}
-	hookPath := item.Path
-	fi, err := os.Stat(hookPath)
-	if err != nil {
-		return HookData{}, err
-	}
-	if fi.IsDir() {
-		hookPath = filepath.Join(hookPath, "hook.json")
-	}
-	data, err := os.ReadFile(hookPath)
-	if err != nil {
-		return HookData{}, err
-	}
-	switch DetectHookFormat(data) {
-	case "manifest":
-		manifest, err := ParseManifest(data)
-		if err != nil {
-			return HookData{}, err
-		}
-		hds, err := HookDataFromManifest(manifest)
-		if err != nil {
-			return HookData{}, err
-		}
-		if len(hds) == 0 {
-			return HookData{}, fmt.Errorf("no hooks in manifest")
-		}
-		return hds[0], nil
-	case "flat":
-		return ParseFlat(data)
-	default:
-		items, err := ParseNested(data)
-		if err != nil {
-			return HookData{}, err
-		}
-		if len(items) == 0 {
-			return HookData{}, fmt.Errorf("no hook groups found in nested format")
-		}
-		return items[0], nil
-	}
 }
 
 // LLMHooksModeSkip drops LLM-evaluated hooks with a warning (default).

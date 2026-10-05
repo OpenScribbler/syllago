@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/output"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 // setupInspectRepo creates a temp syllago repo with a skill that has files and
@@ -400,8 +401,8 @@ func TestInspectCompat_NonHook(t *testing.T) {
 	}
 
 	out := stdout.String()
-	if !strings.Contains(out, "not applicable for Skills (hooks only)") {
-		t.Errorf("expected 'not applicable' message for non-hook, got:\n%s", out)
+	if !strings.Contains(out, "Compatibility:") || !strings.Contains(out, "claude-code") {
+		t.Errorf("expected a compatibility row per provider for a skill, got:\n%s", out)
 	}
 }
 
@@ -479,9 +480,33 @@ func TestInspectCompat_NonHook_JSON(t *testing.T) {
 		t.Fatalf("invalid JSON output: %v\nraw: %s", err, stdout.String())
 	}
 
-	// Non-hook items produce no compatibility array in JSON (omitempty).
-	if len(result.Compatibility) != 0 {
-		t.Errorf("expected no compatibility entries for non-hook in JSON, got %d", len(result.Compatibility))
+	if len(result.Compatibility) != len(provider.AllProviders) {
+		t.Errorf("got %d compatibility entries for a skill, want one per provider (%d)", len(result.Compatibility), len(provider.AllProviders))
+	}
+}
+
+// A hook copied from Claude Code settings names Claude Code's event, so
+// its compatibility is read in Claude Code's terms.
+func TestInspectCompat_HookInSourceProviderTerms(t *testing.T) {
+	root := setupInspectHookRepo(t)
+	withFakeRepoRoot(t, root)
+
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+	inspectCmd.Flags().Set("compatibility", "true")
+	defer inspectCmd.Flags().Set("compatibility", "false")
+
+	if err := inspectCmd.RunE(inspectCmd, []string{"hooks/claude-code/my-hook"}); err != nil {
+		t.Fatalf("inspect --compatibility --json failed: %v", err)
+	}
+	var result inspectResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("invalid JSON output: %v\nraw: %s", err, stdout.String())
+	}
+	for _, cr := range result.Compatibility {
+		if cr.Provider == "gemini-cli" && (cr.Level == "broken" || cr.Level == "none") {
+			t.Errorf("gemini-cli = %+v, want the PostToolUse hook read as after_tool_execute", cr)
+		}
 	}
 }
 
