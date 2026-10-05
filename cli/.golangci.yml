@@ -8,6 +8,7 @@ run:
 linters:
   default: none
   enable:
+    - depguard
     - errcheck
     - errorlint
     - gocyclo
@@ -21,6 +22,63 @@ linters:
     - unconvert
     - unused
   settings:
+    depguard:
+      # Import direction. Each list applies to every file its globs match,
+      # tests included, and denies by prefix unless the entry ends in $.
+      rules:
+        # Workflows compose the core packages and each other. Everything else
+        # under internal/ is core, so a new package starts out bound by this.
+        core-imports-no-workflow:
+          files:
+            - "**/internal/**/*.go"
+            - "!**/internal/add/**"
+            - "!**/internal/doctor/**"
+            - "!**/internal/librarymigrate/**"
+            - "!**/internal/lifecycle/**"
+            - "!**/internal/loadout/**"
+            - "!**/internal/moatinstall/**"
+            - "!**/internal/promote/**"
+            - "!**/internal/registryops/**"
+            - "!**/internal/rollback/**"
+            - "!**/internal/tui/**"
+          deny:
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/add$"
+              desc: add is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/doctor$"
+              desc: doctor is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/librarymigrate$"
+              desc: librarymigrate is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/lifecycle$"
+              desc: lifecycle is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/loadout$"
+              desc: loadout is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/moatinstall$"
+              desc: moatinstall is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/promote$"
+              desc: promote is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/registryops$"
+              desc: registryops is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/rollback$"
+              desc: rollback is a workflow; core packages must not depend on workflows
+        # Shared logic stays front-end-neutral, so the CLI, the TUI and a GUI
+        # can all call it. Only the TUI imports the TUI or a terminal UI library.
+        shared-imports-no-front-end:
+          files:
+            - "**/internal/**/*.go"
+            - "!**/internal/tui/**"
+          deny:
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui"
+              desc: shared packages must not depend on the TUI
+            - pkg: github.com/charmbracelet
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/lrstanley/bubblezone
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/muesli/termenv
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/spf13/cobra
+              desc: command wiring belongs in cmd/syllago
+            - pkg: github.com/spf13/pflag
+              desc: command wiring belongs in cmd/syllago
     errcheck:
       # CLI output, string builders, and scan helpers — errors are not actionable.
       exclude-functions:
