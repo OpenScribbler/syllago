@@ -952,7 +952,7 @@ func TestDiscoverSettingsFiles_ReadsOnlyTheFilesGiven(t *testing.T) {
 	writeFile(t, good, `{"mcpServers": {"db": {"command": "db-server"}}}`)
 	writeFile(t, broken, `{"mcpServers": `)
 
-	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, []string{good, broken}, globalDir, catalog.MCP)
+	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, t.TempDir(), []string{good, broken}, globalDir, catalog.MCP)
 	if err != nil {
 		t.Fatalf("DiscoverSettingsFiles: %v", err)
 	}
@@ -962,7 +962,22 @@ func TestDiscoverSettingsFiles_ReadsOnlyTheFilesGiven(t *testing.T) {
 	if len(unread) != 1 || !strings.Contains(unread[0].Error(), broken) {
 		t.Errorf("unread = %v, want the broken file", unread)
 	}
-	if _, _, err := DiscoverSettingsFiles(provider.ClaudeCode, []string{good}, globalDir, catalog.Rules); err == nil {
+	if _, _, err := DiscoverSettingsFiles(provider.ClaudeCode, t.TempDir(), []string{good}, globalDir, catalog.Rules); err == nil {
 		t.Error("rules: want an error, since rules are not kept in settings files")
+	}
+}
+
+// Regression: a folder's Zed settings, which allow comments, were reported
+// as invalid JSON and their servers dropped.
+func TestDiscoverSettingsFiles_ZedSettingsWithComments(t *testing.T) {
+	_, globalDir := settingsEnv(t)
+	path := filepath.Join(t.TempDir(), ".zed", "settings.json")
+	writeFile(t, path, "{\n  // servers\n  \"context_servers\": {\"db\": {\"command\": {\"path\": \"db-server\"}}}\n}")
+	items, unread, err := DiscoverSettingsFiles(provider.Zed, filepath.Dir(filepath.Dir(path)), []string{path}, globalDir, catalog.MCP)
+	if err != nil || len(unread) > 0 {
+		t.Fatalf("err %v unread %v", err, unread)
+	}
+	if len(items) != 1 || items[0].Name != "db" {
+		t.Errorf("items %v, want the db server", itemNames(items))
 	}
 }

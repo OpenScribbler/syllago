@@ -229,4 +229,59 @@ func TestDiscoverFromLocalPath_LayoutRuleInLibraryOnceAdded(t *testing.T) {
 	if rules := itemsOfType(items, catalog.Rules); len(rules) != 1 || rules[0].status != add.StatusInLibrary {
 		t.Errorf("rediscovered rule status = %v, want in library", rules[0].status)
 	}
+
+	// Regression: changed since, it still read as in the Library, so it
+	// left the list of items to add.
+	writeTUITestFile(t, filepath.Join(dir, ".cursor", "rules", "style.mdc"), []byte("---\ndescription: Style\n---\nUse spaces.\n"))
+	items, _, _, err = discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, library)
+	if err != nil {
+		t.Fatalf("third discovery: %v", err)
+	}
+	if rules := itemsOfType(items, catalog.Rules); len(rules) != 1 || rules[0].status != add.StatusOutdated {
+		t.Errorf("changed rule status = %v, want outdated", rules[0].status)
+	}
+}
+
+// Regression: a folder's hook copied any script its command named, so a
+// command reaching outside the folder copied the user's own file into the
+// Library.
+func TestAddSingleItem_LocalHookBringsOnlyItsFolderScripts(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeTUITestFile(t, filepath.Join(home, "secret.sh"), []byte("#!/bin/sh\necho secret\n"))
+	outside := t.TempDir()
+	writeTUITestFile(t, filepath.Join(outside, "far.sh"), []byte("#!/bin/sh\necho far\n"))
+	dir := t.TempDir()
+	writeTUITestFile(t, filepath.Join(dir, ".claude", "scripts", "lint.sh"), []byte("#!/bin/sh\nexit 0\n"))
+	if err := os.Symlink(filepath.Join(outside, "far.sh"), filepath.Join(dir, ".claude", "scripts", "link.sh")); err != nil {
+		t.Fatal(err)
+	}
+	writeTUITestFile(t, filepath.Join(dir, ".claude", "settings.json"), []byte(`{"hooks": {"PostToolUse": [
+		{"matcher": "Write", "hooks": [{"type": "command", "command": "./scripts/lint.sh"}]},
+		{"matcher": "Edit", "hooks": [{"type": "command", "command": "bash ~/secret.sh"}]},
+		{"matcher": "Read", "hooks": [{"type": "command", "command": "bash `+filepath.Join(outside, "far.sh")+`"}]},
+		{"matcher": "Glob", "hooks": [{"type": "command", "command": "./scripts/link.sh"}]}
+	]}}`))
+	library := t.TempDir()
+	items, _, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Hooks}, library)
+	if err != nil {
+		t.Fatalf("discoverFromLocalPath: %v", err)
+	}
+	hooks := itemsOfType(items, catalog.Hooks)
+	if len(hooks) != 4 {
+		t.Fatalf("hooks = %d, want four", len(hooks))
+	}
+	var copied []string
+	for _, h := range hooks {
+		if r := addSingleItem(h, library, dir, "", "", "", ""); r.status != "added" {
+			t.Fatalf("%s: status %q err %v", h.name, r.status, r.err)
+		}
+		files, _ := filepath.Glob(filepath.Join(h.settings.Dest, "*.sh"))
+		for _, f := range files {
+			copied = append(copied, filepath.Base(f))
+		}
+	}
+	if len(copied) != 1 || copied[0] != "lint.sh" {
+		t.Errorf("scripts copied = %v, want lint.sh alone", copied)
+	}
 }

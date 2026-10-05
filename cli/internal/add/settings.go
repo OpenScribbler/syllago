@@ -32,6 +32,9 @@ type SettingsItem struct {
 	ServerKey string
 	Server    json.RawMessage
 	Dest      string
+	// ScriptRoot, when set, is the folder a hook's scripts must lie in to
+	// be copied with it.
+	ScriptRoot string
 }
 
 // DiscoverSettings reads every settings file prov keeps hooks or MCP
@@ -70,10 +73,11 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 }
 
 // DiscoverSettingsFiles reads the hooks or MCP servers (ct picks which) in
-// the files at paths, which hold prov's settings for one project, and
-// places them as DiscoverSettings does. It reads those files alone, so a
-// folder imported from elsewhere never pulls in the user's own settings.
-func DiscoverSettingsFiles(prov provider.Provider, paths []string, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
+// the files at paths, which hold prov's settings for the folder root, and
+// places them as DiscoverSettings does. It reads those files alone, and a
+// hook brings only the scripts inside root, so a folder imported from
+// elsewhere never pulls in the user's own settings or files.
+func DiscoverSettingsFiles(prov provider.Provider, root string, paths []string, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
 	if ct != catalog.Hooks && ct != catalog.MCP {
 		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
 	}
@@ -82,6 +86,9 @@ func DiscoverSettingsFiles(prov provider.Provider, paths []string, globalDir str
 		files[i] = settingsFile{path: path, scope: installer.ScopeProject.String(), jsonKey: installer.MCPJSONKey(prov)}
 	}
 	items, unread = readSettings(prov, files, globalDir, ct)
+	for i := range items {
+		items[i].ScriptRoot = root
+	}
 	return items, unread, nil
 }
 
@@ -103,7 +110,7 @@ func readSettings(prov provider.Provider, files []settingsFile, globalDir string
 			}
 			continue
 		}
-		if ct == catalog.MCP && prov.Slug == "opencode" {
+		if ct == catalog.MCP && (prov.Slug == "opencode" || prov.Slug == "zed") {
 			data = converter.StripJSONCComments(data)
 		}
 		if !gjson.ValidBytes(data) {
@@ -335,7 +342,7 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		// copy that leaves the caller's item as discovered.
 		hook := *item.Hook
 		hook.Hooks = slices.Clone(hook.Hooks)
-		bundled, err := converter.BundleHookScripts(&hook, filepath.Dir(item.Path), item.Dest)
+		bundled, err := converter.BundleHookScriptsWithin(&hook, filepath.Dir(item.Path), item.Dest, item.ScriptRoot)
 		r.Bundled, r.BundleErr = len(bundled), err
 		for _, b := range bundled {
 			bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{OriginalPath: b.OriginalPath, Filename: b.Filename})

@@ -2187,21 +2187,11 @@ func nativeItemsToDiscovery(
 			for _, ni := range nativeItems {
 				fullPath := filepath.Join(baseDir, ni.Path)
 
-				status := add.StatusNew
-				key := string(ct) + "/" + ni.Name
-				if !ct.IsUniversal() {
-					key = string(ct) + "/" + pc.ProviderSlug + "/" + ni.Name
-				}
-				if _, exists := idx[key]; exists {
-					status = add.StatusInLibrary
-				}
-
 				di := add.DiscoveryItem{
-					Name:   ni.Name,
-					Type:   ct,
-					Path:   fullPath,
-					Status: status,
-					Scope:  pc.ProviderSlug,
+					Name:  ni.Name,
+					Type:  ct,
+					Path:  fullPath,
+					Scope: pc.ProviderSlug,
 				}
 
 				// Check if path is a directory or file
@@ -2218,6 +2208,8 @@ func nativeItemsToDiscovery(
 						di.Path = filepath.Join(fullPath, primary)
 					}
 				}
+				status := add.ItemStatusOf(di.Path, ct, pc.ProviderSlug, ni.Name, idx)
+				di.Status = status
 
 				item := addDiscoveryItem{
 					name:         ni.Name,

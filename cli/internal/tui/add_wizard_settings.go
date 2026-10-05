@@ -78,7 +78,7 @@ func discoverSettingsFromFolder(dir string, native catalog.NativeScanResult, con
 	covered = map[string]bool{}
 	seen := map[string]bool{}
 	for _, g := range groups {
-		settings, errs, err := add.DiscoverSettingsFiles(g.prov, g.paths, contentRoot, g.ct)
+		settings, errs, err := add.DiscoverSettingsFiles(g.prov, dir, g.paths, contentRoot, g.ct)
 		if err != nil {
 			errs = []error{err}
 		}
