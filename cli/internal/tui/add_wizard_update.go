@@ -980,6 +980,7 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			risks:             di.risks,      // pre-computed risks (hooks carry command/URL risks)
 			hookData:          di.hookData,   // needed for triage preview + drill-in
 			hookSourceDir:     di.hookSourceDir,
+			settings:          di.settings,
 			catalogItem:       di.catalogItem, // original item with correct Files list
 			splittable:        di.splittable,
 			splitSectionCount: di.splitSectionCount,
