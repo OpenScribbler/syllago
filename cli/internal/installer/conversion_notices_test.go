@@ -3,6 +3,7 @@ package installer
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -126,5 +127,47 @@ func TestInstall_ItemPlacedForItsOwnProviderLosesNothing(t *testing.T) {
 	}
 	if got := conversionWarnings(placement.Notices); len(got) != 0 {
 		t.Errorf("expected no conversion warnings, got %q", got)
+	}
+}
+
+// TestInstallMCP_ReportsWhatTheTargetLoses: an MCP server merged into a
+// provider's config keeps fields the provider does not read, so the
+// placement says which ones it ignores.
+func TestInstallMCP_ReportsWhatTheTargetLoses(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	overrideMCPConfigPaths(t, map[string]string{
+		"cursor":      filepath.Join(dir, "cursor-mcp.json"),
+		"claude-code": filepath.Join(dir, "claude.json"),
+	})
+	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","autoApprove":["list"]}}}`), 0644)
+	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Path: itemDir}
+
+	tests := []struct {
+		prov provider.Provider
+		want string // "" means no conversion warning
+	}{
+		{provider.Cursor, `gh: server "gh": autoApprove dropped (not documented by Cursor)`},
+		{provider.ClaudeCode, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.prov.Slug, func(t *testing.T) {
+			placement, err := installMCP(item, tt.prov, t.TempDir())
+			if err != nil {
+				t.Fatalf("installMCP: %v", err)
+			}
+			got := conversionWarnings(placement.Notices)
+			if tt.want == "" {
+				if len(got) != 0 {
+					t.Errorf("expected no conversion warnings, got %q", got)
+				}
+				return
+			}
+			if !slices.Contains(got, tt.want) {
+				t.Errorf("expected warning %q, got %q", tt.want, got)
+			}
+		})
 	}
 }

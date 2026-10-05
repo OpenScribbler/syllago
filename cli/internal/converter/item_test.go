@@ -201,3 +201,33 @@ func TestCompatReport_LevelFollowsSupport(t *testing.T) {
 		}
 	}
 }
+
+func TestCompatReport_SingleFileHook(t *testing.T) {
+	// A hook stored as one file in its provider's directory is its own
+	// content file.
+	path := filepath.Join(t.TempDir(), "guard.json")
+	hook := `{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"./check.sh"}]}]}}`
+	if err := os.WriteFile(path, []byte(hook), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "guard.json", Type: catalog.Hooks, Provider: "claude-code", Path: path}
+	rows := compatRows(t, item)
+	if cc := rows["claude-code"]; !cc.Supported || cc.Level != CompatFull {
+		t.Errorf("claude-code = %+v, want supported and full", cc)
+	}
+}
+
+func TestCompatReport_DroppedHTTPHookBreaksTheItem(t *testing.T) {
+	// Gemini CLI has no HTTP hooks, so it writes the command hook and drops
+	// the other.
+	item := writeItem(t, catalog.Hooks, "hook.json", `{"spec":"hooks/0.1","hooks":[`+
+		`{"event":"before_tool_execute","handler":{"type":"command","command":"./a.sh"}},`+
+		`{"event":"before_tool_execute","handler":{"type":"http","url":"https://example.com/hook"}}]}`)
+	rows := compatRows(t, item)
+	if gemini := rows["gemini-cli"]; !gemini.Supported || gemini.Level != CompatBroken || !slices.Contains(gemini.Warnings, "no HTTP hooks") {
+		t.Errorf("gemini-cli = %+v, want supported and broken because the HTTP hook is dropped", gemini)
+	}
+	if cc := rows["claude-code"]; cc.Level != CompatFull {
+		t.Errorf("claude-code = %+v, want full", cc)
+	}
+}

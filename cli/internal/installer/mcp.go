@@ -415,6 +415,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		Mechanism: MechanismMCPMerge,
 		Path:      cfgPath,
 		Keys:      keys,
+		Notices:   placedNotices(item, prov),
 		desc:      desc,
 	}, nil
 }
