@@ -173,3 +173,96 @@ func TestCheckItem_NilInputsBypass(t *testing.T) {
 		t.Fatal("CheckItem with nil inputs: ok = true, want false")
 	}
 }
+
+// A manifest may list a skill and a rule under one name; a copy is
+// checked against the entry of its own type.
+func TestCheckItem_MatchesEntryOfItsType(t *testing.T) {
+	const regName, regURL = "moat-reg", "https://registry.example.com/manifest.json"
+	skillHash := "sha256:" + strings.Repeat("a", 64)
+	ruleHash := "sha256:" + strings.Repeat("b", 64)
+	manifest := &moat.Manifest{ManifestURI: regURL, Content: []moat.ContentEntry{
+		{Name: "shared", Type: "skill", ContentHash: skillHash},
+		{Name: "shared", Type: "rules", ContentHash: ruleHash, PrivateRepo: true},
+	}}
+	in := &moat.GateInputs{
+		RevSet:       moat.NewRevocationSet(),
+		Manifests:    map[string]*moat.Manifest{regName: manifest},
+		ManifestURIs: map[string]string{regName: regURL},
+	}
+	item := catalog.ContentItem{
+		Name:    "shared",
+		Type:    catalog.Rules,
+		Library: true,
+		Meta:    &metadata.Meta{SourceRegistry: regName, SourceHash: ruleHash},
+	}
+
+	got, ok := CheckItem(item, in, moat.NewLockfile(), moat.NewSession(), moat.TrustTierUnsigned)
+	if !ok {
+		t.Fatal("ok = false, want the rule's entry")
+	}
+	if got.Decision != MOATGatePrivatePrompt {
+		t.Errorf("decision = %v, want %v from the private rule entry", got.Decision, MOATGatePrivatePrompt)
+	}
+}
+
+// A copy whose registry has no cached manifest is still refused when the
+// lockfile has archived a revocation of its hash.
+func TestCheckItem_LockfileRevocationWithoutManifest(t *testing.T) {
+	hash := "sha256:" + strings.Repeat("a", 64)
+	item := catalog.ContentItem{
+		Name:    "copy",
+		Type:    catalog.Skills,
+		Library: true,
+		Meta:    &metadata.Meta{SourceRegistry: "uncached-reg", SourceHash: hash},
+	}
+	lf := moat.NewLockfile()
+	lf.RevokedHashes = append(lf.RevokedHashes, hash)
+
+	for name, in := range map[string]*moat.GateInputs{
+		"no inputs":       nil,
+		"registry absent": {RevSet: moat.NewRevocationSet(), Manifests: map[string]*moat.Manifest{}, ManifestURIs: map[string]string{}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, ok := CheckItem(item, in, lf, moat.NewSession(), moat.TrustTierUnsigned)
+			if !ok || got.Decision != MOATGateHardBlock {
+				t.Errorf("ok = %v, decision = %v; want a hard block", ok, got.Decision)
+			}
+		})
+	}
+
+	if _, ok := CheckItem(item, nil, moat.NewLockfile(), moat.NewSession(), moat.TrustTierUnsigned); ok {
+		t.Error("an unrevoked copy without a cached manifest was gated; want it to bypass")
+	}
+}
+
+// An older copy is not credited with the attestation of the version its
+// registry lists now.
+func TestCheckItem_OlderCopyHasNoBorrowedAttestation(t *testing.T) {
+	const regName, regURL = "moat-reg", "https://registry.example.com/manifest.json"
+	idx := int64(7)
+	manifest := &moat.Manifest{ManifestURI: regURL, Content: []moat.ContentEntry{{
+		Name:          "listed",
+		Type:          "skill",
+		ContentHash:   "sha256:" + strings.Repeat("b", 64),
+		RekorLogIndex: &idx,
+	}}}
+	in := &moat.GateInputs{
+		RevSet:       moat.NewRevocationSet(),
+		Manifests:    map[string]*moat.Manifest{regName: manifest},
+		ManifestURIs: map[string]string{regName: regURL},
+	}
+	item := catalog.ContentItem{
+		Name:    "listed",
+		Type:    catalog.Skills,
+		Library: true,
+		Meta:    &metadata.Meta{SourceRegistry: regName, SourceHash: "sha256:" + strings.Repeat("a", 64)},
+	}
+
+	got, ok := CheckItem(item, in, moat.NewLockfile(), moat.NewSession(), moat.TrustTierUnsigned)
+	if !ok {
+		t.Fatal("ok = false, want the older copy gated")
+	}
+	if tier := got.Entry.TrustTier(); tier != moat.TrustTierUnsigned {
+		t.Errorf("older copy's tier = %v, want %v", tier, moat.TrustTierUnsigned)
+	}
+}

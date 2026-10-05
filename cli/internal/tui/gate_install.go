@@ -14,8 +14,10 @@ package tui
 //     are already done in rescanCatalog, so this layer is CPU-only.
 //   - When the decision requires operator input (PublisherWarn /
 //     PrivatePrompt), the caller stashes the install msg on App and opens
-//     the shared confirmModal. handleConfirmResult re-dispatches on Y and
-//     calls the correct MarkConfirmed variant based on pendingGateKind.
+//     the shared confirmModal. On Y, handleConfirmResult calls the correct
+//     MarkConfirmed variant based on pendingGateKind and runs the gate
+//     again, so a second question (a private prompt after a recall) is
+//     still asked.
 //   - When the decision hard-refuses (HardBlock / TierBelowPolicy), the
 //     caller pushes an error toast and returns without stashing.
 //
@@ -64,9 +66,16 @@ func evaluateInstallGate(a *App, item catalog.ContentItem) (gateEvaluation, bool
 	if !ok {
 		return gateEvaluation{}, false
 	}
+	// A publisher confirmation is keyed by the registry that issued the
+	// revocation, which the check looks up, and that may not be the
+	// registry the item came from.
+	registryURL := check.RegistryURL
+	if check.Decision == installer.MOATGatePublisherWarn {
+		registryURL = check.Revocation.IssuingRegistryURL
+	}
 	return gateEvaluation{
 		decision:    check.GateBlock,
-		registryURL: check.RegistryURL,
+		registryURL: registryURL,
 		contentHash: check.Entry.ContentHash,
 		entryName:   check.Entry.Name,
 	}, true

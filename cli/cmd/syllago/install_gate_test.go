@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,5 +195,83 @@ func TestInstall_LibraryCopyUnrevokedInstalls(t *testing.T) {
 	}
 	if !installedSkill(installBase) {
 		t.Error("the copy was not installed")
+	}
+}
+
+// A recall issued by a second registry is confirmed under that registry,
+// so the user answers it once and the copy installs.
+func TestInstall_LibraryCopyRecallFromAnotherRegistry(t *testing.T) {
+	copyHash := "sha256:" + strings.Repeat("a", 64)
+	installBase := setupLibraryCopy(t, copyHash, nil)
+
+	const otherName, otherURI = "other-reg", "https://other.example.com/manifest.json"
+	cfg, err := config.LoadGlobal()
+	if err != nil {
+		t.Fatalf("load global config: %v", err)
+	}
+	cfg.Registries = append(cfg.Registries, config.Registry{Name: otherName, Type: config.RegistryTypeMOAT, ManifestURI: otherURI})
+	if err := config.SaveGlobal(cfg); err != nil {
+		t.Fatalf("save global config: %v", err)
+	}
+	entry := signedManifestEntry("other-skill", "sha256:"+strings.Repeat("e", 64))
+	entry.DisplayName, entry.SourceURI, entry.AttestedAt = "other-skill", "fixture-source", registryStatusTestNow()
+	other := registryStatusManifest(t, "2026-05-01T00:00:00Z", []moat.ContentEntry{entry})
+	other.ManifestURI = otherURI
+	other.Revocations = []moat.Revocation{{
+		ContentHash: copyHash,
+		Reason:      moat.RevocationReasonDeprecated,
+		Source:      moat.RevocationSourcePublisher,
+		DetailsURL:  "https://other.example.com/rev",
+	}}
+	path, err := moat.ManifestCachePath(config.GlobalDirOverride, otherName)
+	if err != nil {
+		t.Fatalf("ManifestCachePath: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir manifest cache: %v", err)
+	}
+	if err := os.WriteFile(path, registryStatusManifestBytes(t, other), 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	withInstallGateStubs(t, true, true)
+	prompts := 0
+	moatInstallPromptFn = func(io.Writer, string) bool { prompts++; return prompts == 1 }
+	_, _ = output.SetForTest(t)
+	installCmd.Flags().Set("to", "gate-prov")
+	defer installCmd.Flags().Set("to", "")
+
+	if err := installCmd.RunE(installCmd, []string{"my-skill"}); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if prompts != 1 {
+		t.Errorf("prompted %d times, want 1", prompts)
+	}
+	if !installedSkill(installBase) {
+		t.Error("the confirmed copy was not installed")
+	}
+}
+
+// A lockfile that cannot be read refuses a registry copy, since its
+// archived revocations cannot be checked.
+func TestInstall_LibraryCopyUnreadableLockfileRefused(t *testing.T) {
+	installBase := setupLibraryCopy(t, "sha256:"+strings.Repeat("a", 64), nil)
+	projectRoot, _ := findProjectRoot()
+	lockPath := moat.LockfilePath(projectRoot)
+	if err := os.MkdirAll(filepath.Dir(lockPath), 0o755); err != nil {
+		t.Fatalf("mkdir lockfile dir: %v", err)
+	}
+	if err := os.WriteFile(lockPath, []byte("{not json"), 0o644); err != nil {
+		t.Fatalf("write lockfile: %v", err)
+	}
+	_, _ = output.SetForTest(t)
+	installCmd.Flags().Set("to", "gate-prov")
+	defer installCmd.Flags().Set("to", "")
+
+	if err := installCmd.RunE(installCmd, []string{"my-skill"}); err == nil {
+		t.Error("install succeeded with an unreadable lockfile; want an error")
+	}
+	if installedSkill(installBase) {
+		t.Error("the copy was installed without its revocations checked")
 	}
 }

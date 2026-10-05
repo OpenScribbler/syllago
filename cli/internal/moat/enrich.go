@@ -48,6 +48,25 @@ func FindContentEntry(m *Manifest, name string) (*ContentEntry, bool) {
 	return nil, false
 }
 
+// FindTypedEntry finds the entry named name of content type ct, since a
+// manifest may list a skill and a rule under one name. An empty ct
+// matches by name alone; a type MOAT does not cover matches nothing.
+func FindTypedEntry(m *Manifest, name string, ct catalog.ContentType) (*ContentEntry, bool) {
+	if ct == "" {
+		return FindContentEntry(m, name)
+	}
+	want, ok := ToMOATType(ct)
+	if m == nil || !ok {
+		return nil, false
+	}
+	for i := range m.Content {
+		if e := &m.Content[i]; e.Name == name && e.Type == want {
+			return e, true
+		}
+	}
+	return nil, false
+}
+
 // moatTierToCatalogTier maps the moat package's internal tier enum to
 // the catalog package's equivalent. The enums are separate (moat owns
 // the normative classification; catalog owns the display layer) so a

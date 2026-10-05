@@ -275,6 +275,54 @@ func TestInstallGate_LibraryCopyPublisherWarnStashesCopyHash(t *testing.T) {
 	}
 }
 
+// Confirming a recall runs the gate again, so a recalled item from a
+// private repository still asks about the private source.
+func TestInstallGate_PublisherConfirmThenPrivatePrompt(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{
+		revocationSource: moat.RevocationSourcePublisher,
+		revocationReason: "deprecated",
+		privateRepo:      true,
+	})
+	m, _ := app.Update(gateInstallMsg(item))
+	a, cmd := confirmModalResult(t, m.(App), true, item)
+
+	if cmd != nil {
+		t.Error("expected no install cmd before the private source is confirmed")
+	}
+	if !a.confirm.active || a.pendingGateKind != gateKindPrivatePrompt {
+		t.Fatalf("expected the private-prompt modal after the recall was confirmed; kind = %v", a.pendingGateKind)
+	}
+
+	a, cmd = confirmModalResult(t, a, true, item)
+	if cmd == nil {
+		t.Error("expected the install cmd once both questions were answered")
+	}
+}
+
+// A recall issued by another registry is confirmed under that registry,
+// so the confirmation holds for the rest of the session.
+func TestInstallGate_PublisherConfirmKeyedByIssuingRegistry(t *testing.T) {
+	app, item := gateTestApp(t, gateFixture{})
+	const otherURL = "https://other.example.com/manifest.json"
+	app.moatGate.RevSet.AddFromManifest(&moat.Manifest{Revocations: []moat.Revocation{{
+		ContentHash: testContentHash,
+		Reason:      "deprecated",
+		DetailsURL:  "https://other.example.com/recall",
+		Source:      moat.RevocationSourcePublisher,
+	}}}, otherURL)
+
+	m, _ := app.Update(gateInstallMsg(item))
+	a, cmd := confirmModalResult(t, m.(App), true, item)
+	if a.confirm.active || cmd == nil {
+		t.Fatal("expected the confirmed install to dispatch")
+	}
+
+	m, cmd = a.Update(gateInstallMsg(item))
+	if m.(App).confirm.active || cmd == nil {
+		t.Error("expected a second install in the session to skip the modal")
+	}
+}
+
 func TestInstallGate_LockfileArchivalRevocationHardBlocks(t *testing.T) {
 	// Archival revocation is permanent per G-15 — even with no live
 	// revocation in the manifest, the lockfile alone must hard-block.

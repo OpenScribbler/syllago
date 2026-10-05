@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -21,11 +22,16 @@ import (
 // It returns the items that may install, the items the gate or the user
 // refused, and the first gate refusal, which fails the command once the
 // other items have installed. stop is true when a headless run met a
-// prompt and the process has been sent its exit code.
+// prompt and the process has been sent its exit code. A lockfile that
+// cannot be read refuses every item when any of them came from a
+// registry, since its archived revocations cannot be checked.
 func gateLibraryItems(errW io.Writer, items []catalog.ContentItem, cfg *config.Config, projectRoot string) (allowed []catalog.ContentItem, refused []skippedItem, stop bool, refusal error) {
 	cacheDir, _ := config.GlobalDirPath()
 	in := moat.BuildGateInputs(cfg, cacheDir)
-	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
+	lf, err := moat.LoadLockfile(moat.LockfilePath(projectRoot))
+	if err != nil && slices.ContainsFunc(items, hasRegistryLineage) {
+		return nil, nil, false, err
+	}
 	session := moat.NewSession()
 
 	for _, item := range items {
@@ -64,10 +70,7 @@ func gateLibraryItem(errW io.Writer, item catalog.ContentItem, in *moat.GateInpu
 		case installer.MOATGateProceed:
 			return false, nil
 		case installer.MOATGatePublisherWarn:
-			reason := ""
-			if check.Revocation != nil {
-				reason = moat.SanitizeForDisplay(check.Revocation.Reason)
-			}
+			reason := moat.SanitizeForDisplay(check.Revocation.Reason)
 			fmt.Fprintf(errW, "\nPublisher-source revocation for %q: %s\n", item.Name, reason)
 			if !moatInstallInteractiveFn() {
 				fmt.Fprintf(errW, "syllago: %s\n", moat.FailurePublisherRevocation.Message())
@@ -77,7 +80,7 @@ func gateLibraryItem(errW io.Writer, item catalog.ContentItem, in *moat.GateInpu
 			if !moatInstallPromptFn(errW, "Proceed anyway? [Y/n]: ") {
 				return false, moatinstall.ErrDeclined
 			}
-			installer.MarkPublisherConfirmed(session, check.RegistryURL, check.Entry.ContentHash)
+			installer.MarkPublisherConfirmed(session, check.Revocation.IssuingRegistryURL, check.Entry.ContentHash)
 		case installer.MOATGatePrivatePrompt:
 			fmt.Fprintf(errW, "\n%q is declared as coming from a private repository.\n", item.Name)
 			if !moatInstallInteractiveFn() {
@@ -93,4 +96,10 @@ func gateLibraryItem(errW io.Writer, item catalog.ContentItem, in *moat.GateInpu
 			return false, moatinstall.GateError(check.Entry, check.GateBlock)
 		}
 	}
+}
+
+// hasRegistryLineage reports whether item came from a registry, as a registry
+// item or a Library copy of one.
+func hasRegistryLineage(item catalog.ContentItem) bool {
+	return item.Registry != "" || item.Meta != nil && item.Meta.SourceRegistry != ""
 }
