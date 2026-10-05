@@ -26,21 +26,24 @@ linters:
       # Import direction. Each list applies to every file its globs match,
       # tests included, and denies by prefix unless the entry ends in $.
       rules:
-        # Workflows compose the core packages and each other. Everything else
-        # under internal/ is core, so a new package starts out bound by this.
+        # Workflows compose the core packages and each other, and the TUI may
+        # call any of them. Everything else under internal/ is core, a
+        # workflow's sub-package included, so a new package starts out bound
+        # by this.
         core-imports-no-workflow:
           files:
-            - "**/internal/**/*.go"
-            - "!**/internal/add/**"
-            - "!**/internal/doctor/**"
-            - "!**/internal/librarymigrate/**"
-            - "!**/internal/lifecycle/**"
-            - "!**/internal/loadout/**"
-            - "!**/internal/moatinstall/**"
-            - "!**/internal/promote/**"
-            - "!**/internal/registryops/**"
-            - "!**/internal/rollback/**"
-            - "!**/internal/tui/**"
+            - "${config-path}/internal/*.go"
+            - "${config-path}/internal/**/*.go"
+            - "!${config-path}/internal/add/*.go"
+            - "!${config-path}/internal/doctor/*.go"
+            - "!${config-path}/internal/librarymigrate/*.go"
+            - "!${config-path}/internal/lifecycle/*.go"
+            - "!${config-path}/internal/loadout/*.go"
+            - "!${config-path}/internal/moatinstall/*.go"
+            - "!${config-path}/internal/promote/*.go"
+            - "!${config-path}/internal/registryops/*.go"
+            - "!${config-path}/internal/rollback/*.go"
+            - "!${config-path}/internal/tui/**"
           deny:
             - pkg: "github.com/OpenScribbler/syllago/cli/internal/add$"
               desc: add is a workflow; core packages must not depend on workflows
@@ -64,8 +67,9 @@ linters:
         # can all call it. Only the TUI imports the TUI or a terminal UI library.
         shared-imports-no-front-end:
           files:
-            - "**/internal/**/*.go"
-            - "!**/internal/tui/**"
+            - "${config-path}/internal/*.go"
+            - "${config-path}/internal/**/*.go"
+            - "!${config-path}/internal/tui/**"
           deny:
             - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui"
               desc: shared packages must not depend on the TUI
