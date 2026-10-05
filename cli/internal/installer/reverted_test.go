@@ -58,7 +58,7 @@ func TestForgetReverted_DropsOnlyWhatTheRevertTookOut(t *testing.T) {
 // TestForgetReverted_MatchesAFileReachedThroughASymlink: a project applied
 // at its real path and removed through a symlink to it names the same
 // config two ways, and the record of a server the revert took out still
-// goes.
+// goes, also once the revert has deleted a config the apply created.
 func TestForgetReverted_MatchesAFileReachedThroughASymlink(t *testing.T) {
 	isolateLegacyRoot(t)
 	server := writeMCPItem(t, t.TempDir(), "gh")
@@ -78,9 +78,55 @@ func TestForgetReverted_MatchesAFileReachedThroughASymlink(t *testing.T) {
 		t.Fatalf("installed.json: got %+v (err %v), want one server", inst, err)
 	}
 
-	os.WriteFile(filepath.Join(realDir, "mcp.json"), []byte(`{}`), 0644)
+	os.Remove(filepath.Join(realDir, "mcp.json"))
 	ForgetReverted(inst, projectRoot, []string{filepath.Join(realDir, "mcp.json")})
 	if len(inst.MCP) != 0 {
 		t.Errorf("got %+v, want the server's record gone", inst.MCP)
+	}
+}
+
+// TestForgetReverted_RecordsWithoutAProvider: a record written before
+// records named their provider could be any provider's. It goes once a
+// reverted file no longer holds it and no other provider's file does, and
+// stays while one does.
+func TestForgetReverted_RecordsWithoutAProvider(t *testing.T) {
+	isolateLegacyRoot(t)
+	server := writeMCPItem(t, t.TempDir(), "gh")
+	dir := t.TempDir()
+	claudeCfg, cursorCfg := filepath.Join(dir, "claude.json"), filepath.Join(dir, "cursor.json")
+	os.WriteFile(claudeCfg, []byte(`{}`), 0644)
+	os.WriteFile(cursorCfg, []byte(`{}`), 0644)
+	overrideMCPConfigPaths(t, map[string]string{"claude-code": claudeCfg, "cursor": cursorCfg})
+	hook, projectRoot := writeCanonicalHookItem(t, "guard", "before_tool_execute", "shell", "echo hi")
+	hookPaths := hookTestPaths(t)
+	overrideHookSettingsPaths(t, hookPaths)
+
+	if _, err := installMCP(server, provider.Cursor, projectRoot); err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+	if _, err := installHook(hook, provider.ClaudeCode, projectRoot, ScanOptions{}); err != nil {
+		t.Fatalf("installHook: %v", err)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || len(inst.Hooks) != 1 {
+		t.Fatalf("installed.json: got %+v (err %v), want one server and one hook", inst, err)
+	}
+	inst.MCP[0].Provider, inst.Hooks[0].Provider = "", ""
+
+	ForgetReverted(inst, projectRoot, []string{claudeCfg, hookPaths["claude-code"]})
+	if len(inst.MCP) != 1 || len(inst.Hooks) != 1 {
+		t.Errorf("still held: got %d servers and %d hooks, want both kept", len(inst.MCP), len(inst.Hooks))
+	}
+
+	os.WriteFile(cursorCfg, []byte(`{}`), 0644)
+	os.WriteFile(hookPaths["claude-code"], []byte(`{}`), 0644)
+	ForgetReverted(inst, projectRoot, []string{filepath.Join(dir, "other.json")})
+	if len(inst.MCP) != 1 || len(inst.Hooks) != 1 {
+		t.Errorf("nothing reverted: got %d servers and %d hooks, want both kept", len(inst.MCP), len(inst.Hooks))
+	}
+
+	ForgetReverted(inst, projectRoot, []string{claudeCfg, hookPaths["cursor"]})
+	if len(inst.MCP) != 0 || len(inst.Hooks) != 0 {
+		t.Errorf("held nowhere: got %+v and %+v, want both gone", inst.MCP, inst.Hooks)
 	}
 }

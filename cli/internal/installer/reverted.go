@@ -48,45 +48,72 @@ func revertedKey(p string) string {
 }
 
 func hookReverted(h InstalledHook, reverted map[string]bool) bool {
-	prov, ok := providerBySlug(h.Provider)
-	if !ok || h.GroupHash == "" {
+	if h.GroupHash == "" {
 		return false
 	}
-	path, err := hookSettingsPath(prov)
-	if err != nil || !reverted[revertedKey(path)] {
-		return false
-	}
-	adapter := converter.AdapterFor(prov.Slug)
-	model, err := hookStorageModelFor(prov.Slug)
-	if adapter == nil || err != nil {
-		return false
-	}
-	existing, err := decodeExistingHooks(model, adapter, path)
-	if err != nil {
-		return false
-	}
-	for _, eh := range existing {
-		if hookIdentity(eh) == h.GroupHash {
-			return false
+	return recordReverted(h.Provider, reverted, func(prov provider.Provider) (string, bool) {
+		path, err := hookSettingsPath(prov)
+		_, modelErr := hookStorageModelFor(prov.Slug)
+		return path, err == nil && modelErr == nil && converter.AdapterFor(prov.Slug) != nil
+	}, func(prov provider.Provider, path string) (bool, error) {
+		model, _ := hookStorageModelFor(prov.Slug)
+		existing, err := decodeExistingHooks(model, converter.AdapterFor(prov.Slug), path)
+		if err != nil {
+			return false, err
 		}
-	}
-	return true
+		for _, eh := range existing {
+			if hookIdentity(eh) == h.GroupHash {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
 }
 
 func mcpReverted(m InstalledMCP, repoRoot string, reverted map[string]bool) bool {
-	prov, ok := providerBySlug(m.Provider)
-	if !ok {
-		return false
+	return recordReverted(m.Provider, reverted, func(prov provider.Provider) (string, bool) {
+		path, err := mcpConfigPath(prov, repoRoot)
+		return path, err == nil
+	}, func(prov provider.Provider, path string) (bool, error) {
+		data, err := readMCPConfig(path, prov)
+		if err != nil {
+			return false, err
+		}
+		return mcpRecordInConfig(m, m.Name, data, MCPConfigKey(prov)), nil
+	})
+}
+
+// recordReverted reports whether a record's hook or server is gone because
+// the revert took it out. A record naming its provider goes when that
+// provider's file is reverted and no longer holds it. One written before
+// records named their provider could be any provider's, so it goes when
+// some provider's file is reverted and no provider's file holds it. A file
+// that cannot be read keeps the record.
+func recordReverted(slug string, reverted map[string]bool,
+	pathFor func(provider.Provider) (string, bool),
+	holds func(provider.Provider, string) (bool, error)) bool {
+	provs := provider.AllProviders
+	if slug != "" {
+		prov, ok := providerBySlug(slug)
+		if !ok {
+			return false
+		}
+		provs = []provider.Provider{prov}
 	}
-	path, err := mcpConfigPath(prov, repoRoot)
-	if err != nil || !reverted[revertedKey(path)] {
-		return false
+	touched := false
+	for _, prov := range provs {
+		path, ok := pathFor(prov)
+		if !ok {
+			continue
+		}
+		if reverted[revertedKey(path)] {
+			touched = true
+		}
+		if held, err := holds(prov, path); err != nil || held {
+			return false
+		}
 	}
-	data, err := readMCPConfig(path, prov)
-	if err != nil {
-		return false
-	}
-	return !mcpRecordInConfig(m, m.Name, data, MCPConfigKey(prov))
+	return touched
 }
 
 func providerBySlug(slug string) (provider.Provider, bool) {
