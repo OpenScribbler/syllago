@@ -1145,7 +1145,13 @@ func addHooksFromLocation(fromSlug string, loc installer.SettingsLocation, proje
 			fmt.Fprintf(output.Writer, "    bundled %d script(s)\n", len(bundled))
 		}
 
-		hookJSON, err := json.MarshalIndent(hook, "", "  ")
+		// Write the canonical hooks/0.1 Manifest, the shape install reads.
+		manifest, err := converter.ManifestFromHookData(hook)
+		if err != nil {
+			fmt.Fprintf(output.ErrWriter, "Warning: failed to build manifest for hook %s: %v\n", name, err)
+			continue
+		}
+		hookJSON, err := json.MarshalIndent(manifest, "", "  ")
 		if err != nil {
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to marshal hook %s: %v\n", name, err)
 			continue

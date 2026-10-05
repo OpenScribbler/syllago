@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
@@ -482,6 +483,20 @@ func TestAddHooksWritesToGlobalDir(t *testing.T) {
 		}
 		if _, err := os.Stat(filepath.Join(itemDir, ".syllago.yaml")); err != nil {
 			t.Errorf("expected .syllago.yaml in %s: %v", itemDir, err)
+		}
+		// Install reads hook.json as a hooks/0.1 Manifest, so a flat
+		// HookData here would add cleanly and then fail to install.
+		data, err := os.ReadFile(filepath.Join(itemDir, "hook.json"))
+		if err != nil {
+			t.Fatalf("read hook.json: %v", err)
+		}
+		m, err := converter.ParseManifest(data)
+		if err != nil {
+			t.Errorf("hook.json in %s is not a hooks/0.1 manifest: %v", itemDir, err)
+			continue
+		}
+		if len(m.Hooks) != 1 || m.Hooks[0].Event == "" || m.Hooks[0].Handler.Command == "" {
+			t.Errorf("manifest in %s = %+v, want one hook with an event and a command", itemDir, m)
 		}
 	}
 }
