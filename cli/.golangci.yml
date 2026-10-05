@@ -64,7 +64,8 @@ linters:
             - pkg: "github.com/OpenScribbler/syllago/cli/internal/rollback$"
               desc: rollback is a workflow; core packages must not depend on workflows
         # Shared logic stays front-end-neutral, so the CLI, the TUI and a GUI
-        # can all call it. Only the TUI imports the TUI or a terminal UI library.
+        # can all call it. Under internal/, only the TUI imports the TUI or a
+        # terminal UI library.
         shared-imports-no-front-end:
           files:
             - "${config-path}/internal/*.go"
@@ -82,9 +83,9 @@ linters:
             - pkg: github.com/muesli/termenv
               desc: terminal UI belongs in internal/tui
             - pkg: github.com/spf13/cobra
-              desc: command wiring belongs in cmd/syllago
+              desc: command wiring belongs under cmd/
             - pkg: github.com/spf13/pflag
-              desc: command wiring belongs in cmd/syllago
+              desc: command wiring belongs under cmd/
     errcheck:
       # CLI output, string builders, and scan helpers — errors are not actionable.
       exclude-functions:
