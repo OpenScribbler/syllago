@@ -2,8 +2,10 @@ package loadout
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -106,5 +108,60 @@ func TestApply_MCPRefusesAServerTheUserDefined(t *testing.T) {
 	}
 	if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
 		t.Errorf("snapshot: got %v, want none", err)
+	}
+}
+
+// TestApply_RollbackLetsARetrySucceed: a failure after the MCP writes puts
+// the config back as it was, deleting one the apply created, so a retry
+// does not find the loadout's own servers and refuse them as the user's.
+func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	tests := []struct {
+		name     string
+		existing string
+	}{
+		{"existing config", `{"mcpServers":{"mine":{"command":"x"}}}`},
+		{"absent config", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"mcpServers":{"srv":{"command":"node"},"two":{"command":"y"}}}`, tt.existing)
+			cat.Items = append(cat.Items, catalog.ContentItem{Name: "two", Type: catalog.MCP, Path: cat.Items[0].Path, ServerKey: "two"})
+			manifest.MCP = append(manifest.MCP, ItemRef{Name: "two"})
+			if tt.existing == "" {
+				os.Remove(cfgPath)
+			}
+			// installed.json is saved after every placement, so a .syllago
+			// the apply cannot write to fails it once both servers are in.
+			dir := filepath.Join(projectRoot, ".syllago")
+			os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
+			os.Chmod(dir, 0555)
+			t.Cleanup(func() { os.Chmod(dir, 0755) })
+			opts := ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err == nil || !strings.Contains(err.Error(), "rolled back") {
+				t.Fatalf("Apply: got %v, want a rolled-back failure", err)
+			}
+			got, err := os.ReadFile(cfgPath)
+			if tt.existing == "" && !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("rollback left the config the apply created: %s (err %v)", got, err)
+			}
+			if tt.existing != "" && string(got) != tt.existing {
+				t.Errorf("rollback left the config as %s, want %s", got, tt.existing)
+			}
+
+			os.Chmod(dir, 0755)
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+				t.Fatalf("retry: %v", err)
+			}
+			got, _ = os.ReadFile(cfgPath)
+			if !strings.Contains(string(got), `"srv"`) || !strings.Contains(string(got), `"two"`) {
+				t.Errorf("retry: config is %s, want srv and two", got)
+			}
+		})
 	}
 }
