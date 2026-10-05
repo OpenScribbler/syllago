@@ -286,7 +286,7 @@ func TestCrushAdapter_Capabilities(t *testing.T) {
 	if !caps.SupportsBlocking {
 		t.Error("crush supports blocking (exit code 2 / deny decision)")
 	}
-	if !caps.SupportsStructuredOutput {
+	if len(caps.OutputFields) == 0 {
 		t.Error("crush supports structured output (JSON decision/context)")
 	}
 	if caps.TimeoutUnit != "seconds" {

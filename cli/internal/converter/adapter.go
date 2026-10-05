@@ -98,8 +98,9 @@ type ProviderCapabilities struct {
 	// SupportsStatusMessage indicates whether hooks can show status text.
 	SupportsStatusMessage bool
 
-	// SupportsStructuredOutput indicates whether hook stdout is parsed as JSON.
-	SupportsStructuredOutput bool
+	// OutputFields lists the structured output fields the provider reads from
+	// a hook's stdout; empty means it ignores structured output.
+	OutputFields []HookOutputField
 
 	// SupportsBlocking indicates whether hooks can block the triggering action.
 	SupportsBlocking bool

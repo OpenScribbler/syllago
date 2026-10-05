@@ -1,5 +1,10 @@
 package converter
 
+import (
+	"slices"
+	"sort"
+)
+
 // CompatLevel represents the compatibility level of a hook for a target provider.
 type CompatLevel int
 
@@ -52,80 +57,45 @@ const (
 	FeatureTimeout // fine-grained (ms) vs coarse (seconds)
 )
 
-// FeatureSupport describes how a provider handles a specific hook feature.
-type FeatureSupport struct {
-	Supported bool
-	Notes     string      // e.g., "mapped to 'comment' field"
-	LostLevel CompatLevel // impact level when this feature is used but not supported
+// featureLoss is what happens to a hook that uses a feature its target
+// lacks: how far the hook degrades, and the note that says why. It is the
+// same for every provider; which provider lacks what comes from its adapter's
+// Capabilities().
+var featureLoss = map[HookFeature]struct {
+	level CompatLevel
+	note  string
+}{
+	FeatureMatcher:       {CompatBroken, "hook fires on ALL tool calls"},
+	FeatureAsync:         {CompatBroken, "hook will block execution"},
+	FeatureStatusMessage: {CompatDegraded, "no user-visible status"},
+	FeatureLLMHook:       {CompatNone, "no prompt or agent hooks"},
 }
 
-// ProviderCapability describes what hook features a provider supports.
-type ProviderCapability struct {
-	Features map[HookFeature]FeatureSupport
+// supportsFeature reports whether caps covers feature. Every adapter writes
+// timeouts, converting to its own unit.
+func supportsFeature(caps ProviderCapabilities, feature HookFeature) bool {
+	switch feature {
+	case FeatureMatcher:
+		return caps.SupportsMatchers
+	case FeatureAsync:
+		return caps.SupportsAsync
+	case FeatureStatusMessage:
+		return caps.SupportsStatusMessage
+	case FeatureLLMHook:
+		return caps.SupportsLLMHooks
+	}
+	return true
 }
 
-// HookCapabilities is the single source of truth for provider hook support.
-// Used by AnalyzeHookCompat, TUI rendering, and tests.
-var HookCapabilities = map[string]ProviderCapability{
-	"claude-code": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: true},
-			FeatureAsync:         {Supported: true},
-			FeatureStatusMessage: {Supported: true},
-			FeatureLLMHook:       {Supported: true},
-			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
-		},
-	},
-	"gemini-cli": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: true},
-			FeatureAsync:         {Supported: true},
-			FeatureStatusMessage: {Supported: true},
-			FeatureLLMHook:       {Supported: false, LostLevel: CompatNone},
-			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
-		},
-	},
-	"copilot-cli": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: false, LostLevel: CompatBroken, Notes: "hook fires on ALL tool calls"},
-			FeatureAsync:         {Supported: false, LostLevel: CompatBroken, Notes: "hook will block execution"},
-			FeatureStatusMessage: {Supported: true, Notes: "mapped to 'comment' field"},
-			FeatureLLMHook:       {Supported: false, LostLevel: CompatNone},
-			FeatureTimeout:       {Supported: true, Notes: "converted ms to seconds, precision lost", LostLevel: CompatDegraded},
-		},
-	},
-	"kiro": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: true, Notes: "per-entry (not group-level)"},
-			FeatureAsync:         {Supported: false, LostLevel: CompatBroken, Notes: "hook will block execution"},
-			FeatureStatusMessage: {Supported: false, LostLevel: CompatDegraded, Notes: "no user-visible status"},
-			FeatureLLMHook:       {Supported: false, LostLevel: CompatNone},
-			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
-		},
-	},
-	"vs-code-copilot": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: true},
-			FeatureAsync:         {Supported: true},
-			FeatureStatusMessage: {Supported: true},
-			FeatureLLMHook:       {Supported: true},
-			FeatureTimeout:       {Supported: true, Notes: "milliseconds"},
-		},
-	},
-	"crush": {
-		Features: map[HookFeature]FeatureSupport{
-			FeatureMatcher:       {Supported: true, Notes: "regex against tool name"},
-			FeatureAsync:         {Supported: false, LostLevel: CompatBroken, Notes: "hook will block execution"},
-			FeatureStatusMessage: {Supported: false, LostLevel: CompatDegraded, Notes: "no user-visible status"},
-			FeatureLLMHook:       {Supported: false, LostLevel: CompatNone},
-			FeatureTimeout:       {Supported: true, Notes: "seconds"},
-		},
-	},
-}
-
-// HookProviders returns the slugs of providers that support hooks, in display order.
+// HookProviders returns the slugs of providers that have a hook adapter, in
+// name order.
 func HookProviders() []string {
-	return []string{"claude-code", "gemini-cli", "copilot-cli", "kiro", "vs-code-copilot", "crush"}
+	slugs := make([]string, 0, len(adapterRegistry))
+	for slug := range adapterRegistry {
+		slugs = append(slugs, slug)
+	}
+	sort.Strings(slugs)
+	return slugs
 }
 
 // --- Structured output capabilities ---
@@ -157,66 +127,16 @@ var AllOutputFields = []HookOutputField{
 	OutputDecision,
 }
 
-// HookOutputCapabilities maps provider slugs to the set of structured output
-// fields they support. A missing provider means no structured output support.
-var HookOutputCapabilities = map[string]map[HookOutputField]bool{
-	"claude-code": {
-		OutputUpdatedInput:   true,
-		OutputSuppressOutput: true,
-		OutputSystemMessage:  true,
-		OutputContext:        true,
-		OutputContinue:       true,
-		OutputDecision:       true,
-	},
-	"copilot-cli": {
-		// Copilot CLI supports decision in preToolUse hooks
-		OutputDecision: true,
-	},
-	"vs-code-copilot": {
-		OutputUpdatedInput:   true,
-		OutputSuppressOutput: true,
-		OutputSystemMessage:  true,
-		OutputContext:        true,
-		OutputContinue:       true,
-		OutputDecision:       true,
-	},
-	"gemini-cli": {
-		// Gemini CLI supports decision and system_message (partial structured output)
-		OutputDecision:      true,
-		OutputSystemMessage: true,
-	},
-	"cursor": {
-		// Cursor supports decision field (partial structured output)
-		OutputDecision: true,
-	},
-	"kiro": {}, // No structured output support
-	"devin": {
-		// Devin hook responses support decision (approve/block), updatedInput,
-		// and additionalContext (docs.devin.ai/cli/extensibility/hooks).
-		OutputDecision:     true,
-		OutputUpdatedInput: true,
-		OutputContext:      true,
-	},
-	"crush": {
-		// Crush hook responses support decision (allow/deny/null), context,
-		// and updated_input (a shallow-merge patch against tool_input; see
-		// charmbracelet/crush docs/hooks/README.md "Output envelope").
-		OutputDecision:     true,
-		OutputContext:      true,
-		OutputUpdatedInput: true,
-	},
-}
-
 // OutputFieldsLostWarnings compares source and target provider structured output
 // capabilities and returns warnings for fields the source supports but the target
 // does not. Returns nil if no capabilities are lost (or if source has none).
 func OutputFieldsLostWarnings(sourceProvider, targetSlug string) []string {
-	sourceCaps := HookOutputCapabilities[sourceProvider]
-	targetCaps := HookOutputCapabilities[targetSlug]
+	sourceFields := providerHookCapabilities[sourceProvider].OutputFields
+	targetFields := providerHookCapabilities[targetSlug].OutputFields
 
 	var warnings []string
 	for _, field := range AllOutputFields {
-		if sourceCaps[field] && !targetCaps[field] {
+		if slices.Contains(sourceFields, field) && !slices.Contains(targetFields, field) {
 			warnings = append(warnings, string(field))
 		}
 	}
@@ -260,12 +180,13 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 		}
 	}
 
-	cap, ok := HookCapabilities[targetProvider]
-	if !ok {
+	adapter := AdapterFor(targetProvider)
+	if adapter == nil {
 		result.Level = CompatNone
 		result.Notes = "Provider not hook-capable"
 		return result
 	}
+	caps := adapter.Capabilities()
 
 	// 2. Check features present in the source hook
 	// LLM hook check
@@ -301,18 +222,21 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 	}
 
 	for _, check := range checks {
-		fs := cap.Features[check.feature]
 		fr := FeatureResult{
 			Feature:   check.feature,
 			Present:   check.present,
-			Supported: fs.Supported,
-			Notes:     fs.Notes,
+			Supported: supportsFeature(caps, check.feature),
+		}
+		if check.feature == FeatureTimeout {
+			fr.Notes = caps.TimeoutUnit
 		}
 
-		if check.present && !fs.Supported {
-			fr.Impact = fs.LostLevel
-			if fs.LostLevel > result.Level {
-				result.Level = fs.LostLevel
+		if check.present && !fr.Supported {
+			loss := featureLoss[check.feature]
+			fr.Impact = loss.level
+			fr.Notes = loss.note
+			if loss.level > result.Level {
+				result.Level = loss.level
 			}
 		}
 
