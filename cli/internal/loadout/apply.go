@@ -163,9 +163,10 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}
 	applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
 	if applyErr != nil {
-		// Rollback: restore snapshot and clean up
-		sm, _, loadErr := snapshot.Load(opts.ProjectRoot)
-		if loadErr == nil {
+		// Rollback: restore snapshot and clean up. Read this apply's own
+		// snapshot, so another one in the directory cannot stop the restore.
+		sm, readErr := snapshot.ReadManifest(snapshotDir)
+		if readErr == nil {
 			_ = snapshot.Restore(snapshotDir, sm)
 			// Remove any symlinks we may have partially created
 			for _, sr := range symlinkRecords {

@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -148,5 +149,71 @@ func TestRemove_ForgetsAnInstallTheRevertTookOut(t *testing.T) {
 	inst, err := installer.LoadInstalled(projectRoot)
 	if err != nil || len(inst.Hooks) != 0 {
 		t.Errorf("installed.json after remove: got %+v (err %v), want no hooks", inst, err)
+	}
+}
+
+// TestRemove_KeepsTheSnapshotWhenInstalledJSONCannotBeSaved: with no backup
+// of installed.json, saving it is the only way the loadout's records go, so
+// a failed save fails the remove and keeps the snapshot for another try.
+func TestRemove_KeepsTheSnapshotWhenInstalledJSONCannotBeSaved(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	syllagoDir := filepath.Join(projectRoot, ".syllago")
+	os.Chmod(syllagoDir, 0555)
+	t.Cleanup(func() { os.Chmod(syllagoDir, 0755) })
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err == nil {
+		t.Fatal("Remove succeeded with installed.json unwritable")
+	}
+	if _, _, err := snapshot.Load(projectRoot); err != nil {
+		t.Fatalf("snapshot after the failed remove: %v", err)
+	}
+
+	os.Chmod(syllagoDir, 0755)
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.Hooks) != 0 || len(inst.Symlinks) != 0 {
+		t.Errorf("installed.json after retry: got %+v (err %v), want no loadout records", inst, err)
+	}
+}
+
+// TestRemove_LeavesInstalledJSONAnEarlierSnapshotBackedUp: snapshots from
+// earlier versions list installed.json among their backups. Remove cleans
+// it rather than restoring it, so a record added after the apply stays.
+func TestRemove_LeavesInstalledJSONAnEarlierSnapshotBackedUp(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	if err := installer.SaveInstalled(projectRoot, &installer.Installed{}); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	installedPath := filepath.Join(projectRoot, ".syllago", "installed.json")
+	if _, err := snapshot.Create(projectRoot, "dev", "keep", []string{installedPath}, nil, nil); err != nil {
+		t.Fatalf("snapshot.Create: %v", err)
+	}
+	if err := installer.SaveInstalled(projectRoot, &installer.Installed{MCP: []installer.InstalledMCP{
+		{Name: "srv", Source: "loadout:dev", Provider: "cursor"},
+		{Name: "later", Source: "export", Provider: "cursor"},
+	}}); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	result, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if slices.Contains(result.RestoredFiles, installedPath) {
+		t.Errorf("RestoredFiles lists installed.json: %q", result.RestoredFiles)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {
+		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
 	}
 }

@@ -196,14 +196,9 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 
 	for _, d := range dirs {
 		snapshotDir := filepath.Join(dir, d.Name())
-		data, err := os.ReadFile(filepath.Join(snapshotDir, "manifest.json"))
+		manifest, err := ReadManifest(snapshotDir)
 		if err != nil {
-			return nil, "", fmt.Errorf("reading manifest: %w", err)
-		}
-
-		var manifest SnapshotManifest
-		if err := json.Unmarshal(data, &manifest); err != nil {
-			return nil, "", fmt.Errorf("parsing manifest: %w", err)
+			return nil, "", err
 		}
 
 		// Earlier versions took a snapshot for every hook install and
@@ -213,14 +208,28 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 			continue
 		}
 
-		// Backwards compat: old manifests have LoadoutName but no Source.
-		if manifest.Source == "" && manifest.LoadoutName != "" {
-			manifest.Source = "loadout:" + manifest.LoadoutName
-		}
-
-		return &manifest, snapshotDir, nil
+		return manifest, snapshotDir, nil
 	}
 	return nil, "", ErrNoSnapshot
+}
+
+// ReadManifest reads the manifest of the snapshot in snapshotDir.
+func ReadManifest(snapshotDir string) (*SnapshotManifest, error) {
+	data, err := os.ReadFile(filepath.Join(snapshotDir, "manifest.json"))
+	if err != nil {
+		return nil, fmt.Errorf("reading manifest: %w", err)
+	}
+
+	var manifest SnapshotManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("parsing manifest: %w", err)
+	}
+
+	// Backwards compat: old manifests have LoadoutName but no Source.
+	if manifest.Source == "" && manifest.LoadoutName != "" {
+		manifest.Source = "loadout:" + manifest.LoadoutName
+	}
+	return &manifest, nil
 }
 
 // Restore reads backed-up files from snapshotDir and writes them back to their

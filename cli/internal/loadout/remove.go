@@ -2,7 +2,9 @@ package loadout
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
@@ -32,14 +34,14 @@ type RemoveResult struct {
 //
 // How it works:
 //  1. Load the most recent snapshot manifest.
-//  2. Restore all backed-up files (settings.json, .claude.json, installed.json).
-//     This automatically reverts hook entries, MCP entries, AND the SessionEnd
-//     hook -- because we backed up the pre-apply state of these files.
+//  2. Restore all backed-up files (settings.json, .claude.json, an MCP
+//     config) and delete the ones the apply created. This reverts hook
+//     entries, MCP entries, AND the SessionEnd hook -- because we backed up
+//     the pre-apply state of these files.
 //  3. Delete symlinks that were created during apply.
-//  4. Clean up any installed.json entries tagged with "loadout:<name>".
-//     Note: step 2 already restored installed.json from snapshot, so this step
-//     handles the edge case where installed.json was modified after the loadout
-//     was applied (e.g., user exported something separately).
+//  4. Remove the installed.json entries tagged with "loadout:<name>". The
+//     apply does not back installed.json up, so entries a later install
+//     added stay. A failure here keeps the snapshot, so remove can run again.
 //  5. Delete the snapshot directory.
 //
 // Gotcha: Symlink deletion ignores ErrNotExist because the user may have
@@ -59,11 +61,17 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		LoadoutName: manifest.LoadoutName,
 	}
 
-	// Step 1: Restore backed-up files
+	// Step 1: Restore backed-up files. Snapshots from earlier versions back
+	// up installed.json too; step 3 cleans it instead, which keeps the
+	// records of anything installed after the apply.
+	home, _ := os.UserHomeDir()
+	installedPath := filepath.Join(opts.ProjectRoot, ".syllago", "installed.json")
+	manifest.BackedUpFiles = slices.DeleteFunc(manifest.BackedUpFiles, func(rel string) bool {
+		return filepath.Clean(manifest.Destination(home, rel)) == installedPath
+	})
 	if err := snapshot.Restore(snapshotDir, manifest); err != nil {
 		return nil, err
 	}
-	home, _ := os.UserHomeDir()
 	for _, rel := range manifest.BackedUpFiles {
 		result.RestoredFiles = append(result.RestoredFiles, manifest.Destination(home, rel))
 	}
@@ -83,11 +91,13 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	// loadout-tagged entries, along with the records of anything installed
 	// after the apply into a file step 1 restored or deleted.
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
-	if err == nil {
-		source := "loadout:" + manifest.LoadoutName
-		inst = cleanInstalledEntries(inst, source)
-		installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles))
-		_ = installer.SaveInstalled(opts.ProjectRoot, inst)
+	if err != nil {
+		return nil, fmt.Errorf("loading installed.json: %w", err)
+	}
+	inst = cleanInstalledEntries(inst, "loadout:"+manifest.LoadoutName)
+	installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles))
+	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
+		return nil, fmt.Errorf("saving installed.json: %w", err)
 	}
 
 	// Step 4: Delete snapshot
