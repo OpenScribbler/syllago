@@ -28,7 +28,8 @@ type PlannedAction struct {
 // How it works:
 //   - For symlink types (Rules, Skills, Agents, Commands): computes the target path
 //     via InstallDir, then checks if the target already exists with os.Lstat.
-//   - For merge types (Hooks, MCP): checks installed.json for an existing entry.
+//   - For merge types (Hooks, MCP): checks installed.json for an existing entry,
+//     and for MCP, whether the merge apply runs would refuse the item.
 //   - Conflicts are encoded in PlannedAction.Action, NOT returned as errors.
 //     This lets callers decide whether to abort or show a warning.
 func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDir string, resolver *config.PathResolver) ([]PlannedAction, error) {
@@ -40,7 +41,7 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 
 	var actions []PlannedAction
 	for _, ref := range refs {
-		action, err := previewOne(ref, prov, homeDir, inst, resolver)
+		action, err := previewOne(ref, prov, repoRoot, homeDir, inst, resolver)
 		if err != nil {
 			return nil, err
 		}
@@ -49,12 +50,12 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 	return actions, nil
 }
 
-func previewOne(ref ResolvedRef, prov provider.Provider, homeDir string, inst *installer.Installed, resolver *config.PathResolver) (PlannedAction, error) {
+func previewOne(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir string, inst *installer.Installed, resolver *config.PathResolver) (PlannedAction, error) {
 	switch ref.Type {
 	case catalog.Hooks:
 		return previewHook(ref, prov, inst), nil
 	case catalog.MCP:
-		return previewMCP(ref, prov, inst), nil
+		return previewMCP(ref, prov, repoRoot, inst), nil
 	default:
 		return previewSymlink(ref, prov, homeDir, resolver)
 	}
@@ -194,14 +195,23 @@ func hookEvent(itemDir string) (string, bool) {
 	return manifest.Hooks[0].Event, true
 }
 
-// previewMCP checks installed.json for an existing MCP entry.
-func previewMCP(ref ResolvedRef, prov provider.Provider, inst *installer.Installed) PlannedAction {
+// previewMCP checks installed.json for an existing MCP entry, then whether
+// the merge would refuse the item, such as for a server the user defined.
+func previewMCP(ref ResolvedRef, prov provider.Provider, repoRoot string, inst *installer.Installed) PlannedAction {
 	if inst.FindMCP(ref.Name, prov.Slug) >= 0 {
 		return PlannedAction{
 			Type:   ref.Type,
 			Name:   ref.Name,
 			Action: "skip-exists",
 			Detail: fmt.Sprintf("MCP server %s already installed", ref.Name),
+		}
+	}
+	if err := installer.CheckMCP(ref.Item, prov, repoRoot, inst); err != nil {
+		return PlannedAction{
+			Type:    ref.Type,
+			Name:    ref.Name,
+			Action:  "error-conflict",
+			Problem: err.Error(),
 		}
 	}
 	return PlannedAction{

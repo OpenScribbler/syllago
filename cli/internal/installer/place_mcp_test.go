@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"bytes"
 	"errors"
 	"os"
 	"path/filepath"
@@ -52,16 +53,17 @@ func TestPlaceMCP_LeavesInstalledAndBackupToTheCaller(t *testing.T) {
 
 // TestInstallMCP_RefusesAConfigItCannotMergeInto: the merge writes into
 // invalid JSON without complaint, so a config that is not JSON once its
-// comments are gone fails the install and stays as it was. An empty file
-// holds no servers yet.
+// comments and trailing commas are gone fails the install and stays as it
+// was. An empty file holds no servers yet.
 func TestInstallMCP_RefusesAConfigItCannotMergeInto(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  string
 		wantErr bool
 	}{
-		{"trailing comma", `{"theme":"x",}`, true},
+		{"missing comma", `{"theme":"x" "font":"y"}`, true},
 		{"truncated", `{"theme":`, true},
+		{"trailing commas", "{\"theme\":\"x\",\"tabs\":[1,2,\n],\"s\":\",}\",\n}", false},
 		{"empty", "", false},
 		{"blank", " \n", false},
 		{"comments", "// mine\n{\"theme\":\"x\"}", false},
@@ -112,5 +114,77 @@ func TestInstallMCP_RefusesAServerTheUserDefined(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(cfgPath); string(got) != mine {
 		t.Errorf("config changed to %s", got)
+	}
+}
+
+// TestMCP_ZedSettingsWithATrailingComma: Zed's settings allow a comma
+// before a closing brace, so a server in such a file still reads as
+// installed and uninstalls.
+func TestMCP_ZedSettingsWithATrailingComma(t *testing.T) {
+	isolateLegacyRoot(t)
+	item := writeMCPItem(t, t.TempDir(), "gh")
+	item.ServerKey = "gh"
+	cfgPath := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(cfgPath, []byte("{\"theme\":\"x\",\n}"), 0644)
+	overrideMCPConfigPaths(t, map[string]string{"zed": cfgPath})
+	projectRoot := t.TempDir()
+
+	if _, err := installMCP(item, provider.Zed, projectRoot); err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+	data, _ := os.ReadFile(cfgPath)
+	end := bytes.LastIndexByte(data, '}')
+	os.WriteFile(cfgPath, append(data[:end:end], ",\n}"...), 0644)
+
+	if status, err := mcpStatus(item, provider.Zed, projectRoot); status != StatusInstalled || err != nil {
+		t.Errorf("status: got %v (err %v), want installed", status, err)
+	}
+	if _, err := uninstallMCP(item, provider.Zed, projectRoot); err != nil {
+		t.Fatalf("uninstallMCP: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); strings.Contains(string(got), `"gh"`) {
+		t.Errorf("server still configured: %s", got)
+	}
+}
+
+// TestStripTrailingCommas: a comma before a closing brace or bracket goes,
+// and a comma inside a string stays, escaped quotes included.
+func TestStripTrailingCommas(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"{\"a\":1,\n}", "{\"a\":1\n}"},
+		{"[1,2, ]", "[1,2 ]"},
+		{`{"s":",}"}`, `{"s":",}"}`},
+		{`{"s":"a\",]",}`, `{"s":"a\",]"}`},
+		{`{"a":1,"b":2}`, `{"a":1,"b":2}`},
+	}
+	for _, tt := range tests {
+		if got := string(stripTrailingCommas([]byte(tt.in))); got != tt.want {
+			t.Errorf("stripTrailingCommas(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+// TestUninstallMCP_RefusesAConfigItCannotEdit: a config that stopped being
+// JSON after the install fails the uninstall and stays as it was, rather
+// than taking a write that corrupts it further.
+func TestUninstallMCP_RefusesAConfigItCannotEdit(t *testing.T) {
+	isolateLegacyRoot(t)
+	item := writeMCPItem(t, t.TempDir(), "gh")
+	cfgPath := filepath.Join(t.TempDir(), "mcp.json")
+	os.WriteFile(cfgPath, []byte(`{}`), 0644)
+	overrideMCPConfigPaths(t, map[string]string{"cursor": cfgPath})
+	projectRoot := t.TempDir()
+	if _, err := installMCP(item, provider.Cursor, projectRoot); err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+	data, _ := os.ReadFile(cfgPath)
+	broken := string(bytes.Replace(data, []byte(`"mcpServers"`), []byte(`"theme":"x" "mcpServers"`), 1))
+	os.WriteFile(cfgPath, []byte(broken), 0644)
+
+	if _, err := uninstallMCP(item, provider.Cursor, projectRoot); err == nil || !strings.Contains(err.Error(), "invalid JSON") {
+		t.Errorf("error: got %v, want invalid JSON", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != broken {
+		t.Errorf("config changed to %q", got)
 	}
 }
