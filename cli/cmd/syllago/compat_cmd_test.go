@@ -133,3 +133,36 @@ func TestCompatShowsUnsupportedProviders(t *testing.T) {
 	// It's possible all providers support skills — only assert unsupported if it's expected.
 	_ = hasUnsupported
 }
+
+// Regression: compat rendered a Library hook through a second encoder, so
+// it failed to read the hooks/0.1 manifest and showed a provider syllago
+// cannot write hooks for, such as Codex, as supported.
+func TestCompatLibraryHook(t *testing.T) {
+	lib := t.TempDir()
+	hookDir := filepath.Join(lib, "hooks", "claude-code", "lint")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"worktree_create","handler":{"type":"command","command":"./lint.sh"}}]}`), 0644)
+	withCompatLibrary(t, lib)
+	stdout, _ := output.SetForTest(t)
+	output.JSON = true
+
+	if err := compatCmd.RunE(compatCmd, []string{"lint"}); err != nil {
+		t.Fatalf("compat: %v", err)
+	}
+	entries := map[string]gjson.Result{}
+	for _, e := range gjson.Get(stdout.String(), "entries").Array() {
+		entries[e.Get("provider").String()] = e
+	}
+	for prov, want := range map[string]bool{"claude-code": true, "gemini-cli": false, "codex": false} {
+		e, ok := entries[prov]
+		if !ok {
+			t.Fatalf("no entry for %s:\n%s", prov, stdout.String())
+		}
+		if got := e.Get("supported").Bool(); got != want {
+			t.Errorf("%s supported = %v, want %v (warnings %s)", prov, got, want, e.Get("warnings").Raw)
+		}
+	}
+	if w := entries["gemini-cli"].Get("warnings").Raw; !strings.Contains(w, "worktree_create") {
+		t.Errorf("gemini-cli warnings = %s, want the event it cannot hold", w)
+	}
+}

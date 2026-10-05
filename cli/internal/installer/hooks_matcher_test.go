@@ -127,3 +127,36 @@ func TestInstallHook_MatcherPatterns(t *testing.T) {
 		})
 	}
 }
+
+// Regression: install read a manifest event it did not know only as the
+// target's own name, while conversion first read it as the source
+// provider's, so compat called a hook supported that install rejected.
+func TestInstallHook_ReadsAnEventThroughTheSourceProvider(t *testing.T) {
+	projectRoot := t.TempDir()
+	hookDir := filepath.Join(projectRoot, "hooks", "claude-code", "after-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"name":"after","event":"PostToolUse","handler":{"type":"command","command":"echo after"}}]}`), 0644)
+	item := catalog.ContentItem{Name: "after-hook", Type: catalog.Hooks, Path: hookDir, Provider: "claude-code"}
+
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(settingsPath, []byte(`{}`), 0644)
+	overrideHookSettingsPath(t, settingsPath)
+
+	if _, err := installHook(item, provider.GeminiCLI, projectRoot, ScanOptions{}); err != nil {
+		t.Fatalf("installHook: %v", err)
+	}
+	data, _ := os.ReadFile(settingsPath)
+	if !gjson.GetBytes(data, "hooks.AfterTool.0").Exists() {
+		t.Fatalf("expected the hook under AfterTool, got: %s", data)
+	}
+	if status := checkHookStatus(item, provider.GeminiCLI, projectRoot); status != StatusInstalled {
+		t.Errorf("expected StatusInstalled, got %v", status)
+	}
+	if _, err := uninstallHook(item, provider.GeminiCLI, projectRoot); err != nil {
+		t.Fatalf("uninstallHook: %v", err)
+	}
+	data, _ = os.ReadFile(settingsPath)
+	if gjson.GetBytes(data, "hooks.AfterTool.0").Exists() {
+		t.Errorf("hook entry should be removed, got: %s", data)
+	}
+}

@@ -266,6 +266,42 @@ func TestClaudeCodeAdapterEncode_ArrayMatcherBecomesAlternation(t *testing.T) {
 	}
 }
 
+func TestPlainMatcherAdapters_WarnWhenAMatcherIsDropped(t *testing.T) {
+	array := `["shell","file_write"]`
+	// The other adapters write an MCP matcher as a native tool name; Pi has
+	// no form for one.
+	mcp := `{"mcp":{"server":"github","tool":"create_issue"}}`
+	cases := map[string][]string{
+		"cursor": {array}, "kiro": {array}, "copilot-cli": {array}, "vs-code-copilot": {array},
+		"pi": {array, mcp},
+	}
+	for slug, matchers := range cases {
+		for _, m := range matchers {
+			t.Run(slug+"/"+m, func(t *testing.T) {
+				hooks := &CanonicalHooks{
+					Spec: SpecVersion,
+					Hooks: []CanonicalHook{
+						{Event: "before_tool_execute", Matcher: json.RawMessage(m), Handler: HookHandler{Type: "command", Command: "echo guard"}},
+					},
+				}
+				encoded, err := AdapterFor(slug).Encode(hooks)
+				if err != nil {
+					t.Fatalf("Encode: %v", err)
+				}
+				found := false
+				for _, w := range encoded.Warnings {
+					if w.Capability == "matcher" && strings.Contains(w.Description, "match all tools") {
+						found = true
+					}
+				}
+				if !found {
+					t.Errorf("expected a match-all warning, got %v", encoded.Warnings)
+				}
+			})
+		}
+	}
+}
+
 func TestTranslateMatcherToProvider_NilMatcher(t *testing.T) {
 	result, warnings := TranslateMatcherToProvider(nil, "claude-code")
 	if result != nil {

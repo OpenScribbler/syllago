@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
@@ -99,5 +101,97 @@ func TestInstallToProvider_NoticeOutputUnchanged(t *testing.T) {
 		"  skip dangerous: hook \"dangerous\" has high-severity security findings; re-run with --force to install anyway\n"
 	if got := stderr.String(); got != want {
 		t.Errorf("stderr changed:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// Regression: install read a Library hook's portability warnings through a
+// second encoder that could not read the hooks/0.1 manifest, so what the
+// target provider loses from a hook went unreported.
+func TestInstallToProvider_WarnsWhatTheProviderLoses(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".warn-test"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".warn-test", "settings.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(projectRoot, "hooks", "guard")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	hook := `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo pre"}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hook), 0644); err != nil {
+		t.Fatal(err)
+	}
+	prov := provider.Provider{
+		Name:         "Warn Test",
+		Slug:         "gemini-cli",
+		ConfigDir:    ".warn-test",
+		InstallDir:   func(string, catalog.ContentType) string { return provider.JSONMergeSentinel },
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+	}
+	items := []catalog.ContentItem{{Name: "guard", Type: catalog.Hooks, Path: dir, Meta: &metadata.Meta{SourceProvider: "claude-code"}}}
+
+	output.SetForTest(t)
+	res, err := installToProvider(items, prov, installer.MethodSymlink,
+		false, config.NewResolver(nil, ""), prov.Slug, projectRoot, false, installer.ScanOptions{})
+	if err != nil {
+		t.Fatalf("installToProvider: %v", err)
+	}
+	if len(res.Installed) != 1 {
+		t.Fatalf("installed = %+v, skipped = %+v", res.Installed, res.Skipped)
+	}
+	if w := strings.Join(res.Installed[0].Warnings, "\n"); !strings.Contains(w, "structured hook output") {
+		t.Errorf("warnings = %q, want the hook output gemini-cli ignores", w)
+	}
+}
+
+func TestInstallToProvider_WarningsReadEventsThroughTheItemProvider(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".warn-test"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".warn-test", "settings.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(projectRoot, "hooks", "claude-code", "after")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// PostToolUse is Claude Code's name; the item records its provider but no source_provider.
+	hook := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"echo post"}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hook), 0644); err != nil {
+		t.Fatal(err)
+	}
+	prov := provider.Provider{
+		Name:         "Warn Test",
+		Slug:         "gemini-cli",
+		ConfigDir:    ".warn-test",
+		InstallDir:   func(string, catalog.ContentType) string { return provider.JSONMergeSentinel },
+		SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+	}
+	items := []catalog.ContentItem{{Name: "after", Type: catalog.Hooks, Path: dir, Provider: "claude-code"}}
+
+	output.SetForTest(t)
+	res, err := installToProvider(items, prov, installer.MethodSymlink,
+		false, config.NewResolver(nil, ""), prov.Slug, projectRoot, false, installer.ScanOptions{})
+	if err != nil {
+		t.Fatalf("installToProvider: %v", err)
+	}
+	if len(res.Installed) != 1 {
+		t.Fatalf("installed = %+v, skipped = %+v", res.Installed, res.Skipped)
+	}
+	if w := strings.Join(res.Installed[0].Warnings, "\n"); strings.Contains(w, "not supported") {
+		t.Errorf("warnings = %q, want none about the event the install wrote", w)
 	}
 }

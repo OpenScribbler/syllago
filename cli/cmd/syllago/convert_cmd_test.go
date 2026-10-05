@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -338,5 +339,40 @@ func TestConvertOpenCodeSourcedAgentFromLibrary(t *testing.T) {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("output missing %q:\n%s", want, data)
 		}
+	}
+}
+
+// Regression: a Library hook, stored as a hooks/0.1 manifest, failed to
+// convert because convert read it only as a provider's settings file.
+func TestConvertLibraryHook(t *testing.T) {
+	lib := t.TempDir()
+	hookDir := filepath.Join(lib, "hooks", "claude-code", "lint")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"after_tool_execute","matcher":"shell","handler":{"type":"command","command":"./lint.sh"}}]}`), 0644)
+	withConvertLibrary(t, lib)
+	_, _ = output.SetForTest(t)
+
+	outFile := filepath.Join(t.TempDir(), "hooks.json")
+	convertCmd.Flags().Set("to", "gemini-cli")
+	convertCmd.Flags().Set("output", outFile)
+	defer resetConvertFlags(t)
+	if err := convertCmd.RunE(convertCmd, []string{"lint"}); err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	data, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("reading output: %v", err)
+	}
+	for _, want := range []string{`"AfterTool"`, `"run_shell_command"`, `"./lint.sh"`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("output missing %s:\n%s", want, data)
+		}
+	}
+
+	convertCmd.Flags().Set("to", "codex")
+	err = convertCmd.RunE(convertCmd, []string{"lint"})
+	var se output.StructuredError
+	if !errors.As(err, &se) || se.Code != output.ErrConvertNotSupported {
+		t.Errorf("convert to codex: err = %v, want %s", err, output.ErrConvertNotSupported)
 	}
 }
