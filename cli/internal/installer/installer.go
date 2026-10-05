@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"syscall"
 
@@ -628,20 +627,7 @@ func placedNotices(item catalog.ContentItem, prov provider.Provider) []Notice {
 	if err != nil || c.From == prov.Slug {
 		return nil
 	}
-	warnings := c.Warnings
-	if item.Type == catalog.MCP && c.From != "" {
-		// A server added from settings is stored as its provider wrote it
-		// and one added by type as canonical, and the merge writes either
-		// as stored, so each reading names fields the other misses.
-		if asCanonical, err := converter.For(item.Type).Render(c.Source, prov); err == nil {
-			for _, w := range asCanonical.Warnings {
-				if !slices.Contains(warnings, w) {
-					warnings = append(warnings, w)
-				}
-			}
-		}
-	}
-	return conversionNotices(item, warnings)
+	return conversionNotices(item, c.Warnings)
 }
 
 // conversionNotices turns a render's warnings into notices about item.

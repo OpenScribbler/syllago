@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -307,6 +310,52 @@ func ExtractServerEntries(rawData []byte, itemName string, jsonKey string) (map[
 	return entries, nil
 }
 
+// mcpEntryFields are the server fields MCPConfig keeps, so the only ones an
+// install writes.
+var mcpEntryFields = []string{"type", "command", "args", "url", "env"}
+
+// droppedServerFields says, for each server an install writes, which of its
+// stored fields the install leaves out. The merge writes the same fields
+// for every provider, so the warning holds whatever the target reads.
+func droppedServerFields(rawData []byte, jsonKey string, servers map[string]json.RawMessage) []string {
+	stored := map[string]gjson.Result{}
+	wrapper := gjson.GetBytes(rawData, jsonKey)
+	if !wrapper.Exists() {
+		wrapper = gjson.GetBytes(rawData, "mcpServers")
+	}
+	if wrapper.Exists() && wrapper.Type == gjson.JSON {
+		wrapper.ForEach(func(key, value gjson.Result) bool {
+			stored[key.String()] = value
+			return true
+		})
+	}
+	names := make([]string, 0, len(servers))
+	for name := range servers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var warnings []string
+	for _, name := range names {
+		entry, ok := stored[name]
+		if !ok {
+			// A flat config.json is the server itself.
+			entry = gjson.ParseBytes(rawData)
+		}
+		var dropped []string
+		entry.ForEach(func(key, _ gjson.Result) bool {
+			if !slices.Contains(mcpEntryFields, key.String()) {
+				dropped = append(dropped, key.String())
+			}
+			return true
+		})
+		if len(dropped) > 0 {
+			sort.Strings(dropped)
+			warnings = append(warnings, fmt.Sprintf("server %q: %s not installed (syllago writes only %s)", name, strings.Join(dropped, ", "), strings.Join(mcpEntryFields, ", ")))
+		}
+	}
+	return warnings
+}
+
 func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
 	// Read the MCP config from the content item
 	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
@@ -415,7 +464,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		Mechanism: MechanismMCPMerge,
 		Path:      cfgPath,
 		Keys:      keys,
-		Notices:   placedNotices(item, prov),
+		Notices:   conversionNotices(item, droppedServerFields(rawData, jsonKey, entries)),
 		desc:      desc,
 	}, nil
 }

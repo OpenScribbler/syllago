@@ -131,68 +131,6 @@ func TestInstall_ItemPlacedForItsOwnProviderLosesNothing(t *testing.T) {
 	}
 }
 
-// TestInstallMCP_ReportsWhatTheTargetLoses: an MCP server merged into a
-// provider's config keeps fields the provider does not read, so the
-// placement says which ones it ignores.
-func TestInstallMCP_ReportsWhatTheTargetLoses(t *testing.T) {
-	isolateLegacyRoot(t)
-	dir := t.TempDir()
-	overrideMCPConfigPaths(t, map[string]string{
-		"cursor":      filepath.Join(dir, "cursor-mcp.json"),
-		"claude-code": filepath.Join(dir, "claude.json"),
-	})
-	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
-	os.MkdirAll(itemDir, 0755)
-	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","autoApprove":["list"]}}}`), 0644)
-	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Path: itemDir}
-
-	tests := []struct {
-		prov provider.Provider
-		want string // "" means no conversion warning
-	}{
-		{provider.Cursor, `gh: server "gh": autoApprove dropped (not documented by Cursor)`},
-		{provider.ClaudeCode, ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.prov.Slug, func(t *testing.T) {
-			placement, err := installMCP(item, tt.prov, t.TempDir())
-			if err != nil {
-				t.Fatalf("installMCP: %v", err)
-			}
-			got := conversionWarnings(placement.Notices)
-			if tt.want == "" {
-				if len(got) != 0 {
-					t.Errorf("expected no conversion warnings, got %q", got)
-				}
-				return
-			}
-			if !slices.Contains(got, tt.want) {
-				t.Errorf("expected warning %q, got %q", tt.want, got)
-			}
-		})
-	}
-}
-
-// TestInstallMCP_ReadsTheServerInItsSourceFormat: a server added from Cline
-// keeps Cline's alwaysAllow, which is what Cursor would lose.
-func TestInstallMCP_ReadsTheServerInItsSourceFormat(t *testing.T) {
-	isolateLegacyRoot(t)
-	overrideMCPConfigPaths(t, map[string]string{"cursor": filepath.Join(t.TempDir(), "cursor-mcp.json")})
-	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
-	os.MkdirAll(itemDir, 0755)
-	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","alwaysAllow":["list"]}}}`), 0644)
-	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Provider: "cline", Path: itemDir}
-
-	placement, err := installMCP(item, provider.Cursor, t.TempDir())
-	if err != nil {
-		t.Fatalf("installMCP: %v", err)
-	}
-	want := `gh: server "gh": autoApprove dropped (not documented by Cursor)`
-	if got := conversionWarnings(placement.Notices); !slices.Contains(got, want) {
-		t.Errorf("expected warning %q, got %q", want, got)
-	}
-}
-
 // TestInstall_ItemAddedFromTheTargetLosesNothing: a universal item records
 // the provider it was added from in its metadata rather than its
 // directory, and placing it back there loses nothing.
@@ -212,23 +150,65 @@ func TestInstall_ItemAddedFromTheTargetLosesNothing(t *testing.T) {
 	}
 }
 
-// TestInstallMCP_ReportsWhatATypedAddLoses: an add that names the content
-// type stores the server as canonical while recording Cline as its source,
-// and Cursor still loses the canonical autoApprove the merge writes.
-func TestInstallMCP_ReportsWhatATypedAddLoses(t *testing.T) {
+// TestInstallMCP_ReportsFieldsItDoesNotWrite: the merge writes a server's
+// type, command, args, url and env for every provider, the one it came from
+// included, so install names the stored fields it leaves out.
+func TestInstallMCP_ReportsFieldsItDoesNotWrite(t *testing.T) {
 	isolateLegacyRoot(t)
-	overrideMCPConfigPaths(t, map[string]string{"cursor": filepath.Join(t.TempDir(), "cursor-mcp.json")})
 	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
 	os.MkdirAll(itemDir, 0755)
-	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","autoApprove":["list"]}}}`), 0644)
-	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Path: itemDir, Meta: &metadata.Meta{SourceProvider: "cline"}}
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"type":"http","url":"https://x","headers":{"Authorization":"t"},"alwaysAllow":["list"]}}}`), 0644)
+	want := []string{`gh: server "gh": alwaysAllow, headers not installed (syllago writes only type, command, args, url, env)`}
 
-	placement, err := installMCP(item, provider.Cursor, t.TempDir())
-	if err != nil {
-		t.Fatalf("installMCP: %v", err)
+	for _, prov := range []provider.Provider{provider.Cursor, provider.Cline} {
+		t.Run(prov.Slug, func(t *testing.T) {
+			cfgPath := filepath.Join(t.TempDir(), "mcp.json")
+			overrideMCPConfigPaths(t, map[string]string{prov.Slug: cfgPath})
+			item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Path: itemDir, Meta: &metadata.Meta{SourceProvider: "cline"}}
+
+			placement, err := installMCP(item, prov, t.TempDir())
+			if err != nil {
+				t.Fatalf("installMCP: %v", err)
+			}
+			if got := conversionWarnings(placement.Notices); !slices.Equal(got, want) {
+				t.Errorf("warnings: got %q, want %q", got, want)
+			}
+			written, _ := os.ReadFile(cfgPath)
+			if strings.Contains(string(written), "headers") || strings.Contains(string(written), "alwaysAllow") {
+				t.Errorf("a field the warning names was written: %s", written)
+			}
+		})
 	}
-	want := `gh: server "gh": autoApprove dropped (not documented by Cursor)`
-	if got := conversionWarnings(placement.Notices); !slices.Contains(got, want) {
-		t.Errorf("expected warning %q, got %q", want, got)
+}
+
+// TestInstallMCP_ReportsOnlyTheInstalledServer: an item for one server of a
+// shared config installs that server alone, so another server's fields are
+// not its warnings, and a server with nothing left out has none.
+func TestInstallMCP_ReportsOnlyTheInstalledServer(t *testing.T) {
+	isolateLegacyRoot(t)
+	itemDir := filepath.Join(t.TempDir(), "mcp", "shared")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"a-mcp","args":["-v"]},"b":{"command":"b-mcp","autoApprove":["y"]}}}`), 0644)
+
+	tests := []struct {
+		server string
+		want   []string
+	}{
+		{"a", nil},
+		{"b", []string{`b: server "b": autoApprove not installed (syllago writes only type, command, args, url, env)`}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.server, func(t *testing.T) {
+			overrideMCPConfigPaths(t, map[string]string{"cursor": filepath.Join(t.TempDir(), "cursor-mcp.json")})
+			item := catalog.ContentItem{Name: tt.server, Type: catalog.MCP, Path: itemDir, ServerKey: tt.server}
+
+			placement, err := installMCP(item, provider.Cursor, t.TempDir())
+			if err != nil {
+				t.Fatalf("installMCP: %v", err)
+			}
+			if got := conversionWarnings(placement.Notices); !slices.Equal(got, tt.want) {
+				t.Errorf("warnings: got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
