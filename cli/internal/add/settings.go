@@ -7,6 +7,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/tidwall/gjson"
 
@@ -65,15 +68,10 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 				unread = append(unread, fmt.Errorf("parsing %s: %w", loc.Path, err))
 				continue
 			}
-			seen := map[string]int{}
-			for _, hook := range hooks {
-				name := converter.DeriveHookName(hook)
-				seen[name]++
-				if n := seen[name]; n > 1 {
-					name = fmt.Sprintf("%s-%d", name, n)
-				}
+			names := hookNames(hooks)
+			for i, hook := range hooks {
 				items = append(items, SettingsItem{
-					DiscoveryItem: DiscoveryItem{Name: name, Type: catalog.Hooks, Path: loc.Path, Scope: loc.Scope.String()},
+					DiscoveryItem: DiscoveryItem{Name: names[i], Type: catalog.Hooks, Path: loc.Path, Scope: loc.Scope.String()},
 					Hook:          &hook,
 				})
 			}
@@ -116,36 +114,82 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 	return items, unread, nil
 }
 
+// hookNames names each hook of one settings file. A hook whose derived
+// name an earlier hook took gets the first -N suffix no hook in the file
+// derives or has taken, so a suffixed name never shadows a real one.
+func hookNames(hooks []converter.HookData) []string {
+	derived := make([]string, len(hooks))
+	taken := map[string]bool{}
+	for i, hook := range hooks {
+		derived[i] = converter.DeriveHookName(hook)
+	}
+	natural := map[string]bool{}
+	for _, name := range derived {
+		natural[name] = true
+	}
+	names := make([]string, len(hooks))
+	for i, name := range derived {
+		if taken[name] {
+			for n := 2; ; n++ {
+				if candidate := fmt.Sprintf("%s-%d", name, n); !taken[candidate] && !natural[candidate] {
+					name = candidate
+					break
+				}
+			}
+		}
+		taken[name] = true
+		names[i] = name
+	}
+	return names
+}
+
 // settingsDest picks the Library directory for item, skipping directories
-// another item of this run has claimed. A directory holds the item when
-// its metadata records the item's scope and settings name. One added
-// before names were recorded holds it at the base directory only, since
-// only a real item of that name can sit at a -N directory without one.
+// another item of this run has claimed. The item goes to the directory
+// that holds it, wherever it sits, or else the first free one. A
+// directory holds the item when its metadata records the item's scope
+// and settings name. One added before names were recorded holds it at the
+// base directory only, since only a real item of that name can sit at a
+// -N directory without one.
 func settingsDest(globalDir, provSlug string, item *SettingsItem, claimed map[string]bool) (string, ItemStatus) {
 	base := filepath.Join(globalDir, string(item.Type), provSlug, item.Name)
-	for i := 1; ; i++ {
-		dest := base
-		if i > 1 {
-			dest = fmt.Sprintf("%s-%d", base, i)
+	dir := func(i int) string {
+		if i == 1 {
+			return base
 		}
-		if claimed[dest] {
+		return fmt.Sprintf("%s-%d", base, i)
+	}
+	entries, _ := os.ReadDir(filepath.Dir(base))
+	var held []int
+	for _, e := range entries {
+		if !e.IsDir() {
 			continue
 		}
-		info, err := os.Stat(dest)
-		if err != nil || !info.IsDir() {
-			return dest, StatusNew
-		}
-		meta, _ := metadata.Load(dest)
-		if meta == nil || meta.SourceScope == "" {
-			if i == 1 {
-				return dest, StatusInLibrary
-			}
-			continue
-		}
-		if meta.SourceScope == item.Scope && (meta.SourceName == item.Name || meta.SourceName == "" && i == 1) {
-			return dest, StatusInLibrary
+		if e.Name() == item.Name {
+			held = append(held, 1)
+		} else if n, err := strconv.Atoi(strings.TrimPrefix(e.Name(), item.Name+"-")); err == nil && n > 1 && e.Name() == fmt.Sprintf("%s-%d", item.Name, n) {
+			held = append(held, n)
 		}
 	}
+	slices.Sort(held)
+	for _, i := range held {
+		if !claimed[dir(i)] && holdsItem(dir(i), i, item) {
+			return dir(i), StatusInLibrary
+		}
+	}
+	for i := 1; ; i++ {
+		if _, err := os.Stat(dir(i)); err != nil && !claimed[dir(i)] {
+			return dir(i), StatusNew
+		}
+	}
+}
+
+// holdsItem reports whether dest, the item's i-th directory, holds item.
+func holdsItem(dest string, i int, item *SettingsItem) bool {
+	meta, _ := metadata.Load(dest)
+	if meta == nil || meta.SourceScope == "" {
+		return i == 1
+	}
+	return meta.SourceScope == item.Scope && (meta.SourceName == item.Name || meta.SourceName == "" && i == 1)
 }
 
 // SettingsResult is the outcome of adding one settings item. Bundled
@@ -202,7 +246,10 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) Set
 	switch item.Type {
 	case catalog.Hooks:
 		metaName = filepath.Base(item.Dest)
+		// Bundling rewrites each command's script path, so it works on a
+		// copy that leaves the caller's item as discovered.
 		hook := *item.Hook
+		hook.Hooks = slices.Clone(hook.Hooks)
 		bundled, err := converter.BundleHookScripts(&hook, filepath.Dir(item.Path), item.Dest)
 		r.Bundled, r.BundleErr = len(bundled), err
 		for _, b := range bundled {

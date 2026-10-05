@@ -109,6 +109,28 @@ func TestDiscoverSettings_HookSuffixesAreStable(t *testing.T) {
 	}
 }
 
+// A suffix never lands on a name another hook in the file derives, so
+// each hook keeps a name of its own.
+func TestDiscoverSettings_SuffixSkipsADerivedName(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo one", "statusMessage": "guard"}]},
+      {"matcher": "Edit", "hooks": [{"type": "command", "command": "echo two", "statusMessage": "guard"}]},
+      {"matcher": "Write", "hooks": [{"type": "command", "command": "echo three", "statusMessage": "guard-2"}]}
+    ]
+  }
+}`)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if got := strings.Join(itemNames(items), ","); got != "guard,guard-3,guard-2" {
+		t.Fatalf("names = %s, want guard,guard-3,guard-2", got)
+	}
+}
+
 func TestDiscoverSettings_MCPServers(t *testing.T) {
 	projectRoot, globalDir := settingsEnv(t)
 	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
@@ -252,6 +274,21 @@ func TestSettingsDest(t *testing.T) {
 			wantStatus: StatusNew,
 		},
 		{
+			name:       "a held -2 is found though the base is free",
+			setup:      func(t *testing.T, g string) { saveNamed(t, base(g)+"-2", "project", "guard") },
+			wantSuffix: "-2",
+			wantStatus: StatusInLibrary,
+		},
+		{
+			name: "a held -3 is found past a free -2",
+			setup: func(t *testing.T, g string) {
+				saveScoped(t, base(g), "global")
+				saveNamed(t, base(g)+"-3", "project", "guard")
+			},
+			wantSuffix: "-3",
+			wantStatus: StatusInLibrary,
+		},
+		{
 			name:       "a directory claimed in this run is skipped",
 			claimed:    func(g string) map[string]bool { return map[string]bool{base(g): true} },
 			wantSuffix: "-2",
@@ -332,6 +369,27 @@ func TestAddFromSettings_HooksWriteManifestsAndScripts(t *testing.T) {
 	}
 	if meta.SourceProvider != "claude-code" || meta.SourceType != "provider" || meta.SourceFormat != "json" {
 		t.Errorf("meta source %q/%q/%q, want claude-code/provider/json", meta.SourceProvider, meta.SourceType, meta.SourceFormat)
+	}
+}
+
+// Bundling a script rewrites the manifest's command, never the item the
+// caller passed in, so the item can be added again elsewhere.
+func TestAddFromSettings_LeavesTheItemAsDiscovered(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{
+  "hooks": {"PostToolUse": [{"matcher": "Write", "hooks": [{"type": "command", "command": "./scripts/check.sh"}]}]}
+}`)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "scripts", "check.sh"), "#!/bin/sh\nexit 0\n")
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("DiscoverSettings: %d items, %v", len(items), err)
+	}
+	results := AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
+	if results[0].Bundled != 1 {
+		t.Fatalf("bundled %d scripts, want 1", results[0].Bundled)
+	}
+	if got := items[0].Hook.Hooks[0].Command; got != "./scripts/check.sh" {
+		t.Errorf("command after the add = %q, want ./scripts/check.sh", got)
 	}
 }
 
