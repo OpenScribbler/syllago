@@ -187,6 +187,23 @@ func plainMatcherString(m json.RawMessage, slug string) (string, []ConversionWar
 	}}
 }
 
+// exactToolNames splits a string matcher into the tool names it accepts, for
+// a provider that compares names exactly. It returns nil names for a matcher
+// that accepts every tool, and ok false when a part is a regular expression
+// beyond a wildcard, which exact comparison cannot represent.
+func exactToolNames(matcher string) (names []string, ok bool) {
+	parts := strings.Split(matcher, "|")
+	for _, part := range parts {
+		if part == "*" || part == ".*" {
+			return nil, true
+		}
+		if strings.ContainsAny(part, `.*+?()[]{}^$\`) {
+			return nil, false
+		}
+	}
+	return parts, true
+}
+
 func hasMCPToolName(names []string, slug string) bool {
 	for _, name := range names {
 		if server, _ := parseMCPToolName(name, slug); server != "" {

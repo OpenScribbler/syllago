@@ -3,6 +3,7 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 func init() {
@@ -61,12 +62,10 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 		}
 
 		// Extract tool matcher
-		var toolMatcher string
 		s, sWarnings := plainMatcherString(hook.Matcher, slug)
 		warnings = append(warnings, sWarnings...)
-		if s != "" {
-			toolMatcher = TranslateTool(s, slug)
-		}
+		toolMatcher, toolNames, gWarnings := piToolGuard(s, slug)
+		warnings = append(warnings, gWarnings...)
 
 		timeoutMs := TranslateTimeoutToProvider(hook.Handler.Timeout, slug)
 		effectiveBlocking := hook.Blocking && piEvent == "tool_call"
@@ -82,6 +81,7 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 			PiEvent:     piEvent,
 			Command:     hook.Handler.Command,
 			ToolMatcher: toolMatcher,
+			ToolNames:   toolNames,
 			HasToolName: piEvent == "tool_call" || piEvent == "tool_result",
 			TimeoutMs:   timeoutMs,
 			Blocking:    effectiveBlocking,
@@ -130,7 +130,7 @@ func (a *PiAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 		// Matcher
 		var matcherJSON json.RawMessage
 		if jshook.ToolMatcher != "" {
-			canonical := ReverseTranslateTool(jshook.ToolMatcher, "pi")
+			canonical := ReverseTranslateMatcher(jshook.ToolMatcher, "pi")
 			matcherJSON, _ = json.Marshal(canonical)
 		}
 
@@ -171,4 +171,29 @@ func (a *PiAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 
 func (a *PiAdapter) Capabilities() ProviderCapabilities {
 	return capabilitiesFor(a.ProviderSlug())
+}
+
+// piToolGuard turns a string matcher into the marker text and the tool names
+// the extension's guard accepts. Pi compares tool names exactly, so an
+// alternation becomes a list of names, and a wildcard or a regular expression
+// leaves the hook unguarded, matching every tool.
+func piToolGuard(matcher, slug string) (marker string, names []string, warnings []ConversionWarning) {
+	if matcher == "" {
+		return "", nil, nil
+	}
+	names, ok := exactToolNames(matcher)
+	if !ok {
+		warnings = append(warnings, ConversionWarning{
+			Severity:    "warning",
+			Capability:  "matcher",
+			Description: fmt.Sprintf("matcher %q is a regular expression pi cannot compare; hook will match all tools", matcher),
+		})
+	}
+	if names == nil {
+		return matcher, nil, warnings
+	}
+	for i, name := range names {
+		names[i] = TranslateTool(name, slug)
+	}
+	return strings.Join(names, "|"), names, warnings
 }

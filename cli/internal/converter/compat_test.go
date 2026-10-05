@@ -230,3 +230,29 @@ func TestAnalyzeHookCompat_VSCodeCopilotFull(t *testing.T) {
 		t.Errorf("expected Full compat for vs-code-copilot, got %v", r.Level)
 	}
 }
+
+// Pi compares tool names exactly: a wildcard and an alternation encode, and
+// any other regular expression leaves the hook matching every tool.
+func TestAnalyzeHookCompat_PiMatcherShapes(t *testing.T) {
+	cases := []struct {
+		matcher string
+		want    CompatLevel
+	}{
+		{"shell", CompatFull},
+		{"*", CompatFull},
+		{"shell|file_read", CompatFull},
+		{"file_.*", CompatBroken},
+	}
+	for _, tc := range cases {
+		t.Run(tc.matcher, func(t *testing.T) {
+			hook := HookData{
+				Event:   "before_tool_execute",
+				Matcher: tc.matcher,
+				Hooks:   []HookEntry{{Type: "command", Command: "./check.sh"}},
+			}
+			if r := AnalyzeHookCompat(hook, "pi"); r.Level != tc.want {
+				t.Errorf("level = %v, want %v (%+v)", r.Level, tc.want, r.Features)
+			}
+		})
+	}
+}

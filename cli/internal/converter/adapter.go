@@ -92,6 +92,11 @@ type ProviderCapabilities struct {
 	// SupportsMatchers indicates whether the provider supports tool matchers.
 	SupportsMatchers bool
 
+	// ExactToolMatchers indicates that matchers compare tool names exactly.
+	// A wildcard and an alternation of names still encode; any other
+	// regular expression cannot, and the hook matches every tool.
+	ExactToolMatchers bool
+
 	// SupportsAsync indicates whether hooks can run asynchronously.
 	SupportsAsync bool
 

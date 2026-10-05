@@ -106,8 +106,9 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:     false,
 	},
 	"pi": {
-		SupportsMatchers: true,
-		SupportsBlocking: true,
-		TimeoutUnit:      "milliseconds",
+		SupportsMatchers:  true,
+		ExactToolMatchers: true,
+		SupportsBlocking:  true,
+		TimeoutUnit:       "milliseconds",
 	},
 }

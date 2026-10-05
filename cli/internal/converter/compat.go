@@ -227,6 +227,11 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 			Present:   check.present,
 			Supported: supportsFeature(caps, check.feature),
 		}
+		if check.feature == FeatureMatcher && caps.ExactToolMatchers {
+			if _, ok := exactToolNames(hook.Matcher); !ok {
+				fr.Supported = false
+			}
+		}
 		if check.feature == FeatureTimeout {
 			fr.Notes = caps.TimeoutUnit
 		}
