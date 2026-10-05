@@ -106,7 +106,7 @@ func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv prov
 
 	ct := catalog.ContentType(typeStr)
 	conv := converter.For(ct)
-	if conv == nil {
+	if conv == nil && ct != catalog.Hooks {
 		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("no converter for content type %q", typeStr), "Supported types: rules, hooks, skills, agents, commands, mcp")
 	}
 
@@ -155,7 +155,7 @@ func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provid
 	}
 
 	conv := converter.For(item.Type)
-	if conv == nil {
+	if conv == nil && item.Type != catalog.Hooks {
 		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Supported types: rules, hooks, skills, agents, commands, mcp")
 	}
 

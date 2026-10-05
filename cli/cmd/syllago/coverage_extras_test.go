@@ -529,7 +529,7 @@ func TestExportWithConverter_SameProviderSourceCopy(t *testing.T) {
 	prov := provider.Provider{Slug: "claude-code", Name: "Claude Code"}
 	installDir := filepath.Join(tmp, "install")
 
-	got, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir, "")
 	if !handled {
 		t.Fatal("handled=false, want true (same-provider .source/ branch)")
 	}
@@ -553,7 +553,7 @@ func TestExportWithConverter_SameProviderNoSourceFile(t *testing.T) {
 	prov := provider.Provider{Slug: "claude-code"}
 	installDir := filepath.Join(tmp, "install")
 
-	got, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir, "")
 	if handled || got != nil {
 		t.Errorf("got (%v, %v), want (nil, false) when .source/ has no files", got, handled)
 	}
@@ -580,7 +580,7 @@ func TestExportWithConverter_CrossProviderRender(t *testing.T) {
 		},
 	}
 
-	got, handled := exportWithConverter(item, prov, "claude-code", conv, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", conv, installDir, "")
 	if !handled || got == nil {
 		t.Fatalf("got (%v, %v), want handled item", got, handled)
 	}
@@ -608,7 +608,7 @@ func TestExportWithConverter_CrossProviderCanonicalizeError(t *testing.T) {
 	installDir := filepath.Join(tmp, "install")
 
 	conv := fullConverter{canonErr: os.ErrInvalid}
-	got, handled := exportWithConverter(item, prov, "claude-code", conv, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", conv, installDir, "")
 	if got != nil || handled {
 		t.Errorf("got (%v, %v), want (nil, false) on canonicalize err", got, handled)
 	}
@@ -627,7 +627,7 @@ func TestExportWithConverter_CrossProviderRenderError(t *testing.T) {
 			return nil, os.ErrPermission
 		},
 	}
-	got, handled := exportWithConverter(item, prov, "claude-code", conv, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", conv, installDir, "")
 	if got != nil || handled {
 		t.Errorf("got (%v, %v), want (nil, false) on render err", got, handled)
 	}
@@ -646,7 +646,7 @@ func TestExportWithConverter_CrossProviderRenderSkip(t *testing.T) {
 			return &converter.Result{Content: nil}, nil // nil Content = skip
 		},
 	}
-	got, handled := exportWithConverter(item, prov, "claude-code", conv, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", conv, installDir, "")
 	if got != nil || !handled {
 		t.Errorf("got (%v, %v), want (nil, true) on skip", got, handled)
 	}
@@ -669,7 +669,7 @@ func TestExportWithConverter_CrossProviderMissingContentFile(t *testing.T) {
 	prov := provider.Provider{Slug: "claude-code"}
 	installDir := filepath.Join(tmp, "install")
 
-	got, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir, "")
 	if got != nil || handled {
 		t.Errorf("got (%v, %v), want (nil, false) with no content file", got, handled)
 	}
@@ -692,7 +692,7 @@ func TestExportWithConverter_NoProviderFallThrough(t *testing.T) {
 	prov := provider.Provider{Slug: "claude-code"}
 	installDir := filepath.Join(tmp, "install")
 
-	got, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir)
+	got, _, handled := exportWithConverter(item, prov, "claude-code", fullConverter{}, installDir, "")
 	if got != nil || handled {
 		t.Errorf("got (%v, %v), want (nil, false) on fall-through", got, handled)
 	}

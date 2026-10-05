@@ -448,7 +448,7 @@ func renderAsProvider(item catalog.ContentItem, provSlug string) (*converter.Res
 	}
 
 	conv := converter.For(item.Type)
-	if conv == nil {
+	if conv == nil && item.Type != catalog.Hooks {
 		return nil, "", output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "")
 	}
 

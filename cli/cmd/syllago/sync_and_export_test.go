@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -531,7 +532,7 @@ func TestRunExportOp_JSONMergeCrossProvider(t *testing.T) {
 	// A hook item with source_provider set triggers the JSON-merge cross-provider
 	// converter branch. The hooks converter renders to the target provider.
 	root := setupExportRepo(t)
-	hookDir := filepath.Join(root, "hooks", "x-hook")
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "hooks.json"), []byte(`{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}]}}`), 0644)
 	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
@@ -554,16 +555,207 @@ func TestRunExportOp_JSONMergeCrossProvider(t *testing.T) {
 	}
 	t.Cleanup(func() { provider.AllProviders = orig })
 
-	_, stderr := output.SetForTest(t)
+	stdout, stderr := output.SetForTest(t)
 
 	err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	// Exercises the JSON-merge branch: either "Skipping ... requires JSON merge" or
-	// "(converted, merge manually)" depending on whether metadata was loaded.
-	if !strings.Contains(stderr.String(), "JSON merge") && !strings.Contains(stderr.String(), "Skipping") {
-		t.Errorf("expected JSON merge or skip message, got: %s", stderr.String())
+	if !strings.Contains(stdout.String(), "(converted, merge manually)") {
+		t.Errorf("expected a converted export, got stdout %q, stderr %q", stdout.String(), stderr.String())
+	}
+}
+
+// Regression: sync-install rendered hooks through a second encoder, so the
+// exported file could differ from what install writes, and a Library hook
+// manifest went out unconverted.
+func TestRunExportOp_HookExportUsesTheInstallEncoder(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":"shell","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(string, catalog.ContentType) string {
+				return provider.JSONMergeSentinel
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	stdout, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeGenerate, "", false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	exported, _ := filepath.Glob(filepath.Join(hookDir, "exported-gemini-cli-*"))
+	if len(exported) != 1 {
+		t.Fatalf("want one exported file, got %v\nstdout: %s\nstderr: %s", exported, stdout, stderr)
+	}
+	data, _ := os.ReadFile(exported[0])
+	for _, want := range []string{`"BeforeTool"`, `"run_shell_command"`, `./syllago-llm-hook-`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("exported hooks missing %s:\n%s", want, data)
+		}
+	}
+	scripts, _ := filepath.Glob(filepath.Join(hookDir, "syllago-llm-hook-*.sh"))
+	if len(scripts) != 1 {
+		t.Errorf("want one wrapper script, got %v", scripts)
+	}
+}
+
+func TestRunExportOp_SkipModeSuggestsGenerate(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"./check.sh"}},{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(string, catalog.ContentType) string {
+				return provider.JSONMergeSentinel
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	stdout, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeSkip, "", false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	if !strings.Contains(stdout.String()+stderr.String(), "--llm-hooks=generate") {
+		t.Errorf("skip mode should suggest --llm-hooks=generate\nstdout: %q\nstderr: %q", stdout.String(), stderr.String())
+	}
+}
+
+func TestRunExportOp_AllHooksDroppedExplainsWhy(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(string, catalog.ContentType) string {
+				return provider.JSONMergeSentinel
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeSkip, "", false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	got := stderr.String()
+	if !strings.Contains(got, "--llm-hooks=generate") || strings.Contains(got, "use the TUI") {
+		t.Errorf("want the drop explained with the --llm-hooks hint, got:\n%s", got)
+	}
+}
+
+func TestRunExportOp_AllHooksDroppedExplainsWhy_FileProvider(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	// --base-dir bypasses the install matrix, which would send Gemini
+	// hooks down the JSON-merge branch instead of the file branch.
+	baseDir := t.TempDir()
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(base string, _ catalog.ContentType) string {
+				return filepath.Join(base, "hooks")
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeSkip, baseDir, false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	got := stderr.String()
+	if !strings.Contains(got, "nothing in it converts to Gemini") || !strings.Contains(got, "--llm-hooks=generate") {
+		t.Errorf("want the drop explained with the --llm-hooks hint, got:\n%s", got)
+	}
+}
+
+func TestRunExportOp_HookWithNoEncoderIsSkippedNotCopied(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"./check.sh"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	baseDir := t.TempDir()
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Codex",
+			Slug: "codex",
+			InstallDir: func(base string, _ catalog.ContentType) string {
+				return filepath.Join(base, ".codex")
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "codex", "hooks", "", "shared", converter.LLMHooksModeSkip, baseDir, false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	if !strings.Contains(stderr.String(), "cannot write hooks") {
+		t.Errorf("want the skip to say syllago cannot write Codex hooks, got:\n%s", stderr.String())
+	}
+	if entries, _ := os.ReadDir(filepath.Join(baseDir, ".codex")); len(entries) != 0 {
+		t.Errorf("nothing should be placed for codex, found %d entries", len(entries))
 	}
 }
 
@@ -795,5 +987,29 @@ func TestSyncAndExportNoRegistries(t *testing.T) {
 	out := stdout.String()
 	if !strings.Contains(out, "greeting") {
 		t.Errorf("expected exported skill 'greeting' in output, got: %s", out)
+	}
+}
+
+func TestConvertHooksForExport_GenerateHintOnlyWhereGenerateHelps(t *testing.T) {
+	content := []byte(`{"hooks":{"PreToolUse":[{"hooks":[{"type":"prompt","prompt":"Check safety"}]}]}}`)
+	cases := []struct {
+		toSlug   string
+		wantHint bool
+	}{
+		{"gemini-cli", true},
+		// Crush runs only shell commands, so generate mode drops the hook too.
+		{"crush", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.toSlug, func(t *testing.T) {
+			res, err := convertHooksForExport(content, "claude-code", tc.toSlug, converter.LLMHooksModeSkip)
+			if err != nil {
+				t.Fatalf("convertHooksForExport: %v", err)
+			}
+			gotHint := strings.Contains(strings.Join(res.Warnings, "\n"), "--llm-hooks=generate")
+			if gotHint != tc.wantHint {
+				t.Errorf("generate hint = %v, want %v; warnings: %v", gotHint, tc.wantHint, res.Warnings)
+			}
+		})
 	}
 }

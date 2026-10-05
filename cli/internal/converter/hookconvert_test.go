@@ -128,3 +128,52 @@ func TestConvertHooks_ReadsUnknownEventAsTheTargets(t *testing.T) {
 		t.Errorf("content nil = %v, warnings = %q; want the hook kept with no warning", res.Content == nil, res.Warnings)
 	}
 }
+
+func TestConvertHooksWrappingLLM(t *testing.T) {
+	raw := []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":"shell","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`)
+
+	t.Run("wraps a prompt hook for a target without LLM hooks", func(t *testing.T) {
+		res, err := ConvertHooksWrappingLLM(raw, "claude-code", "gemini-cli")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(res.ExtraFiles) != 1 {
+			t.Fatalf("want one wrapper script, got %v", res.ExtraFiles)
+		}
+		for name := range res.ExtraFiles {
+			if !strings.HasPrefix(name, "syllago-llm-hook-") || !strings.Contains(string(res.Content), `"./`+name+`"`) {
+				t.Errorf("hook does not run its wrapper %s:\n%s", name, res.Content)
+			}
+		}
+	})
+
+	t.Run("drops it without wrapping", func(t *testing.T) {
+		res, err := ConvertHooks(raw, "claude-code", "gemini-cli")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Content != nil || len(res.ExtraFiles) != 0 {
+			t.Errorf("want the prompt hook dropped, got %s %v", res.Content, res.ExtraFiles)
+		}
+	})
+
+	t.Run("drops it for crush, which has no CLI to wrap it in", func(t *testing.T) {
+		res, err := ConvertHooksWrappingLLM(raw, "claude-code", "crush")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Content != nil || len(res.ExtraFiles) != 0 {
+			t.Errorf("want the prompt hook dropped, got %s %v", res.Content, res.ExtraFiles)
+		}
+	})
+
+	t.Run("keeps it for a target with LLM hooks", func(t *testing.T) {
+		res, err := ConvertHooksWrappingLLM(raw, "claude-code", "claude-code")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(res.ExtraFiles) != 0 || !strings.Contains(string(res.Content), `"type": "prompt"`) {
+			t.Errorf("want the prompt hook kept, got %s %v", res.Content, res.ExtraFiles)
+		}
+	})
+}

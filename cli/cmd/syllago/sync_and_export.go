@@ -155,11 +155,6 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 		return output.NewStructuredErrorDetail(output.ErrConfigPath, "expanding paths failed", "Check path overrides in config", err.Error())
 	}
 
-	// Configure the hooks converter with the LLM hooks mode.
-	if hooksConv, ok := converter.For(catalog.Hooks).(*converter.HooksConverter); ok {
-		hooksConv.LLMHooksMode = llmHooksMode
-	}
-
 	// Scan the catalog.
 	cat, err := catalog.Scan(root, projectRoot)
 	if err != nil {
@@ -243,16 +238,22 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 		if installDir == provider.JSONMergeSentinel {
 			// Allow converter-based cross-provider export for JSON merge types
 			srcProv := effectiveProvider(item)
-			if conv := converter.For(item.Type); conv != nil && srcProv != "" && srcProv != toSlug {
+			if conv := converter.For(item.Type); (conv != nil || item.Type == catalog.Hooks) && srcProv != "" && srcProv != toSlug {
 				contentFile := converter.ResolveContentFile(item)
 				if contentFile != "" {
 					content, readErr := os.ReadFile(contentFile)
 					if readErr == nil {
-						canonical, canonErr := conv.Canonicalize(content, srcProv)
-						if canonErr != nil {
-							canonical = &converter.Result{Content: content}
+						var rendered *converter.Result
+						var renderErr error
+						if item.Type == catalog.Hooks {
+							rendered, renderErr = convertHooksForExport(content, srcProv, toSlug, llmHooksMode)
+						} else {
+							canonical, canonErr := conv.Canonicalize(content, srcProv)
+							if canonErr != nil {
+								canonical = &converter.Result{Content: content}
+							}
+							rendered, renderErr = conv.Render(canonical.Content, *prov)
 						}
-						rendered, renderErr := conv.Render(canonical.Content, *prov)
 						if renderErr == nil && rendered.Content != nil {
 							dest := filepath.Join(item.Path, "exported-"+toSlug+"-"+rendered.Filename)
 							if writeErr := os.WriteFile(dest, rendered.Content, 0644); writeErr == nil {
@@ -277,6 +278,21 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 								}
 								continue
 							}
+						}
+						if renderErr == nil && rendered.Content == nil {
+							// The warnings say why nothing converted.
+							result.Skipped = append(result.Skipped, syncSkippedItem{
+								Name:   item.Name,
+								Type:   string(item.Type),
+								Reason: fmt.Sprintf("nothing in it converts to %s: %s", prov.Name, strings.Join(rendered.Warnings, "; ")),
+							})
+							if !output.JSON {
+								fmt.Fprintf(output.ErrWriter, "Skipping %s (%s): nothing in it converts to %s\n", item.Name, item.Type.Label(), prov.Name)
+								for _, w := range rendered.Warnings {
+									fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+								}
+							}
+							continue
 						}
 					}
 				}
@@ -341,14 +357,27 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 		}
 
 		// Try cross-provider rendering via converter
-		if conv := converter.For(item.Type); conv != nil {
-			exported, handled := exportWithConverter(item, *prov, toSlug, conv, installDir)
+		if conv := converter.For(item.Type); conv != nil || item.Type == catalog.Hooks {
+			exported, skipWarnings, handled := exportWithConverter(item, *prov, toSlug, conv, installDir, llmHooksMode)
 			if handled {
 				if exported != nil {
 					result.Installed = append(result.Installed, *exported)
 					if !output.JSON {
 						fmt.Fprintf(output.Writer, "Installed %s to %s (converted)\n", item.Name, exported.Destination)
 						for _, w := range exported.Warnings {
+							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+						}
+					}
+				} else if len(skipWarnings) > 0 {
+					// The warnings say why nothing converted.
+					result.Skipped = append(result.Skipped, syncSkippedItem{
+						Name:   item.Name,
+						Type:   string(item.Type),
+						Reason: fmt.Sprintf("nothing in it converts to %s: %s", prov.Name, strings.Join(skipWarnings, "; ")),
+					})
+					if !output.JSON {
+						fmt.Fprintf(output.ErrWriter, "Skipping %s (%s): nothing in it converts to %s\n", item.Name, item.Type.Label(), prov.Name)
+						for _, w := range skipWarnings {
 							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
 						}
 					}
@@ -447,65 +476,75 @@ func runInstallAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, bas
 }
 
 // exportWithConverter handles export with cross-provider conversion.
-// Returns (syncInstalledItem, true) if the converter handled the item.
-// Returns (nil, true) if the converter skipped it (not compatible).
-// Returns (nil, false) if the converter doesn't apply (fall through to default copy).
-func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir string) (*syncInstalledItem, bool) {
+// Returns (syncInstalledItem, nil, true) if the converter handled the item.
+// Returns (nil, warnings, true) if the converter skipped it (not compatible);
+// the warnings, when present, say why nothing converted.
+// Returns (nil, nil, false) if the converter doesn't apply (fall through to default copy).
+func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir, llmHooksMode string) (*syncInstalledItem, []string, bool) {
 	srcProvider := effectiveProvider(item)
 
 	// Same provider + has .source/ → copy original verbatim (lossless)
 	if converter.HasSourceFile(item) && srcProvider == toSlug {
 		srcPath := converter.SourceFilePath(item)
 		if srcPath == "" {
-			return nil, false
+			return nil, nil, false
 		}
 		dest := filepath.Join(installDir, item.Name, filepath.Base(srcPath))
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		if err := installer.CopyContent(srcPath, dest); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		return &syncInstalledItem{
 			Name:        item.Name,
 			Type:        string(item.Type),
 			Destination: dest,
-		}, true
+		}, nil, true
 	}
 
 	// Cross-provider → canonicalize then render
 	if srcProvider != "" && srcProvider != toSlug {
 		contentFile := converter.ResolveContentFile(item)
 		if contentFile == "" {
-			return nil, false
+			return nil, nil, false
 		}
 		content, err := os.ReadFile(contentFile)
 		if err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
-		// Canonicalize from source provider format, then render to target
-		canonical, err := conv.Canonicalize(content, srcProvider)
-		if err != nil {
-			return nil, false
+		var rendered *converter.Result
+		if item.Type == catalog.Hooks {
+			rendered, err = convertHooksForExport(content, srcProvider, toSlug, llmHooksMode)
+			if err != nil {
+				// A hook that cannot convert must not fall through to the
+				// raw copy, which would place the source provider's file.
+				return nil, []string{err.Error()}, true
+			}
+		} else {
+			// Canonicalize from source provider format, then render to target
+			var canonical *converter.Result
+			canonical, err = conv.Canonicalize(content, srcProvider)
+			if err == nil {
+				rendered, err = conv.Render(canonical.Content, prov)
+			}
 		}
-
-		rendered, err := conv.Render(canonical.Content, prov)
 		if err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
 		// nil Content means skip
 		if rendered.Content == nil {
-			return nil, true
+			return nil, rendered.Warnings, true
 		}
 
 		dest := filepath.Join(installDir, item.Name, rendered.Filename)
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		if err := os.WriteFile(dest, rendered.Content, 0644); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
 		// Write any extra files (e.g. generated LLM hook wrapper scripts)
@@ -523,9 +562,42 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 			Destination: dest,
 			Converted:   true,
 			Warnings:    rendered.Warnings,
-		}, true
+		}, nil, true
 	}
 
 	// No conversion needed — fall through to default copy
-	return nil, false
+	return nil, nil, false
+}
+
+// convertHooksForExport converts hook content through the target's hook
+// adapter, the encoder install uses. In generate mode a prompt or agent hook
+// the target cannot run becomes a wrapper script rather than being dropped.
+func convertHooksForExport(content []byte, srcProv, toSlug, llmHooksMode string) (*converter.Result, error) {
+	if llmHooksMode == converter.LLMHooksModeGenerate {
+		return converter.ConvertHooksWrappingLLM(content, srcProv, toSlug)
+	}
+	res, err := converter.ConvertHooks(content, srcProv, toSlug)
+	if err != nil || !generateKeepsDroppedHooks(content, srcProv, toSlug) {
+		return res, err
+	}
+	res.Warnings = append(res.Warnings, "use --llm-hooks=generate to keep LLM-evaluated hooks as wrapper scripts")
+	return res, nil
+}
+
+// generateKeepsDroppedHooks reports whether content holds a prompt or agent
+// hook that skip mode drops for toSlug and --llm-hooks=generate would keep.
+func generateKeepsDroppedHooks(content []byte, srcProv, toSlug string) bool {
+	if !converter.WrapsLLMHooks(toSlug) {
+		return false
+	}
+	hooks, err := converter.DecodeHooks(content, srcProv)
+	if err != nil {
+		return false
+	}
+	for _, h := range hooks.Hooks {
+		if h.Handler.Type == "prompt" || h.Handler.Type == "agent" {
+			return true
+		}
+	}
+	return false
 }

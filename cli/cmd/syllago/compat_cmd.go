@@ -83,7 +83,7 @@ func runCompat(cmd *cobra.Command, args []string) error {
 	// Pre-read and canonicalize content once (if a converter exists).
 	var raw []byte
 	var canonical *converter.Result
-	if conv != nil {
+	if conv != nil || item.Type == catalog.Hooks {
 		contentFile := converter.ResolveContentFile(*item)
 		if contentFile != "" {
 			var readErr error

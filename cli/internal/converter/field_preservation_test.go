@@ -741,18 +741,9 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
 	// Claude Code — identity (everything preserved)
 	t.Run("to Claude", func(t *testing.T) {
-		result, err := conv.Render(canonical.Content, provider.ClaudeCode)
-		if err != nil {
-			t.Fatalf("Render: %v", err)
-		}
+		result := convertHooksT(t, input, "claude-code", "claude-code")
 		out := string(result.Content)
 		assertContains(t, out, "PreToolUse")
 		assertContains(t, out, "SessionStart")
@@ -765,10 +756,7 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 
 	// Gemini CLI — events translated, matchers translated
 	t.Run("to Gemini", func(t *testing.T) {
-		result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-		if err != nil {
-			t.Fatalf("Render: %v", err)
-		}
+		result := convertHooksT(t, input, "claude-code", "gemini-cli")
 		out := string(result.Content)
 		assertContains(t, out, "BeforeTool")        // PreToolUse → BeforeTool
 		assertContains(t, out, "run_shell_command") // Bash → run_shell_command
@@ -779,10 +767,7 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 
 	// Copilot CLI — events translated, matchers preserved, version field present
 	t.Run("to Copilot", func(t *testing.T) {
-		result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-		if err != nil {
-			t.Fatalf("Render: %v", err)
-		}
+		result := convertHooksT(t, input, "claude-code", "copilot-cli")
 		out := string(result.Content)
 		assertContains(t, out, "echo safety-check")
 		assertNotContains(t, out, "PreToolUse")
@@ -796,10 +781,7 @@ func TestFieldPreservation_Hooks(t *testing.T) {
 
 	// Kiro — wrapped in agent file, events translated
 	t.Run("to Kiro", func(t *testing.T) {
-		result, err := conv.Render(canonical.Content, provider.Kiro)
-		if err != nil {
-			t.Fatalf("Render: %v", err)
-		}
+		result := convertHooksT(t, input, "claude-code", "kiro")
 		out := string(result.Content)
 		assertContains(t, out, `"name": "syllago-hooks"`)
 		assertContains(t, out, "echo safety-check")
@@ -1155,13 +1137,12 @@ func TestCanonicalize_GeminiHookEvents(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "gemini-cli")
+	canonical, err := json.Marshal(decodeHooksT(t, input, "gemini-cli"))
 	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+		t.Fatalf("marshal: %v", err)
 	}
 
-	out := string(result.Content)
+	out := string(canonical)
 	assertContains(t, out, "before_tool_execute") // BeforeTool → canonical
 	assertContains(t, out, "after_tool_execute")  // AfterTool → canonical
 	assertContains(t, out, `"shell"`)             // run_shell_command → canonical
@@ -1190,13 +1171,12 @@ func TestCanonicalize_CopilotHookFormat(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "copilot-cli")
+	canonical, err := json.MarshalIndent(decodeHooksT(t, input, "copilot-cli"), "", "  ")
 	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+		t.Fatalf("marshal: %v", err)
 	}
 
-	out := string(result.Content)
+	out := string(canonical)
 	assertContains(t, out, "before_tool_execute") // preToolUse → canonical
 	assertContains(t, out, "echo verify")
 	assertContains(t, out, `"timeout": 10`) // 10 sec stays 10 sec (canonical unit is seconds)
@@ -1297,23 +1277,14 @@ func TestRoundTrip_HooksClaudeGemini(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(original, "claude-code")
+	geminiResult := convertHooksT(t, original, "claude-code", "gemini-cli")
+
+	backToCanonical, err := json.MarshalIndent(decodeHooksT(t, geminiResult.Content, "gemini-cli"), "", "  ")
 	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+		t.Fatalf("marshal: %v", err)
 	}
 
-	geminiResult, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render to Gemini: %v", err)
-	}
-
-	backToCanonical, err := conv.Canonicalize(geminiResult.Content, "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize from Gemini: %v", err)
-	}
-
-	out := string(backToCanonical.Content)
+	out := string(backToCanonical)
 	assertContains(t, out, "before_tool_execute") // event back to canonical
 	assertContains(t, out, `"shell"`)             // matcher back to canonical
 	assertContains(t, out, "echo check")          // command preserved
@@ -1579,25 +1550,9 @@ func TestEdgeCase_HookUnsupportedEvent(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	for _, tt := range []struct {
-		name   string
-		target provider.Provider
-	}{
-		{"Gemini", provider.GeminiCLI},
-		{"Copilot", provider.CopilotCLI},
-		{"Kiro", provider.Kiro},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.target)
-			if err != nil {
-				t.Fatalf("Render: %v", err)
-			}
+	for _, slug := range []string{"gemini-cli", "copilot-cli", "kiro"} {
+		t.Run(slug, func(t *testing.T) {
+			result := convertHooksT(t, input, "claude-code", slug)
 			if len(result.Warnings) == 0 {
 				t.Error("expected warning about unsupported event")
 			}
@@ -1620,30 +1575,16 @@ func TestEdgeCase_TimeoutUnitPrecision(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
 	// Claude → Copilot
-	copilotResult, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render to Copilot: %v", err)
-	}
+	copilotResult := convertHooksT(t, input, "claude-code", "copilot-cli")
 	out := string(copilotResult.Content)
 	// 7500ms → 7 or 8 seconds (truncation behavior)
 	assertContains(t, out, "echo test")
 
 	// Copilot → canonical (back)
-	backToCanonical, err := conv.Canonicalize(copilotResult.Content, "copilot-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize from Copilot: %v", err)
-	}
-
-	backOut := string(backToCanonical.Content)
-	assertContains(t, backOut, "echo test")
-	assertContains(t, backOut, "before_tool_execute") // canonical name
+	back := decodeHooksT(t, copilotResult.Content, "copilot-cli")
+	assertEqual(t, "echo test", back.Hooks[0].Handler.Command)
+	assertEqual(t, "before_tool_execute", back.Hooks[0].Event) // canonical name
 }
 
 func TestEdgeCase_SkillMinimalToAllProviders(t *testing.T) {
@@ -1798,24 +1739,12 @@ func TestLLMHookGenerateMode_AllProviders(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{LLMHooksMode: LLMHooksModeGenerate}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
 	// All providers that support hooks should convert LLM hooks to wrapper scripts
-	for _, tt := range []struct {
-		name   string
-		target provider.Provider
-	}{
-		{"Gemini", provider.GeminiCLI},
-		{"Copilot", provider.CopilotCLI},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.target)
+	for _, slug := range []string{"gemini-cli", "copilot-cli"} {
+		t.Run(slug, func(t *testing.T) {
+			result, err := ConvertHooksWrappingLLM(input, "claude-code", slug)
 			if err != nil {
-				t.Fatalf("Render: %v", err)
+				t.Fatalf("ConvertHooksWrappingLLM: %v", err)
 			}
 
 			// Should produce ExtraFiles with wrapper script
@@ -1846,7 +1775,7 @@ func TestLLMHookGenerateMode_AllProviders(t *testing.T) {
 	}
 }
 
-func TestLLMHookSkipMode_WarnsAboutGenerate(t *testing.T) {
+func TestLLMHookSkipMode_ExplainsTheDrop(t *testing.T) {
 	input := []byte(`{
 		"hooks": {
 			"PreToolUse": [
@@ -1859,37 +1788,25 @@ func TestLLMHookSkipMode_WarnsAboutGenerate(t *testing.T) {
 		}
 	}`)
 
-	// Default (empty) LLMHooksMode = skip
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	for _, tt := range []struct {
-		name   string
-		target provider.Provider
-	}{
-		{"Gemini", provider.GeminiCLI},
-		{"Copilot", provider.CopilotCLI},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.target)
-			if err != nil {
-				t.Fatalf("Render: %v", err)
-			}
+	// ConvertHooks (no LLM wrapping) = skip
+	for _, slug := range []string{"gemini-cli", "copilot-cli"} {
+		t.Run(slug, func(t *testing.T) {
+			result := convertHooksT(t, input, "claude-code", slug)
 
 			// Hook should be dropped
-			// Warning should mention --llm-hooks=generate
+			if result.Content != nil {
+				t.Errorf("expected LLM hook dropped, got: %s", result.Content)
+			}
+			// The drop is explained; sync install adds the --llm-hooks hint
 			hasHint := false
 			for _, w := range result.Warnings {
-				if containsStr(w, "--llm-hooks=generate") {
+				if containsStr(w, `hook type "prompt" is not supported`) {
 					hasHint = true
 					break
 				}
 			}
 			if !hasHint {
-				t.Errorf("expected warning mentioning --llm-hooks=generate, got: %v", result.Warnings)
+				t.Errorf("expected a warning that the prompt hook was dropped, got: %v", result.Warnings)
 			}
 		})
 	}

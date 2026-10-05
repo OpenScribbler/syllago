@@ -2,16 +2,54 @@ package converter
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
+
+// convertHooksT runs ConvertHooks and fails the test on error.
+func convertHooksT(t *testing.T, raw []byte, from, to string) *Result {
+	t.Helper()
+	res, err := ConvertHooks(raw, from, to)
+	if err != nil {
+		t.Fatalf("ConvertHooks(%s -> %s): %v", from, to, err)
+	}
+	return res
+}
+
+// decodeHooksT runs DecodeHooks, the canonicalize step of ConvertHooks, and
+// fails the test on error.
+func decodeHooksT(t *testing.T, raw []byte, from string) *CanonicalHooks {
+	t.Helper()
+	hooks, err := DecodeHooks(raw, from)
+	if err != nil {
+		t.Fatalf("DecodeHooks(%s): %v", from, err)
+	}
+	if len(hooks.Hooks) == 0 {
+		t.Fatalf("DecodeHooks(%s): no hooks", from)
+	}
+	return hooks
+}
+
+// matcherOf returns a canonical hook's matcher as a bare string.
+func matcherOf(t *testing.T, h CanonicalHook) string {
+	t.Helper()
+	var s string
+	if err := json.Unmarshal(h.Matcher, &s); err != nil {
+		t.Fatalf("matcher %s is not a bare string: %v", h.Matcher, err)
+	}
+	return s
+}
+
+// manifestJSON wraps canonical hook objects in a hooks/0.1 manifest.
+func manifestJSON(hooks ...string) []byte {
+	return []byte(`{"spec":"hooks/0.1","hooks":[` + strings.Join(hooks, ",") + `]}`)
+}
 
 func TestClaudeHooksToGemini(t *testing.T) {
 	input := []byte(`{
@@ -27,16 +65,7 @@ func TestClaudeHooksToGemini(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	out := string(result.Content)
 	assertContains(t, out, "BeforeTool")
@@ -60,16 +89,7 @@ func TestGeminiHooksToClaude(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "gemini-cli", "claude-code")
 
 	out := string(result.Content)
 	assertContains(t, out, "PreToolUse")
@@ -90,16 +110,7 @@ func TestUnsupportedEventDroppedWithWarning(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	// Find the event-specific warning (not the structured output warning)
 	found := false
@@ -127,16 +138,7 @@ func TestLLMHookDroppedWithWarning(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	// Find the LLM-specific warning (not the structured output warning)
 	foundPromptWarning := false
@@ -150,11 +152,9 @@ func TestLLMHookDroppedWithWarning(t *testing.T) {
 		t.Fatal("expected warning for LLM-evaluated hook mentioning 'prompt'")
 	}
 
-	// Verify the hook was dropped (empty hooks)
-	var cfg hooksConfig
-	json.Unmarshal(result.Content, &cfg)
-	if matchers, ok := cfg.Hooks["BeforeTool"]; ok && len(matchers) > 0 {
-		t.Fatal("expected LLM hook to be dropped")
+	// The only hook was dropped, so there is no content.
+	if result.Content != nil {
+		t.Fatalf("expected LLM hook to be dropped, got: %s", result.Content)
 	}
 }
 
@@ -179,16 +179,7 @@ func TestCopilotHooksToClaude(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "copilot-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "copilot-cli", "claude-code")
 
 	out := string(result.Content)
 	assertContains(t, out, "PreToolUse")
@@ -213,16 +204,7 @@ func TestClaudeHooksToCopilot(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "copilot-cli")
 
 	out := string(result.Content)
 	assertContains(t, out, "preToolUse")
@@ -250,15 +232,9 @@ func TestLLMHookGenerateMode(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{LLMHooksMode: LLMHooksModeGenerate}
-	canonical, err := conv.Canonicalize(input, "claude-code")
+	result, err := ConvertHooksWrappingLLM(input, "claude-code", "gemini-cli")
 	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
+		t.Fatalf("ConvertHooksWrappingLLM: %v", err)
 	}
 
 	// Hook should NOT be dropped — should be replaced with command type
@@ -318,19 +294,13 @@ func TestLLMHookGenerateModeCopilot(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{LLMHooksMode: LLMHooksModeGenerate}
-	canonical, err := conv.Canonicalize(input, "claude-code")
+	result, err := ConvertHooksWrappingLLM(input, "claude-code", "copilot-cli")
 	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
+		t.Fatalf("ConvertHooksWrappingLLM: %v", err)
 	}
 
 	// Copilot format: should have bash field with script reference
-	var cfg copilotHooksConfig
+	var cfg copilotNativeConfig
 	json.Unmarshal(result.Content, &cfg)
 	groups := cfg.Hooks["preToolUse"]
 	if len(groups) == 0 || len(groups[0].Hooks) == 0 {
@@ -357,35 +327,24 @@ func TestLLMHookDefaultSkipMode(t *testing.T) {
 		}
 	}`)
 
-	// Empty LLMHooksMode should default to skip
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	// ConvertHooks (no LLM wrapping) is skip mode
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	// Should be dropped (skip mode)
-	var cfg hooksConfig
-	json.Unmarshal(result.Content, &cfg)
-	if matchers, ok := cfg.Hooks["BeforeTool"]; ok && len(matchers) > 0 {
-		t.Fatal("expected LLM hook to be dropped in skip mode")
+	if result.Content != nil {
+		t.Fatalf("expected LLM hook to be dropped in skip mode, got: %s", result.Content)
 	}
 
-	// Warning should mention --llm-hooks=generate
+	// The drop is explained; sync install adds the --llm-hooks hint
 	foundLLMWarning := false
 	for _, w := range result.Warnings {
-		if containsStr(w, "--llm-hooks=generate") {
+		if containsStr(w, `hook type "prompt" is not supported`) {
 			foundLLMWarning = true
 			break
 		}
 	}
 	if !foundLLMWarning {
-		t.Fatalf("expected warning mentioning --llm-hooks=generate, got: %v", result.Warnings)
+		t.Fatalf("expected a warning that the prompt hook was dropped, got: %v", result.Warnings)
 	}
 }
 
@@ -412,16 +371,7 @@ func TestClaudeHooksToKiro(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.Kiro)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "kiro")
 
 	out := string(result.Content)
 	// Output is the syllago-hooks.json agent file
@@ -436,6 +386,8 @@ func TestClaudeHooksToKiro(t *testing.T) {
 	assertEqual(t, "syllago-hooks.json", result.Filename)
 }
 
+// A provider with no hook support has no hook encoder, so converting to it
+// reports ErrNoHookEncoder instead of producing output.
 func TestHooklessProviderWarning(t *testing.T) {
 	input := []byte(`{
 		"hooks": {
@@ -450,43 +402,16 @@ func TestHooklessProviderWarning(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	hooklessTargets := []struct {
-		name string
-		prov provider.Provider
-	}{
-		{"zed", provider.Zed},
-		{"roo-code", provider.RooCode},
-	}
-
-	for _, tt := range hooklessTargets {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.prov)
-			if err != nil {
-				t.Fatalf("Render to %s: %v", tt.name, err)
+	for _, slug := range []string{"zed", "roo-code"} {
+		t.Run(slug, func(t *testing.T) {
+			result, err := ConvertHooks(input, "claude-code", slug)
+			if !errors.Is(err, ErrNoHookEncoder) {
+				t.Fatalf("ConvertHooks to %s: err = %v, want ErrNoHookEncoder", slug, err)
 			}
-
-			// Content should be nil (no output)
-			if result.Content != nil {
-				t.Errorf("expected nil Content for hookless provider %s, got %d bytes", tt.name, len(result.Content))
+			if result != nil {
+				t.Errorf("expected no result for hookless provider %s, got %+v", slug, result)
 			}
-
-			// Filename should be empty
-			if result.Filename != "" {
-				t.Errorf("expected empty Filename for hookless provider %s, got %q", tt.name, result.Filename)
-			}
-
-			// Should have exactly one warning
-			if len(result.Warnings) != 1 {
-				t.Fatalf("expected 1 warning for %s, got %d: %v", tt.name, len(result.Warnings), result.Warnings)
-			}
-			assertContains(t, result.Warnings[0], "does not support hooks")
-			assertContains(t, result.Warnings[0], tt.name)
+			assertContains(t, err.Error(), slug)
 		})
 	}
 }
@@ -568,51 +493,31 @@ func TestParseNested(t *testing.T) {
 func TestCanonicalizeFlatHook_GeminiCLI(t *testing.T) {
 	t.Parallel()
 	input := `{"event":"BeforeTool","matcher":"run_shell_command","hooks":[{"type":"command","command":"echo safe"}]}`
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize([]byte(input), "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize flat: %v", err)
+	hooks := decodeHooksT(t, []byte(input), "gemini-cli")
+	if hooks.Hooks[0].Event != "before_tool_execute" {
+		t.Errorf("event not translated: got %q", hooks.Hooks[0].Event)
 	}
-	var hd HookData
-	json.Unmarshal(result.Content, &hd)
-	if hd.Event != "before_tool_execute" {
-		t.Errorf("event not translated: got %q", hd.Event)
-	}
-	if hd.Matcher != "shell" {
-		t.Errorf("matcher not translated: got %q", hd.Matcher)
+	if got := matcherOf(t, hooks.Hooks[0]); got != "shell" {
+		t.Errorf("matcher not translated: got %q", got)
 	}
 }
 
 func TestCanonicalizeFlatHook_ClaudeCode(t *testing.T) {
 	t.Parallel()
 	input := `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"echo check"}]}`
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize([]byte(input), "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize flat: %v", err)
+	hooks := decodeHooksT(t, []byte(input), "claude-code")
+	if hooks.Hooks[0].Event != "before_tool_execute" {
+		t.Errorf("event should be translated to neutral: got %q", hooks.Hooks[0].Event)
 	}
-	var hd HookData
-	json.Unmarshal(result.Content, &hd)
-	if hd.Event != "before_tool_execute" {
-		t.Errorf("event should be translated to neutral: got %q", hd.Event)
-	}
-	if hd.Matcher != "shell" {
-		t.Errorf("matcher should be translated to neutral: got %q", hd.Matcher)
+	if got := matcherOf(t, hooks.Hooks[0]); got != "shell" {
+		t.Errorf("matcher should be translated to neutral: got %q", got)
 	}
 }
 
 func TestRenderFlat_Copilot(t *testing.T) {
 	t.Parallel()
-	hook := HookData{
-		Event:   "before_tool_execute",
-		Matcher: "shell",
-		Hooks:   []HookEntry{{Type: "command", Command: "echo check", Timeout: 3, StatusMessage: "Checking..."}},
-	}
-	conv := &HooksConverter{}
-	result, err := conv.RenderFlat(hook, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("RenderFlat: %v", err)
-	}
+	input := manifestJSON(`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo check","timeout":3,"status_message":"Checking..."}}`)
+	result := convertHooksT(t, input, "", "copilot-cli")
 	out := string(result.Content)
 	assertContains(t, out, "preToolUse")
 	assertContains(t, out, "echo check")
@@ -626,16 +531,8 @@ func TestRenderFlat_Copilot(t *testing.T) {
 
 func TestRenderFlat_Crush(t *testing.T) {
 	t.Parallel()
-	hook := HookData{
-		Event:   "before_tool_execute",
-		Matcher: "shell",
-		Hooks:   []HookEntry{{Type: "command", Command: "echo check", Timeout: 3}},
-	}
-	conv := &HooksConverter{}
-	result, err := conv.RenderFlat(hook, provider.Crush)
-	if err != nil {
-		t.Fatalf("RenderFlat: %v", err)
-	}
+	input := manifestJSON(`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo check","timeout":3}}`)
+	result := convertHooksT(t, input, "", "crush")
 	entry := gjson.GetBytes(result.Content, "hooks.PreToolUse.0")
 	if !entry.Exists() {
 		t.Fatalf("expected hooks.PreToolUse.0, got: %s", result.Content)
@@ -659,17 +556,9 @@ func TestRenderFlat_Crush(t *testing.T) {
 
 func TestRenderCrush_UnsupportedEventDropped(t *testing.T) {
 	t.Parallel()
-	hook := HookData{
-		Event: "session_start",
-		Hooks: []HookEntry{{Type: "command", Command: "echo hi"}},
-	}
-	conv := &HooksConverter{}
-	result, err := conv.RenderFlat(hook, provider.Crush)
-	if err != nil {
-		t.Fatalf("RenderFlat: %v", err)
-	}
-	if gjson.GetBytes(result.Content, "hooks").Exists() &&
-		len(gjson.GetBytes(result.Content, "hooks").Map()) > 0 {
+	input := manifestJSON(`{"event":"session_start","handler":{"type":"command","command":"echo hi"}}`)
+	result := convertHooksT(t, input, "", "crush")
+	if result.Content != nil {
 		t.Errorf("unsupported event should be dropped, got: %s", result.Content)
 	}
 	if len(result.Warnings) == 0 {
@@ -680,28 +569,23 @@ func TestRenderCrush_UnsupportedEventDropped(t *testing.T) {
 func TestCanonicalize_Crush(t *testing.T) {
 	t.Parallel()
 	input := `{"hooks":{"PreToolUse":[{"matcher":"bash","command":"echo safe","timeout":5}]}}`
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize([]byte(input), "crush")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+	hooks := decodeHooksT(t, []byte(input), "crush")
+	if len(hooks.Hooks) != 1 {
+		t.Fatalf("expected 1 hook, got: %+v", hooks.Hooks)
 	}
-	var cfg hooksConfig
-	if err := json.Unmarshal(result.Content, &cfg); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	h := hooks.Hooks[0]
+	if h.Event != "before_tool_execute" {
+		t.Errorf("event: got %q, want before_tool_execute", h.Event)
 	}
-	matchers, ok := cfg.Hooks["before_tool_execute"]
-	if !ok || len(matchers) != 1 {
-		t.Fatalf("expected 1 before_tool_execute matcher group, got: %+v", cfg.Hooks)
+	if got := matcherOf(t, h); got != "shell" {
+		t.Errorf("matcher: got %q, want shell", got)
 	}
-	if matchers[0].Matcher != "shell" {
-		t.Errorf("matcher: got %q, want shell", matchers[0].Matcher)
-	}
-	if len(matchers[0].Hooks) != 1 || matchers[0].Hooks[0].Command != "echo safe" {
-		t.Fatalf("hooks: got %+v", matchers[0].Hooks)
+	if h.Handler.Command != "echo safe" {
+		t.Fatalf("command: got %q", h.Handler.Command)
 	}
 	// Crush timeouts are seconds — canonical unit, no /1000.
-	if matchers[0].Hooks[0].Timeout != 5 {
-		t.Errorf("timeout: got %d, want 5", matchers[0].Hooks[0].Timeout)
+	if h.Handler.Timeout != 5 {
+		t.Errorf("timeout: got %d, want 5", h.Handler.Timeout)
 	}
 }
 
@@ -754,16 +638,7 @@ func TestCopilotHooksVersionField(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "copilot-cli")
 
 	// Rendered Copilot hooks must have version: 1
 	var raw map[string]json.RawMessage
@@ -781,7 +656,7 @@ func TestCopilotHooksVersionField(t *testing.T) {
 
 func TestCopilotHooksMatcherPreserved(t *testing.T) {
 	t.Parallel()
-	// Canonical hooks with a matcher should preserve it when rendering to Copilot
+	// Hooks with a matcher should preserve it when rendering to Copilot
 	input := []byte(`{
 		"hooks": {
 			"PreToolUse": [
@@ -800,18 +675,9 @@ func TestCopilotHooksMatcherPreserved(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "copilot-cli")
 
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
-
-	var cfg copilotHooksConfig
+	var cfg copilotNativeConfig
 	if err := json.Unmarshal(result.Content, &cfg); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -867,18 +733,9 @@ func TestCopilotHookEntryTypeField(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "copilot-cli")
 
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
-
-	var cfg copilotHooksConfig
+	var cfg copilotNativeConfig
 	if err := json.Unmarshal(result.Content, &cfg); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -916,30 +773,19 @@ func TestCopilotHooksRoundtripWithMatcher(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "copilot-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
 	// Canonical should have matcher translated to neutral (shell)
-	var canonCfg hooksConfig
-	json.Unmarshal(canonical.Content, &canonCfg)
-	matchers := canonCfg.Hooks["before_tool_execute"]
-	if len(matchers) == 0 {
-		t.Fatal("expected matchers in canonical")
+	canonical := decodeHooksT(t, input, "copilot-cli")
+	if canonical.Hooks[0].Event != "before_tool_execute" {
+		t.Errorf("expected canonical event before_tool_execute, got %q", canonical.Hooks[0].Event)
 	}
-	if matchers[0].Matcher != "shell" {
-		t.Errorf("expected canonical matcher 'shell', got %q", matchers[0].Matcher)
+	if got := matcherOf(t, canonical.Hooks[0]); got != "shell" {
+		t.Errorf("expected canonical matcher 'shell', got %q", got)
 	}
 
 	// Render back to Copilot
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "copilot-cli", "copilot-cli")
 
-	var outCfg copilotHooksConfig
+	var outCfg copilotNativeConfig
 	json.Unmarshal(result.Content, &outCfg)
 
 	groups := outCfg.Hooks["preToolUse"]
@@ -977,26 +823,17 @@ func TestHookCanonicalizeHTTPPreservesFields(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+	hooks := decodeHooksT(t, input, "claude-code")
+	if hooks.Hooks[0].Event != "before_tool_execute" {
+		t.Fatalf("expected before_tool_execute, got %q", hooks.Hooks[0].Event)
 	}
 
-	var cfg hooksConfig
-	if err := json.Unmarshal(result.Content, &cfg); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	matchers := cfg.Hooks["before_tool_execute"]
-	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
-		t.Fatal("expected hook entries")
-	}
-
-	h := matchers[0].Hooks[0]
+	h := hooks.Hooks[0].Handler
 	assertEqual(t, "http", h.Type)
 	assertEqual(t, "https://example.com/hook", h.URL)
-	assertEqual(t, "10", fmt.Sprintf("%d", h.Timeout)) // 10000ms -> 10s canonical
+	if h.Timeout != 10 { // 10000ms -> 10s canonical
+		t.Errorf("timeout: got %d, want 10", h.Timeout)
+	}
 	if len(h.Headers) != 2 {
 		t.Fatalf("expected 2 headers, got %d", len(h.Headers))
 	}
@@ -1025,27 +862,18 @@ func TestHookCanonicalizePromptPreservesFields(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+	hooks := decodeHooksT(t, input, "claude-code")
+	if hooks.Hooks[0].Event != "before_tool_execute" {
+		t.Fatalf("expected before_tool_execute, got %q", hooks.Hooks[0].Event)
 	}
 
-	var cfg hooksConfig
-	if err := json.Unmarshal(result.Content, &cfg); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	matchers := cfg.Hooks["before_tool_execute"]
-	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
-		t.Fatal("expected hook entries")
-	}
-
-	h := matchers[0].Hooks[0]
+	h := hooks.Hooks[0].Handler
 	assertEqual(t, "prompt", h.Type)
 	assertEqual(t, "Is this command safe to run?", h.Prompt)
 	assertEqual(t, "claude-sonnet-4-20250514", h.Model)
-	assertEqual(t, "15", fmt.Sprintf("%d", h.Timeout)) // 15000ms -> 15s
+	if h.Timeout != 15 { // 15000ms -> 15s
+		t.Errorf("timeout: got %d, want 15", h.Timeout)
+	}
 }
 
 func TestHookCanonicalizeAgentPreservesFields(t *testing.T) {
@@ -1066,23 +894,12 @@ func TestHookCanonicalizeAgentPreservesFields(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+	hooks := decodeHooksT(t, input, "claude-code")
+	if hooks.Hooks[0].Event != "before_tool_execute" {
+		t.Fatalf("expected before_tool_execute, got %q", hooks.Hooks[0].Event)
 	}
 
-	var cfg hooksConfig
-	if err := json.Unmarshal(result.Content, &cfg); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-
-	matchers := cfg.Hooks["before_tool_execute"]
-	if len(matchers) == 0 || len(matchers[0].Hooks) == 0 {
-		t.Fatal("expected hook entries")
-	}
-
-	h := matchers[0].Hooks[0]
+	h := hooks.Hooks[0].Handler
 	assertEqual(t, "agent", h.Type)
 	// Agent is json.RawMessage — verify it round-trips
 	assertEqual(t, `"security-reviewer"`, string(h.Agent))
@@ -1090,43 +907,15 @@ func TestHookCanonicalizeAgentPreservesFields(t *testing.T) {
 
 func TestHookRenderClaudeCodeIncludesTypeSpecificFields(t *testing.T) {
 	t.Parallel()
-	// Canonical input with all 4 types (neutral event/tool names)
-	input := []byte(`{
-		"hooks": {
-			"before_tool_execute": [
-				{
-					"matcher": "shell",
-					"hooks": [
-						{"type": "command", "command": "echo check", "timeout": 5},
-						{
-							"type": "http",
-							"url": "https://example.com/hook",
-							"headers": {"Authorization": "Bearer token"},
-							"allowedEnvVars": ["TOKEN"],
-							"timeout": 10
-						},
-						{
-							"type": "prompt",
-							"prompt": "Is this safe?",
-							"model": "claude-sonnet-4-20250514",
-							"timeout": 15
-						},
-						{
-							"type": "agent",
-							"agent": "security-reviewer",
-							"timeout": 30
-						}
-					]
-				}
-			]
-		}
-	}`)
+	// Canonical manifest with all 4 types (neutral event/tool names)
+	input := manifestJSON(
+		`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo check","timeout":5}}`,
+		`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"http","url":"https://example.com/hook","headers":{"Authorization":"Bearer token"},"allowed_env_vars":["TOKEN"],"timeout":10}}`,
+		`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"prompt","prompt":"Is this safe?","model":"claude-sonnet-4-20250514","timeout":15}}`,
+		`{"event":"before_tool_execute","matcher":"shell","handler":{"type":"agent","agent":"security-reviewer","timeout":30}}`,
+	)
 
-	conv := &HooksConverter{}
-	result, err := conv.Render(input, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "", "claude-code")
 
 	out := string(result.Content)
 
@@ -1165,54 +954,26 @@ func TestHookRenderClaudeCodeIncludesTypeSpecificFields(t *testing.T) {
 
 func TestHookRenderNonClaudeWarnsHTTPType(t *testing.T) {
 	t.Parallel()
-	input := []byte(`{
-		"hooks": {
-			"before_tool_execute": [
-				{
-					"hooks": [
-						{
-							"type": "http",
-							"url": "https://example.com/hook",
-							"timeout": 10
-						}
-					]
-				}
-			]
-		}
-	}`)
+	input := manifestJSON(`{"event":"before_tool_execute","handler":{"type":"http","url":"https://example.com/hook","timeout":10}}`)
 
-	conv := &HooksConverter{}
+	for _, slug := range []string{"gemini-cli", "copilot-cli", "kiro"} {
+		t.Run(slug, func(t *testing.T) {
+			result := convertHooksT(t, input, "", slug)
 
-	targets := []struct {
-		name string
-		prov provider.Provider
-	}{
-		{"gemini-cli", provider.GeminiCLI},
-		{"copilot-cli", provider.CopilotCLI},
-		{"kiro", provider.Kiro},
-	}
-
-	for _, tt := range targets {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(input, tt.prov)
-			if err != nil {
-				t.Fatalf("Render to %s: %v", tt.name, err)
-			}
-
-			// Should have warning about unsupported type
-			if len(result.Warnings) == 0 {
-				t.Fatalf("expected warning for http hook type on %s", tt.name)
+			// The only hook is http, which the target cannot hold.
+			if result.Content != nil {
+				t.Errorf("expected http hook dropped for %s, got: %s", slug, result.Content)
 			}
 
 			foundHTTPWarning := false
 			for _, w := range result.Warnings {
-				if containsStr(w, "http") && containsStr(w, "Claude Code") {
+				if containsStr(w, `"http"`) && containsStr(w, "not supported by "+slug) {
 					foundHTTPWarning = true
 					break
 				}
 			}
 			if !foundHTTPWarning {
-				t.Errorf("expected warning mentioning 'http' and 'Claude Code', got: %v", result.Warnings)
+				t.Errorf("expected warning that http is not supported by %s, got: %v", slug, result.Warnings)
 			}
 		})
 	}
@@ -1249,30 +1010,20 @@ func TestGeminiOnlyEventsRoundtrip(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-
-	// Canonicalize from Gemini CLI
-	canonical, err := conv.Canonicalize(input, "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
 	// Canonical should preserve all 3 events
-	var cfg hooksConfig
-	if err := json.Unmarshal(canonical.Content, &cfg); err != nil {
-		t.Fatalf("unmarshal canonical: %v", err)
+	canonical := decodeHooksT(t, input, "gemini-cli")
+	events := map[string]bool{}
+	for _, h := range canonical.Hooks {
+		events[h.Event] = true
 	}
 	for _, event := range []string{"before_model", "after_model", "before_tool_selection"} {
-		if _, ok := cfg.Hooks[event]; !ok {
+		if !events[event] {
 			t.Errorf("expected canonical to have event %q", event)
 		}
 	}
 
 	// Render back to Gemini CLI — all 3 events should survive
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render to Gemini: %v", err)
-	}
+	result := convertHooksT(t, input, "gemini-cli", "gemini-cli")
 
 	out := string(result.Content)
 	assertContains(t, out, "BeforeModel")
@@ -1318,26 +1069,9 @@ func TestGeminiOnlyEventsDroppedForOtherProviders(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	targets := []struct {
-		name string
-		prov provider.Provider
-	}{
-		{"copilot-cli", provider.CopilotCLI},
-		{"kiro", provider.Kiro},
-	}
-
-	for _, tt := range targets {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := conv.Render(canonical.Content, tt.prov)
-			if err != nil {
-				t.Fatalf("Render to %s: %v", tt.name, err)
-			}
+	for _, slug := range []string{"copilot-cli", "kiro"} {
+		t.Run(slug, func(t *testing.T) {
+			result := convertHooksT(t, input, "gemini-cli", slug)
 
 			// All 3 events should generate warnings
 			warnEvents := map[string]bool{}
@@ -1350,7 +1084,7 @@ func TestGeminiOnlyEventsDroppedForOtherProviders(t *testing.T) {
 			}
 			for _, event := range []string{"before_model", "after_model", "before_tool_selection"} {
 				if !warnEvents[event] {
-					t.Errorf("expected warning for %q on %s, got warnings: %v", event, tt.name, result.Warnings)
+					t.Errorf("expected warning for %q on %s, got warnings: %v", event, slug, result.Warnings)
 				}
 			}
 		})
@@ -1361,16 +1095,10 @@ func TestGeminiOnlyEventsFlatFormat(t *testing.T) {
 	t.Parallel()
 	// Flat-format Gemini-only events should canonicalize correctly.
 	input := `{"event":"BeforeModel","hooks":[{"type":"command","command":"echo model-check"}]}`
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize([]byte(input), "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize flat: %v", err)
-	}
-	var hd HookData
-	json.Unmarshal(result.Content, &hd)
+	hooks := decodeHooksT(t, []byte(input), "gemini-cli")
 	// BeforeModel in Gemini maps to canonical "before_model"
-	if hd.Event != "before_model" {
-		t.Errorf("event not translated correctly: got %q, want %q", hd.Event, "before_model")
+	if hooks.Hooks[0].Event != "before_model" {
+		t.Errorf("event not translated correctly: got %q, want %q", hooks.Hooks[0].Event, "before_model")
 	}
 }
 
@@ -1392,16 +1120,7 @@ func TestStructuredOutputWarnings_ClaudeToGemini(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	// Should have a warning about structured output fields
 	foundOutputWarning := false
@@ -1439,16 +1158,7 @@ func TestStructuredOutputWarnings_ClaudeToCopilot(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.CopilotCLI)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "copilot-cli")
 
 	foundOutputWarning := false
 	for _, w := range result.Warnings {
@@ -1482,16 +1192,7 @@ func TestStructuredOutputWarnings_GeminiToClaude(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "gemini-cli")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "gemini-cli", "claude-code")
 
 	// Should NOT have structured output warnings
 	for _, w := range result.Warnings {
@@ -1516,16 +1217,7 @@ func TestStructuredOutputWarnings_SameProvider(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "claude-code")
 
 	for _, w := range result.Warnings {
 		if containsStr(w, "structured hook output") {
@@ -1549,16 +1241,7 @@ func TestStructuredOutputWarnings_ClaudeToKiro(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.Kiro)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "kiro")
 
 	foundOutputWarning := false
 	for _, w := range result.Warnings {
@@ -1623,7 +1306,7 @@ func TestOutputFieldsLostWarnings(t *testing.T) {
 
 func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {
 	t.Parallel()
-	// Flat format should also carry source provider through RenderFlat
+	// A legacy flat hook.json carries its source provider through conversion
 	input := []byte(`{
 		"event": "PreToolUse",
 		"matcher": "Bash",
@@ -1632,23 +1315,7 @@ func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {
 		]
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize flat: %v", err)
-	}
-
-	// Parse canonical flat to get HookData with SourceProvider set
-	var hd HookData
-	if err := json.Unmarshal(canonical.Content, &hd); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	assertEqual(t, "claude-code", hd.SourceProvider)
-
-	result, err := conv.RenderFlat(hd, provider.GeminiCLI)
-	if err != nil {
-		t.Fatalf("RenderFlat: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "gemini-cli")
 
 	foundOutputWarning := false
 	for _, w := range result.Warnings {
@@ -1658,7 +1325,7 @@ func TestStructuredOutputWarnings_FlatFormat(t *testing.T) {
 		}
 	}
 	if !foundOutputWarning {
-		t.Fatalf("expected structured output warning via RenderFlat, got: %v", result.Warnings)
+		t.Fatalf("expected structured output warning for a flat hook, got: %v", result.Warnings)
 	}
 }
 
@@ -1677,21 +1344,15 @@ func TestHookCanonicalizeFlatHTTPHook(t *testing.T) {
 		]
 	}`)
 
-	conv := &HooksConverter{}
-	result, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize flat http: %v", err)
-	}
+	hooks := decodeHooksT(t, input, "claude-code")
+	h := hooks.Hooks[0].Handler
 
-	var hd HookData
-	if err := json.Unmarshal(result.Content, &hd); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	assertEqual(t, "http", h.Type)
+	assertEqual(t, "https://example.com/check", h.URL)
+	if h.Timeout != 5 { // ms -> s
+		t.Errorf("timeout: got %d, want 5", h.Timeout)
 	}
-
-	assertEqual(t, "http", hd.Hooks[0].Type)
-	assertEqual(t, "https://example.com/check", hd.Hooks[0].URL)
-	assertEqual(t, "5", fmt.Sprintf("%d", hd.Hooks[0].Timeout)) // ms -> s
-	assertEqual(t, "value", hd.Hooks[0].Headers["X-Custom"])
+	assertEqual(t, "value", h.Headers["X-Custom"])
 }
 
 func containsStr(s, substr string) bool {
@@ -1723,16 +1384,7 @@ func TestClaudeHooksDevinRoundTrip(t *testing.T) {
 		}
 	}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-
-	result, err := conv.Render(canonical.Content, provider.Devin)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "devin")
 	group := gjson.GetBytes(result.Content, "hooks.PreToolUse.0")
 	if got := group.Get("matcher").String(); got != "exec" {
 		t.Errorf("matcher: got %q, want exec; output: %s", got, result.Content)
@@ -1741,14 +1393,7 @@ func TestClaudeHooksDevinRoundTrip(t *testing.T) {
 		t.Errorf("timeout: got %d, want 5 (seconds); output: %s", got, result.Content)
 	}
 
-	back, err := conv.Canonicalize(result.Content, "devin")
-	if err != nil {
-		t.Fatalf("Canonicalize devin: %v", err)
-	}
-	cc, err := conv.Render(back.Content, provider.ClaudeCode)
-	if err != nil {
-		t.Fatalf("Render claude-code: %v", err)
-	}
+	cc := convertHooksT(t, result.Content, "devin", "claude-code")
 	ccGroup := gjson.GetBytes(cc.Content, "hooks.PreToolUse.0")
 	if got := ccGroup.Get("matcher").String(); got != "Bash" {
 		t.Errorf("round-trip matcher: got %q, want Bash", got)
@@ -1762,17 +1407,16 @@ func TestHooksConverterDevin_BareHooksV1File(t *testing.T) {
 	// .devin/hooks.v1.json is the event map itself, with no "hooks" wrapper.
 	input := []byte(`{"PreToolUse": [{"matcher": "exec", "hooks": [{"type": "command", "command": "./guard.sh", "timeout": 10}]}]}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "devin")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
+	hooks := decodeHooksT(t, input, "devin")
+	h := hooks.Hooks[0]
+	if h.Event != "before_tool_execute" {
+		t.Errorf("event: got %q, want before_tool_execute", h.Event)
 	}
-	group := gjson.GetBytes(canonical.Content, "hooks.before_tool_execute.0")
-	if got := group.Get("matcher").String(); got != "shell" {
-		t.Errorf("matcher: got %q, want shell; output: %s", got, canonical.Content)
+	if got := matcherOf(t, h); got != "shell" {
+		t.Errorf("matcher: got %q, want shell", got)
 	}
-	if got := group.Get("hooks.0.command").String(); got != "./guard.sh" {
-		t.Errorf("command: got %q; output: %s", got, canonical.Content)
+	if h.Handler.Command != "./guard.sh" {
+		t.Errorf("command: got %q", h.Handler.Command)
 	}
 }
 
@@ -1781,15 +1425,7 @@ func TestHooksConverterDevin_RenderDropsUnsupportedFields(t *testing.T) {
 		{"type": "command", "command": "echo hi", "timeout": 5000, "async": true, "statusMessage": "checking"}
 	]}]}}`)
 
-	conv := &HooksConverter{}
-	canonical, err := conv.Canonicalize(input, "claude-code")
-	if err != nil {
-		t.Fatalf("Canonicalize: %v", err)
-	}
-	result, err := conv.Render(canonical.Content, provider.Devin)
-	if err != nil {
-		t.Fatalf("Render: %v", err)
-	}
+	result := convertHooksT(t, input, "claude-code", "devin")
 	entry := gjson.GetBytes(result.Content, "hooks.PreToolUse.0.hooks.0")
 	entry.ForEach(func(key, _ gjson.Result) bool {
 		switch key.String() {
@@ -1801,7 +1437,7 @@ func TestHooksConverterDevin_RenderDropsUnsupportedFields(t *testing.T) {
 	})
 	found := false
 	for _, w := range result.Warnings {
-		if strings.Contains(w, "async and statusMessage dropped") {
+		if strings.Contains(w, "async") && strings.Contains(w, "statusMessage dropped") {
 			found = true
 		}
 	}
