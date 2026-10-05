@@ -331,9 +331,6 @@ func TestPiAdapterCapabilities(t *testing.T) {
 	if !caps.SupportsMatchers {
 		t.Error("Pi should support matchers")
 	}
-	if caps.SupportsEnv {
-		t.Error("Pi should not support env")
-	}
 	if caps.SupportsLLMHooks {
 		t.Error("Pi should not support LLM hooks")
 	}

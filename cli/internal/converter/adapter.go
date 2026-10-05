@@ -108,15 +108,6 @@ type ProviderCapabilities struct {
 	// TimeoutUnit is the native timeout unit ("seconds" or "milliseconds").
 	TimeoutUnit string
 
-	// SupportsPlatform indicates per-OS command override support.
-	SupportsPlatform bool
-
-	// SupportsCWD indicates configurable working directory support.
-	SupportsCWD bool
-
-	// SupportsEnv indicates custom environment variable support.
-	SupportsEnv bool
-
 	// SupportsLLMHooks indicates whether prompt/agent hook types are supported.
 	SupportsLLMHooks bool
 

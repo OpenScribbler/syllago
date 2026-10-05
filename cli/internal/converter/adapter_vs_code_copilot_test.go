@@ -159,12 +159,6 @@ func TestVSCodeCopilotAdapter_LLMHookDropped(t *testing.T) {
 
 func TestVSCodeCopilotAdapterCapabilities(t *testing.T) {
 	caps := AdapterFor("vs-code-copilot").Capabilities()
-	if !caps.SupportsPlatform {
-		t.Error("VS Code Copilot should support platform commands")
-	}
-	if !caps.SupportsEnv {
-		t.Error("VS Code Copilot should support env")
-	}
 	if caps.SupportsLLMHooks {
 		t.Error("VS Code Copilot should not support LLM hooks")
 	}
