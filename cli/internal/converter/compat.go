@@ -173,15 +173,13 @@ func AnalyzeHookCompat(hook HookData, targetProvider string) CompatResult {
 	}
 
 	// 1. Check event support
+	if _, supported := TranslateHookEvent(hook.Event, targetProvider); !supported {
+		result.Level = CompatNone
+		result.Notes = "Event not supported"
+		return result
+	}
 	if targetProvider == "claude-code" {
 		result.Notes = "Native format"
-	} else {
-		_, supported := TranslateHookEvent(hook.Event, targetProvider)
-		if !supported {
-			result.Level = CompatNone
-			result.Notes = "Event not supported"
-			return result
-		}
 	}
 
 	adapter := AdapterFor(targetProvider)

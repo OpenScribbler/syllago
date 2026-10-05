@@ -615,28 +615,19 @@ func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv 
 }
 
 // placedNotices is what prov loses from an item placed as it is, without
-// conversion: the warnings rendering it for prov gives, such as a skill's
+// conversion: the warnings converting it for prov gives, such as a skill's
 // hooks that prov runs only from its own settings. An item placed for the
 // provider it came from loses nothing. The warnings are advisory, so a
-// render that fails reports none.
+// conversion that fails reports none.
 func placedNotices(item catalog.ContentItem, prov provider.Provider) []Notice {
-	conv := converter.For(item.Type)
-	if conv == nil || item.Provider == prov.Slug {
+	if item.Type == catalog.Hooks || item.Provider == prov.Slug {
 		return nil
 	}
-	contentFile := converter.ResolveContentFile(item)
-	if contentFile == "" {
-		return nil
-	}
-	content, err := os.ReadFile(contentFile)
+	c, err := converter.ConvertItem(item, prov, "")
 	if err != nil {
 		return nil
 	}
-	result, err := conv.Render(content, prov)
-	if err != nil {
-		return nil
-	}
-	return conversionNotices(item, result.Warnings)
+	return conversionNotices(item, c.Warnings)
 }
 
 // conversionNotices turns a render's warnings into notices about item.

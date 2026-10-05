@@ -171,3 +171,23 @@ func TestInstallMCP_ReportsWhatTheTargetLoses(t *testing.T) {
 		})
 	}
 }
+
+// TestInstallMCP_ReadsTheServerInItsSourceFormat: a server added from Cline
+// keeps Cline's alwaysAllow, which is what Cursor would lose.
+func TestInstallMCP_ReadsTheServerInItsSourceFormat(t *testing.T) {
+	isolateLegacyRoot(t)
+	overrideMCPConfigPaths(t, map[string]string{"cursor": filepath.Join(t.TempDir(), "cursor-mcp.json")})
+	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","alwaysAllow":["list"]}}}`), 0644)
+	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Provider: "cline", Path: itemDir}
+
+	placement, err := installMCP(item, provider.Cursor, t.TempDir())
+	if err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+	want := `gh: server "gh": autoApprove dropped (not documented by Cursor)`
+	if got := conversionWarnings(placement.Notices); !slices.Contains(got, want) {
+		t.Errorf("expected warning %q, got %q", want, got)
+	}
+}

@@ -231,3 +231,34 @@ func TestCompatReport_DroppedHTTPHookBreaksTheItem(t *testing.T) {
 		t.Errorf("claude-code = %+v, want full", cc)
 	}
 }
+
+func TestConvertItem_TypedAddIsReadAsCanonical(t *testing.T) {
+	// An add that names the content type stores the canonical form and
+	// records the provider the command came from.
+	item := writeItem(t, catalog.Commands, "command.md", "---\ndescription: Review code\n---\n\nReview the diff.\n")
+	item.Meta = &metadata.Meta{SourceProvider: "gemini-cli"}
+
+	c, err := ConvertItem(item, providerBySlug(t, "claude-code"), "")
+	if err != nil {
+		t.Fatalf("ConvertItem: %v", err)
+	}
+	if c.From != "" || len(c.Content) == 0 {
+		t.Errorf("From = %q, Content = %q; want the canonical content converted", c.From, c.Content)
+	}
+	// Naming the source format says how to read the content, so content
+	// that is not in it stays an error.
+	if _, err := ConvertItem(item, providerBySlug(t, "claude-code"), "gemini-cli"); !errors.Is(err, ErrUnreadable) {
+		t.Errorf("explicit from: err = %v, want ErrUnreadable", err)
+	}
+}
+
+func TestCompatReport_DroppedEventBreaksTheItemForClaudeCode(t *testing.T) {
+	// Claude Code has no before_model event, so it writes one hook of two.
+	item := writeItem(t, catalog.Hooks, "hook.json", `{"spec":"hooks/0.1","hooks":[`+
+		`{"event":"session_start","handler":{"type":"command","command":"./a.sh"}},`+
+		`{"event":"before_model","handler":{"type":"command","command":"./b.sh"}}]}`)
+	rows := compatRows(t, item)
+	if cc := rows["claude-code"]; !cc.Supported || cc.Level != CompatBroken {
+		t.Errorf("claude-code = %+v, want supported and broken because before_model is dropped", cc)
+	}
+}
