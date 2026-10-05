@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -363,6 +364,88 @@ func TestInstallMCP_ReadsPastAByteOrderMark(t *testing.T) {
 	got, _ := os.ReadFile(paths["cursor"])
 	if !gjson.GetBytes(got, "mcpServers.bom-mcp").Exists() || !gjson.GetBytes(got, "mcpServers.mine").Exists() {
 		t.Errorf("config: got %s, want both servers", got)
+	}
+}
+
+// An item that bundles several servers places the ones a shared config
+// lacks and leaves the one it already holds unchanged to whoever placed it.
+func TestInstallMCP_PlacesTheServersASharedConfigLacks(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node"},"b":{"command":"y"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"a":{"command":"node"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "bundle", Type: catalog.MCP, Path: itemDir}
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	got, _ := os.ReadFile(paths["claude-code"])
+	if gjson.GetBytes(got, "mcpServers.b.command").String() != "y" {
+		t.Errorf("config: got %s, want b placed", got)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || !slices.Equal(inst.MCP[0].ServerNames, []string{"b"}) {
+		t.Errorf("records: got %+v (%v), want one claiming only b", inst, err)
+	}
+}
+
+// A legacy record for a config every project shares can outlive its server.
+// Status then reports the server missing, so install places it.
+func TestInstallMCP_StaleLegacyRecordOnASharedConfig(t *testing.T) {
+	legacyRoot := isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{MCP: []InstalledMCP{{Name: "gone", ServerKey: "gone", Provider: "claude-code"}}}); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "gone")
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); !gjson.GetBytes(got, "mcpServers.gone").Exists() {
+		t.Errorf("config: got %s, want the server placed", got)
+	}
+}
+
+// Zed keeps its servers under context_servers, and an item stored that way
+// installs to a provider that reads mcpServers.
+func TestInstallMCP_ReadsAContextServersBundle(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "zed-bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"context_servers":{"fs":{"command":"npx"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "fs", Type: catalog.MCP, Path: itemDir, ServerKey: "fs"}
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); gjson.GetBytes(got, "mcpServers.fs.command").String() != "npx" {
+		t.Errorf("config: got %s, want fs placed", got)
 	}
 }
 

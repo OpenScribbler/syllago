@@ -332,7 +332,7 @@ func serverSources(rawData []byte, itemName string, jsonKey string) (map[string]
 	sources := make(map[string]gjson.Result)
 	wrapper := gjson.GetBytes(rawData, jsonKey)
 	if !wrapper.Exists() {
-		wrapper = gjson.GetBytes(rawData, "mcpServers")
+		wrapper = catalog.MCPServersWrapper(rawData)
 	}
 	if wrapper.Exists() && wrapper.Type == gjson.JSON {
 		wrapper.ForEach(func(key, value gjson.Result) bool {
@@ -486,11 +486,13 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 			if !syllagoManaged {
 				// A config shared by every project can hold this server
 				// from another project, so the same settings count as
-				// installed; whoever placed them keeps them.
+				// installed and are left out of the merge; whoever placed
+				// them keeps them.
 				if !jsonEqual([]byte(existing.Raw), configData) {
 					return mcpMerge{}, fmt.Errorf("MCP server %q already exists in %s with other settings and was not installed by syllago for this project; rename or remove it there first", name, cfgPath)
 				}
 				sameName = name
+				continue
 			}
 		}
 
@@ -501,7 +503,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		serverNames = append(serverNames, name)
 		keys = append(keys, key)
 	}
-	if sameName != "" {
+	if len(serverNames) == 0 {
 		return mcpMerge{}, fmt.Errorf("MCP server %q %w", sameName, ErrMCPInstalled)
 	}
 	return mcpMerge{rawData: rawData, entries: entries, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
@@ -730,8 +732,7 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 // legacyMCPInstalled reports whether the legacy root's installed.json
 // records item, or one of its servers, as installed on the provider with
 // slug provSlug. fileData is that provider's MCP config and jsonKey its
-// servers key. An entry with no provider counts only when its server is
-// already in fileData, as hookTracked explains for hooks.
+// servers key.
 func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, prov provider.Provider, fileData []byte, jsonKey string) (string, bool) {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
@@ -741,21 +742,14 @@ func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[s
 	if err != nil {
 		return "", false
 	}
-	// A record under the legacy root describes the provider's config
-	// there. A provider whose config lives in the project has another file
-	// here, so only a server this file holds counts as installed.
-	legacyPath, legacyErr := mcpConfigPath(prov, legacyRoot)
-	targetPath, targetErr := mcpConfigPath(prov, repoRoot)
-	sameFile := legacyErr == nil && targetErr == nil && legacyPath == targetPath
-	if idx := findMCPInstallRecord(inst, item, prov.Slug); idx >= 0 {
-		entry := inst.MCP[idx]
-		if (entry.Provider != "" && sameFile) || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
-			return item.Name, true
-		}
+	// A record can outlive its server, and a record for a provider whose
+	// config lives in the project describes another file, so only a server
+	// this file holds counts as installed, as status reports it.
+	if idx := findMCPInstallRecord(inst, item, prov.Slug); idx >= 0 && mcpRecordInConfig(inst.MCP[idx], item.Name, fileData, jsonKey) {
+		return item.Name, true
 	}
 	for name := range entries {
-		inTarget := gjson.GetBytes(fileData, jsonKey+"."+name).Exists()
-		if (sameFile || inTarget) && mcpServerClaimed(inst, name, prov.Slug, inTarget) {
+		if gjson.GetBytes(fileData, jsonKey+"."+name).Exists() && mcpServerClaimed(inst, name, prov.Slug, true) {
 			return name, true
 		}
 	}

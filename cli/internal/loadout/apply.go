@@ -175,20 +175,20 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and
-		// a restore that keeps failing leaves the backups to copy by hand. The
-		// directory blocks the next apply until it is gone, so each message
-		// says to delete it.
+		// a restore that keeps failing leaves the backups to copy by hand and
+		// the files the apply created to delete. The directory blocks the
+		// next apply until it is gone, so each message says to delete it.
 		if readErr != nil {
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, then delete that directory", applyErr, readErr, snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files its manifest.json lists under createdFiles, then delete that directory", applyErr, readErr, snapshotDir)
 		}
 		if restoreErr != nil {
 			// A file or symlink it lists that is gone now is not the apply's
 			// to delete if it appears again. Until that is recorded, remove
 			// could delete one, so it is not offered.
 			if err := snapshot.DropUncreated(snapshotDir); err != nil {
-				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, then delete that directory", applyErr, restoreErr, snapshotDir)
+				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files its manifest.json lists under createdFiles, then delete that directory", applyErr, restoreErr, snapshotDir)
 			}
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, then delete that directory", applyErr, restoreErr, snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files its manifest.json lists under createdFiles, then delete that directory", applyErr, restoreErr, snapshotDir)
 		}
 		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)

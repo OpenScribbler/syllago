@@ -145,8 +145,8 @@ func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
 			t.Cleanup(func() { os.Chmod(dir, 0755) })
 			opts := ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
 
-			if _, err := Apply(manifest, cat, provider.Cursor, opts); err == nil || !strings.Contains(err.Error(), "rolled back") {
-				t.Fatalf("Apply: got %v, want a rolled-back failure", err)
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err == nil || !strings.Contains(err.Error(), "rolled back") || !strings.Contains(err.Error(), "saving installed.json") {
+				t.Fatalf("Apply: got %v, want a rolled-back failure to save installed.json", err)
 			}
 			got, err := os.ReadFile(cfgPath)
 			if tt.existing == "" && !errors.Is(err, fs.ErrNotExist) {
