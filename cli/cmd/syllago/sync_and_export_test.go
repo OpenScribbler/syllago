@@ -683,6 +683,44 @@ func TestRunExportOp_AllHooksDroppedExplainsWhy(t *testing.T) {
 	}
 }
 
+func TestRunExportOp_AllHooksDroppedExplainsWhy_FileProvider(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	// --base-dir bypasses the install matrix, which would send Gemini
+	// hooks down the JSON-merge branch instead of the file branch.
+	baseDir := t.TempDir()
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(base string, _ catalog.ContentType) string {
+				return filepath.Join(base, "hooks")
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	_, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeSkip, baseDir, false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	got := stderr.String()
+	if !strings.Contains(got, "nothing in it converts to Gemini") || !strings.Contains(got, "--llm-hooks=generate") {
+		t.Errorf("want the drop explained with the --llm-hooks hint, got:\n%s", got)
+	}
+}
+
 func TestRunExportOp_FilterBySourceExcludes(t *testing.T) {
 	// With source=library and no library items, filterBySource skips every item.
 	root := setupExportEnv(t, "test-prov", []catalog.ContentType{catalog.Skills})

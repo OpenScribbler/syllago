@@ -358,13 +358,26 @@ func runInstallOp(root, toSlug, typeFilter, nameFilter, sourceFilter, llmHooksMo
 
 		// Try cross-provider rendering via converter
 		if conv := converter.For(item.Type); conv != nil || item.Type == catalog.Hooks {
-			exported, handled := exportWithConverter(item, *prov, toSlug, conv, installDir, llmHooksMode)
+			exported, skipWarnings, handled := exportWithConverter(item, *prov, toSlug, conv, installDir, llmHooksMode)
 			if handled {
 				if exported != nil {
 					result.Installed = append(result.Installed, *exported)
 					if !output.JSON {
 						fmt.Fprintf(output.Writer, "Installed %s to %s (converted)\n", item.Name, exported.Destination)
 						for _, w := range exported.Warnings {
+							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
+						}
+					}
+				} else if len(skipWarnings) > 0 {
+					// The warnings say why nothing converted.
+					result.Skipped = append(result.Skipped, syncSkippedItem{
+						Name:   item.Name,
+						Type:   string(item.Type),
+						Reason: fmt.Sprintf("nothing in it converts to %s: %s", prov.Name, strings.Join(skipWarnings, "; ")),
+					})
+					if !output.JSON {
+						fmt.Fprintf(output.ErrWriter, "Skipping %s (%s): nothing in it converts to %s\n", item.Name, item.Type.Label(), prov.Name)
+						for _, w := range skipWarnings {
 							fmt.Fprintf(output.ErrWriter, "  warning: %s\n", w)
 						}
 					}
@@ -463,41 +476,42 @@ func runInstallAll(root, typeFilter, nameFilter, sourceFilter, llmHooksMode, bas
 }
 
 // exportWithConverter handles export with cross-provider conversion.
-// Returns (syncInstalledItem, true) if the converter handled the item.
-// Returns (nil, true) if the converter skipped it (not compatible).
-// Returns (nil, false) if the converter doesn't apply (fall through to default copy).
-func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir, llmHooksMode string) (*syncInstalledItem, bool) {
+// Returns (syncInstalledItem, nil, true) if the converter handled the item.
+// Returns (nil, warnings, true) if the converter skipped it (not compatible);
+// the warnings, when present, say why nothing converted.
+// Returns (nil, nil, false) if the converter doesn't apply (fall through to default copy).
+func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlug string, conv converter.Converter, installDir, llmHooksMode string) (*syncInstalledItem, []string, bool) {
 	srcProvider := effectiveProvider(item)
 
 	// Same provider + has .source/ → copy original verbatim (lossless)
 	if converter.HasSourceFile(item) && srcProvider == toSlug {
 		srcPath := converter.SourceFilePath(item)
 		if srcPath == "" {
-			return nil, false
+			return nil, nil, false
 		}
 		dest := filepath.Join(installDir, item.Name, filepath.Base(srcPath))
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		if err := installer.CopyContent(srcPath, dest); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		return &syncInstalledItem{
 			Name:        item.Name,
 			Type:        string(item.Type),
 			Destination: dest,
-		}, true
+		}, nil, true
 	}
 
 	// Cross-provider → canonicalize then render
 	if srcProvider != "" && srcProvider != toSlug {
 		contentFile := converter.ResolveContentFile(item)
 		if contentFile == "" {
-			return nil, false
+			return nil, nil, false
 		}
 		content, err := os.ReadFile(contentFile)
 		if err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
 		var rendered *converter.Result
@@ -512,20 +526,20 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 			}
 		}
 		if err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
 		// nil Content means skip
 		if rendered.Content == nil {
-			return nil, true
+			return nil, rendered.Warnings, true
 		}
 
 		dest := filepath.Join(installDir, item.Name, rendered.Filename)
 		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 		if err := os.WriteFile(dest, rendered.Content, 0644); err != nil {
-			return nil, false
+			return nil, nil, false
 		}
 
 		// Write any extra files (e.g. generated LLM hook wrapper scripts)
@@ -543,11 +557,11 @@ func exportWithConverter(item catalog.ContentItem, prov provider.Provider, toSlu
 			Destination: dest,
 			Converted:   true,
 			Warnings:    rendered.Warnings,
-		}, true
+		}, nil, true
 	}
 
 	// No conversion needed — fall through to default copy
-	return nil, false
+	return nil, nil, false
 }
 
 // convertHooksForExport converts hook content through the target's hook
