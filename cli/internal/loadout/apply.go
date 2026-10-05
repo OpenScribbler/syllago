@@ -188,6 +188,9 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 		autoRevertArmed = injected
 	}
+	if err := snapshot.DropUncreated(snapshotDir); err != nil {
+		warnings = append(warnings, fmt.Sprintf("files this apply did not create may be deleted by loadout remove: %v", err))
+	}
 
 	return &ApplyResult{
 		Actions:         actions,

@@ -140,17 +140,53 @@ func Create(projectRoot string, loadoutName string, mode string,
 		CreatedFiles:   created,
 	}
 
-	manifestData, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshaling manifest: %w", err)
-	}
-
-	manifestPath := filepath.Join(snapshotDir, "manifest.json")
-	if err := os.WriteFile(manifestPath, manifestData, 0644); err != nil {
-		return "", fmt.Errorf("writing manifest: %w", err)
+	if err := writeManifest(snapshotDir, &manifest); err != nil {
+		return "", err
 	}
 
 	return snapshotDir, nil
+}
+
+// writeManifest replaces the snapshot's manifest through a rename, so a
+// failed write leaves the previous one readable.
+func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshaling manifest: %w", err)
+	}
+
+	manifestPath := filepath.Join(snapshotDir, "manifest.json")
+	tmp := manifestPath + ".tmp"
+	if err := os.WriteFile(tmp, manifestData, 0644); err != nil {
+		return fmt.Errorf("writing manifest: %w", err)
+	}
+	if err := os.Rename(tmp, manifestPath); err != nil {
+		_ = os.Remove(tmp)
+		return fmt.Errorf("writing manifest: %w", err)
+	}
+	return nil
+}
+
+// DropUncreated drops from the snapshot's CreatedFiles each path that
+// still does not exist. An apply calls it once its writes are done: a write
+// that failed without stopping the apply created nothing, and a file that
+// appears there later belongs to whoever made it.
+func DropUncreated(snapshotDir string) error {
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	var created []string
+	for _, p := range manifest.CreatedFiles {
+		if _, err := os.Lstat(p); !errors.Is(err, fs.ErrNotExist) {
+			created = append(created, p)
+		}
+	}
+	if len(created) == len(manifest.CreatedFiles) {
+		return nil
+	}
+	manifest.CreatedFiles = created
+	return writeManifest(snapshotDir, manifest)
 }
 
 // Load reads the manifest from the most recent snapshot directory.
