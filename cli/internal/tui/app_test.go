@@ -2073,6 +2073,26 @@ func TestApp_AddKeyOpensWizardOnLibrary(t *testing.T) {
 	assertContains(t, view, "Where is the content?")
 }
 
+// The wizard adds to the Library, not the project content root the App
+// scans, so an added item shows as Library content.
+func TestApp_AddWizardWritesToTheLibrary(t *testing.T) {
+	library := t.TempDir()
+	orig := catalog.GlobalContentDirOverride
+	catalog.GlobalContentDirOverride = library
+	t.Cleanup(func() { catalog.GlobalContentDirOverride = orig })
+
+	app := testAppWithItems(t)
+	m, _ := app.Update(keyRune('a'))
+	a := m.(App)
+
+	if a.addWizard == nil {
+		t.Fatal("expected addWizard not nil")
+	}
+	if a.addWizard.contentRoot != library {
+		t.Errorf("wizard contentRoot = %s, want the Library %s", a.addWizard.contentRoot, library)
+	}
+}
+
 func TestApp_AddKeyOpensWizardOnContentTab(t *testing.T) {
 	app := testAppWithItems(t)
 
