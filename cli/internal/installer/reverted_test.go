@@ -151,3 +151,19 @@ func TestForgetReverted_KeepsAHookFromV0_14(t *testing.T) {
 		t.Errorf("group gone: got %+v, want the record gone", inst.Hooks)
 	}
 }
+
+// TestForgetReverted_MatchesAV0_14HookUnderItsOwnEvent: the v0.14.0 hash
+// leaves out the event, so the same group under another event does not
+// hold the record.
+func TestForgetReverted_MatchesAV0_14HookUnderItsOwnEvent(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	overrideHookSettingsPaths(t, map[string]string{"claude-code": settingsPath})
+	group := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`
+	os.WriteFile(settingsPath, []byte(`{"hooks":{"PreToolUse":[`+group+`]}}`), 0644)
+	inst := &Installed{Hooks: []InstalledHook{{Name: "guard", Event: "PostToolUse", GroupHash: computeGroupHash([]byte(group)), Source: "export"}}}
+
+	ForgetReverted(inst, t.TempDir(), []string{settingsPath})
+	if len(inst.Hooks) != 0 {
+		t.Errorf("group only under PreToolUse: got %+v, want the PostToolUse record gone", inst.Hooks)
+	}
+}

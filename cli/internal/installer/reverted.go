@@ -70,13 +70,17 @@ func hookReverted(h InstalledHook, reverted map[string]bool) bool {
 		if model != hookStorageSharedJSON {
 			return false, nil
 		}
-		// v0.14.0 and earlier hashed the matcher group's JSON as written.
+		// v0.14.0 and earlier hashed the matcher group's JSON as written,
+		// under the event key the record names.
 		data, err := readJSONFile(path)
 		if err != nil {
 			return false, err
 		}
 		held := false
-		gjson.GetBytes(data, "hooks").ForEach(func(_, groups gjson.Result) bool {
+		gjson.GetBytes(data, "hooks").ForEach(func(event, groups gjson.Result) bool {
+			if event.String() != h.Event {
+				return true
+			}
 			for _, g := range groups.Array() {
 				held = held || computeGroupHash([]byte(g.Raw)) == h.GroupHash
 			}
