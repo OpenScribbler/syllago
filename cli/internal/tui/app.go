@@ -161,8 +161,13 @@ type App struct {
 	installed    *installer.Installed
 }
 
-// NewApp creates a new TUI app. Signature matches main.go.
-func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string, autoUpdate bool, registrySources []catalog.RegistrySource, cfg *config.Config, isReleaseBuild bool, contentRoot, projectRoot string) App {
+// NewApp creates a new TUI app from a moat.LoadAndScan result, the same
+// result a rescan applies, so the trust gate holds from the first render.
+func NewApp(scan *moat.ScanResult, providers []provider.Provider, version string, autoUpdate bool, isReleaseBuild bool, contentRoot, projectRoot string) App {
+	if scan == nil {
+		scan = &moat.ScanResult{}
+	}
+	cat, cfg, registrySources := scan.Catalog, scan.Config, scan.RegistrySources
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -203,8 +208,10 @@ func NewApp(cat *catalog.Catalog, providers []provider.Provider, version string,
 		telemetryConsent: consent,
 		hint:             newHintModal(),
 
-		moatSession: moat.NewSession(),
-		moatMinTier: moat.TrustTierUnsigned,
+		moatSession:  moat.NewSession(),
+		moatGate:     scan.GateInputs,
+		moatLockfile: scan.Lockfile,
+		moatMinTier:  moat.TrustTierUnsigned,
 	}
 
 	// Extract registry names for settings display

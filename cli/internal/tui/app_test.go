@@ -16,7 +16,7 @@ import (
 // --- Unit tests ---
 
 func TestApp_WindowSizeMsg(t *testing.T) {
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: testCatalog(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 	if a.width != 120 || a.height != 40 {
@@ -28,7 +28,7 @@ func TestApp_WindowSizeMsg(t *testing.T) {
 }
 
 func TestApp_NotReadyBeforeWindowSize(t *testing.T) {
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: testCatalog(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	view := app.View()
 	if view != "" {
 		t.Errorf("expected empty view before WindowSizeMsg, got %q", view)
@@ -949,9 +949,13 @@ func testAppOnRegistries(t *testing.T) App {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1127,7 +1131,7 @@ func TestApp_RegistryWiring_ModalPassesCtrlC(t *testing.T) {
 
 func TestApp_RegistryWiring_WindowSizeMsg(t *testing.T) {
 	cat := &catalog.Catalog{}
-	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
 
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
@@ -1161,9 +1165,13 @@ func testAppOnRegistriesWithConfig(t *testing.T, cfg *config.Config) App {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, cfg, false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: cfg,
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1253,7 +1261,7 @@ func TestApp_ActionHandler_SyncWithCard(t *testing.T) {
 
 func TestApp_ActionHandler_SyncNilCard(t *testing.T) {
 	// Create app with no registry sources (empty gallery)
-	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1369,7 +1377,7 @@ func TestApp_ActionHandler_ConfirmRegistryItemUninstall_NotMisroutedAsRegistryRe
 
 func TestApp_ActionHandler_ConfirmLoadoutStillWorks(t *testing.T) {
 	// Create a fresh app on Loadouts (not Registries).
-	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1438,7 +1446,7 @@ func TestGallery_RegistryButtons_NotOnLoadouts(t *testing.T) {
 			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1509,7 +1517,7 @@ func TestApp_RegistryHints_NotOnLoadouts(t *testing.T) {
 			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1896,9 +1904,13 @@ func TestGolden_RegistryAddModal_Git_80x30(t *testing.T) {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1925,9 +1937,13 @@ func TestGolden_RegistryAddModal_Local_80x30(t *testing.T) {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1960,9 +1976,13 @@ func TestGolden_RegistryAddModal_Error_80x30(t *testing.T) {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -1998,9 +2018,13 @@ func TestGolden_RegistryAddModal_Buttons_80x30(t *testing.T) {
 			{Name: "alpha-skill", Type: catalog.Skills, Source: "my-registry", Registry: "my-registry", Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -2082,9 +2106,13 @@ func TestApp_AddKeyOnRegistriesDoesNotOpenWizard(t *testing.T) {
 			{Name: "test-loadout", Type: catalog.Loadouts, Source: "library"},
 		},
 	}
-	app := NewApp(cat, nil, "0.0.0-test", false, []catalog.RegistrySource{
-		{Name: "my-registry", Path: "/tmp/fake-registry"},
-	}, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{
+		Catalog: cat,
+		RegistrySources: []catalog.RegistrySource{
+			{Name: "my-registry", Path: "/tmp/fake-registry"},
+		},
+		Config: testConfig(),
+	}, nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -2475,7 +2503,7 @@ func TestHintModal_NotShownWhenPreferenceDismissed(t *testing.T) {
 	cfg := &config.Config{
 		Preferences: map[string]string{"hints.registry_add_dismissed": "true"},
 	}
-	app := NewApp(testCatalog(t), testProviders(), "0.0.0-test", false, nil, cfg, false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: testCatalog(t), Config: cfg}, testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 	m2, cmd := a.handleRegistryAddDone(registryAddDoneMsg{name: "reg"})

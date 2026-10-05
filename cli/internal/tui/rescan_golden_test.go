@@ -9,6 +9,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // testAppWithVerifiedRulesSize builds a TUI App with 2 library rules:
@@ -55,7 +56,7 @@ func testAppWithVerifiedRulesSize(t *testing.T, w, h int) App {
 		},
 	}
 
-	app := NewApp(cat, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	a := m.(App)
 	a.verification = verification

@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // setupEditableSkill creates a real directory item on disk and an App with
@@ -29,7 +30,7 @@ func setupEditableSkill(t *testing.T, name string) (App, string) {
 			{Name: name, Type: catalog.Skills, Path: itemDir, Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(cat, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	return m.(App), itemDir
 }

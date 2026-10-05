@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/rollback"
 )
 
@@ -61,7 +62,7 @@ func TestPinToggle_RoundTrip(t *testing.T) {
 		Meta:    &metadata.Meta{SourceRegistry: "https://my-registry.com"},
 	}
 	cat := &catalog.Catalog{Items: []catalog.ContentItem{item}}
-	app := NewApp(cat, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", t.TempDir())
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	app = m.(App)
 
@@ -117,7 +118,7 @@ func TestRollback_NoData(t *testing.T) {
 		Meta:    &metadata.Meta{SourceRegistry: "https://my-registry.com"},
 	}
 	cat := &catalog.Catalog{Items: []catalog.ContentItem{item}}
-	app := NewApp(cat, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", t.TempDir())
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	app = m.(App)
 
@@ -156,7 +157,7 @@ func TestConfirmPurposeRouting(t *testing.T) {
 	plan := &rollback.Plan{
 		Item: catalog.ContentItem{Name: "my-rule", Type: catalog.Rules},
 	}
-	app := NewApp(&catalog.Catalog{}, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", t.TempDir())
+	app := NewApp(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", t.TempDir())
 	app.pendingRollback = plan
 
 	// confirmed: false should clear pendingRollback and do nothing

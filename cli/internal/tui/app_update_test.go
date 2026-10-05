@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // TestApp_HandleLibraryAddMsg_ShowsToast verifies that when the App receives
@@ -21,7 +22,7 @@ func TestApp_HandleLibraryAddMsg_ShowsToast(t *testing.T) {
 			},
 		},
 	}
-	app := NewApp(cat, testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	item := &cat.Items[0]
 	_, cmd := app.Update(libraryAddMsg{item: item})
 	if cmd == nil {

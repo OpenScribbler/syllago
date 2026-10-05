@@ -11,6 +11,7 @@ import (
 	zone "github.com/lrstanley/bubblezone"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // newLibraryWithDiskItems returns a libraryModel whose items reference real
@@ -467,7 +468,7 @@ func testCatalogUnifiedList(t *testing.T) *catalog.Catalog {
 // catalog at the given dimensions, landed on the Library tab (default).
 func testAppWithUnifiedLibraryCatalog(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(testCatalogUnifiedList(t), testProviders(), "0.0.0-test", false, nil, testConfig(), false, "", "")
+	app := NewApp(&moat.ScanResult{Catalog: testCatalogUnifiedList(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }
