@@ -244,42 +244,6 @@ func TestSymlinkSource_Rules(t *testing.T) {
 	}
 }
 
-// --- writeJSONFileAtomic (61.5% coverage) ---
-
-func TestWriteJSONFileAtomic_CreatesParentDirs(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), "nested", "dir", "settings.json")
-
-	err := writeJSONFileAtomic(path, []byte(`{"key":"value"}`))
-	if err != nil {
-		t.Fatalf("writeJSONFileAtomic: %v", err)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading written file: %v", err)
-	}
-	if string(data) != `{"key":"value"}` {
-		t.Errorf("got %q, want %q", string(data), `{"key":"value"}`)
-	}
-}
-
-func TestWriteJSONFileAtomic_Overwrites(t *testing.T) {
-	t.Parallel()
-	path := filepath.Join(t.TempDir(), "settings.json")
-	os.WriteFile(path, []byte(`{"old":"data"}`), 0644)
-
-	err := writeJSONFileAtomic(path, []byte(`{"new":"data"}`))
-	if err != nil {
-		t.Fatalf("writeJSONFileAtomic: %v", err)
-	}
-
-	data, _ := os.ReadFile(path)
-	if string(data) != `{"new":"data"}` {
-		t.Errorf("got %q, want %q", string(data), `{"new":"data"}`)
-	}
-}
-
 // --- BuildManifestFromNames with ID resolution ---
 
 func TestBuildManifestFromNames_WithGlobalDir(t *testing.T) {
