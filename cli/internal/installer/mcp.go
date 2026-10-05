@@ -1,7 +1,9 @@
 package installer
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -255,6 +257,14 @@ func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 		return nil, err
 	}
 	data = converter.StripJSONCComments(data)
+	if len(bytes.TrimSpace(data)) == 0 {
+		return []byte("{}"), nil
+	}
+	// sjson writes into invalid JSON without complaint, so a merge would
+	// corrupt the file rather than fail.
+	if !json.Valid(data) {
+		return nil, errors.New("invalid JSON; fix or delete the file")
+	}
 	return data, nil
 }
 
@@ -352,6 +362,29 @@ func droppedServerFields(rawData []byte, itemName string, jsonKey string, names 
 }
 
 func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Placement, error) {
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
+	}
+	placement, err := placeMCP(item, prov, repoRoot, inst, "export", true)
+	if err != nil {
+		return Placement{}, err
+	}
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
+	}
+	return placement, nil
+}
+
+// PlaceMCP merges an MCP item's servers into the provider's MCP config and
+// appends their record to inst under source. The caller loads and saves
+// inst, so several placements share one write of installed.json, and the
+// caller keeps any backup of the config, so none is written beside it.
+func PlaceMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed, source string) (Placement, error) {
+	return placeMCP(item, prov, repoRoot, inst, source, false)
+}
+
+func placeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string, inst *Installed, source string, backup bool) (Placement, error) {
 	// Read the MCP config from the content item
 	rawData, err := os.ReadFile(filepath.Join(item.Path, "config.json"))
 	if err != nil {
@@ -386,11 +419,6 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
 
-	// Load installed.json to check for syllago-managed entries
-	inst, err := LoadInstalled(repoRoot)
-	if err != nil {
-		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
-	}
 	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov.Slug, fileData, jsonKey); ok {
 		return Placement{}, fmt.Errorf("MCP server %q already installed", serverName)
 	}
@@ -409,7 +437,7 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 			// Check if this key was installed by syllago (safe to overwrite)
 			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			if !syllagoManaged {
-				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; use --force to overwrite", name, cfgPath)
+				return Placement{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; rename or remove it there first", name, cfgPath)
 			}
 		}
 
@@ -421,21 +449,22 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		keys = append(keys, key)
 	}
 
-	if err := backupFile(cfgPath); err != nil {
-		return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
+	if backup {
+		if err := backupFile(cfgPath); err != nil {
+			return Placement{}, fmt.Errorf("backing up %s: %w", cfgPath, err)
+		}
 	}
 
 	if err := writeJSONFile(cfgPath, fileData); err != nil {
 		return Placement{}, fmt.Errorf("writing %s: %w", cfgPath, err)
 	}
 
-	// Record in installed.json (inst already loaded above for collision check)
 	if item.ServerKey != "" {
 		// Per-server install: one entry per server key
 		inst.MCP = append(inst.MCP, InstalledMCP{
 			Name:        item.Name,
 			ServerKey:   item.ServerKey,
-			Source:      "export",
+			Source:      source,
 			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
@@ -444,14 +473,10 @@ func installMCP(item catalog.ContentItem, prov provider.Provider, repoRoot strin
 		inst.MCP = append(inst.MCP, InstalledMCP{
 			Name:        item.Name,
 			ServerNames: serverNames,
-			Source:      "export",
+			Source:      source,
 			Provider:    prov.Slug,
 			InstalledAt: time.Now(),
 		})
-	}
-
-	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return Placement{}, fmt.Errorf("saving installed.json: %w", err)
 	}
 
 	desc := fmt.Sprintf("%s in %s", jsonKey, cfgPath)

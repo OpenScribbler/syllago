@@ -124,13 +124,6 @@ func Create(projectRoot string, loadoutName string, mode string,
 	return snapshotDir, nil
 }
 
-// CreateForHook creates a snapshot for a hook operation. It records the source
-// identifier (e.g. "hook:some-hook-name") and backs up the given files.
-// Mode is always "keep" since hook snapshots are not trial installs.
-func CreateForHook(projectRoot, source string, filesToBackup []string) (string, error) {
-	return Create(projectRoot, source, "keep", filesToBackup, nil, nil)
-}
-
 // Load reads the manifest from the most recent snapshot directory.
 // Returns ErrNoSnapshot if .syllago/snapshots/ is empty or missing.
 func Load(projectRoot string) (*SnapshotManifest, string, error) {

@@ -198,30 +198,6 @@ func TestLoad_ReturnsLatestSnapshot(t *testing.T) {
 	}
 }
 
-func TestCreateForHook(t *testing.T) {
-	t.Parallel()
-	projectRoot := t.TempDir()
-
-	snapshotDir, err := CreateForHook(projectRoot, "hook:my-hook", nil)
-	if err != nil {
-		t.Fatalf("CreateForHook failed: %v", err)
-	}
-
-	manifest, loadedDir, err := Load(projectRoot)
-	if err != nil {
-		t.Fatalf("Load failed: %v", err)
-	}
-	if loadedDir != snapshotDir {
-		t.Errorf("snapshot dir mismatch: got %s, want %s", loadedDir, snapshotDir)
-	}
-	if manifest.Source != "hook:my-hook" {
-		t.Errorf("Source: got %q, want %q", manifest.Source, "hook:my-hook")
-	}
-	if manifest.Mode != "keep" {
-		t.Errorf("Mode: got %q, want %q", manifest.Mode, "keep")
-	}
-}
-
 func TestLoad_BackwardsCompat(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
@@ -246,58 +222,6 @@ func TestLoad_BackwardsCompat(t *testing.T) {
 	}
 	if manifest.LoadoutName != "my-loadout" {
 		t.Errorf("LoadoutName should be preserved: got %q", manifest.LoadoutName)
-	}
-}
-
-func TestCreateForHook_Restore(t *testing.T) {
-	t.Parallel()
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-
-	projectRoot := t.TempDir()
-	testDir := filepath.Join(home, ".syllago-test-hook-restore-"+filepath.Base(projectRoot))
-	if err := os.MkdirAll(testDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(testDir) })
-
-	testFile := filepath.Join(testDir, "hook-settings.json")
-	originalContent := []byte(`{"hook": "original"}`)
-	if err := os.WriteFile(testFile, originalContent, 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	snapshotDir, err := CreateForHook(projectRoot, "hook:my-hook", []string{testFile})
-	if err != nil {
-		t.Fatalf("CreateForHook failed: %v", err)
-	}
-
-	// Modify the file to simulate hook apply changes.
-	if err := os.WriteFile(testFile, []byte(`{"hook": "modified"}`), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	manifest, loadedDir, err := Load(projectRoot)
-	if err != nil {
-		t.Fatalf("Load failed: %v", err)
-	}
-	if loadedDir != snapshotDir {
-		t.Fatalf("snapshot dir mismatch")
-	}
-
-	if err := Restore(snapshotDir, manifest); err != nil {
-		t.Fatalf("Restore failed: %v", err)
-	}
-
-	data, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Fatalf("reading restored file: %v", err)
-	}
-	if string(data) != string(originalContent) {
-		t.Errorf("file not restored: got %q, want %q", string(data), string(originalContent))
 	}
 }
 

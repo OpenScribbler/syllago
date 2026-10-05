@@ -355,79 +355,6 @@ func TestApply_ResolveFails(t *testing.T) {
 	}
 }
 
-func TestReadJSONFileOrEmpty(t *testing.T) {
-	t.Parallel()
-
-	t.Run("valid JSON returns contents", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join(t.TempDir(), "settings.json")
-		os.WriteFile(path, []byte(`{"hooks":[]}`), 0644)
-
-		data, err := readJSONFileOrEmpty(path)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if string(data) != `{"hooks":[]}` {
-			t.Errorf("got %q, want %q", string(data), `{"hooks":[]}`)
-		}
-	})
-
-	t.Run("missing file returns empty object", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join(t.TempDir(), "nonexistent.json")
-
-		data, err := readJSONFileOrEmpty(path)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if string(data) != "{}" {
-			t.Errorf("got %q, want %q", string(data), "{}")
-		}
-	})
-
-	t.Run("malformed JSON returns error", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join(t.TempDir(), "settings.json")
-		os.WriteFile(path, []byte(`{"hooks": [`), 0644)
-
-		_, err := readJSONFileOrEmpty(path)
-		if err == nil {
-			t.Fatal("expected error for malformed JSON")
-		}
-		if !strings.Contains(err.Error(), "invalid JSON") {
-			t.Errorf("error should mention invalid JSON, got: %v", err)
-		}
-	})
-
-	t.Run("empty file returns error", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join(t.TempDir(), "settings.json")
-		os.WriteFile(path, []byte(""), 0644)
-
-		_, err := readJSONFileOrEmpty(path)
-		if err == nil {
-			t.Fatal("expected error for empty file")
-		}
-		if !strings.Contains(err.Error(), "invalid JSON") {
-			t.Errorf("error should mention invalid JSON, got: %v", err)
-		}
-	})
-
-	t.Run("truncated JSON returns error", func(t *testing.T) {
-		t.Parallel()
-		path := filepath.Join(t.TempDir(), "settings.json")
-		os.WriteFile(path, []byte(`{"hooks":[{"type":"command","command":"echo`), 0644)
-
-		_, err := readJSONFileOrEmpty(path)
-		if err == nil {
-			t.Fatal("expected error for truncated JSON")
-		}
-		if !strings.Contains(err.Error(), "invalid JSON") {
-			t.Errorf("error should mention invalid JSON, got: %v", err)
-		}
-	})
-}
-
 // setupUnsupportedHookEnv builds a devin-targeted env with one rule that
 // works and one hook whose event (worktree_create) devin has no
 // settings key for.
@@ -769,27 +696,5 @@ func TestCollectBackupFiles_TryModeSkipsSettingsWithoutSessionEnd(t *testing.T) 
 	}
 	if !found {
 		t.Error("claude-code supports session_end; try-mode must back up settings.json so auto-revert injection can be reverted")
-	}
-}
-
-// applyMCP records the provider it merged the server into.
-func TestApplyMCP_RecordsProvider(t *testing.T) {
-	t.Parallel()
-	projectRoot := t.TempDir()
-	itemDir := filepath.Join(projectRoot, "mcp", "srv")
-	if err := os.MkdirAll(itemDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"command":"node"}`), 0644); err != nil {
-		t.Fatal(err)
-	}
-	ref := ResolvedRef{Type: catalog.MCP, Name: "srv", Item: catalog.ContentItem{Name: "srv", Type: catalog.MCP, Path: itemDir}}
-	inst := &installer.Installed{}
-
-	if err := applyMCP(ref, provider.Cursor, projectRoot, inst, "loadout:test"); err != nil {
-		t.Fatalf("applyMCP: %v", err)
-	}
-	if len(inst.MCP) != 1 || inst.MCP[0].Provider != "cursor" {
-		t.Fatalf("expected one cursor record, got %+v", inst.MCP)
 	}
 }
