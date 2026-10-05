@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -306,6 +307,40 @@ func TestInstallMCP_OtherProviderRecordDoesNotClaimServer(t *testing.T) {
 	}
 	if got := gjson.GetBytes(cursor, "mcpServers.shared-mcp.command").String(); got != "mine" {
 		t.Errorf("hand-written server overwritten: command = %q", got)
+	}
+}
+
+// A config every project shares can hold a server syllago placed from
+// another project, whose installed.json this project cannot see. The same
+// settings count as installed, so install leaves the file and records
+// nothing; other settings are still refused.
+func TestInstallMCP_SameServerFromAnotherProject(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "shared-mcp")
+
+	same := []byte("{\n  \"mcpServers\": {\"shared-mcp\": { \"command\": \"node\" }}\n}")
+	if err := os.WriteFile(paths["claude-code"], same, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); !errors.Is(err, ErrMCPInstalled) {
+		t.Fatalf("install over the same settings: got %v, want ErrMCPInstalled", err)
+	}
+	if got, _ := os.ReadFile(paths["claude-code"]); string(got) != string(same) {
+		t.Errorf("config: got %s, want it unchanged", got)
+	}
+	if inst, err := LoadInstalled(projectRoot); err != nil || len(inst.MCP) != 0 {
+		t.Errorf("records: got %+v (%v), want none", inst, err)
+	}
+
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"shared-mcp":{"command":"other"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err == nil || errors.Is(err, ErrMCPInstalled) || !strings.Contains(err.Error(), "with other settings") {
+		t.Fatalf("install over other settings: got %v, want a collision error", err)
 	}
 }
 

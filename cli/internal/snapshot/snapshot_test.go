@@ -552,3 +552,38 @@ func TestDelete_RemovesDir(t *testing.T) {
 		t.Fatal("snapshot dir should not exist after delete")
 	}
 }
+
+// TestDropUncreated_DropsWhatDoesNotExist: a created file or symlink the
+// apply never made, or has removed, leaves the manifest, so a later
+// restore cannot delete what someone else puts at that path.
+func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	made := filepath.Join(tmpDir, "made.json")
+	gone := filepath.Join(tmpDir, "gone.json")
+	link := filepath.Join(tmpDir, "link")
+	goneLink := filepath.Join(tmpDir, "gone-link")
+	snapshotDir, err := Create(tmpDir, "test-loadout", "keep", []string{made, gone},
+		[]SymlinkRecord{{Path: link, Target: tmpDir}, {Path: goneLink, Target: tmpDir}}, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(made, []byte("{}"), 0644)
+	if err := os.Symlink(tmpDir, link); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := DropUncreated(snapshotDir); err != nil {
+		t.Fatalf("DropUncreated: %v", err)
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if len(m.CreatedFiles) != 1 || m.CreatedFiles[0] != made {
+		t.Errorf("CreatedFiles: got %v, want [%s]", m.CreatedFiles, made)
+	}
+	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != link {
+		t.Errorf("Symlinks: got %+v, want only %s", m.Symlinks, link)
+	}
+}

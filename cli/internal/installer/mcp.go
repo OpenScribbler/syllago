@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
@@ -469,6 +470,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	// Merge each server entry into the target config
 	var serverNames []string
 	var keys []string
+	var sameName string
 	for name, configData := range entries {
 		if !catalog.IsValidItemName(name) {
 			return mcpMerge{}, fmt.Errorf("invalid MCP server name %q: names may only contain letters, numbers, hyphens, and underscores", name)
@@ -476,11 +478,17 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		key := jsonKey + "." + name
 
 		// H2: Check for collision with user-defined (non-syllago) server keys
-		if gjson.GetBytes(fileData, key).Exists() {
+		if existing := gjson.GetBytes(fileData, key); existing.Exists() {
 			// Check if this key was installed by syllago (safe to overwrite)
 			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			if !syllagoManaged {
-				return mcpMerge{}, fmt.Errorf("MCP server %q already exists in %s and was not installed by syllago; rename or remove it there first", name, cfgPath)
+				// A config shared by every project can hold this server
+				// from another project, so the same settings count as
+				// installed; whoever placed them keeps them.
+				if !jsonEqual([]byte(existing.Raw), configData) {
+					return mcpMerge{}, fmt.Errorf("MCP server %q already exists in %s with other settings and was not installed by syllago for this project; rename or remove it there first", name, cfgPath)
+				}
+				sameName = name
 			}
 		}
 
@@ -491,12 +499,26 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		serverNames = append(serverNames, name)
 		keys = append(keys, key)
 	}
+	if sameName != "" {
+		return mcpMerge{}, fmt.Errorf("MCP server %q %w", sameName, ErrMCPInstalled)
+	}
 	return mcpMerge{rawData: rawData, entries: entries, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
 }
 
 // ErrMCPInstalled is the merge's error for a server a record under the
-// legacy root already placed.
+// legacy root already placed, or one the target config already holds with
+// the same settings.
 var ErrMCPInstalled = errors.New("already installed")
+
+// jsonEqual reports whether a and b decode to the same JSON value, so a
+// config its provider reformatted still matches.
+func jsonEqual(a, b []byte) bool {
+	var va, vb any
+	if json.Unmarshal(a, &va) != nil || json.Unmarshal(b, &vb) != nil {
+		return false
+	}
+	return reflect.DeepEqual(va, vb)
+}
 
 // CheckMCP reports the error PlaceMCP would return for an item, without
 // writing anything.
@@ -565,11 +587,6 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 	if err != nil {
 		return Placement{}, fmt.Errorf("reading %s: %w", cfgPath, err)
 	}
-	// sjson writes into invalid JSON without complaint, so a write would
-	// corrupt the file rather than fail.
-	if !json.Valid(fileData) {
-		return Placement{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
-	}
 
 	jsonKey := MCPConfigKey(prov)
 
@@ -594,6 +611,12 @@ func uninstallMCPAtRoot(item catalog.ContentItem, prov provider.Provider, repoRo
 	// matching hook in the target settings.
 	if entry := inst.MCP[instIdx]; entry.Provider == "" && !mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
 		return Placement{}, fmt.Errorf("%s was not installed by syllago for %s", item.Name, prov.Name)
+	}
+	// sjson writes into invalid JSON without complaint, so a write would
+	// corrupt the file rather than fail. The check waits for the legacy
+	// fallback above, which edits another root's file.
+	if !json.Valid(fileData) {
+		return Placement{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
 	}
 
 	if err := backupFile(cfgPath); err != nil {

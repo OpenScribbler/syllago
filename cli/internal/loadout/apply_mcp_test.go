@@ -185,12 +185,29 @@ func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
 		// after is what the user writes to the config before remove.
 		after string
 		want  string
+		// noRemove is set when the apply cannot record what remove may
+		// delete, so its message must not offer remove.
+		noRemove bool
 	}{
 		{
 			name:     "restore changed nothing",
 			existing: `{"mcpServers":{"mine":{"command":"x"}}}`,
 			restore:  func(string) error { return errors.New("disk full") },
 			want:     `{"mcpServers":{"mine":{"command":"x"}}}`,
+		},
+		{
+			name: "snapshot cannot be pruned",
+			restore: func(cfgPath string) error {
+				os.Remove(cfgPath)
+				snapshotDirs, _ := filepath.Glob(filepath.Join(filepath.Dir(filepath.Dir(cfgPath)), ".syllago", "snapshots", "*"))
+				os.Chmod(snapshotDirs[0], 0555)
+				return errors.New("disk full")
+			},
+			noRemove: true,
+		},
+		{
+			name:    "restore left the created config",
+			restore: func(string) error { return errors.New("disk full") },
 		},
 		{
 			name:    "restore deleted the created config",
@@ -210,10 +227,16 @@ func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
 			os.Chmod(dir, 0555)
 			t.Cleanup(func() { os.Chmod(dir, 0755) })
 			restoreSnapshot = func(string, *snapshot.SnapshotManifest) error { return tt.restore(cfgPath) }
+			t.Cleanup(func() {
+				snapshotDirs, _ := filepath.Glob(filepath.Join(dir, "snapshots", "*"))
+				for _, d := range snapshotDirs {
+					os.Chmod(d, 0755)
+				}
+			})
 
 			_, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
-			if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || !strings.Contains(err.Error(), "syllago loadout remove") {
-				t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove", err)
+			if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || strings.Contains(err.Error(), "syllago loadout remove") == tt.noRemove {
+				t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove only when it is safe (noRemove %v)", err, tt.noRemove)
 			}
 			_, snapDir, loadErr := snapshot.Load(projectRoot)
 			if loadErr != nil {
@@ -224,6 +247,7 @@ func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
 			}
 
 			os.Chmod(dir, 0755)
+			os.Chmod(snapDir, 0755)
 			restoreSnapshot = snapshot.Restore
 			if tt.after != "" {
 				os.WriteFile(cfgPath, []byte(tt.after), 0644)
@@ -231,10 +255,42 @@ func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
 			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
 				t.Fatalf("Remove: %v", err)
 			}
-			if got, _ := os.ReadFile(cfgPath); string(got) != tt.want {
+			got, readErr := os.ReadFile(cfgPath)
+			if tt.want == "" && !os.IsNotExist(readErr) {
+				t.Errorf("config after remove: got %s (%v), want it deleted", got, readErr)
+			} else if tt.want != "" && string(got) != tt.want {
 				t.Errorf("config after remove: got %s, want %s", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestApply_SkipsTheSameServerFromAnotherProject: a config every project
+// shares can hold this server from another project's apply. The same
+// settings count as installed, so the apply skips the server, and remove
+// leaves it to the project that placed it.
+func TestApply_SkipsTheSameServerFromAnotherProject(t *testing.T) {
+	t.Parallel()
+	const shared = `{"mcpServers": {"srv": { "command": "node" }}}`
+	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, shared)
+	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+
+	result, err := Apply(manifest, cat, provider.Cursor, opts)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(result.Actions) != 1 || result.Actions[0].Action != "skip-exists" {
+		t.Fatalf("preview actions: got %+v, want one skip-exists", result.Actions)
+	}
+	opts.Mode = "keep"
+	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != shared {
+		t.Errorf("config: got %s, want it unchanged as %s", got, shared)
 	}
 }
 
