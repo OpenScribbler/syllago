@@ -193,5 +193,5 @@ func isDevinEvent(name string) bool {
 }
 
 func (a *DevinAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

@@ -181,5 +181,5 @@ func (a *GeminiCLIAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *GeminiCLIAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

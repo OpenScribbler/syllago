@@ -51,20 +51,13 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 			})
 		}
 
-		// Translate event — special case for subagent_stop → agent_end
-		var piEvent string
-		if hook.Event == "subagent_stop" {
-			piEvent = "agent_end"
-		} else {
-			var err error
-			piEvent, err = TranslateEventToProvider(hook.Event, slug)
-			if err != nil {
-				warnings = append(warnings, ConversionWarning{
-					Severity:    "warning",
-					Description: fmt.Sprintf("hook event %q not supported by pi; skipped", hook.Event),
-				})
-				continue
-			}
+		piEvent, err := TranslateEventToProvider(hook.Event, slug)
+		if err != nil {
+			warnings = append(warnings, ConversionWarning{
+				Severity:    "warning",
+				Description: fmt.Sprintf("hook event %q not supported by pi; skipped", hook.Event),
+			})
+			continue
 		}
 
 		// Extract tool matcher
@@ -185,5 +178,5 @@ func (a *PiAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *PiAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

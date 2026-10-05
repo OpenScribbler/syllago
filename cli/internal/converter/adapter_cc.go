@@ -216,5 +216,5 @@ func (a *ClaudeCodeAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *ClaudeCodeAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

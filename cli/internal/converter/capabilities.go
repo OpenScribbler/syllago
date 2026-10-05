@@ -1,22 +1,26 @@
 package converter
 
+import "sort"
+
+// capabilitiesFor returns slug's entry from providerHookCapabilities with
+// Events filled from HookEvents, the table the encoders translate through,
+// so the install gate never accepts an event the encoder then drops.
+func capabilitiesFor(slug string) ProviderCapabilities {
+	caps := providerHookCapabilities[slug]
+	for canon, native := range HookEvents {
+		if _, ok := native[slug]; ok {
+			caps.Events = append(caps.Events, canon)
+		}
+	}
+	sort.Strings(caps.Events)
+	return caps
+}
+
 // providerHookCapabilities is the single data table for hook feature support,
 // keyed by provider slug. Each adapter's Capabilities() method returns its
-// entry from this table; the Encode/Decode codecs are unaffected.
-//
-// Entries are shared (including the Events slice backing array) — callers
-// must treat the returned ProviderCapabilities as read-only.
+// entry through capabilitiesFor, which adds the events.
 var providerHookCapabilities = map[string]ProviderCapabilities{
 	"claude-code": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "subagent_start", "subagent_stop", "error_occurred",
-			"tool_use_failure", "permission_request", "after_compact",
-			"instructions_loaded", "config_change", "worktree_create",
-			"worktree_remove", "elicitation", "elicitation_result",
-			"teammate_idle", "task_completed", "stop_failure", "file_changed",
-		},
 		SupportsMatchers:         true,
 		SupportsAsync:            true,
 		SupportsStatusMessage:    true,
@@ -30,11 +34,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        true,
 	},
 	"copilot-cli": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end",
-			"subagent_stop", "error_occurred", "tool_use_failure",
-		},
 		SupportsMatchers:         false,
 		SupportsAsync:            false,
 		SupportsStatusMessage:    true,
@@ -48,12 +47,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"cursor": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"tool_use_failure", "subagent_start", "subagent_stop",
-			"file_changed", "before_model", "after_model", "before_tool_selection",
-		},
 		SupportsMatchers:         true,
 		SupportsAsync:            false,
 		SupportsStatusMessage:    true,
@@ -67,11 +60,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"gemini-cli": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "before_model", "after_model", "before_tool_selection",
-		},
 		SupportsMatchers:         true,
 		SupportsAsync:            true,
 		SupportsStatusMessage:    true,
@@ -85,11 +73,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"kiro": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start",
-			"file_changed", "file_created", "file_deleted", "before_task", "after_task",
-		},
 		SupportsMatchers:         true,
 		SupportsAsync:            false,
 		SupportsStatusMessage:    false,
@@ -103,23 +86,12 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"devin": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "permission_request",
-			"before_prompt", "agent_stop", "after_compact",
-			"session_start", "session_end",
-		},
 		SupportsMatchers:         true,
 		SupportsStructuredOutput: true, // decision, updatedInput, additionalContext
 		SupportsBlocking:         true,
 		TimeoutUnit:              "seconds",
 	},
 	"vs-code-copilot": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"notification", "subagent_start", "subagent_stop",
-			"error_occurred", "tool_use_failure",
-		},
 		SupportsMatchers:         true,
 		SupportsAsync:            true,
 		SupportsStatusMessage:    true,
@@ -133,11 +105,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"factory-droid": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "before_prompt",
-			"agent_stop", "session_start", "session_end", "before_compact",
-			"subagent_start", "subagent_stop",
-		},
 		SupportsMatchers:      true,
 		SupportsStatusMessage: true,
 		SupportsBlocking:      true,
@@ -149,7 +116,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		// Crush fires hooks only before tool execution (PreToolUse); they run
 		// before permission checks with veto power (exit code 2 or a JSON
 		// decision of "deny" blocks the tool call).
-		Events: []string{"before_tool_execute"},
 
 		SupportsMatchers:         true,
 		SupportsAsync:            false,
@@ -164,13 +130,6 @@ var providerHookCapabilities = map[string]ProviderCapabilities{
 		SupportsHTTPHooks:        false,
 	},
 	"pi": {
-		Events: []string{
-			"before_tool_execute", "after_tool_execute", "session_start", "session_end",
-			"before_prompt", "agent_stop", "before_compact", "subagent_start", "subagent_stop",
-			// Pi-specific events
-			"turn_start", "turn_end", "model_select", "user_bash",
-			"context_update", "message_start", "message_end",
-		},
 		SupportsMatchers: true,
 		SupportsBlocking: true,
 		TimeoutUnit:      "milliseconds",

@@ -164,5 +164,5 @@ func (a *VSCodeCopilotAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 }
 
 func (a *VSCodeCopilotAdapter) Capabilities() ProviderCapabilities {
-	return providerHookCapabilities[a.ProviderSlug()]
+	return capabilitiesFor(a.ProviderSlug())
 }

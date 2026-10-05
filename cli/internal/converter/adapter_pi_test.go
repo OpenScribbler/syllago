@@ -71,7 +71,7 @@ func TestPiAdapterEncode_MatcherBecomesTool(t *testing.T) {
 	assertNotContains(t, out, "event.tool !==")
 }
 
-func TestPiAdapterEncode_SubagentStopMapsToAgentEnd(t *testing.T) {
+func TestPiAdapterEncode_SubagentStopIsSkipped(t *testing.T) {
 	hooks := &CanonicalHooks{
 		Spec: SpecVersion,
 		Hooks: []CanonicalHook{
@@ -88,8 +88,10 @@ func TestPiAdapterEncode_SubagentStopMapsToAgentEnd(t *testing.T) {
 		t.Fatalf("Encode: %v", err)
 	}
 
-	out := string(encoded.Content)
-	assertContains(t, out, "agent_end")
+	assertNotContains(t, string(encoded.Content), "sub-stop")
+	if len(encoded.Warnings) == 0 {
+		t.Error("expected a warning that pi cannot run subagent_stop")
+	}
 }
 
 func TestPiAdapterEncode_TimeoutInMs(t *testing.T) {
