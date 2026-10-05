@@ -315,18 +315,16 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to create a new content repo in the current directory")
 	}
 
-	// Load project config to get registry list and preferences
-	projectCfg, cfgErr := config.Load(root)
-	if cfgErr != nil {
-		projectCfg = &config.Config{}
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
 	}
 
-	// Load global config and merge with project config
-	globalCfg, _ := config.LoadGlobal()
-	if globalCfg == nil {
-		globalCfg = &config.Config{}
-	}
-	cfg := config.Merge(globalCfg, projectCfg)
+	// The startup preferences come from the config the scan below merges.
+	// A content-root config that fails to parse leaves auto-sync and
+	// auto-update off.
+	_, cfgErr := config.Load(root)
+	cfg := moat.LoadConfig(root, projectRoot)
 
 	// Auto-sync registries if enabled (5-second timeout; failure is non-fatal)
 	if cfgErr == nil && cfg.Preferences["registryAutoSync"] == "true" && len(cfg.Registries) > 0 {
@@ -347,11 +345,6 @@ func runTUI(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(os.Stderr, "Registry auto-sync timed out, using cached content\n")
 		}
 		cancel()
-	}
-
-	projectRoot, _ := findProjectRoot()
-	if projectRoot == "" {
-		projectRoot = root
 	}
 
 	// The same load the TUI's rescan runs, so the trust gate and MOAT trust
