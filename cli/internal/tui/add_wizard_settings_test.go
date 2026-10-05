@@ -111,7 +111,7 @@ func TestAddSingleItem_ProviderMCPAddsOnlyThatServer(t *testing.T) {
 	projectRoot, library, _ := providerSettingsEnv(t)
 	db := mergedProviderItems(t, projectRoot, library)["db"]
 
-	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("status = %q err=%v, want added", result.status, result.err)
 	}
@@ -140,7 +140,7 @@ func TestAddSingleItem_ProviderHookKeepsItsScope(t *testing.T) {
 		t.Fatal("no hook discovered")
 	}
 
-	result := addSingleItem(hook, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(hook, nil, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("status = %q err=%v, want added", result.status, result.err)
 	}
@@ -180,7 +180,7 @@ func TestAddSingleItem_ProviderSettingsLeavesPinnedItem(t *testing.T) {
 	db := mergedProviderItems(t, projectRoot, library)["db"]
 	db.overwrite = true
 
-	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -222,7 +222,7 @@ func TestAddSingleItem_ProviderSettingsLeavesPinnedSuffixedServer(t *testing.T) 
 	}
 	db.overwrite = true
 
-	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -256,5 +256,52 @@ func TestApp_AddDiscoveryWarnsOfUnreadSettings(t *testing.T) {
 	}
 	if got := a.toast.queue[0].details; len(got) != 1 || !strings.Contains(got[0], "settings.json") {
 		t.Errorf("details = %v, want the unread file named", got)
+	}
+}
+
+// Regression: the wizard adds one item per command, and each settings item
+// was placed alone, so a second same-scope server named db landed on the
+// first one's directory and was skipped as already added.
+func TestAddItemCmd_PlacesSettingsItemsAfterEarlierOnes(t *testing.T) {
+	projectRoot, library, _ := providerSettingsEnv(t)
+	writeTUITestFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), []byte(`{"mcpServers": {"db": {"command": "from-settings"}}}`))
+	writeTUITestFile(t, filepath.Join(projectRoot, ".mcp.json"), []byte(`{"mcpServers": {"db": {"command": "from-mcp-json"}}}`))
+	items, unread := discoverSettingsFromProvider(provider.ClaudeCode, projectRoot, "", library, catalog.MCP)
+	if len(items) != 2 || len(unread) > 0 {
+		t.Fatalf("discovered %d items, unread %v; want two db servers", len(items), unread)
+	}
+
+	m := testOpenAddWizard(t)
+	m.source = addSourceProvider
+	m.providers = []provider.Provider{provider.ClaudeCode}
+	m.providerCursor = 0
+	m.contentRoot, m.projectRoot = library, projectRoot
+	m.discoveredItems = items
+	m.actionableCount = len(items)
+	m.discoveryList = m.buildDiscoveryList()
+	for i := range items {
+		msg := m.addItemCmd(i)().(addExecItemDoneMsg)
+		if msg.result.status != "added" {
+			t.Fatalf("item %d: status %q err %v, want added", i, msg.result.status, msg.result.err)
+		}
+	}
+	for _, dir := range []string{"db", "db-2"} {
+		if _, err := os.Stat(filepath.Join(library, string(catalog.MCP), "claude-code", dir, "config.json")); err != nil {
+			t.Errorf("%s: %v", dir, err)
+		}
+	}
+}
+
+// Regression: a broken settings file that holds both hooks and servers was
+// reported once per content type, so one file read as two.
+func TestDiscoverFromProvider_ReportsABrokenFileOnce(t *testing.T) {
+	projectRoot, library, _ := providerSettingsEnv(t)
+	writeTUITestFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), []byte(`{"mcpServers": {"db": {"command": "db-server"}}, "hooks": `))
+	_, unread, err := discoverFromProvider(provider.ClaudeCode, projectRoot, nil, library, []catalog.ContentType{catalog.Hooks, catalog.MCP})
+	if err != nil {
+		t.Fatalf("discoverFromProvider: %v", err)
+	}
+	if len(unread) != 1 {
+		t.Errorf("unread = %v, want the broken file once", unread)
 	}
 }

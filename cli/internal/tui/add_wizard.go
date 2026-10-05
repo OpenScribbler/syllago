@@ -1717,6 +1717,14 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 		return nil
 	}
 	item := items[index]
+	// Settings items are added one at a time, so each is placed after the
+	// ones this add wrote before it.
+	var placed []add.SettingsItem
+	for _, it := range items[:index] {
+		if it.settings != nil && it.itemType == item.itemType {
+			placed = append(placed, *it.settings)
+		}
+	}
 	contentRoot := m.contentRoot
 	projectRoot := m.projectRoot
 	sourceReg := m.sourceRegistry
@@ -1735,7 +1743,7 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 				sourceSHA = head
 			}
 		}
-		result := addSingleItem(item, contentRoot, projectRoot, sourceReg, sourceVis, provSlug, sourceSHA)
+		result := addSingleItem(item, placed, contentRoot, projectRoot, sourceReg, sourceVis, provSlug, sourceSHA)
 		return addExecItemDoneMsg{seq: seq, index: index, result: result, sourceSHA: sourceSHA}
 	}
 }
@@ -1842,11 +1850,18 @@ func discoverFromProvider(
 		baseDir = resolver.BaseDir(prov.Slug)
 	}
 	var unread []error
+	seen := map[string]bool{}
 	for _, ct := range []catalog.ContentType{catalog.Hooks, catalog.MCP} {
 		if typeSet[ct] {
 			settingsItems, errs := discoverSettingsFromProvider(prov, projectRoot, baseDir, contentRoot, ct)
 			items = append(items, settingsItems...)
-			unread = append(unread, errs...)
+			// A file holding both hooks and servers fails both reads alike.
+			for _, err := range errs {
+				if !seen[err.Error()] {
+					seen[err.Error()] = true
+					unread = append(unread, err)
+				}
+			}
 		}
 	}
 
@@ -2391,7 +2406,9 @@ func discoverFromGitURL(
 
 // addSingleItem adds a single item to the library. A pinned library item
 // is left as it is and reported as pinned.
-func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
+// addSingleItem adds item to the Library. placed holds the settings items
+// this add wrote before item, which a settings item is placed after.
+func addSingleItem(item addDiscoveryItem, placed []add.SettingsItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	if item.underlying == nil {
 		return addExecResult{
 			name:   item.name,
@@ -2408,7 +2425,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcV
 		return addSplitRuleItem(item, contentRoot, provSlug)
 	}
 	if item.settings != nil {
-		return addSettingsEntry(item, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA)
+		return addSettingsEntry(item, placed, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA)
 	}
 
 	// The generic write lands under the discovered name; item.name may be a

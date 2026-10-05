@@ -28,10 +28,9 @@ type SettingsItem struct {
 	// Hook is the single hook a hooks item holds.
 	Hook *converter.HookData
 	// ServerKey and Server are an MCP item's server name and its raw JSON
-	// entry; JSONKey is the settings key the servers sit under.
+	// entry.
 	ServerKey string
 	Server    json.RawMessage
-	JSONKey   string
 	Dest      string
 }
 
@@ -109,7 +108,6 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 					DiscoveryItem: DiscoveryItem{Name: key.String(), Type: catalog.MCP, Path: loc.Path, Scope: loc.Scope.String()},
 					ServerKey:     key.String(),
 					Server:        json.RawMessage(value.Raw),
-					JSONKey:       loc.JSONKey,
 				})
 				return true
 			})
@@ -225,8 +223,20 @@ type SettingsResult struct {
 // left as it is unless opts.Force. projectRoot names the project a
 // project-scope item came from.
 func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
+	return AddFromSettingsAfter(nil, items, opts, projectRoot, globalDir)
+}
+
+// AddFromSettingsAfter adds items as AddFromSettings does, as the later
+// part of an add whose earlier calls added placed. The placed items claim
+// their directories first, so two items that share a scope and a name
+// land side by side when they are added one call at a time.
+func AddFromSettingsAfter(placed, items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
 	results := make([]SettingsResult, 0, len(items))
 	claimed := map[string]bool{}
+	for _, item := range placed {
+		dest, _ := settingsDest(globalDir, opts.Provider, &item, claimed)
+		claimed[dest] = true
+	}
 	for _, item := range items {
 		item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
 		claimed[item.Dest] = true
@@ -237,9 +247,8 @@ func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalD
 
 func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir string) SettingsResult {
 	r := SettingsResult{AddResult: AddResult{Name: item.Name, Type: item.Type}, Dest: item.Dest, LibraryName: filepath.Base(item.Dest)}
-	// The Library lists each server of an mcpServers config under its key,
-	// whatever directory holds it.
-	if item.Type == catalog.MCP && item.JSONKey == "mcpServers" {
+	// The Library lists a server under its key, whatever directory holds it.
+	if item.Type == catalog.MCP {
 		r.LibraryName = item.ServerKey
 	}
 	fail := func(err error) SettingsResult {
@@ -287,7 +296,10 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 			return fail(fmt.Errorf("writing hook.json: %w", err))
 		}
 	case catalog.MCP:
-		configJSON := fmt.Sprintf("{\n  %q: {\n    %q: %s\n  }\n}", item.JSONKey, item.ServerKey, item.Server)
+		// Every Library MCP config keeps its servers under mcpServers, the
+		// key the catalog reads server names from, whichever key the
+		// provider's settings file used.
+		configJSON := fmt.Sprintf("{\n  \"mcpServers\": {\n    %q: %s\n  }\n}", item.ServerKey, item.Server)
 		if err := os.WriteFile(filepath.Join(item.Dest, "config.json"), []byte(configJSON), 0o644); err != nil {
 			return fail(fmt.Errorf("writing config.json: %w", err))
 		}
@@ -320,9 +332,11 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		// through a symlink into the Library, or one whose content matches
 		// private Library content, keeps that content's registry.
 		reg, vis := traceSymlinkTaint(item.Path, globalDir)
-		if reg == "" {
-			if raw, err := os.ReadFile(item.Path); err == nil {
-				reg, vis = hashMatchTaint(sourceHash(raw), globalDir)
+		if raw, err := os.ReadFile(item.Path); err == nil {
+			// The hash lets a later add of the same file find this item.
+			meta.SourceHash = sourceHash(raw)
+			if reg == "" {
+				reg, vis = hashMatchTaint(meta.SourceHash, globalDir)
 			}
 		}
 		if reg != "" {

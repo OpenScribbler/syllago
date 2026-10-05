@@ -149,8 +149,8 @@ func TestDiscoverSettings_MCPServers(t *testing.T) {
 		t.Fatalf("names = %s, want db,web", got)
 	}
 	db := items[0]
-	if db.JSONKey != "mcpServers" || db.ServerKey != "db" {
-		t.Errorf("JSONKey %q ServerKey %q, want mcpServers and db", db.JSONKey, db.ServerKey)
+	if db.ServerKey != "db" {
+		t.Errorf("ServerKey %q, want db", db.ServerKey)
 	}
 	if !strings.Contains(string(db.Server), "db-server") || strings.Contains(string(db.Server), "web") {
 		t.Errorf("Server = %s, want the db entry alone", db.Server)
@@ -173,7 +173,7 @@ func TestDiscoverSettings_OpenCodeJSONC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
-	if len(items) != 1 || items[0].Name != "lint" || items[0].JSONKey != "mcp" {
+	if len(items) != 1 || items[0].Name != "lint" || !strings.Contains(string(items[0].Server), "lint-mcp") {
 		t.Fatalf("items = %+v, want one lint server under mcp", items)
 	}
 	if items[0].Scope != "project" {
@@ -728,4 +728,103 @@ func TestAddFromSettings_KeepsPrivateTaint(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Regression: an item added from a settings file through a symlink into
+// private Library content kept the taint but recorded no hash, and the
+// Library index never looked inside mcp/<provider>/, so the same content
+// added again from a plain file lost the taint once the original was gone.
+func TestAddFromSettings_TaintSurvivesASecondAdd(t *testing.T) {
+	const servers = `{"mcpServers": {"db": {"command": "db-server"}}}` + "\n"
+	projectRoot, globalDir := settingsEnv(t)
+	private := filepath.Join(globalDir, "mcp", "acme-db")
+	writeFile(t, filepath.Join(private, "config.json"), servers)
+	if err := metadata.Save(private, &metadata.Meta{Name: "acme-db", SourceRegistry: "acme/private", SourceVisibility: "private"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(private, filepath.Join(projectRoot, ".claude")); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), servers)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("DiscoverSettings: items %v err %v", itemNames(items), err)
+	}
+	opts := AddOptions{Provider: "claude-code"}
+	if r := AddFromSettings(items, opts, projectRoot, globalDir)[0]; r.Status != AddStatusAdded {
+		t.Fatalf("first add: status %v err %v", r.Status, r.Error)
+	}
+	if err := os.RemoveAll(private); err != nil {
+		t.Fatal(err)
+	}
+
+	plain := filepath.Join(t.TempDir(), "settings.json")
+	writeFile(t, plain, servers)
+	again := items[0]
+	again.Path, again.Scope = plain, "global"
+	r := AddFromSettings([]SettingsItem{again}, opts, projectRoot, globalDir)[0]
+	if r.Status != AddStatusAdded {
+		t.Fatalf("second add: status %v err %v", r.Status, r.Error)
+	}
+	meta, err := metadata.Load(r.Dest)
+	if err != nil || meta == nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if meta.SourceRegistry != "acme/private" || meta.SourceVisibility != "private" {
+		t.Errorf("registry %q visibility %q, want acme/private private", meta.SourceRegistry, meta.SourceVisibility)
+	}
+}
+
+// Regression: adding two same-scope, same-name servers one call at a time
+// placed the second on the first's directory and skipped it as added.
+func TestAddFromSettingsAfter_PlacesBesideEarlierItems(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	item := func(file, command string) SettingsItem {
+		return SettingsItem{
+			DiscoveryItem: DiscoveryItem{Name: "db", Type: catalog.MCP, Path: filepath.Join(projectRoot, file), Scope: "project"},
+			ServerKey:     "db",
+			Server:        json.RawMessage(`{"command": "` + command + `"}`),
+		}
+	}
+	first, second := item(".mcp.json", "one"), item(filepath.Join(".claude", "settings.json"), "two")
+	opts := AddOptions{Provider: "claude-code"}
+	AddFromSettings([]SettingsItem{first}, opts, projectRoot, globalDir)
+
+	r := AddFromSettingsAfter([]SettingsItem{first}, []SettingsItem{second}, opts, projectRoot, globalDir)[0]
+	if want := filepath.Join(globalDir, "mcp", "claude-code", "db-2"); r.Status != AddStatusAdded || r.Dest != want {
+		t.Fatalf("status %v dest %s, want added at %s", r.Status, r.Dest, want)
+	}
+	if data, _ := os.ReadFile(filepath.Join(r.Dest, "config.json")); !strings.Contains(string(data), `"two"`) {
+		t.Errorf("config.json = %s, want the second server", data)
+	}
+}
+
+// Regression: a Zed server written beside another under db-2 kept Zed's
+// context_servers key, which the catalog does not read, so the Library
+// listed it as db-2 and installing it found no such server.
+func TestAddFromSettings_SuffixedServerKeepsItsKey(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	saveNamed(t, filepath.Join(globalDir, "mcp", "zed", "db"), "global", "db")
+	s := SettingsItem{
+		DiscoveryItem: DiscoveryItem{Name: "db", Type: catalog.MCP, Path: filepath.Join(projectRoot, ".zed", "settings.json"), Scope: "project"},
+		ServerKey:     "db",
+		Server:        json.RawMessage(`{"command": "db-server"}`),
+	}
+	r := AddFromSettings([]SettingsItem{s}, AddOptions{Provider: "zed"}, projectRoot, globalDir)[0]
+	if want := filepath.Join(globalDir, "mcp", "zed", "db-2"); r.Dest != want {
+		t.Fatalf("dest %s, want %s", r.Dest, want)
+	}
+	cat, err := catalog.Scan(globalDir, t.TempDir())
+	if err != nil {
+		t.Fatalf("catalog.Scan: %v", err)
+	}
+	for _, it := range append(cat.Items, cat.Overridden...) {
+		if it.Path == r.Dest {
+			if it.ServerKey != "db" || it.Name != r.LibraryName {
+				t.Errorf("Library lists server %q as %q, want db as %q", it.ServerKey, it.Name, r.LibraryName)
+			}
+			return
+		}
+	}
+	t.Fatalf("the Library lists nothing at %s", r.Dest)
 }
