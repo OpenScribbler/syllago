@@ -38,6 +38,14 @@ func hookSettingsPathImpl(prov provider.Provider) (string, error) {
 	return HookConfigPath(prov, home)
 }
 
+// hookSourceProvider names the provider an item's hooks were written for.
+func hookSourceProvider(item catalog.ContentItem) string {
+	if item.Meta != nil && item.Meta.SourceProvider != "" {
+		return item.Meta.SourceProvider
+	}
+	return item.Provider
+}
+
 func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string, scan ScanOptions) (Placement, error) {
 	// item.Path is already absolute (set by scanner).
 	h, err := readSingleManifestHook(item.Path)
@@ -67,7 +75,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if err != nil {
 		return Placement{}, fmt.Errorf("building canonical hook: %w", err)
 	}
-	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	canonEvent := converter.CanonicalHookEvent(h.Event, hookSourceProvider(item), prov.Slug)
 	canonHook.Event = canonEvent
 
 	// Event-support gate: reject events the adapter cannot represent. Adapter
@@ -210,7 +218,7 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 		return Placement{}, err
 	}
 
-	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	canonEvent := converter.CanonicalHookEvent(h.Event, hookSourceProvider(item), prov.Slug)
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
 	settingsPath, err := hookSettingsPath(prov)
@@ -332,7 +340,7 @@ func hookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot
 		return StatusNotAvailable, nil
 	}
 
-	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	canonEvent := converter.CanonicalHookEvent(h.Event, hookSourceProvider(item), prov.Slug)
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
 	inst, err := LoadInstalled(repoRoot)

@@ -69,11 +69,10 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 
 		// Extract tool matcher
 		var toolMatcher string
-		if hook.Matcher != nil {
-			var s string
-			if json.Unmarshal(hook.Matcher, &s) == nil && s != "" {
-				toolMatcher = TranslateTool(s, slug)
-			}
+		s, sWarnings := plainMatcherString(hook.Matcher, slug)
+		warnings = append(warnings, sWarnings...)
+		if s != "" {
+			toolMatcher = TranslateTool(s, slug)
 		}
 
 		// Timeout in milliseconds

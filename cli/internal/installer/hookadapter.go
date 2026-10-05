@@ -88,20 +88,6 @@ func devinHookConfigPathFor(goos, base string) string {
 	return filepath.Join(base, ".config", "devin", "config.json")
 }
 
-// canonicalizeEvent normalizes a hook event name to its canonical form. An
-// event that is already a canonical key is returned unchanged; a provider-native
-// name is reverse-translated using the target provider's mapping.
-func canonicalizeEvent(event, slug string) string {
-	if _, ok := converter.HookEvents[event]; ok {
-		return event
-	}
-	return converter.ReverseTranslateHookEvent(event, slug)
-}
-
-// nativeEventFor returns the provider-native event key for tracking/dedup. When
-// the canonical event has no direct mapping for the provider, the canonical
-// name is used as-is; install/uninstall/status all compute it the same way, so
-// lookups stay consistent.
 func nativeEventFor(canonEvent, slug string) string {
 	if nv, ok := converter.TranslateHookEvent(canonEvent, slug); ok {
 		return nv
@@ -256,7 +242,7 @@ func ApplyCanonicalHook(prov provider.Provider, h converter.Hook, path, resolved
 	if err != nil {
 		return ApplyHookResult{}, fmt.Errorf("building canonical hook: %w", err)
 	}
-	canonEvent := canonicalizeEvent(h.Event, prov.Slug)
+	canonEvent := converter.CanonicalHookEvent(h.Event, "", prov.Slug)
 	canonHook.Event = canonEvent
 	if resolvedCommand != "" {
 		canonHook.Handler.Command = resolvedCommand

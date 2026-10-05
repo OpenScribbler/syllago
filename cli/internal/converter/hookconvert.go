@@ -25,12 +25,8 @@ func ConvertHooks(raw []byte, fromSlug, toSlug string) (*Result, error) {
 	if adapter == nil {
 		return nil, fmt.Errorf("%w: %s", ErrNoHookEncoder, toSlug)
 	}
-	// Install reads an event name it does not know as the target's own, so
-	// a conversion does the same.
 	for i, h := range hooks.Hooks {
-		if _, ok := HookEvents[h.Event]; !ok {
-			hooks.Hooks[i].Event = ReverseTranslateHookEvent(h.Event, toSlug)
-		}
+		hooks.Hooks[i].Event = CanonicalHookEvent(h.Event, fromSlug, toSlug)
 	}
 	enc, err := adapter.Encode(hooks)
 	if err != nil {
@@ -103,6 +99,19 @@ func DecodeHooks(raw []byte, fromSlug string) (*CanonicalHooks, error) {
 		return nil, fmt.Errorf("syllago cannot read %s hook files", fromSlug)
 	}
 	return adapter.Decode(raw)
+}
+
+// CanonicalHookEvent reads an event name that is not canonical as fromSlug's
+// own, and failing that as toSlug's own. Install and conversion both read
+// events this way, so they agree on which hooks a target supports.
+func CanonicalHookEvent(event, fromSlug, toSlug string) string {
+	for _, slug := range []string{fromSlug, toSlug} {
+		if _, ok := HookEvents[event]; ok || slug == "" {
+			continue
+		}
+		event = ReverseTranslateHookEvent(event, slug)
+	}
+	return event
 }
 
 func canonicalFromManifest(hooks []Hook, fromSlug string) (*CanonicalHooks, error) {
