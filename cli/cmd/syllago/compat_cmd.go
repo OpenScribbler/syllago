@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 
@@ -69,89 +67,21 @@ func runCompat(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q in your library", name), "Run 'syllago list' to show all library items")
 	}
 
-	conv := converter.For(item.Type)
-
-	// Determine the source provider for canonicalization.
-	srcProvider := ""
-	if item.Meta != nil {
-		srcProvider = item.Meta.SourceProvider
-	}
-	if srcProvider == "" && item.Provider != "" {
-		srcProvider = item.Provider
-	}
-
-	// Pre-read and canonicalize content once (if a converter exists).
-	var raw []byte
-	var canonical *converter.Result
-	if conv != nil || item.Type == catalog.Hooks {
-		contentFile := converter.ResolveContentFile(*item)
-		if contentFile != "" {
-			var readErr error
-			raw, readErr = os.ReadFile(contentFile)
-			if readErr == nil && item.Type != catalog.Hooks {
-				canonical, _ = conv.Canonicalize(raw, srcProvider)
-			}
-		}
+	report, err := converter.CompatReport(*item)
+	if err != nil {
+		return convertItemError(err, *item, provider.Provider{})
 	}
 
 	result := compatOutput{
 		Name: item.Name,
 		Type: item.Type.Label(),
 	}
-
-	for _, prov := range provider.AllProviders {
-		entry := compatEntry{
-			Provider: prov.Slug,
-		}
-
-		// Check if the provider supports this content type at all.
-		if prov.SupportsType == nil || !prov.SupportsType(item.Type) {
-			entry.Supported = false
-			entry.Warnings = []string{item.Type.Label() + " not supported"}
-			result.Entries = append(result.Entries, entry)
-			continue
-		}
-
-		// Hooks are encoded by the provider's hook adapter, as install
-		// encodes them.
-		var rendered *converter.Result
-		var renderErr error
-		switch {
-		case item.Type == catalog.Hooks && raw != nil:
-			rendered, renderErr = convertHooks(raw, srcProvider, prov)
-			var se output.StructuredError
-			if errors.As(renderErr, &se) {
-				renderErr = errors.New(se.Message)
-			}
-		case conv == nil || canonical == nil:
-			// No converter registered for this type — supported but no conversion needed.
-			entry.Supported = true
-			result.Entries = append(result.Entries, entry)
-			continue
-		default:
-			// Attempt render to this provider's format.
-			rendered, renderErr = conv.Render(canonical.Content, prov)
-		}
-		if renderErr != nil {
-			entry.Supported = false
-			entry.Warnings = []string{renderErr.Error()}
-			result.Entries = append(result.Entries, entry)
-			continue
-		}
-
-		if rendered.Content == nil {
-			entry.Supported = false
-			entry.Warnings = rendered.Warnings
-			if len(entry.Warnings) == 0 {
-				entry.Warnings = []string{"conversion produced no output"}
-			}
-			result.Entries = append(result.Entries, entry)
-			continue
-		}
-
-		entry.Supported = true
-		entry.Warnings = rendered.Warnings
-		result.Entries = append(result.Entries, entry)
+	for _, row := range report {
+		result.Entries = append(result.Entries, compatEntry{
+			Provider:  row.Provider.Slug,
+			Supported: row.Supported,
+			Warnings:  row.Warnings,
+		})
 	}
 
 	if output.JSON {

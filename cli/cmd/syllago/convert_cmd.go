@@ -154,53 +154,37 @@ func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provid
 		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("no item named %q in your library", name), "Run 'syllago list' to see all library items")
 	}
 
-	conv := converter.For(item.Type)
-	if conv == nil && item.Type != catalog.Hooks {
-		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Supported types: rules, hooks, skills, agents, commands, mcp")
-	}
-
-	contentFile := converter.ResolveContentFile(*item)
-	if contentFile == "" {
-		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", name), "Ensure the item has a primary content file")
-	}
-	raw, err := os.ReadFile(contentFile)
+	c, err := converter.ConvertItem(*item, toProv, fromSlug)
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "Check file permissions", err.Error())
+		return convertItemError(err, *item, toProv)
 	}
 
-	// Determine source provider: explicit flag > metadata > item directory
-	srcProvider := fromSlug
-	if srcProvider == "" {
-		if item.Meta != nil {
-			srcProvider = item.Meta.SourceProvider
-		}
-		if srcProvider == "" {
-			srcProvider = item.Provider
-		}
-	}
-
-	var rendered *converter.Result
-	if item.Type == catalog.Hooks {
-		rendered, err = convertHooks(raw, srcProvider, toProv)
-		if err != nil {
-			return err
-		}
-	} else {
-		canonical, err := conv.Canonicalize(raw, srcProvider)
-		if err != nil {
-			return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
-		}
-		rendered, err = conv.Render(canonical.Content, toProv)
-		if err != nil {
-			return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
-		}
-	}
-
-	displayFrom := srcProvider
+	displayFrom := c.From
 	if displayFrom == "" {
 		displayFrom = "(canonical)"
 	}
-	return emitConvertOutput(name, displayFrom, toSlug, outputPath, rendered, raw, showDiff)
+	return emitConvertOutput(name, displayFrom, toSlug, outputPath, &c.Result, c.Source, showDiff)
+}
+
+// convertItemError turns a ConvertItem error into the structured error
+// convert, inspect --as and compat report.
+func convertItemError(err error, item catalog.ContentItem, toProv provider.Provider) error {
+	switch {
+	case errors.Is(err, converter.ErrNotConvertible):
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "Supported types: rules, hooks, skills, agents, commands, mcp")
+	case errors.Is(err, converter.ErrNoContentFile):
+		return output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", item.Name), "Ensure the item has a primary content file")
+	case errors.Is(err, converter.ErrNoHookEncoder):
+		return output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("syllago cannot write hooks for %s", toProv.Name), "Try a different target provider")
+	case errors.Is(err, converter.ErrUnreadable) && item.Type == catalog.Hooks:
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "reading the hooks failed", "Check that the content is a hook.json or a hook file from its source provider", err.Error())
+	case errors.Is(err, converter.ErrUnreadable):
+		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
+	case errors.Is(err, converter.ErrRender):
+		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
+	default:
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "Check file permissions", err.Error())
+	}
 }
 
 // convertHooks converts hook content through the target's hook adapter, the

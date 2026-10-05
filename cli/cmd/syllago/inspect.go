@@ -447,45 +447,11 @@ func renderAsProvider(item catalog.ContentItem, provSlug string) (*converter.Res
 		return nil, "", output.NewStructuredError(output.ErrProviderNotFound, "unknown provider: "+provSlug, "Available: "+strings.Join(slugs, ", "))
 	}
 
-	conv := converter.For(item.Type)
-	if conv == nil && item.Type != catalog.Hooks {
-		return nil, "", output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("%s does not support format conversion", item.Type.Label()), "")
-	}
-
-	contentFile := converter.ResolveContentFile(item)
-	if contentFile == "" {
-		return nil, "", output.NewStructuredError(output.ErrItemNotFound, fmt.Sprintf("cannot locate content file for %s", item.Name), "")
-	}
-
-	raw, err := os.ReadFile(contentFile)
+	c, err := converter.ConvertItem(item, *prov, "")
 	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrSystemIO, "reading content failed", "", err.Error())
+		return nil, "", convertItemError(err, item, *prov)
 	}
-
-	srcProvider := ""
-	if item.Meta != nil {
-		srcProvider = item.Meta.SourceProvider
-	}
-	if srcProvider == "" && item.Provider != "" {
-		srcProvider = item.Provider
-	}
-
-	if item.Type == catalog.Hooks {
-		rendered, err := convertHooks(raw, srcProvider, *prov)
-		return rendered, prov.Name, err
-	}
-
-	canonical, err := conv.Canonicalize(raw, srcProvider)
-	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "", err.Error())
-	}
-
-	rendered, err := conv.Render(canonical.Content, *prov)
-	if err != nil {
-		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", prov.Name), "", err.Error())
-	}
-
-	return rendered, prov.Name, nil
+	return &c.Result, prov.Name, nil
 }
 
 // compatSymbol returns a colored status symbol for a compat level label.
