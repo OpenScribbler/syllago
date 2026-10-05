@@ -40,32 +40,23 @@ func TranslateEventFromProvider(event, slug string) (string, []ConversionWarning
 
 // --- Timeout translation ---
 
-// TranslateTimeoutToProvider converts canonical seconds to the target provider's
-// native timeout unit. Most providers use milliseconds; Copilot uses seconds.
+// TranslateTimeoutToProvider converts canonical seconds to the target
+// provider's native timeout unit, read from its capabilities. A slug with no
+// adapter is treated as milliseconds, the most common unit.
 func TranslateTimeoutToProvider(seconds int, slug string) int {
-	if seconds == 0 {
-		return 0
+	if providerHookCapabilities[slug].TimeoutUnit == "seconds" {
+		return seconds
 	}
-	switch slug {
-	case "copilot-cli", "crush", "devin":
-		return seconds // Copilot, Crush, and Devin use seconds natively
-	default:
-		return seconds * 1000 // CC, Gemini, Cursor, Kiro all use milliseconds
-	}
+	return seconds * 1000
 }
 
-// TranslateTimeoutFromProvider converts a provider-native timeout value to canonical
-// seconds. Most providers use milliseconds; Copilot uses seconds.
+// TranslateTimeoutFromProvider converts a provider-native timeout value to
+// canonical seconds, the inverse of TranslateTimeoutToProvider.
 func TranslateTimeoutFromProvider(value int, slug string) int {
-	if value == 0 {
-		return 0
+	if providerHookCapabilities[slug].TimeoutUnit == "seconds" {
+		return value
 	}
-	switch slug {
-	case "copilot-cli", "crush", "devin":
-		return value // Copilot, Crush, and Devin already in seconds
-	default:
-		return value / 1000 // CC, Gemini, Cursor, Kiro use milliseconds
-	}
+	return value / 1000
 }
 
 // --- Matcher translation ---

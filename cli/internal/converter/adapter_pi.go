@@ -68,11 +68,7 @@ func (a *PiAdapter) Encode(hooks *CanonicalHooks) (*EncodedResult, error) {
 			toolMatcher = TranslateTool(s, slug)
 		}
 
-		// Timeout in milliseconds
-		timeoutMs := 0
-		if hook.Handler.Timeout > 0 {
-			timeoutMs = hook.Handler.Timeout * 1000
-		}
+		timeoutMs := TranslateTimeoutToProvider(hook.Handler.Timeout, slug)
 		effectiveBlocking := hook.Blocking && piEvent == "tool_call"
 		if hook.Blocking && !effectiveBlocking {
 			warnings = append(warnings, ConversionWarning{
@@ -138,11 +134,7 @@ func (a *PiAdapter) Decode(content []byte) (*CanonicalHooks, error) {
 			matcherJSON, _ = json.Marshal(canonical)
 		}
 
-		// Timeout: markers store ms, convert to canonical seconds
-		timeoutSec := 0
-		if jshook.Timeout > 0 {
-			timeoutSec = jshook.Timeout / 1000
-		}
+		timeoutSec := TranslateTimeoutFromProvider(jshook.Timeout, "pi")
 
 		// Name from markers
 		name := ""

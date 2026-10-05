@@ -47,3 +47,13 @@ func TestCapabilities_EventsOmitWhatTheEncoderCannotWrite(t *testing.T) {
 		}
 	}
 }
+
+// TimeoutUnit decides how every adapter converts timeouts, and any value but
+// "seconds" converts as milliseconds, so a typo would scale timeouts 1000x.
+func TestCapabilities_TimeoutUnitIsKnown(t *testing.T) {
+	for slug, adapter := range adapterRegistry {
+		if u := adapter.Capabilities().TimeoutUnit; u != "seconds" && u != "milliseconds" {
+			t.Errorf("%s: TimeoutUnit %q, want seconds or milliseconds", slug, u)
+		}
+	}
+}

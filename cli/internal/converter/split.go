@@ -99,10 +99,7 @@ func SplitSettingsHooks(content []byte, sourceProvider string) ([]HookData, erro
 				}
 				for _, h := range m.Hooks {
 					entry := h
-					// Convert provider ms timeouts to canonical seconds
-					if entry.Timeout > 0 {
-						entry.Timeout = entry.Timeout / 1000
-					}
+					entry.Timeout = TranslateTimeoutFromProvider(entry.Timeout, sourceProvider)
 					items = append(items, HookData{
 						Event:   canonicalEvent,
 						Matcher: matcher,
