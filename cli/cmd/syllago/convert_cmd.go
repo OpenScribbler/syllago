@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -114,6 +115,14 @@ func convertFile(path, fromSlug, toSlug, typeStr, outputPath string, toProv prov
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "reading file failed", "Check file path and permissions", err.Error())
 	}
 
+	if ct == catalog.Hooks {
+		rendered, err := convertHooks(raw, fromSlug, toProv)
+		if err != nil {
+			return err
+		}
+		return emitConvertOutput(path, fromSlug, toSlug, outputPath, rendered, raw, showDiff)
+	}
+
 	canonical, err := conv.Canonicalize(raw, fromSlug)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, fmt.Sprintf("failed to parse %s as %s format", path, fromSlug), "Check that the file matches the expected provider format", err.Error())
@@ -170,14 +179,21 @@ func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provid
 		}
 	}
 
-	canonical, err := conv.Canonicalize(raw, srcProvider)
-	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
-	}
-
-	rendered, err := conv.Render(canonical.Content, toProv)
-	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
+	var rendered *converter.Result
+	if item.Type == catalog.Hooks {
+		rendered, err = convertHooks(raw, srcProvider, toProv)
+		if err != nil {
+			return err
+		}
+	} else {
+		canonical, err := conv.Canonicalize(raw, srcProvider)
+		if err != nil {
+			return output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "Check that the content is valid for its source provider format", err.Error())
+		}
+		rendered, err = conv.Render(canonical.Content, toProv)
+		if err != nil {
+			return output.NewStructuredErrorDetail(output.ErrConvertRenderFailed, fmt.Sprintf("rendering to %s format failed", toProv.Name), "This content may not be compatible with the target provider", err.Error())
+		}
 	}
 
 	displayFrom := srcProvider
@@ -185,6 +201,19 @@ func convertLibraryItem(name, fromSlug, toSlug, outputPath string, toProv provid
 		displayFrom = "(canonical)"
 	}
 	return emitConvertOutput(name, displayFrom, toSlug, outputPath, rendered, raw, showDiff)
+}
+
+// convertHooks converts hook content through the target's hook adapter, the
+// encoder install uses, so convert shows what an install writes.
+func convertHooks(raw []byte, fromSlug string, toProv provider.Provider) (*converter.Result, error) {
+	rendered, err := converter.ConvertHooks(raw, fromSlug, toProv.Slug)
+	if errors.Is(err, converter.ErrNoHookEncoder) {
+		return nil, output.NewStructuredError(output.ErrConvertNotSupported, fmt.Sprintf("syllago cannot write hooks for %s", toProv.Name), "Try a different target provider")
+	}
+	if err != nil {
+		return nil, output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "reading the hooks failed", "Check that the content is a hook.json or a hook file from its source provider", err.Error())
+	}
+	return rendered, nil
 }
 
 // emitConvertOutput writes the conversion result to stdout, a file, or JSON.

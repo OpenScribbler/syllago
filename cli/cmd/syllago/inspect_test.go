@@ -590,3 +590,24 @@ func TestInspectRisk_JSON(t *testing.T) {
 		t.Errorf("expected at least one riskDetail with label and details, got: %+v", result.DetailedRisks)
 	}
 }
+
+// Regression: inspect --as failed on a hook stored as a hooks/0.1
+// manifest, the form the Library keeps hooks in.
+func TestInspectAs_ManifestHook(t *testing.T) {
+	root := t.TempDir()
+	hookDir := filepath.Join(root, "hooks", "claude-code", "my-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"after_tool_execute","matcher":"shell","handler":{"type":"command","command":"echo done"}}]}`), 0644)
+	withFakeRepoRoot(t, root)
+
+	stdout, _ := output.SetForTest(t)
+	inspectCmd.Flags().Set("as", "gemini-cli")
+	defer inspectCmd.Flags().Set("as", "")
+
+	if err := inspectCmd.RunE(inspectCmd, []string{"hooks/claude-code/my-hook"}); err != nil {
+		t.Fatalf("inspect --as: %v", err)
+	}
+	if out := stdout.String(); !strings.Contains(out, `"AfterTool"`) || !strings.Contains(out, `"echo done"`) {
+		t.Errorf("output is not the Gemini hook:\n%s", out)
+	}
+}

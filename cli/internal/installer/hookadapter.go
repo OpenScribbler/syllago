@@ -3,7 +3,6 @@ package installer
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -87,51 +86,6 @@ func devinHookConfigPathFor(goos, base string) string {
 		return filepath.Join(base, "AppData", "Roaming", "devin", "config.json")
 	}
 	return filepath.Join(base, ".config", "devin", "config.json")
-}
-
-// manifestHookToCanonical converts a spec Manifest hook into the enhanced
-// canonical form the HookAdapters encode/decode. The manifest matcher is a bare
-// string; the canonical matcher is a json.RawMessage (a JSON-encoded string).
-func manifestHookToCanonical(h converter.Hook) (converter.CanonicalHook, error) {
-	ch := converter.CanonicalHook{
-		Name:     h.Name,
-		Event:    h.Event,
-		Blocking: h.Blocking,
-		Handler: converter.HookHandler{
-			Type:           h.Handler.Type,
-			Command:        h.Handler.Command,
-			Platform:       h.Handler.Platform,
-			CWD:            h.Handler.Cwd,
-			Env:            h.Handler.Env,
-			Timeout:        h.Handler.Timeout,
-			TimeoutAction:  h.Handler.TimeoutAction,
-			StatusMessage:  h.Handler.StatusMessage,
-			Async:          h.Handler.Async,
-			URL:            h.Handler.URL,
-			Headers:        h.Handler.Headers,
-			AllowedEnvVars: h.Handler.AllowedEnvVars,
-			Prompt:         h.Handler.Prompt,
-			Model:          h.Handler.Model,
-			Agent:          h.Handler.Agent,
-		},
-	}
-	if ch.Handler.Type == "" {
-		ch.Handler.Type = "command"
-	}
-	if h.Matcher != "" {
-		m, err := json.Marshal(h.Matcher)
-		if err != nil {
-			return converter.CanonicalHook{}, err
-		}
-		ch.Matcher = m
-	}
-	if len(h.Provider) > 0 {
-		var pd map[string]any
-		if err := json.Unmarshal(h.Provider, &pd); err == nil {
-			ch.ProviderData = pd
-		}
-	}
-	return ch, nil
 }
 
 // canonicalizeEvent normalizes a hook event name to its canonical form. An
@@ -298,7 +252,7 @@ func ApplyCanonicalHook(prov provider.Provider, h converter.Hook, path, resolved
 		return ApplyHookResult{}, err
 	}
 
-	canonHook, err := manifestHookToCanonical(h)
+	canonHook, err := converter.CanonicalHookFromManifest(h)
 	if err != nil {
 		return ApplyHookResult{}, fmt.Errorf("building canonical hook: %w", err)
 	}

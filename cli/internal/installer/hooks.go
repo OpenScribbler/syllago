@@ -63,7 +63,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return Placement{}, err
 	}
 
-	canonHook, err := manifestHookToCanonical(h)
+	canonHook, err := converter.CanonicalHookFromManifest(h)
 	if err != nil {
 		return Placement{}, fmt.Errorf("building canonical hook: %w", err)
 	}

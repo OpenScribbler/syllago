@@ -466,6 +466,11 @@ func renderAsProvider(item catalog.ContentItem, provSlug string) (*converter.Res
 		srcProvider = item.Provider
 	}
 
+	if item.Type == catalog.Hooks {
+		rendered, err := convertHooks(raw, srcProvider, *prov)
+		return rendered, prov.Name, err
+	}
+
 	canonical, err := conv.Canonicalize(raw, srcProvider)
 	if err != nil {
 		return nil, "", output.NewStructuredErrorDetail(output.ErrConvertParseFailed, "canonicalizing content failed", "", err.Error())
