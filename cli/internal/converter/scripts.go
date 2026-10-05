@@ -127,6 +127,14 @@ func resolveScriptPath(ref string, sourceDir string) (string, error) {
 // sourceDir is the directory containing the provider's settings.json,
 // used to resolve relative script paths.
 func BundleHookScripts(hook *HookData, sourceDir, destDir string) ([]BundledScript, error) {
+	return BundleHookScriptsWithin(hook, sourceDir, destDir, "")
+}
+
+// BundleHookScriptsWithin bundles as BundleHookScripts does, copying only
+// the scripts that resolve inside root, symlinks followed, when root is
+// set. Content imported from a folder or a clone names its own scripts, so
+// a command that reaches outside it never copies the user's files.
+func BundleHookScriptsWithin(hook *HookData, sourceDir, destDir, root string) ([]BundledScript, error) {
 	var bundled []BundledScript
 
 	for i := range hook.Hooks {
@@ -142,6 +150,9 @@ func BundleHookScripts(hook *HookData, sourceDir, destDir string) ([]BundledScri
 
 		// Check if the script actually exists — skip silently if not
 		if _, err := os.Stat(absPath); err != nil {
+			continue
+		}
+		if root != "" && !ResolvesWithin(absPath, root) {
 			continue
 		}
 
@@ -168,4 +179,18 @@ func BundleHookScripts(hook *HookData, sourceDir, destDir string) ([]BundledScri
 	}
 
 	return bundled, nil
+}
+
+// ResolvesWithin reports whether path, symlinks followed, lies inside root.
+func ResolvesWithin(path, root string) bool {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return false
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(resolvedRoot, resolved)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }

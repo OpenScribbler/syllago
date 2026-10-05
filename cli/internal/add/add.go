@@ -595,7 +595,7 @@ func DiscoverFromProvider(prov provider.Provider, projectRoot string, resolver *
 				}
 				seen[dedupKey] = true
 
-				status := computeItemStatus(raw.path, ct, prov.Slug, raw.name, idx)
+				status := ItemStatusOf(raw.path, ct, prov.Slug, raw.name, idx)
 				items = append(items, DiscoveryItem{
 					Name:      raw.name,
 					Type:      ct,
@@ -758,7 +758,7 @@ func DiscoverFromRegistry(regName, cloneDir, globalDir string) ([]DiscoveryItem,
 		// ci.Provider is set from the manifest (e.g., "content-signal").
 		// For universal types (skills, agents, etc.) the provider is ignored
 		// in the library key lookup, so it has no effect on the status check.
-		status := computeItemStatus(primaryFile, ci.Type, ci.Provider, ci.Name, idx)
+		status := ItemStatusOf(primaryFile, ci.Type, ci.Provider, ci.Name, idx)
 		items = append(items, DiscoveryItem{
 			Name:      ci.Name,
 			Type:      ci.Type,
@@ -770,8 +770,10 @@ func DiscoverFromRegistry(regName, cloneDir, globalDir string) ([]DiscoveryItem,
 	return items, nil
 }
 
-// computeItemStatus determines the library status for a discovered item.
-func computeItemStatus(filePath string, ct catalog.ContentType, provSlug, name string, idx LibraryIndex) ItemStatus {
+// ItemStatusOf reports the Library status of the item at filePath, were
+// it added as name under provSlug: new, in the Library with the same
+// content, or outdated.
+func ItemStatusOf(filePath string, ct catalog.ContentType, provSlug, name string, idx LibraryIndex) ItemStatus {
 	key := libraryKey(ct, provSlug, name)
 	existing, inLib := idx[key]
 

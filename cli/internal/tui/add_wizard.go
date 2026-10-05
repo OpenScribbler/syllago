@@ -21,7 +21,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
-	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
 )
@@ -100,6 +99,9 @@ type addConfirmItem struct {
 	hookSourceDir string
 	settings      *add.SettingsItem
 
+	// provider mirrors addDiscoveryItem.provider.
+	provider string
+
 	// Splittable mirrors the addDiscoveryItem field so the Review step (after
 	// mergeConfirmIntoDiscovery) can still render the monolithic-rule hint.
 	splittable        bool
@@ -163,6 +165,11 @@ type addDiscoveryItem struct {
 	// settings is set for a hook or MCP server read from a provider's
 	// settings file; addSingleItem adds it through add.AddFromSettings.
 	settings *add.SettingsItem
+
+	// provider is the provider whose format the item was found in, which
+	// places it in the Library. Empty when the source does not say, and
+	// then the provider source's own provider, if any, is used.
+	provider string
 
 	confidence      float64
 	detectionSource string
@@ -1004,6 +1011,7 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.hookSourceDir = item.hookSourceDir
 		}
 		di.settings = item.settings
+		di.provider = item.provider
 
 		// Preserve splittability + Heuristic-step decision.
 		di.splittable = item.splittable
@@ -1394,7 +1402,7 @@ func (m *addWizardModel) openRenameModal(cursor int) {
 // handleRenameSaved applies a rename from the review modal to the in-memory
 // discoveredItem. Nothing is written to disk — the new display name and
 // description are persisted into .syllago.yaml at execute time by
-// writeHookToLibrary / add.AddItems.
+// add.AddFromSettings / add.AddItems.
 //
 // For the monolithic-rule path (addSourceMonolithic), the rename targets
 // reviewRenames[reviewCandidateCursor] instead of discoveredItems, since the
@@ -1479,15 +1487,15 @@ func (m *addWizardModel) startDiscoveryCmd() tea.Cmd {
 	case addSourceLocal:
 		dir := m.pathInput
 		return func() tea.Msg {
-			items, confirmItems, err := discoverFromLocalPath(dir, types, contentRoot)
-			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err}
+			items, confirmItems, unread, err := discoverFromLocalPath(dir, types, contentRoot)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, warnings: unread, err: err}
 		}
 
 	case addSourceGit:
 		url := m.pathInput
 		return func() tea.Msg {
-			items, confirmItems, tmpDir, err := discoverFromGitURL(url, types, contentRoot)
-			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err, tmpDir: tmpDir}
+			items, confirmItems, unread, tmpDir, err := discoverFromGitURL(url, types, contentRoot)
+			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, warnings: unread, err: err, tmpDir: tmpDir}
 		}
 	}
 	return nil
@@ -1718,7 +1726,15 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 	}
 	item := items[index]
 	contentRoot := m.contentRoot
+	// A project-scope settings item records the project it came from: the
+	// folder for a local source, and none for a clone that is deleted after.
 	projectRoot := m.projectRoot
+	switch m.source {
+	case addSourceLocal:
+		projectRoot = m.pathInput
+	case addSourceGit:
+		projectRoot = ""
+	}
 	sourceReg := m.sourceRegistry
 	sourceVis := m.sourceVisibility
 	sourceSHA := m.executeSourceSHA
@@ -1861,66 +1877,6 @@ func discoverFromProvider(
 	return items, unread, nil
 }
 
-// hooksFromSettingsFile converts an already-parsed list of HookData from a
-// single settings file into discovery items. Each HookData becomes one item
-// with full hookData + hookSourceDir populated so drill-in renders the
-// canonical flat hook.json + bundled scripts.
-func hooksFromSettingsFile(
-	settingsPath, providerSlug, scope string,
-	idx add.LibraryIndex,
-	hooks []converter.HookData,
-) []addDiscoveryItem {
-	var result []addDiscoveryItem
-	sourceDir := filepath.Dir(settingsPath)
-	seen := map[string]int{}
-	for _, hook := range hooks {
-		hookCopy := hook
-		baseName := converter.DeriveHookName(hookCopy)
-		// Two different handlers can derive the same name (same event+matcher
-		// with no script reference or status message). Suffix collisions with
-		// -2, -3, … so each discovery row is uniquely addressable.
-		name := baseName
-		seen[baseName]++
-		if n := seen[baseName]; n > 1 {
-			name = fmt.Sprintf("%s-%d", baseName, n)
-		}
-
-		key := string(catalog.Hooks) + "/" + providerSlug + "/" + name
-		_, inLib := idx[key]
-		status := add.StatusNew
-		if inLib {
-			status = add.StatusInLibrary
-		}
-
-		di := add.DiscoveryItem{
-			Name:   name,
-			Type:   catalog.Hooks,
-			Path:   settingsPath,
-			Status: status,
-			Scope:  scope,
-		}
-
-		homeDir, _ := os.UserHomeDir()
-		relPath := providerRelPath(settingsPath, "", homeDir)
-		if relPath != "" {
-			relPath = relPath + " [" + name + "]"
-		}
-		result = append(result, addDiscoveryItem{
-			name:          name,
-			itemType:      catalog.Hooks,
-			path:          settingsPath,
-			relativePath:  relPath,
-			status:        status,
-			scope:         scope,
-			risks:         hookRisks(hookCopy),
-			underlying:    &di,
-			hookData:      &hookCopy,
-			hookSourceDir: sourceDir,
-		})
-	}
-	return result
-}
-
 func discoverFromRegistry(
 	reg catalog.RegistrySource,
 	selectedTypes []catalog.ContentType,
@@ -2018,7 +1974,7 @@ func discoverFromRegistry(
 					continue
 				}
 				seenKeys[key] = true
-				items = append(items, analyzerItemToDiscovery(regDir, detected))
+				items = append(items, analyzerItemToDiscovery(regDir, detected, idx))
 			}
 			for _, detected := range result.Confirm {
 				if !typeSet[detected.Type] {
@@ -2032,11 +1988,14 @@ func discoverFromRegistry(
 	return items, confirmItems, nil
 }
 
+// discoverFromLocalPath discovers the content in dir. Hooks and MCP servers
+// kept in provider settings files are read one entry per item; a settings
+// file that could not be read is returned in unread.
 func discoverFromLocalPath(
 	dir string,
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
-) ([]addDiscoveryItem, []addConfirmItem, error) {
+) ([]addDiscoveryItem, []addConfirmItem, []error, error) {
 	typeSet := make(map[catalog.ContentType]bool)
 	for _, t := range selectedTypes {
 		typeSet[t] = true
@@ -2050,7 +2009,7 @@ func discoverFromLocalPath(
 	if nativeResult.HasSyllagoStructure {
 		cat, err := catalog.Scan(dir, dir)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		items = catalogItemsToDiscovery(dir, cat.Items, typeSet, idx)
 	}
@@ -2069,13 +2028,16 @@ func discoverFromLocalPath(
 		}
 	}
 
-	// Run content-signal analyzer for fallback detection
+	// Run content-signal analyzer for fallback detection. When it is
+	// unavailable, the pattern and settings items stand alone.
 	az := analyzer.New(analyzer.DefaultConfig())
 	result, azErr := az.Analyze(dir)
 	if azErr != nil {
-		// Analyzer unavailable — return pattern items only
-		return items, nil, nil
+		result = &analyzer.AnalysisResult{}
 	}
+
+	settingsItems, covered, unread := discoverSettingsFromFolder(dir, nativeResult, result.Confirm, typeSet, contentRoot)
+	items = append(items, settingsItems...)
 
 	// Dedup analyzer items against pattern items by (type, name). Analyzer
 	// detectors emit Path-shapes that don't match catalog.Scan (SyllagoDetector
@@ -2097,39 +2059,47 @@ func discoverFromLocalPath(
 			continue // pattern-detected wins
 		}
 		seenKeys[key] = true
-		items = append(items, analyzerItemToDiscovery(dir, detected))
+		items = append(items, analyzerItemToDiscovery(dir, detected, idx))
 	}
 
 	// Build Confirm items (type-filtered). Do NOT dedup against actionable
-	// items: hooks/MCP always land in Confirm for triage even when pattern
-	// detectors surfaced them as actionable. The analyzer's own
-	// DeduplicateItems already resolves Auto/Confirm overlap internally.
+	// items by name: hooks/MCP always land in Confirm for triage even when
+	// pattern detectors surfaced them as actionable. A hook or server from
+	// a settings file read above is left out, since its entries are listed
+	// one by one already.
 	var confirmItems []addConfirmItem
 	for _, detected := range result.Confirm {
 		if !typeSet[detected.Type] {
 			continue
 		}
+		if rel := settingsFileOf(detected); rel != "" && covered[string(detected.Type)+"/"+rel] {
+			continue
+		}
 		confirmItems = append(confirmItems, analyzerItemToConfirm(dir, detected))
 	}
 
-	return items, confirmItems, nil
+	return items, confirmItems, unread, nil
 }
 
 // analyzerItemToDiscovery converts an analyzer.DetectedItem into an
 // addDiscoveryItem. Preserves detected.Name for list display and uses
 // type-aware sourceDir so copySupportingFiles only walks directory-based
-// items (skills, agents), never the whole scan root for a loose file.
-func analyzerItemToDiscovery(baseDir string, detected *analyzer.DetectedItem) addDiscoveryItem {
+// items (skills, agents), never the whole scan root for a loose file. Its
+// status compares it with the item idx holds where an add would place it.
+func analyzerItemToDiscovery(baseDir string, detected *analyzer.DetectedItem, idx add.LibraryIndex) addDiscoveryItem {
+	prov := knownProvider(detected.Provider)
+	path := filepath.Join(baseDir, detected.Path)
 	return addDiscoveryItem{
 		name:            detected.Name,
 		displayName:     detected.DisplayName,
 		itemType:        detected.Type,
-		path:            filepath.Join(baseDir, detected.Path),
+		path:            path,
 		sourceDir:       analyzerItemSourceDir(baseDir, detected),
 		relativePath:    filepath.ToSlash(detected.Path),
-		status:          add.StatusNew,
+		status:          add.ItemStatusOf(path, detected.Type, prov, detected.Name, idx),
 		detectionSource: "content-signal",
 		tier:            analyzer.TierForItem(detected),
+		provider:        prov,
 	}
 }
 
@@ -2149,7 +2119,17 @@ func analyzerItemToConfirm(baseDir string, detected *analyzer.DetectedItem) addC
 		sourceDir:   analyzerItemSourceDir(baseDir, detected),
 		baseDir:     baseDir,
 		relPath:     filepath.ToSlash(detected.Path),
+		provider:    knownProvider(detected.Provider),
 	}
+}
+
+// knownProvider returns slug when it names a provider, and "" for the
+// analyzer's own detector names, such as top-level or content-signal.
+func knownProvider(slug string) string {
+	if _, ok := providerBySlug(slug); ok {
+		return slug
+	}
+	return ""
 }
 
 // analyzerItemSourceDir returns the sourceDir to use when constructing an
@@ -2199,46 +2179,19 @@ func nativeItemsToDiscovery(
 			if !ok || !typeSet[ct] {
 				continue
 			}
-			// Hooks need special handling: each NativeItem is one hook inside
-			// a shared settings.json, but drill-in/library want one flat
-			// hook.json per entry. Parse the settings file and split it the
-			// way the provider source does so the drill-in shows
-			// just the single hook (not the whole settings.json).
-			if ct == catalog.Hooks {
-				seen := make(map[string]bool)
-				for _, ni := range nativeItems {
-					settingsPath := filepath.Join(baseDir, ni.Path)
-					if seen[settingsPath] {
-						continue
-					}
-					seen[settingsPath] = true
-					data, err := os.ReadFile(settingsPath)
-					if err != nil {
-						continue
-					}
-					hooks, err := converter.SplitSettingsHooks(data, pc.ProviderSlug)
-					if err != nil {
-						continue
-					}
-					items = append(items, hooksFromSettingsFile(settingsPath, pc.ProviderSlug, pc.ProviderSlug, idx, hooks)...)
-				}
+			// Hooks and MCP servers sit inside settings files, which
+			// discoverSettingsFromFolder reads one entry per item.
+			if ct == catalog.Hooks || ct == catalog.MCP {
 				continue
 			}
 			for _, ni := range nativeItems {
 				fullPath := filepath.Join(baseDir, ni.Path)
 
-				status := add.StatusNew
-				key := string(ct) + "/" + ni.Name
-				if _, exists := idx[key]; exists {
-					status = add.StatusInLibrary
-				}
-
 				di := add.DiscoveryItem{
-					Name:   ni.Name,
-					Type:   ct,
-					Path:   fullPath,
-					Status: status,
-					Scope:  pc.ProviderSlug,
+					Name:  ni.Name,
+					Type:  ct,
+					Path:  fullPath,
+					Scope: pc.ProviderSlug,
 				}
 
 				// Check if path is a directory or file
@@ -2255,6 +2208,8 @@ func nativeItemsToDiscovery(
 						di.Path = filepath.Join(fullPath, primary)
 					}
 				}
+				status := add.ItemStatusOf(di.Path, ct, pc.ProviderSlug, ni.Name, idx)
+				di.Status = status
 
 				item := addDiscoveryItem{
 					name:         ni.Name,
@@ -2265,6 +2220,7 @@ func nativeItemsToDiscovery(
 					relativePath: relPathOrEmpty(baseDir, di.Path),
 					status:       status,
 					scope:        pc.ProviderSlug,
+					provider:     pc.ProviderSlug,
 					underlying:   &di,
 				}
 
@@ -2383,23 +2339,26 @@ func discoverFromGitURL(
 	url string,
 	selectedTypes []catalog.ContentType,
 	contentRoot string,
-) ([]addDiscoveryItem, []addConfirmItem, string, error) {
+) ([]addDiscoveryItem, []addConfirmItem, []error, string, error) {
 	tmpDir, err := cloneGitURL(url, 60)
 	if err != nil {
-		return nil, nil, "", err
+		return nil, nil, nil, "", err
 	}
-	items, confirmItems, err := discoverFromLocalPath(tmpDir, selectedTypes, contentRoot)
+	items, confirmItems, unread, err := discoverFromLocalPath(tmpDir, selectedTypes, contentRoot)
 	if err != nil {
 		_ = os.RemoveAll(filepath.Dir(tmpDir))
-		return nil, nil, "", err
+		return nil, nil, nil, "", err
 	}
-	return items, confirmItems, tmpDir, nil
+	return items, confirmItems, unread, tmpDir, nil
 }
 
-// addSingleItem adds a single item to the library. A pinned library item
-// is left as it is and reported as pinned.
-// addSingleItem adds item to the Library.
+// addSingleItem adds item to the Library under item.provider, or provSlug
+// when the item names none. A pinned library item is left as it is and
+// reported as pinned.
 func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
+	if item.provider != "" {
+		provSlug = item.provider
+	}
 	if item.underlying == nil {
 		return addExecResult{
 			name:   item.name,
@@ -2419,12 +2378,9 @@ func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcV
 		return addSettingsEntry(item, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA)
 	}
 
-	// The generic write lands under the discovered name; item.name may be a
-	// display name. A settings hook lands under item.name.
+	// The write lands under the discovered name; item.name may be a
+	// display name.
 	name := item.underlying.Name
-	if item.itemType == catalog.Hooks && item.hookData != nil {
-		name = item.name
-	}
 	dest := lifecycle.Destination{Type: item.itemType, Name: name, Path: add.DestDir(item.itemType, provSlug, name, contentRoot)}
 	var res addExecResult
 	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
@@ -2448,15 +2404,6 @@ func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcV
 
 // writeLibraryItem writes item into the library.
 func writeLibraryItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
-	// Hooks discovered from a provider's settings.json need their own write
-	// path: item.path is the settings.json (not a hook.json), so the generic
-	// add.AddItems copy-from-path flow would write the whole settings file as
-	// hook.json. Instead, serialize the parsed HookData directly. Mirrors
-	// cli/cmd/syllago/add_cmd.go addHooksFromLocation.
-	if item.itemType == catalog.Hooks && item.hookData != nil {
-		return writeHookToLibrary(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
-	}
-
 	opts := add.AddOptions{
 		Force:            item.overwrite,
 		Provider:         provSlug,
@@ -2496,82 +2443,6 @@ func writeLibraryItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSl
 	}
 }
 
-// writeHookToLibrary serializes a HookData to ~/.syllago/hooks/<provider>/<name>/hook.json,
-// bundles any referenced scripts into the same directory, and writes .syllago.yaml
-// metadata. Mirrors addHooksFromLocation in cli/cmd/syllago/add_cmd.go.
-func writeHookToLibrary(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
-	itemDir := filepath.Join(contentRoot, string(catalog.Hooks), provSlug, item.name)
-
-	if !item.overwrite {
-		if info, err := os.Stat(itemDir); err == nil && info.IsDir() {
-			return addExecResult{name: item.name, status: "skipped"}
-		}
-	}
-
-	if err := os.MkdirAll(itemDir, 0o755); err != nil {
-		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("creating %s: %w", itemDir, err)}
-	}
-
-	// Bundle script files referenced by the hook's commands. Failure here is
-	// non-fatal — the hook can still be installed if scripts are absolute paths.
-	bundled, _ := converter.BundleHookScripts(item.hookData, item.hookSourceDir, itemDir)
-
-	// Write the canonical hooks/0.1 Manifest shape (single handler per file).
-	// SplitSettingsHooks guarantees one entry in hookData.Hooks post-split.
-	manifest, err := converter.ManifestFromHookData(*item.hookData)
-	if err != nil {
-		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("building manifest: %w", err)}
-	}
-	hookJSON, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
-		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("marshaling hook: %w", err)}
-	}
-	if err := os.WriteFile(filepath.Join(itemDir, "hook.json"), hookJSON, 0o644); err != nil {
-		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("writing hook.json: %w", err)}
-	}
-
-	var bundledMeta []metadata.BundledScriptMeta
-	for _, b := range bundled {
-		bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{
-			OriginalPath: b.OriginalPath,
-			Filename:     b.Filename,
-		})
-	}
-
-	metaName := item.name
-	if item.displayName != "" {
-		metaName = item.displayName
-	}
-
-	now := time.Now().UTC()
-	meta := &metadata.Meta{
-		ID:               metadata.NewID(),
-		Name:             metaName,
-		Description:      item.description,
-		Type:             string(catalog.Hooks),
-		BundledScripts:   bundledMeta,
-		AddedAt:          &now,
-		SourceProvider:   provSlug,
-		SourceFormat:     "json",
-		SourceType:       "provider",
-		SourceRegistry:   srcReg,
-		SourceVisibility: srcVis,
-		SourceScope:      item.scope,
-	}
-	if srcReg != "" {
-		meta.SourceType = "registry"
-		meta.SourceSHA = srcSHA
-	}
-	if err := metadata.Save(itemDir, meta); err != nil {
-		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("writing metadata: %w", err)}
-	}
-
-	if item.status == add.StatusInLibrary {
-		return addExecResult{name: item.name, status: "updated"}
-	}
-	return addExecResult{name: item.name, status: "added"}
-}
-
 // --- Git URL validation ---
 
 // validGitURL returns true if the URL looks like a valid git remote.
@@ -2593,7 +2464,7 @@ func validGitURL(url string) bool {
 // buildHookPreviewFiles returns the virtual file list for a hook drill-in:
 // "hook.json" (the flat single-hook object) followed by any referenced
 // scripts that exist in item.hookSourceDir. This mirrors the on-disk layout
-// that writeHookToLibrary will produce, so the wizard preview shows the same
+// that add.AddFromSettings will produce, so the wizard preview shows the same
 // files the user will inspect in the library and Content > Hooks surfaces.
 func buildHookPreviewFiles(item addDiscoveryItem) []string {
 	files := []string{"hook.json"}
@@ -2607,7 +2478,7 @@ func buildHookPreviewFiles(item addDiscoveryItem) []string {
 			continue
 		}
 		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
-		if !ok {
+		if !ok || !bundlesScript(item, resolved) {
 			continue
 		}
 		base := filepath.Base(resolved)
@@ -2621,6 +2492,12 @@ func buildHookPreviewFiles(item addDiscoveryItem) []string {
 		seen[base] = true
 	}
 	return files
+}
+
+// bundlesScript reports whether an add of item would bundle the script at
+// resolved: for a hook imported from a folder, one inside that folder.
+func bundlesScript(item addDiscoveryItem, resolved string) bool {
+	return item.settings == nil || item.settings.ScriptRoot == "" || converter.ResolvesWithin(resolved, item.settings.ScriptRoot)
 }
 
 // resolveHookScriptPath resolves a hook command's script reference to an
@@ -2682,7 +2559,7 @@ func readHookPreviewContent(item addDiscoveryItem, relPath string) (string, erro
 			continue
 		}
 		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
-		if !ok || filepath.Base(resolved) != relPath {
+		if !ok || filepath.Base(resolved) != relPath || !bundlesScript(item, resolved) {
 			continue
 		}
 		data, err := os.ReadFile(resolved)

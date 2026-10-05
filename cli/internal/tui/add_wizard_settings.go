@@ -9,6 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
+	"github.com/OpenScribbler/syllago/cli/internal/analyzer"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
@@ -25,6 +26,104 @@ func discoverSettingsFromProvider(prov provider.Provider, projectRoot, baseDir, 
 		return nil, []error{err}
 	}
 	homeDir, _ := os.UserHomeDir()
+	return settingsItemsToDiscovery(settings, prov.Slug, func(path string) string {
+		return providerRelPath(path, "", homeDir)
+	}), unread
+}
+
+// discoverSettingsFromFolder reads the hooks and MCP servers (typeSet picks
+// which) in the provider settings files found in dir: those native names,
+// then those the analyzer confirm items name under a known provider. It
+// returns one discovery item per entry, and covered, the files it read
+// entries from, keyed by type and path relative to dir.
+func discoverSettingsFromFolder(dir string, native catalog.NativeScanResult, confirm []*analyzer.DetectedItem, typeSet map[catalog.ContentType]bool, contentRoot string) (items []addDiscoveryItem, covered map[string]bool, unread []error) {
+	type fileGroup struct {
+		prov  provider.Provider
+		ct    catalog.ContentType
+		paths []string
+	}
+	var groups []*fileGroup
+	listed := map[string]bool{}
+	addFile := func(slug string, ct catalog.ContentType, rel string) {
+		prov, ok := providerBySlug(slug)
+		if !ok || !typeSet[ct] || listed[string(ct)+"/"+rel] {
+			return
+		}
+		listed[string(ct)+"/"+rel] = true
+		var g *fileGroup
+		for _, existing := range groups {
+			if existing.prov.Slug == slug && existing.ct == ct {
+				g = existing
+			}
+		}
+		if g == nil {
+			g = &fileGroup{prov: prov, ct: ct}
+			groups = append(groups, g)
+		}
+		g.paths = append(g.paths, filepath.Join(dir, rel))
+	}
+	for _, pc := range native.Providers {
+		for _, ct := range []catalog.ContentType{catalog.Hooks, catalog.MCP} {
+			for _, ni := range pc.Items[string(ct)] {
+				addFile(pc.ProviderSlug, ct, filepath.ToSlash(ni.Path))
+			}
+		}
+	}
+	for _, d := range confirm {
+		if rel := settingsFileOf(d); rel != "" {
+			addFile(d.Provider, d.Type, rel)
+		}
+	}
+
+	covered = map[string]bool{}
+	seen := map[string]bool{}
+	for _, g := range groups {
+		settings, errs, err := add.DiscoverSettingsFiles(g.prov, dir, g.paths, contentRoot, g.ct)
+		if err != nil {
+			errs = []error{err}
+		}
+		// A file holding both hooks and servers fails both reads alike.
+		for _, err := range errs {
+			if !seen[err.Error()] {
+				seen[err.Error()] = true
+				unread = append(unread, err)
+			}
+		}
+		for _, s := range settings {
+			covered[string(g.ct)+"/"+relPathOrEmpty(dir, s.Path)] = true
+		}
+		items = append(items, settingsItemsToDiscovery(settings, g.prov.Slug, func(path string) string {
+			return relPathOrEmpty(dir, path)
+		})...)
+	}
+	return items, covered, unread
+}
+
+// settingsFileOf returns the settings file, relative to the scan root, that
+// an analyzer hook or MCP item was read from, or "" for a hook script.
+func settingsFileOf(d *analyzer.DetectedItem) string {
+	if d.Type != catalog.Hooks && d.Type != catalog.MCP || d.InternalLabel == "hook-script" {
+		return ""
+	}
+	if d.ConfigSource != "" {
+		return filepath.ToSlash(d.ConfigSource)
+	}
+	return filepath.ToSlash(d.Path)
+}
+
+// providerBySlug returns the provider slug names.
+func providerBySlug(slug string) (provider.Provider, bool) {
+	for _, p := range provider.AllProviders {
+		if p.Slug == slug {
+			return p, true
+		}
+	}
+	return provider.Provider{}, false
+}
+
+// settingsItemsToDiscovery turns settings entries read for provSlug into
+// discovery items. relPath renders a settings file's path for the list.
+func settingsItemsToDiscovery(settings []add.SettingsItem, provSlug string, relPath func(string) string) []addDiscoveryItem {
 	items := make([]addDiscoveryItem, 0, len(settings))
 	for i := range settings {
 		s := &settings[i]
@@ -34,10 +133,11 @@ func discoverSettingsFromProvider(prov provider.Provider, projectRoot, baseDir, 
 			path:       s.Path,
 			status:     s.Status,
 			scope:      s.Scope,
+			provider:   provSlug,
 			underlying: &s.DiscoveryItem,
 			settings:   s,
 		}
-		if rel := providerRelPath(s.Path, "", homeDir); rel != "" {
+		if rel := relPath(s.Path); rel != "" {
 			item.relativePath = rel + " [" + s.Name + "]"
 		}
 		if s.Hook != nil {
@@ -49,7 +149,7 @@ func discoverSettingsFromProvider(prov provider.Provider, projectRoot, baseDir, 
 		}
 		items = append(items, item)
 	}
-	return items, unread
+	return items
 }
 
 // hookRisks reports what a hook does when it runs: a command or a call to
@@ -152,7 +252,7 @@ func addSettingsEntry(item addDiscoveryItem, contentRoot, projectRoot, srcReg, s
 		return addExecResult{name: item.name, status: "added"}
 	case add.AddStatusUpdated:
 		return addExecResult{name: item.name, status: "updated"}
-	case add.AddStatusUpToDate:
+	case add.AddStatusUpToDate, add.AddStatusSkipped:
 		return addExecResult{name: item.name, status: "skipped"}
 	default:
 		return addExecResult{name: item.name, status: "error", err: r.Error}

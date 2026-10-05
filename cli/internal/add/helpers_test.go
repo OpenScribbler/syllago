@@ -48,7 +48,7 @@ func TestContentFilename(t *testing.T) {
 	}
 }
 
-// --- computeItemStatus (0% coverage) ---
+// --- ItemStatusOf (0% coverage) ---
 
 func TestComputeItemStatus_New(t *testing.T) {
 	t.Parallel()
@@ -58,9 +58,9 @@ func TestComputeItemStatus_New(t *testing.T) {
 	filePath := filepath.Join(tmp, "rule.md")
 	os.WriteFile(filePath, []byte("# Rule"), 0644)
 
-	status := computeItemStatus(filePath, catalog.Rules, "claude-code", "my-rule", idx)
+	status := ItemStatusOf(filePath, catalog.Rules, "claude-code", "my-rule", idx)
 	if status != StatusNew {
-		t.Errorf("computeItemStatus() = %v, want StatusNew", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusNew", status)
 	}
 }
 
@@ -77,9 +77,9 @@ func TestComputeItemStatus_InLibrary(t *testing.T) {
 		"rules/claude-code/my-rule": &metadata.Meta{SourceHash: hash},
 	}
 
-	status := computeItemStatus(filePath, catalog.Rules, "claude-code", "my-rule", idx)
+	status := ItemStatusOf(filePath, catalog.Rules, "claude-code", "my-rule", idx)
 	if status != StatusInLibrary {
-		t.Errorf("computeItemStatus() = %v, want StatusInLibrary", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusInLibrary", status)
 	}
 }
 
@@ -94,9 +94,9 @@ func TestComputeItemStatus_Outdated(t *testing.T) {
 		"rules/claude-code/my-rule": &metadata.Meta{SourceHash: "sha256:oldoldhash"},
 	}
 
-	status := computeItemStatus(filePath, catalog.Rules, "claude-code", "my-rule", idx)
+	status := ItemStatusOf(filePath, catalog.Rules, "claude-code", "my-rule", idx)
 	if status != StatusOutdated {
-		t.Errorf("computeItemStatus() = %v, want StatusOutdated", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusOutdated", status)
 	}
 }
 
@@ -111,9 +111,9 @@ func TestComputeItemStatus_InLibrary_NilMeta(t *testing.T) {
 		"rules/claude-code/my-rule": nil, // dir exists, no .syllago.yaml
 	}
 
-	status := computeItemStatus(filePath, catalog.Rules, "claude-code", "my-rule", idx)
+	status := ItemStatusOf(filePath, catalog.Rules, "claude-code", "my-rule", idx)
 	if status != StatusOutdated {
-		t.Errorf("computeItemStatus() = %v, want StatusOutdated (nil meta)", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusOutdated (nil meta)", status)
 	}
 }
 
@@ -124,9 +124,9 @@ func TestComputeItemStatus_UnreadableFile(t *testing.T) {
 		"rules/claude-code/my-rule": &metadata.Meta{SourceHash: "sha256:abc"},
 	}
 
-	status := computeItemStatus("/nonexistent/file.md", catalog.Rules, "claude-code", "my-rule", idx)
+	status := ItemStatusOf("/nonexistent/file.md", catalog.Rules, "claude-code", "my-rule", idx)
 	if status != StatusNew {
-		t.Errorf("computeItemStatus() = %v, want StatusNew (unreadable file)", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusNew (unreadable file)", status)
 	}
 }
 
@@ -143,9 +143,9 @@ func TestComputeItemStatus_UniversalType(t *testing.T) {
 		"skills/my-skill": &metadata.Meta{SourceHash: hash},
 	}
 
-	status := computeItemStatus(filePath, catalog.Skills, "claude-code", "my-skill", idx)
+	status := ItemStatusOf(filePath, catalog.Skills, "claude-code", "my-skill", idx)
 	if status != StatusInLibrary {
-		t.Errorf("computeItemStatus() = %v, want StatusInLibrary (universal)", status)
+		t.Errorf("ItemStatusOf() = %v, want StatusInLibrary (universal)", status)
 	}
 }
 

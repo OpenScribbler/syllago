@@ -1,17 +1,12 @@
 package tui
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
-	"github.com/OpenScribbler/syllago/cli/internal/converter"
-	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 )
 
 // TestHandleRenameSaved_UpdatesDisplayNameAndDescription verifies that when the
@@ -587,70 +582,5 @@ func TestEditModal_ViewContainsContextHint(t *testing.T) {
 	wiz.OpenWithContext("Rename", "foo", "", "path", "wizard_rename")
 	if got := wiz.View(); !strings.Contains(got, "after you add this item") {
 		t.Errorf("wizard rename modal missing wizard-specific hint, got:\n%s", got)
-	}
-}
-
-// TestWriteHookToLibrary_HonorsDisplayNameAndDescription verifies that a
-// rename applied to a hook before adding (via the review-step [e] modal) is
-// persisted into .syllago.yaml without changing the on-disk directory name
-// or hook.json payload.
-func TestWriteHookToLibrary_HonorsDisplayNameAndDescription(t *testing.T) {
-	contentRoot := t.TempDir()
-
-	hook := converter.HookData{
-		Event: "before_tool_execute",
-		Hooks: []converter.HookEntry{{Type: "command", Command: "echo hi"}},
-	}
-
-	item := addDiscoveryItem{
-		name:        "original-dir-name",
-		displayName: "Friendly Display Name",
-		description: "User-supplied description",
-		itemType:    catalog.Hooks,
-		scope:       "global",
-		hookData:    &hook,
-	}
-
-	result := writeHookToLibrary(item, contentRoot, "", "", "claude-code", "")
-	if result.status != "added" {
-		t.Fatalf("expected status=added, got %q err=%v", result.status, result.err)
-	}
-
-	// Directory must still be keyed on item.name (identity), NOT displayName.
-	itemDir := filepath.Join(contentRoot, string(catalog.Hooks), "claude-code", "original-dir-name")
-	if _, err := os.Stat(itemDir); err != nil {
-		t.Fatalf("item dir should exist at identity-keyed path: %v", err)
-	}
-
-	// displayName must NOT be used as a directory.
-	strayDir := filepath.Join(contentRoot, string(catalog.Hooks), "claude-code", "Friendly Display Name")
-	if _, err := os.Stat(strayDir); err == nil {
-		t.Errorf("unexpected directory created from displayName: %s", strayDir)
-	}
-
-	// Metadata should carry displayName + description.
-	meta, err := metadata.Load(itemDir)
-	if err != nil {
-		t.Fatalf("loading metadata: %v", err)
-	}
-	if meta.Name != "Friendly Display Name" {
-		t.Errorf("meta.Name: got %q want %q", meta.Name, "Friendly Display Name")
-	}
-	if meta.Description != "User-supplied description" {
-		t.Errorf("meta.Description: got %q want %q", meta.Description, "User-supplied description")
-	}
-
-	// hook.json payload unchanged — still the canonical manifest.
-	hookPath := filepath.Join(itemDir, "hook.json")
-	hookBytes, err := os.ReadFile(hookPath)
-	if err != nil {
-		t.Fatalf("reading hook.json: %v", err)
-	}
-	var parsed map[string]any
-	if err := json.Unmarshal(hookBytes, &parsed); err != nil {
-		t.Fatalf("hook.json should be valid JSON: %v", err)
-	}
-	if parsed["spec"] != converter.SpecVersion {
-		t.Errorf("hook.json spec: got %v want %q", parsed["spec"], converter.SpecVersion)
 	}
 }

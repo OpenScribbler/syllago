@@ -143,19 +143,26 @@ type MCPLocation struct {
 	JSONKey string // "mcpServers", "context_servers", "mcp", "amp.mcpServers", etc.
 }
 
+// MCPJSONKey returns the JSON path prov's settings files keep MCP servers
+// under, which FindMCPLocations reads. OpenCode and Amp nest them apart
+// from the key MCPConfigKey merges installs into.
+func MCPJSONKey(prov provider.Provider) string {
+	switch prov.Slug {
+	case "opencode":
+		return "mcp"
+	case "amp":
+		return "amp.mcpServers"
+	}
+	return MCPConfigKey(prov)
+}
+
 // FindMCPLocations returns all files where MCP configs exist for a provider.
 // For providers that store MCP in settings.json (alongside hooks), it checks
 // both global and project scopes. For providers with dedicated MCP files, it
 // checks those. For Claude Code, it checks both settings.json files AND
 // dedicated files (~/.claude.json, .mcp.json).
 func FindMCPLocations(prov provider.Provider, projectRoot, baseDir string) []MCPLocation {
-	jsonKey := MCPConfigKey(prov)
-	if prov.Slug == "opencode" {
-		jsonKey = "mcp"
-	}
-	if prov.Slug == "amp" {
-		jsonKey = "amp.mcpServers"
-	}
+	jsonKey := MCPJSONKey(prov)
 
 	var locs []MCPLocation
 

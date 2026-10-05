@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/add"
@@ -282,13 +283,13 @@ func TestReadHookPreviewContent_UnreferencedScriptRejected(t *testing.T) {
 	}
 }
 
-// TestNativeItemsToDiscovery_HooksSplitPerEntry verifies that when local-path
+// TestDiscoverSettingsFromFolder_HooksSplitPerEntry verifies that when local-path
 // discovery surfaces a settings.json containing multiple events/matchers,
-// nativeItemsToDiscovery produces ONE addDiscoveryItem per canonical hook —
+// discoverSettingsFromFolder produces ONE addDiscoveryItem per canonical hook —
 // each with its own hookData — rather than a single item whose drill-in shows
 // the whole settings.json. This is the regression test for the "add wizard
 // shows multiple events under one name" bug.
-func TestNativeItemsToDiscovery_HooksSplitPerEntry(t *testing.T) {
+func TestDiscoverSettingsFromFolder_HooksSplitPerEntry(t *testing.T) {
 	baseDir := t.TempDir()
 	settingsRel := filepath.Join(".claude", "settings.json")
 	settingsAbs := filepath.Join(baseDir, settingsRel)
@@ -328,7 +329,10 @@ func TestNativeItemsToDiscovery_HooksSplitPerEntry(t *testing.T) {
 	}
 	typeSet := map[catalog.ContentType]bool{catalog.Hooks: true}
 
-	items := nativeItemsToDiscovery(baseDir, result, typeSet, add.LibraryIndex{})
+	items, _, unread := discoverSettingsFromFolder(baseDir, result, nil, typeSet, t.TempDir())
+	if len(unread) > 0 {
+		t.Fatalf("unread = %v", unread)
+	}
 
 	if len(items) != 3 {
 		t.Fatalf("expected 3 discovery items (one per canonical hook), got %d", len(items))
@@ -349,5 +353,33 @@ func TestNativeItemsToDiscovery_HooksSplitPerEntry(t *testing.T) {
 			t.Errorf("duplicate discovery name %q — each hook must get a unique derived name", it.name)
 		}
 		names[it.name] = true
+	}
+}
+
+// Regression: the preview of a hook imported from a folder listed and read
+// scripts outside the folder, which an add never brings.
+func TestHookPreview_FolderHookShowsOnlyItsOwnScripts(t *testing.T) {
+	folder := t.TempDir()
+	_ = os.WriteFile(filepath.Join(folder, "lint.sh"), []byte("echo lint"), 0o755)
+	outside := filepath.Join(t.TempDir(), "secret.sh")
+	_ = os.WriteFile(outside, []byte("TOKEN=1"), 0o600)
+	item := addDiscoveryItem{
+		name:     "linter",
+		itemType: catalog.Hooks,
+		hookData: &converter.HookData{
+			Event: "before_tool_execute",
+			Hooks: []converter.HookEntry{
+				{Type: "command", Command: "bash ./lint.sh"},
+				{Type: "command", Command: "bash " + outside},
+			},
+		},
+		hookSourceDir: folder,
+		settings:      &add.SettingsItem{ScriptRoot: folder},
+	}
+	if files := buildHookPreviewFiles(item); !slices.Equal(files, []string{"hook.json", "lint.sh"}) {
+		t.Errorf("files = %v, want hook.json and lint.sh", files)
+	}
+	if _, err := readHookPreviewContent(item, "secret.sh"); err == nil {
+		t.Error("read secret.sh, want it refused as outside the folder")
 	}
 }
