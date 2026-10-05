@@ -25,6 +25,9 @@ linters:
     depguard:
       # Import direction. Each list applies to every file its globs match,
       # tests included, and denies by prefix unless the entry ends in $.
+      # ${config-path} keeps the checkout's parent directories out of the
+      # globs. On native Windows it expands with backslashes, which the globs
+      # read as escapes, so the rules match nothing there; CI lints on Linux.
       rules:
         # Workflows compose the core packages and each other, and the TUI may
         # call any of them. Everything else under internal/ is core, a
