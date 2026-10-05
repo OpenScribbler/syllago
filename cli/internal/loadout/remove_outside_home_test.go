@@ -2,6 +2,7 @@ package loadout
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -211,6 +212,49 @@ func TestRemove_LeavesInstalledJSONAnEarlierSnapshotBackedUp(t *testing.T) {
 	}
 	if slices.Contains(result.RestoredFiles, installedPath) {
 		t.Errorf("RestoredFiles lists installed.json: %q", result.RestoredFiles)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {
+		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
+	}
+}
+
+// TestRemove_SkipsInstalledJSONInAManifestFromBeforeDestinations: an earlier
+// version's manifest keys installed.json by its path under home and records
+// no destination. Remove skips it even when the project is reached through
+// a symlink, so a record added after the apply stays.
+func TestRemove_SkipsInstalledJSONInAManifestFromBeforeDestinations(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	projectRoot := filepath.Join(home, "proj")
+	alias := filepath.Join(t.TempDir(), "proj")
+	if err := os.MkdirAll(projectRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(projectRoot, alias); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	snapshotDir := filepath.Join(projectRoot, ".syllago", "snapshots", "20260101T000000")
+	key := filepath.Join("proj", ".syllago", "installed.json")
+	os.MkdirAll(filepath.Dir(filepath.Join(snapshotDir, "files", key)), 0755)
+	os.WriteFile(filepath.Join(snapshotDir, "files", key), []byte(`{}`), 0644)
+	legacy := fmt.Sprintf(`{"loadoutName":"dev","mode":"keep","backedUpFiles":[%q]}`, filepath.ToSlash(key))
+	os.WriteFile(filepath.Join(snapshotDir, "manifest.json"), []byte(legacy), 0644)
+	if err := installer.SaveInstalled(projectRoot, &installer.Installed{MCP: []installer.InstalledMCP{
+		{Name: "srv", Source: "loadout:dev", Provider: "cursor"},
+		{Name: "later", Source: "export", Provider: "cursor"},
+	}}); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	result, err := Remove(RemoveOptions{ProjectRoot: alias})
+	if err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if len(result.RestoredFiles) != 0 {
+		t.Errorf("RestoredFiles: got %q, want none", result.RestoredFiles)
 	}
 	inst, err := installer.LoadInstalled(projectRoot)
 	if err != nil || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {

@@ -180,6 +180,23 @@ func TestRunLoadoutRemove(t *testing.T) {
 			},
 		},
 		{
+			name: "non-auto leaves out an installed.json an earlier version backed up",
+			setup: func(t *testing.T, root string) {
+				installedJSON := filepath.Join(root, ".syllago", "installed.json")
+				os.MkdirAll(filepath.Dir(installedJSON), 0755)
+				os.WriteFile(installedJSON, []byte("{}"), 0644)
+				if _, err := snapshot.Create(root, "dev", "keep", []string{installedJSON}, nil, nil); err != nil {
+					t.Fatal(err)
+				}
+			},
+			check: func(t *testing.T, stdout, stderr string) {
+				t.Helper()
+				if strings.Contains(stdout, "installed.json") {
+					t.Errorf("installed.json listed, but remove does not restore it: %s", stdout)
+				}
+			},
+		},
+		{
 			name: "non-auto lists a file the loadout created for deletion",
 			setup: func(t *testing.T, root string) {
 				outsideCfg = filepath.Join(root, ".cursor", "mcp.json")

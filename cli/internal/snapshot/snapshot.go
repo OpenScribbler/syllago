@@ -97,13 +97,15 @@ func Create(projectRoot string, loadoutName string, mode string,
 		if err != nil {
 			return "", fmt.Errorf("backing up %s: %w", path, err)
 		}
-		// A file outside the home directory has no path under it, and its
-		// absolute path cannot sit under files/ on Windows, so it is stored
-		// under a numbered key. The two prefixes keep a file in the home
-		// directory from sharing a key with one outside it.
+		// A file in the home directory keys by its path under it, which
+		// earlier versions restore correctly too. A file outside it has no
+		// such path, and its absolute path cannot sit under files/ on
+		// Windows, so it is stored under a numbered outside-home key, as is
+		// a home path that starts with outside-home, so no two share one.
 		rel := filepath.Join("outside-home", strconv.Itoa(i), filepath.Base(absPath))
-		if r, err := filepath.Rel(home, absPath); err == nil && filepath.IsLocal(r) {
-			rel = filepath.Join("home", r)
+		if r, err := filepath.Rel(home, absPath); err == nil && filepath.IsLocal(r) &&
+			!strings.EqualFold(strings.SplitN(filepath.ToSlash(r), "/", 2)[0], "outside-home") {
+			rel = r
 		}
 
 		destPath := filepath.Join(filesDir, rel)

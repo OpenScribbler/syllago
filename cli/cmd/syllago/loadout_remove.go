@@ -64,6 +64,7 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		loadout.SkipInstalledBackup(manifest, projectRoot)
 		if len(manifest.BackedUpFiles) > 0 {
 			fmt.Fprintln(output.Writer, "\nFiles to restore from snapshot:")
 			home, _ := os.UserHomeDir()

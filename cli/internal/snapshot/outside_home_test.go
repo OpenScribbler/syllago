@@ -297,3 +297,24 @@ func TestLoad_SkipsALeftoverHookSnapshot(t *testing.T) {
 		t.Errorf("Load: got %+v in %s (err %v), want the dev snapshot", m, dir, err)
 	}
 }
+
+// TestCreate_KeysAFileInHomeTheWayEarlierVersionsRead: earlier versions
+// restore a backup to its key joined to the home directory and ignore
+// Destinations, so a file in the home directory keeps its path under it as
+// its key, and an older syllago removing this snapshot still puts it back.
+func TestCreate_KeysAFileInHomeTheWayEarlierVersionsRead(t *testing.T) {
+	home, outside := outsideHome(t)
+	path := filepath.Join(home, ".claude", "settings.json")
+	os.MkdirAll(filepath.Dir(path), 0755)
+	os.WriteFile(path, []byte(`{}`), 0644)
+	if _, err := Create(outside, "dev", "keep", []string{path}, nil, nil); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	manifest, _, err := Load(outside)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(manifest.BackedUpFiles) != 1 || filepath.Join(home, manifest.BackedUpFiles[0]) != path {
+		t.Errorf("keys: got %q, want the path under home", manifest.BackedUpFiles)
+	}
+}

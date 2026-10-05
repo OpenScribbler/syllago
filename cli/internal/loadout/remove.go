@@ -61,14 +61,9 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		LoadoutName: manifest.LoadoutName,
 	}
 
-	// Step 1: Restore backed-up files. Snapshots from earlier versions back
-	// up installed.json too; step 3 cleans it instead, which keeps the
-	// records of anything installed after the apply.
+	// Step 1: Restore backed-up files
 	home, _ := os.UserHomeDir()
-	installedPath := filepath.Join(opts.ProjectRoot, ".syllago", "installed.json")
-	manifest.BackedUpFiles = slices.DeleteFunc(manifest.BackedUpFiles, func(rel string) bool {
-		return filepath.Clean(manifest.Destination(home, rel)) == installedPath
-	})
+	SkipInstalledBackup(manifest, opts.ProjectRoot)
 	if err := snapshot.Restore(snapshotDir, manifest); err != nil {
 		return nil, err
 	}
@@ -106,6 +101,23 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 
 	return result, nil
+}
+
+// SkipInstalledBackup drops installed.json from the files manifest restores.
+// Snapshots from earlier versions back it up; remove cleans the loadout's
+// records from it instead, which keeps the records of anything installed
+// after the apply. It compares files rather than paths, so a project
+// reached through another spelling of its path still matches.
+func SkipInstalledBackup(manifest *snapshot.SnapshotManifest, projectRoot string) {
+	current, err := os.Stat(filepath.Join(projectRoot, ".syllago", "installed.json"))
+	if err != nil {
+		return
+	}
+	home, _ := os.UserHomeDir()
+	manifest.BackedUpFiles = slices.DeleteFunc(manifest.BackedUpFiles, func(rel string) bool {
+		fi, err := os.Stat(manifest.Destination(home, rel))
+		return err == nil && os.SameFile(fi, current)
+	})
 }
 
 // cleanInstalledEntries removes all entries from Installed that match the given source.
