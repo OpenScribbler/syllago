@@ -169,32 +169,72 @@ func TestApply_RollbackLetsARetrySucceed(t *testing.T) {
 
 // TestApply_FailedRollbackKeepsTheSnapshot: a snapshot that did not restore
 // holds the only copy of the files the apply changed, so the apply keeps it
-// and says so, and loadout remove restores them from it.
+// and says so, and loadout remove restores them from it. A created file
+// the failed restore did delete is no longer the apply's, so remove leaves
+// one the user writes there afterward.
 func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
-	existing := `{"mcpServers":{"mine":{"command":"x"}}}`
-	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, existing)
-	dir := filepath.Join(projectRoot, ".syllago")
-	os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
-	os.Chmod(dir, 0555)
-	t.Cleanup(func() { os.Chmod(dir, 0755) })
-	restoreSnapshot = func(string, *snapshot.SnapshotManifest) error { return errors.New("disk full") }
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
 	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	tests := []struct {
+		name     string
+		existing string
+		// restore stands in for the failed restore; it gets the config path.
+		restore func(cfgPath string) error
+		// after is what the user writes to the config before remove.
+		after string
+		want  string
+	}{
+		{
+			name:     "restore changed nothing",
+			existing: `{"mcpServers":{"mine":{"command":"x"}}}`,
+			restore:  func(string) error { return errors.New("disk full") },
+			want:     `{"mcpServers":{"mine":{"command":"x"}}}`,
+		},
+		{
+			name:    "restore deleted the created config",
+			restore: func(cfgPath string) error { os.Remove(cfgPath); return errors.New("disk full") },
+			after:   `{"mcpServers":{"user":{"command":"u"}}}`,
+			want:    `{"mcpServers":{"user":{"command":"u"}}}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, tt.existing)
+			if tt.existing == "" {
+				os.Remove(cfgPath)
+			}
+			dir := filepath.Join(projectRoot, ".syllago")
+			os.MkdirAll(filepath.Join(dir, "snapshots"), 0755)
+			os.Chmod(dir, 0555)
+			t.Cleanup(func() { os.Chmod(dir, 0755) })
+			restoreSnapshot = func(string, *snapshot.SnapshotManifest) error { return tt.restore(cfgPath) }
 
-	_, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
-	if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || !strings.Contains(err.Error(), "syllago loadout remove") {
-		t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove", err)
-	}
-	if _, _, err := snapshot.Load(projectRoot); err != nil {
-		t.Fatalf("snapshot.Load after the failed rollback: %v", err)
-	}
+			_, err := Apply(manifest, cat, provider.Cursor, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot})
+			if err == nil || !strings.Contains(err.Error(), "rolling back failed: disk full") || !strings.Contains(err.Error(), "syllago loadout remove") {
+				t.Fatalf("Apply: got %v, want a failed rollback that names loadout remove", err)
+			}
+			_, snapDir, loadErr := snapshot.Load(projectRoot)
+			if loadErr != nil {
+				t.Fatalf("snapshot.Load after the failed rollback: %v", loadErr)
+			}
+			if !strings.Contains(err.Error(), snapDir) {
+				t.Errorf("Apply: got %v, want it to name the kept snapshot %s", err, snapDir)
+			}
 
-	os.Chmod(dir, 0755)
-	restoreSnapshot = snapshot.Restore
-	if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
-		t.Fatalf("Remove: %v", err)
-	}
-	if got, _ := os.ReadFile(cfgPath); string(got) != existing {
-		t.Errorf("config after remove: got %s, want %s", got, existing)
+			os.Chmod(dir, 0755)
+			restoreSnapshot = snapshot.Restore
+			if tt.after != "" {
+				os.WriteFile(cfgPath, []byte(tt.after), 0644)
+			}
+			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err != nil {
+				t.Fatalf("Remove: %v", err)
+			}
+			if got, _ := os.ReadFile(cfgPath); string(got) != tt.want {
+				t.Errorf("config after remove: got %s, want %s", got, tt.want)
+			}
+		})
 	}
 }
 

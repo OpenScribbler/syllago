@@ -164,18 +164,26 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up. Read this apply's own
 		// snapshot, so another one in the directory cannot stop the restore.
-		sm, restoreErr := snapshot.ReadManifest(snapshotDir)
-		if restoreErr == nil {
+		sm, readErr := snapshot.ReadManifest(snapshotDir)
+		var restoreErr error
+		if readErr == nil {
 			restoreErr = restoreSnapshot(snapshotDir, sm)
-			// Remove any symlinks we may have partially created
-			for _, sr := range symlinkRecords {
-				_ = os.Remove(sr.Path)
-			}
+		}
+		// Remove any symlinks we may have partially created
+		for _, sr := range symlinkRecords {
+			_ = os.Remove(sr.Path)
 		}
 		// A snapshot that did not restore is the only copy of the files the
-		// apply changed, so it stays for loadout remove to retry.
+		// apply changed, so it stays: loadout remove retries the restore, and
+		// a restore that keeps failing leaves the backups to copy by hand.
+		if readErr != nil {
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; the backups of the files it changed are in %s", applyErr, readErr, snapshotDir)
+		}
 		if restoreErr != nil {
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it", applyErr, restoreErr)
+			// A file it lists as created that is gone now is not the
+			// apply's to delete if it appears again.
+			_ = snapshot.DropUncreated(snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand", applyErr, restoreErr, snapshotDir)
 		}
 		_ = snapshot.Delete(snapshotDir)
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
