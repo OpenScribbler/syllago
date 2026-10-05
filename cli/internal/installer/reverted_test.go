@@ -130,3 +130,24 @@ func TestForgetReverted_RecordsWithoutAProvider(t *testing.T) {
 		t.Errorf("held nowhere: got %+v and %+v, want both gone", inst.MCP, inst.Hooks)
 	}
 }
+
+// TestForgetReverted_KeepsAHookFromV0_14: v0.14.0 recorded a hook by the
+// hash of its matcher group's JSON rather than its identity, so a record of
+// that kind stays while the restored settings still hold the group.
+func TestForgetReverted_KeepsAHookFromV0_14(t *testing.T) {
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	overrideHookSettingsPaths(t, map[string]string{"claude-code": settingsPath})
+	group := `{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}`
+	os.WriteFile(settingsPath, []byte(`{"hooks":{"PreToolUse":[`+group+`]}}`), 0644)
+	inst := &Installed{Hooks: []InstalledHook{{Name: "guard", Event: "PreToolUse", GroupHash: computeGroupHash([]byte(group)), Source: "export"}}}
+
+	ForgetReverted(inst, t.TempDir(), []string{settingsPath})
+	if len(inst.Hooks) != 1 {
+		t.Fatalf("group still in settings: got %+v, want the record kept", inst.Hooks)
+	}
+	os.WriteFile(settingsPath, []byte(`{}`), 0644)
+	ForgetReverted(inst, t.TempDir(), []string{settingsPath})
+	if len(inst.Hooks) != 0 {
+		t.Errorf("group gone: got %+v, want the record gone", inst.Hooks)
+	}
+}
