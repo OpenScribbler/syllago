@@ -66,34 +66,52 @@ func TestRemove_DeletesAFileTheApplyCreated(t *testing.T) {
 	}
 }
 
-// TestRemove_KeepsInstallsMadeAfterTheApply: on a project's first apply
-// there is no installed.json to restore, so remove takes out the loadout's
-// entries and keeps one a later install added.
+// TestRemove_KeepsInstallsMadeAfterTheApply: remove takes out the loadout's
+// entries and keeps one a later install added, whether or not the project
+// had an installed.json before the apply.
 func TestRemove_KeepsInstallsMadeAfterTheApply(t *testing.T) {
 	t.Parallel()
-	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
-	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
-		t.Fatalf("Apply: %v", err)
-	}
-	inst, err := installer.LoadInstalled(projectRoot)
-	if err != nil || len(inst.Hooks) == 0 {
-		t.Fatalf("installed.json after apply: got %+v (err %v), want the loadout's hook", inst, err)
-	}
-	inst.MCP = append(inst.MCP, installer.InstalledMCP{Name: "later", Source: "export", Provider: prov.Slug})
-	if err := installer.SaveInstalled(projectRoot, inst); err != nil {
-		t.Fatalf("SaveInstalled: %v", err)
-	}
+	for _, existing := range []bool{false, true} {
+		t.Run(map[bool]string{false: "first apply", true: "existing installed.json"}[existing], func(t *testing.T) {
+			t.Parallel()
+			homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+			want := []string{"later"}
+			if existing {
+				earlier := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "earlier", Source: "export", Provider: prov.Slug}}}
+				if err := installer.SaveInstalled(projectRoot, earlier); err != nil {
+					t.Fatalf("SaveInstalled: %v", err)
+				}
+				want = []string{"earlier", "later"}
+			}
+			if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			inst, err := installer.LoadInstalled(projectRoot)
+			if err != nil || len(inst.Hooks) == 0 {
+				t.Fatalf("installed.json after apply: got %+v (err %v), want the loadout's hook", inst, err)
+			}
+			inst.MCP = append(inst.MCP, installer.InstalledMCP{Name: "later", Source: "export", Provider: prov.Slug})
+			if err := installer.SaveInstalled(projectRoot, inst); err != nil {
+				t.Fatalf("SaveInstalled: %v", err)
+			}
 
-	result, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err != nil {
-		t.Fatalf("Remove: %v", err)
-	}
-	if slices.Contains(result.RemovedFiles, filepath.Join(projectRoot, ".syllago", "installed.json")) {
-		t.Errorf("RemovedFiles lists installed.json: %q", result.RemovedFiles)
-	}
-	inst, err = installer.LoadInstalled(projectRoot)
-	if err != nil || len(inst.Hooks) != 0 || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {
-		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
+			result, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
+			if err != nil {
+				t.Fatalf("Remove: %v", err)
+			}
+			installedPath := filepath.Join(projectRoot, ".syllago", "installed.json")
+			if slices.Contains(result.RemovedFiles, installedPath) || slices.Contains(result.RestoredFiles, installedPath) {
+				t.Errorf("remove reverted installed.json: restored %q, removed %q", result.RestoredFiles, result.RemovedFiles)
+			}
+			inst, err = installer.LoadInstalled(projectRoot)
+			var got []string
+			for _, m := range inst.MCP {
+				got = append(got, m.Name)
+			}
+			if err != nil || len(inst.Hooks) != 0 || !slices.Equal(got, want) {
+				t.Errorf("installed.json after remove: hooks %d, MCP %q (err %v), want no hooks and MCP %q", len(inst.Hooks), got, err, want)
+			}
+		})
 	}
 }
 

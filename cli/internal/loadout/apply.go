@@ -464,13 +464,10 @@ func collectBackupFiles(actions []PlannedAction, prov provider.Provider, opts Ap
 		}
 	}
 
-	// Also back up installed.json, when there is one. Remove deletes the
-	// loadout's entries from it, which keeps the entries a later install
-	// adds; restoring a file that did not exist would delete it instead.
-	installedPath := filepath.Join(opts.ProjectRoot, ".syllago", "installed.json")
-	if _, err := os.Lstat(installedPath); err == nil {
-		files = append(files, installedPath)
-	}
+	// installed.json is not backed up. Apply only adds records, and writes
+	// them last, so a failed apply leaves the file alone; remove deletes the
+	// loadout's records, which keeps the ones a later install adds, where
+	// restoring the file would drop them.
 
 	return files
 }

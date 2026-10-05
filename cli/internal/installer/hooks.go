@@ -247,7 +247,7 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 		}
 	}
 	if found == -1 {
-		return Placement{}, fmt.Errorf("hook %s not found in %s (modified since installation; use 'syllago restore' to revert)", item.Name, settingsPath)
+		return Placement{}, fmt.Errorf("hook %s not found in %s; it was changed or removed after it was installed", item.Name, settingsPath)
 	}
 
 	remaining := make([]converter.CanonicalHook, 0, len(existing)-1)

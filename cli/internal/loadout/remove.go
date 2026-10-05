@@ -78,12 +78,10 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
 	}
 
-	// Step 3: Clean installed.json entries for this loadout
-	// The snapshot restore already put back the pre-apply installed.json,
-	// but if anything was added to installed.json after the loadout apply,
-	// we want to keep those entries. So we load the current state and remove
-	// only the loadout-tagged entries, along with the records of anything
-	// installed after the apply into a file step 1 restored or deleted.
+	// Step 3: Clean installed.json entries for this loadout. Apply does not
+	// back the file up, so records added after the apply survive. Drop the
+	// loadout-tagged entries, along with the records of anything installed
+	// after the apply into a file step 1 restored or deleted.
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err == nil {
 		source := "loadout:" + manifest.LoadoutName
