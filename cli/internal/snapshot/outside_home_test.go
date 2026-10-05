@@ -3,24 +3,22 @@ package snapshot
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
-// outsideHome returns a directory outside the home directory, skipping the
-// test when the temp directory sits under it.
-func outsideHome(t *testing.T) string {
+// outsideHome points the home directory at a new directory and returns
+// another one outside it.
+func outsideHome(t *testing.T) (home, outside string) {
 	t.Helper()
-	dir := t.TempDir()
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-	if rel, err := filepath.Rel(home, dir); err == nil && filepath.IsLocal(rel) {
-		t.Skip("temp dir is under the home directory")
-	}
-	return dir
+	home = t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	return home, t.TempDir()
 }
 
 // TestCreate_FileOutsideHomeRestoresInPlace: a project outside the home
@@ -28,8 +26,7 @@ func outsideHome(t *testing.T) string {
 // backup stays inside the snapshot, so the snapshot loads, restores the
 // file where it was, and leaves nothing behind once deleted.
 func TestCreate_FileOutsideHomeRestoresInPlace(t *testing.T) {
-	t.Parallel()
-	projectRoot := outsideHome(t)
+	_, projectRoot := outsideHome(t)
 	cfgPath := filepath.Join(projectRoot, ".cursor", "mcp.json")
 	os.MkdirAll(filepath.Dir(cfgPath), 0755)
 	const original = `{"mcpServers":{}}`
@@ -133,4 +130,111 @@ func TestRestore_RemovesAFileTheApplyCreated(t *testing.T) {
 	if _, err := os.Stat(cfgPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("created config still there (stat err %v)", err)
 	}
+}
+
+// TestCreate_KeysAFileInHomeApartFromOneOutside: a file in the home
+// directory whose path matches the key of one outside it keeps its own
+// backup, so both restore.
+func TestCreate_KeysAFileInHomeApartFromOneOutside(t *testing.T) {
+	home, outside := outsideHome(t)
+	files := []string{filepath.Join(outside, "settings.json"), filepath.Join(home, "outside-home", "0", "settings.json")}
+	for i, f := range files {
+		os.MkdirAll(filepath.Dir(f), 0755)
+		os.WriteFile(f, []byte(fmt.Sprintf(`{"n":%d}`, i)), 0644)
+	}
+	snapshotDir, err := Create(outside, "dev", "keep", files, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for _, f := range files {
+		os.WriteFile(f, []byte(`{"changed":true}`), 0644)
+	}
+
+	manifest, _, err := Load(outside)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(snapshotDir, manifest); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	for i, f := range files {
+		if got, want := readString(f), fmt.Sprintf(`{"n":%d}`, i); got != want {
+			t.Errorf("%s: got %s, want %s", f, got, want)
+		}
+	}
+}
+
+// TestCreate_KeepsASymlinkToAMissingTarget: a symlink whose target is
+// missing reads as missing, but it is the user's, so restore leaves it.
+func TestCreate_KeepsASymlinkToAMissingTarget(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	link := filepath.Join(projectRoot, "settings.json")
+	if err := os.Symlink(filepath.Join(projectRoot, "missing.json"), link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{link}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(snapshotDir, manifest); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if _, err := os.Lstat(link); err != nil {
+		t.Errorf("symlink gone after restore: %v", err)
+	}
+}
+
+// TestRestore_RefusesARelativePath: syllago records only absolute paths,
+// so a relative one in a manifest fails the restore before it changes
+// anything.
+func TestRestore_RefusesARelativePath(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		manifest SnapshotManifest
+	}{
+		{"destination", SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "x")}}},
+		{"created file", SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := Restore(t.TempDir(), &tt.manifest); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
+				t.Errorf("Restore: got %v, want a refusal of the relative path", err)
+			}
+		})
+	}
+}
+
+// TestLoad_ReportsASnapshotItCannotRead: a snapshot Load cannot read fails
+// the load rather than letting an older snapshot stand in for it.
+func TestLoad_ReportsASnapshotItCannotRead(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs POSIX permissions enforced")
+	}
+	projectRoot := t.TempDir()
+	for _, name := range []string{"20260101T000000", "20260102T000000"} {
+		dir := filepath.Join(snapshotsDir(projectRoot), name)
+		os.MkdirAll(dir, 0755)
+		data, _ := json.Marshal(SnapshotManifest{LoadoutName: name, Mode: "keep"})
+		os.WriteFile(filepath.Join(dir, "manifest.json"), data, 0644)
+	}
+	newest := filepath.Join(snapshotsDir(projectRoot), "20260102T000000")
+	os.Chmod(newest, 0)
+	t.Cleanup(func() { os.Chmod(newest, 0755) })
+
+	if m, _, err := Load(projectRoot); err == nil || errors.Is(err, ErrNoSnapshot) {
+		t.Errorf("Load: got %v (manifest %+v), want a read error", err, m)
+	}
+}
+
+func readString(path string) string {
+	data, _ := os.ReadFile(path)
+	return string(data)
 }

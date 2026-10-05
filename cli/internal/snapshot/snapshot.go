@@ -91,20 +91,29 @@ func Create(projectRoot string, loadoutName string, mode string,
 	hashes := make(map[string]string)
 	destinations := make(map[string]string)
 	var created []string
-	for i, absPath := range filesToBackup {
-		rel, err := filepath.Rel(home, absPath)
-		if err != nil || !filepath.IsLocal(rel) {
-			// A file outside the home directory has no path under it, and
-			// its absolute path cannot sit under files/ on Windows, so it
-			// is stored under a numbered key.
-			rel = filepath.Join("outside-home", strconv.Itoa(i), filepath.Base(absPath))
+	for i, path := range filesToBackup {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return "", fmt.Errorf("backing up %s: %w", path, err)
+		}
+		// A file outside the home directory has no path under it, and its
+		// absolute path cannot sit under files/ on Windows, so it is stored
+		// under a numbered key. The two prefixes keep a file in the home
+		// directory from sharing a key with one outside it.
+		rel := filepath.Join("outside-home", strconv.Itoa(i), filepath.Base(absPath))
+		if r, err := filepath.Rel(home, absPath); err == nil && filepath.IsLocal(r) {
+			rel = filepath.Join("home", r)
 		}
 
 		destPath := filepath.Join(filesDir, rel)
 
 		if err := copyFile(absPath, destPath); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				created = append(created, absPath)
+				// A symlink to a missing target reads as missing too, but
+				// it is the user's, so only an empty path counts as created.
+				if _, err := os.Lstat(absPath); errors.Is(err, fs.ErrNotExist) {
+					created = append(created, absPath)
+				}
 				continue
 			}
 			return "", fmt.Errorf("backing up %s: %w", absPath, err)
@@ -148,13 +157,6 @@ func Create(projectRoot string, loadoutName string, mode string,
 	return snapshotDir, nil
 }
 
-// CreateForHook creates a snapshot for a hook operation. It records the source
-// identifier (e.g. "hook:some-hook-name") and backs up the given files.
-// Mode is always "keep" since hook snapshots are not trial installs.
-func CreateForHook(projectRoot, source string, filesToBackup []string) (string, error) {
-	return Create(projectRoot, source, "keep", filesToBackup, nil, nil)
-}
-
 // Load reads the manifest from the most recent snapshot directory.
 // Returns ErrNoSnapshot if .syllago/snapshots/ is empty or missing.
 func Load(projectRoot string) (*SnapshotManifest, string, error) {
@@ -176,8 +178,11 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		if !e.IsDir() {
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(dir, e.Name(), "manifest.json")); err == nil {
+		_, err := os.Stat(filepath.Join(dir, e.Name(), "manifest.json"))
+		if err == nil {
 			dirs = append(dirs, e)
+		} else if !errors.Is(err, fs.ErrNotExist) {
+			return nil, "", fmt.Errorf("reading snapshot %s: %w", e.Name(), err)
 		}
 	}
 	if len(dirs) == 0 {
@@ -223,6 +228,19 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("getting home dir: %w", err)
+	}
+
+	// Every path syllago records is absolute, so a relative one came from a
+	// hand edit and would resolve against wherever syllago runs.
+	for rel, dest := range manifest.Destinations {
+		if !filepath.IsAbs(dest) {
+			return fmt.Errorf("restoring %s: destination %q is not an absolute path", rel, dest)
+		}
+	}
+	for _, path := range manifest.CreatedFiles {
+		if !filepath.IsAbs(path) {
+			return fmt.Errorf("removing %q: not an absolute path", path)
+		}
 	}
 
 	filesDir := filepath.Join(snapshotDir, "files")

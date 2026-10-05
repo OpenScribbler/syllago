@@ -79,9 +79,9 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		fmt.Fprintln(output.Writer, "\nNote: Any changes you made to settings.json or .claude.json after")
-		fmt.Fprintln(output.Writer, "applying the loadout will be lost — the original files are restored")
-		fmt.Fprintln(output.Writer, "from a snapshot.")
+		fmt.Fprintln(output.Writer, "\nNote: Any changes you made to these files after applying the loadout")
+		fmt.Fprintln(output.Writer, "will be lost — the original files are restored from a snapshot, and")
+		fmt.Fprintln(output.Writer, "the files the loadout created are deleted.")
 
 		if isInteractive() {
 			fmt.Fprintf(output.Writer, "\nRemove loadout? [y/N]: ")

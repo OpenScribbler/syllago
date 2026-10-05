@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 )
 
@@ -13,12 +14,10 @@ import (
 // outside the home directory restores the project's config where it was
 // and reports that path.
 func TestRemove_RestoresAFileOutsideHome(t *testing.T) {
-	t.Parallel()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
 	projectRoot := t.TempDir()
-	home, _ := os.UserHomeDir()
-	if rel, err := filepath.Rel(home, projectRoot); err == nil && filepath.IsLocal(rel) {
-		t.Skip("temp dir is under the home directory")
-	}
 	cfgPath := filepath.Join(projectRoot, ".cursor", "mcp.json")
 	os.MkdirAll(filepath.Dir(cfgPath), 0755)
 	const original = `{"mcpServers":{}}`
@@ -61,5 +60,36 @@ func TestRemove_DeletesAFileTheApplyCreated(t *testing.T) {
 	}
 	if _, err := os.Stat(cfgPath); !os.IsNotExist(err) {
 		t.Errorf("created config still there (stat err %v)", err)
+	}
+}
+
+// TestRemove_KeepsInstallsMadeAfterTheApply: on a project's first apply
+// there is no installed.json to restore, so remove takes out the loadout's
+// entries and keeps one a later install added.
+func TestRemove_KeepsInstallsMadeAfterTheApply(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.Hooks) == 0 {
+		t.Fatalf("installed.json after apply: got %+v (err %v), want the loadout's hook", inst, err)
+	}
+	inst.MCP = append(inst.MCP, installer.InstalledMCP{Name: "later", Source: "export", Provider: prov.Slug})
+	if err := installer.SaveInstalled(projectRoot, inst); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+
+	result, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if slices.Contains(result.RemovedFiles, filepath.Join(projectRoot, ".syllago", "installed.json")) {
+		t.Errorf("RemovedFiles lists installed.json: %q", result.RemovedFiles)
+	}
+	inst, err = installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.Hooks) != 0 || len(inst.MCP) != 1 || inst.MCP[0].Name != "later" {
+		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
 	}
 }

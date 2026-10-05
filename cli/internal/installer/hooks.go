@@ -12,7 +12,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
-	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -156,10 +155,6 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
 
-	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-install:"+item.Name, []string{settingsPath})
-	if err != nil {
-		return Placement{Notices: notices}, fmt.Errorf("creating snapshot: %w", err)
-	}
 	all := make([]converter.CanonicalHook, 0, len(existing)+1)
 	all = append(all, existing...)
 	all = append(all, canonHook)
@@ -169,10 +164,6 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		return Placement{Notices: notices}, fmt.Errorf("encoding hooks: %w", err)
 	}
 	if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
-		// Auto-rollback using the snapshot we just created.
-		if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
-			_ = snapshot.Restore(snapshotDir, manifest)
-		}
 		return Placement{Notices: notices}, fmt.Errorf("writing %s: %w", settingsPath, err)
 	}
 
@@ -259,20 +250,12 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 		return Placement{}, fmt.Errorf("hook %s not found in %s (modified since installation; use 'syllago restore' to revert)", item.Name, settingsPath)
 	}
 
-	snapshotDir, err := snapshot.CreateForHook(repoRoot, "hook-uninstall:"+item.Name, []string{settingsPath})
-	if err != nil {
-		return Placement{}, fmt.Errorf("creating snapshot: %w", err)
-	}
-
 	remaining := make([]converter.CanonicalHook, 0, len(existing)-1)
 	remaining = append(remaining, existing[:found]...)
 	remaining = append(remaining, existing[found+1:]...)
 
 	if model == hookStorageDirectory && len(remaining) == 0 {
 		if err := os.Remove(settingsPath); err != nil && !os.IsNotExist(err) {
-			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
-				_ = snapshot.Restore(snapshotDir, manifest)
-			}
 			return Placement{}, fmt.Errorf("removing %s: %w", settingsPath, err)
 		}
 	} else {
@@ -281,9 +264,6 @@ func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoR
 			return Placement{}, fmt.Errorf("encoding hooks: %w", err)
 		}
 		if err := writeHookFile(model, settingsPath, encoded.Content); err != nil {
-			if manifest, _, loadErr := snapshot.Load(repoRoot); loadErr == nil {
-				_ = snapshot.Restore(snapshotDir, manifest)
-			}
 			return Placement{}, fmt.Errorf("writing %s: %w", settingsPath, err)
 		}
 	}
