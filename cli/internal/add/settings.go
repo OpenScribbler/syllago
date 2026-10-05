@@ -119,7 +119,7 @@ func readSettings(prov provider.Provider, files []settingsFile, globalDir string
 				// The name becomes a Library directory, and the catalog lists
 				// no server whose name could not be one.
 				if !catalog.IsValidItemName(key.String()) {
-					unread = append(unread, fmt.Errorf("%s: MCP server %q: a Library item name holds only letters, digits, - and _", loc.Path, key.String()))
+					unread = append(unread, fmt.Errorf("%s: MCP server %q: a Library item name holds only letters, digits, - and _", f.path, key.String()))
 					return true
 				}
 				items = append(items, SettingsItem{
