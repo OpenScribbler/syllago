@@ -622,3 +622,110 @@ func TestDiscoverSettings_ReportsUnparseableMCPFile(t *testing.T) {
 		t.Errorf("items %d unread %v, want none and one error naming the file", len(items), unread)
 	}
 }
+
+// Regression: a settings file with no hooks key, such as one kept only for
+// permissions, was reported as unreadable.
+func TestDiscoverSettings_FileWithoutHooksIsNotUnread(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"permissions": {"allow": ["Bash"]}}`)
+
+	items, unread, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil || len(items) != 0 || len(unread) != 0 {
+		t.Errorf("items %v unread %v err %v, want none of each", itemNames(items), unread, err)
+	}
+}
+
+// Regression: a server placed at a -N directory was looked up under that
+// directory's name, while the Library and its install records list it
+// under its server key, so a pin on it went unseen.
+func TestAddFromSettings_LibraryNameIsWhatTheLibraryLists(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
+	writeFile(t, filepath.Join(projectRoot, ".mcp.json"), `{"mcpServers": {"db": {"command": "db-server"}}}`)
+	saveNamed(t, filepath.Join(globalDir, "mcp", "claude-code", "db"), "global", "db")
+
+	servers, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	hooks, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	r := AddFromSettings(append(servers, hooks[1]), AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
+
+	cat, err := catalog.Scan(globalDir, t.TempDir())
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	// Precedence hides the second db as overridden; it keeps its name.
+	listed := map[string]string{}
+	for _, it := range append(cat.Items, cat.Overridden...) {
+		listed[it.Path] = it.Name
+	}
+	for _, res := range r {
+		if res.Status != AddStatusAdded {
+			t.Fatalf("%s: status %v err %v", res.Name, res.Status, res.Error)
+		}
+		// The scanner gives a hook its hook.json path and a server its directory.
+		name, ok := listed[res.Dest]
+		if !ok {
+			name = listed[filepath.Join(res.Dest, "hook.json")]
+		}
+		if res.LibraryName != name {
+			t.Errorf("%s at %s: LibraryName %q, the Library lists %q", res.Name, filepath.Base(res.Dest), res.LibraryName, name)
+		}
+	}
+	if filepath.Base(r[0].Dest) != "db-2" || r[0].LibraryName != "db" {
+		t.Errorf("server at %s named %q, want db-2 named db", filepath.Base(r[0].Dest), r[0].LibraryName)
+	}
+}
+
+// Regression: settings adds dropped the laundering defense every other add
+// applies, so private content re-added from a provider's settings came
+// back with no registry.
+func TestAddFromSettings_KeepsPrivateTaint(t *testing.T) {
+	const servers = `{"mcpServers": {"db": {"command": "db-server"}}}`
+	privateItem := func(t *testing.T, globalDir string) string {
+		dir := filepath.Join(globalDir, "mcp", "acme-db")
+		writeFile(t, filepath.Join(dir, "config.json"), servers)
+		if err := metadata.Save(dir, &metadata.Meta{Name: "acme-db", SourceRegistry: "acme/private", SourceVisibility: "private", SourceHash: sourceHash([]byte(servers))}); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+	for _, tc := range []struct {
+		name  string
+		setup func(t *testing.T, projectRoot, globalDir string)
+	}{
+		{"same content", func(t *testing.T, projectRoot, globalDir string) {
+			privateItem(t, globalDir)
+			writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), servers)
+		}},
+		{"symlink into the Library", func(t *testing.T, projectRoot, globalDir string) {
+			if err := os.Symlink(privateItem(t, globalDir), filepath.Join(projectRoot, ".claude")); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(projectRoot, ".claude", "settings.json"), []byte(servers+"\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			projectRoot, globalDir := settingsEnv(t)
+			tc.setup(t, projectRoot, globalDir)
+			items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+			if err != nil || len(items) != 1 {
+				t.Fatalf("DiscoverSettings: items %v err %v", itemNames(items), err)
+			}
+			r := AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
+			meta, err := metadata.Load(r.Dest)
+			if err != nil || meta == nil {
+				t.Fatalf("metadata.Load: %v", err)
+			}
+			if meta.SourceRegistry != "acme/private" || meta.SourceVisibility != "private" {
+				t.Errorf("registry %q visibility %q, want acme/private private", meta.SourceRegistry, meta.SourceVisibility)
+			}
+		})
+	}
+}

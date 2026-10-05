@@ -123,11 +123,11 @@ func addSettingsEntry(item addDiscoveryItem, contentRoot, projectRoot, srcReg, s
 	}
 	plan := opts
 	plan.DryRun = true
-	dest := add.AddFromSettings([]add.SettingsItem{s}, plan, projectRoot, contentRoot)[0].Dest
+	planned := add.AddFromSettings([]add.SettingsItem{s}, plan, projectRoot, contentRoot)[0]
 
 	var r add.SettingsResult
 	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
-		Destinations: []lifecycle.Destination{{Type: item.itemType, Name: filepath.Base(dest), Path: dest}},
+		Destinations: []lifecycle.Destination{{Type: item.itemType, Name: planned.LibraryName, Path: planned.Dest}},
 		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
 			r = add.AddFromSettings([]add.SettingsItem{s}, opts, projectRoot, contentRoot)[0]
 			return []lifecycle.Written{{Path: r.Dest, SourceSHA: srcSHA}}, nil

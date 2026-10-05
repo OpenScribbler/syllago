@@ -190,6 +190,48 @@ func TestAddSingleItem_ProviderSettingsLeavesPinnedItem(t *testing.T) {
 	}
 }
 
+// Regression: a server placed at a -N directory was checked for a pin under
+// that directory's name, while its install record is keyed on the server's
+// name, so a forced add replaced a pinned server.
+func TestAddSingleItem_ProviderSettingsLeavesPinnedSuffixedServer(t *testing.T) {
+	projectRoot, library, records := providerSettingsEnv(t)
+	global := filepath.Join(library, string(catalog.MCP), "claude-code", "db")
+	writeTUITestFile(t, filepath.Join(global, "config.json"), []byte(`{"mcpServers": {"db": {"command": "global"}}}`))
+	if err := metadata.Save(global, &metadata.Meta{Name: "db", SourceScope: "global", SourceName: "db"}); err != nil {
+		t.Fatalf("metadata.Save: %v", err)
+	}
+	dest := filepath.Join(library, string(catalog.MCP), "claude-code", "db-2")
+	writeTUITestFile(t, filepath.Join(dest, "config.json"), []byte(`{"mcpServers": {"db": {"command": "old"}}}`))
+	if err := metadata.Save(dest, &metadata.Meta{Name: "db", SourceType: "registry", SourceRegistry: "acme/tools", SourceScope: "project", SourceName: "db"}); err != nil {
+		t.Fatalf("metadata.Save: %v", err)
+	}
+	coord := installstore.Coord{Registry: "acme/tools", Type: string(catalog.MCP), Name: "db"}
+	if err := installstore.RecordInstallMeta(records, coord, dest, installstore.PlacementInput{
+		Provider:  "claude-code",
+		Mechanism: installstore.MechanismMCPMerge,
+		Path:      filepath.Join(t.TempDir(), ".mcp.json"),
+	}, installstore.InstallMeta{SourceSHA: "sha-old"}, time.Date(2026, 10, 4, 12, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("RecordInstallMeta: %v", err)
+	}
+	if err := installstore.SetPinned(records, coord, true, time.Date(2026, 10, 4, 13, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("SetPinned: %v", err)
+	}
+	db := mergedProviderItems(t, projectRoot, library)["db"]
+	if db.settings == nil || db.settings.Dest != dest {
+		t.Fatalf("db placed at %v, want %s", db.settings, dest)
+	}
+	db.overwrite = true
+
+	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
+	if result.status != "pinned" {
+		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dest, "config.json"))
+	if !strings.Contains(string(data), `"old"`) {
+		t.Errorf("config.json = %s, want the pinned copy left as it was", data)
+	}
+}
+
 func TestApp_AddDiscoveryWarnsOfUnreadSettings(t *testing.T) {
 	app := testAppWithItems(t)
 	m, _ := app.Update(keyRune('a'))

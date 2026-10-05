@@ -63,6 +63,14 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 				}
 				continue
 			}
+			if !gjson.ValidBytes(data) {
+				unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", loc.Path))
+				continue
+			}
+			// A settings file kept for other settings holds no hooks.
+			if !gjson.GetBytes(data, "hooks").Exists() {
+				continue
+			}
 			hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
 			if err != nil {
 				unread = append(unread, fmt.Errorf("parsing %s: %w", loc.Path, err))
@@ -196,14 +204,17 @@ func holdsItem(dest string, i int, item *SettingsItem) bool {
 	return meta.SourceScope == item.Scope && (meta.SourceName == item.Name || meta.SourceName == "" && i == 1)
 }
 
-// SettingsResult is the outcome of adding one settings item. Bundled
-// counts the hook scripts copied beside it; BundleErr is a script that
-// could not be copied, which leaves the hook added.
+// SettingsResult is the outcome of adding one settings item. LibraryName
+// is the name the Library lists the item at Dest under, which install
+// records and pins are keyed on. Bundled counts the hook scripts copied
+// beside it; BundleErr is a script that could not be copied, which leaves
+// the hook added.
 type SettingsResult struct {
 	AddResult
-	Dest      string
-	Bundled   int
-	BundleErr error
+	Dest        string
+	LibraryName string
+	Bundled     int
+	BundleErr   error
 }
 
 // AddFromSettings writes each item to the Library under globalDir: a hook
@@ -219,13 +230,18 @@ func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalD
 	for _, item := range items {
 		item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
 		claimed[item.Dest] = true
-		results = append(results, addSettingsItem(item, opts, projectRoot))
+		results = append(results, addSettingsItem(item, opts, projectRoot, globalDir))
 	}
 	return results
 }
 
-func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) SettingsResult {
-	r := SettingsResult{AddResult: AddResult{Name: item.Name, Type: item.Type}, Dest: item.Dest}
+func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir string) SettingsResult {
+	r := SettingsResult{AddResult: AddResult{Name: item.Name, Type: item.Type}, Dest: item.Dest, LibraryName: filepath.Base(item.Dest)}
+	// The Library lists each server of an mcpServers config under its key,
+	// whatever directory holds it.
+	if item.Type == catalog.MCP && item.JSONKey == "mcpServers" {
+		r.LibraryName = item.ServerKey
+	}
 	fail := func(err error) SettingsResult {
 		r.Status, r.Error = AddStatusError, err
 		return r
@@ -299,6 +315,19 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) Set
 	if opts.SourceRegistry != "" {
 		meta.SourceType = "registry"
 		meta.SourceSHA = opts.SourceSHA
+	} else {
+		// Laundering defense, as for any other add: a settings file reached
+		// through a symlink into the Library, or one whose content matches
+		// private Library content, keeps that content's registry.
+		reg, vis := traceSymlinkTaint(item.Path, globalDir)
+		if reg == "" {
+			if raw, err := os.ReadFile(item.Path); err == nil {
+				reg, vis = hashMatchTaint(sourceHash(raw), globalDir)
+			}
+		}
+		if reg != "" {
+			meta.SourceRegistry, meta.SourceVisibility = reg, vis
+		}
 	}
 	if item.Scope == "project" && projectRoot != "" {
 		meta.SourceProject = filepath.Base(projectRoot)
