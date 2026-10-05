@@ -115,8 +115,24 @@ func TestCheckItem(t *testing.T) {
 			wantHash: oldHash,
 		},
 		{
-			name: "unlisted copy without a hash bypasses",
-			item: libraryCopy("delisted", ""),
+			name:     "copy without a hash has no attestation to meet the policy floor",
+			item:     libraryCopy("listed", ""),
+			minTier:  moat.TrustTierSigned,
+			wantOK:   true,
+			wantGate: MOATGateTierBelowPolicy,
+		},
+		{
+			name:     "unlisted copy without a hash is held to the policy floor",
+			item:     libraryCopy("delisted", ""),
+			minTier:  moat.TrustTierSigned,
+			wantOK:   true,
+			wantGate: MOATGateTierBelowPolicy,
+		},
+		{
+			name:     "copy without a hash proceeds at an unsigned floor",
+			item:     libraryCopy("listed", ""),
+			wantOK:   true,
+			wantGate: MOATGateProceed,
 		},
 		{
 			name: "copy from a registry the inputs do not hold bypasses",

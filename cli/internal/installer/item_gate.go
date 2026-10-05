@@ -23,9 +23,10 @@ type ItemGate struct {
 // registry has published a newer one.
 //
 // The registry's attestations vouch only for the hash it lists. A copy
-// staged at another hash, or one the registry no longer lists, carries no
-// attestation, so a tier floor above unsigned refuses it; it is checked
-// for revocations and for the listing's privacy declaration as well. A
+// staged at another hash, one that recorded no hash, or one the registry
+// no longer lists carries no attestation, so a tier floor above unsigned
+// refuses it; it is checked for revocations and for the listing's privacy
+// declaration as well. A
 // copy whose registry has no cached manifest is still checked when the
 // lockfile or any cached registry revokes its hash.
 //
@@ -49,13 +50,14 @@ func CheckItem(item catalog.ContentItem, in *moat.GateInputs, lf *moat.Lockfile,
 	if in.HasRegistry(regName) {
 		listed, ok = moat.FindTypedEntry(in.Manifests[regName], item.Name, item.Type)
 	}
+	isCopy := item.Registry == ""
 	var entry moat.ContentEntry
 	switch {
-	case ok && (hash == "" || hash == listed.ContentHash):
+	case ok && (!isCopy || hash == listed.ContentHash):
 		entry = *listed
 	case ok:
 		entry = moat.ContentEntry{Name: listed.Name, Type: listed.Type, ContentHash: hash, PrivateRepo: listed.PrivateRepo}
-	case hash != "" && in.HasRegistry(regName):
+	case isCopy && in.HasRegistry(regName):
 		entry = moat.ContentEntry{Name: item.Name, ContentHash: hash}
 	case hash != "" && (lf != nil && lf.IsRevoked(hash) || in != nil && len(in.RevSet.Lookup(hash)) > 0):
 		// Only the revocation is known; the copy's registry may not be a
