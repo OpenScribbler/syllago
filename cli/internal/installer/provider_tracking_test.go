@@ -344,6 +344,28 @@ func TestInstallMCP_SameServerFromAnotherProject(t *testing.T) {
 	}
 }
 
+// A Windows editor can save a config with a UTF-8 byte order mark, which
+// is not JSON. Install reads past it rather than refusing the file.
+func TestInstallMCP_ReadsPastAByteOrderMark(t *testing.T) {
+	isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"cursor": filepath.Join(dir, "mcp.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["cursor"], []byte("\xef\xbb\xbf{\"mcpServers\":{\"mine\":{\"command\":\"x\"}}}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	item := writeMCPItem(t, projectRoot, "bom-mcp")
+
+	if _, err := installMCP(item, provider.Cursor, projectRoot); err != nil {
+		t.Fatalf("install into a config with a byte order mark: %v", err)
+	}
+	got, _ := os.ReadFile(paths["cursor"])
+	if !gjson.GetBytes(got, "mcpServers.bom-mcp").Exists() || !gjson.GetBytes(got, "mcpServers.mine").Exists() {
+		t.Errorf("config: got %s, want both servers", got)
+	}
+}
+
 // Records written under a retired provider slug load under its current slug,
 // so lookups by the current slug find them.
 func TestLoadInstalled_ResolvesRetiredProviderSlugs(t *testing.T) {

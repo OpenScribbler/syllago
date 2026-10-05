@@ -250,13 +250,15 @@ func isUnder(path, dir string) bool {
 }
 
 // readMCPConfig reads and returns the JSON bytes from a provider's MCP config file.
-// Strips JSONC comments and trailing commas for all providers — sjson requires valid JSON input.
-// This permanently removes comments from settings files that use JSONC (e.g. Zed, OpenCode).
+// Strips a UTF-8 byte order mark, JSONC comments and trailing commas for all providers — sjson
+// requires valid JSON input. This permanently removes comments from settings files that use JSONC
+// (e.g. Zed, OpenCode), and the mark from files a Windows editor saved with one.
 func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 	data, err := readJSONFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf"))
 	data = stripTrailingCommas(converter.StripJSONCComments(data))
 	if len(bytes.TrimSpace(data)) == 0 {
 		return []byte("{}"), nil
@@ -463,7 +465,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		return mcpMerge{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
 	}
 
-	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov.Slug, fileData, jsonKey); ok {
+	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov, fileData, jsonKey); ok {
 		return mcpMerge{}, fmt.Errorf("MCP server %q %w", serverName, ErrMCPInstalled)
 	}
 
@@ -730,7 +732,7 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 // slug provSlug. fileData is that provider's MCP config and jsonKey its
 // servers key. An entry with no provider counts only when its server is
 // already in fileData, as hookTracked explains for hooks.
-func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, provSlug string, fileData []byte, jsonKey string) (string, bool) {
+func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, prov provider.Provider, fileData []byte, jsonKey string) (string, bool) {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
 		return "", false
@@ -739,14 +741,21 @@ func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[s
 	if err != nil {
 		return "", false
 	}
-	if idx := findMCPInstallRecord(inst, item, provSlug); idx >= 0 {
+	// A record under the legacy root describes the provider's config
+	// there. A provider whose config lives in the project has another file
+	// here, so only a server this file holds counts as installed.
+	legacyPath, legacyErr := mcpConfigPath(prov, legacyRoot)
+	targetPath, targetErr := mcpConfigPath(prov, repoRoot)
+	sameFile := legacyErr == nil && targetErr == nil && legacyPath == targetPath
+	if idx := findMCPInstallRecord(inst, item, prov.Slug); idx >= 0 {
 		entry := inst.MCP[idx]
-		if entry.Provider != "" || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
+		if (entry.Provider != "" && sameFile) || mcpRecordInConfig(entry, item.Name, fileData, jsonKey) {
 			return item.Name, true
 		}
 	}
 	for name := range entries {
-		if mcpServerClaimed(inst, name, provSlug, gjson.GetBytes(fileData, jsonKey+"."+name).Exists()) {
+		inTarget := gjson.GetBytes(fileData, jsonKey+"."+name).Exists()
+		if (sameFile || inTarget) && mcpServerClaimed(inst, name, prov.Slug, inTarget) {
 			return name, true
 		}
 	}

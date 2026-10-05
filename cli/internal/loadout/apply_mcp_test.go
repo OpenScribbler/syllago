@@ -14,6 +14,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
+	"github.com/tidwall/gjson"
 )
 
 // setupMCPEnv builds a Cursor loadout holding one MCP item whose
@@ -296,32 +297,45 @@ func TestApply_SkipsTheSameServerFromAnotherProject(t *testing.T) {
 
 // TestApply_SkipsAServerInstalledUnderTheLegacyRoot: a server a record
 // under the global content dir placed is installed already, so the apply
-// skips it as it skips one this project's installed.json records.
+// skips it as it skips one this project's installed.json records, even
+// with other settings. Cursor's config lives in the project, so the record
+// describes another file, and a project config without the server gets it.
 func TestApply_SkipsAServerInstalledUnderTheLegacyRoot(t *testing.T) {
-	projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, `{"mcpServers":{"legacy-srv":{"command":"node"}}}`)
-	cat.Items[0].Name, cat.Items[0].ServerKey = "legacy-srv", "legacy-srv"
-	manifest.MCP = []ItemRef{{Name: "legacy-srv"}}
 	legacyRoot := catalog.GlobalContentDirOverride
 	legacy := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "legacy-srv", ServerKey: "legacy-srv", Source: "manual", Provider: "cursor"}}}
 	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
 		t.Fatalf("SaveInstalled: %v", err)
 	}
 	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
-	before, _ := os.ReadFile(cfgPath)
-	opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
+	tests := []struct {
+		name, existing, want string
+	}{
+		{"config holds the server", `{"mcpServers":{"legacy-srv":{"command":"old"}}}`, "skip-exists"},
+		{"config lacks the server", `{"mcpServers":{}}`, "merge-mcp"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projectRoot, cfgPath, manifest, cat := setupMCPEnv(t, `{"command":"node"}`, tt.existing)
+			cat.Items[0].Name, cat.Items[0].ServerKey = "legacy-srv", "legacy-srv"
+			manifest.MCP = []ItemRef{{Name: "legacy-srv"}}
+			opts := ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: t.TempDir(), RepoRoot: projectRoot}
 
-	result, err := Apply(manifest, cat, provider.Cursor, opts)
-	if err != nil {
-		t.Fatalf("preview: %v", err)
-	}
-	if len(result.Actions) != 1 || result.Actions[0].Action != "skip-exists" {
-		t.Fatalf("preview actions: got %+v, want one skip-exists", result.Actions)
-	}
-	opts.Mode = "keep"
-	if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
-		t.Fatalf("Apply: %v", err)
-	}
-	if got, _ := os.ReadFile(cfgPath); string(got) != string(before) {
-		t.Errorf("config: got %s, want it unchanged as %s", got, before)
+			result, err := Apply(manifest, cat, provider.Cursor, opts)
+			if err != nil {
+				t.Fatalf("preview: %v", err)
+			}
+			if len(result.Actions) != 1 || result.Actions[0].Action != tt.want {
+				t.Fatalf("preview actions: got %+v, want one %s", result.Actions, tt.want)
+			}
+			opts.Mode = "keep"
+			if _, err := Apply(manifest, cat, provider.Cursor, opts); err != nil {
+				t.Fatalf("Apply: %v", err)
+			}
+			got, _ := os.ReadFile(cfgPath)
+			placed := gjson.GetBytes(got, "mcpServers.legacy-srv.command").String() == "node"
+			if placed != (tt.want == "merge-mcp") {
+				t.Errorf("config: got %s, want the server placed only when the config lacked it", got)
+			}
+		})
 	}
 }
