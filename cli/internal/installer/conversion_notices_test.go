@@ -212,3 +212,27 @@ func TestInstallMCP_ReportsOnlyTheInstalledServer(t *testing.T) {
 		})
 	}
 }
+
+// TestDroppedServerFields_ReadsFieldsAsTheMergeDoes: the merge decodes a
+// field name in any case, reads the entry extraction chose, and finds no
+// fields to leave out in a server that is not an object.
+func TestDroppedServerFields_ReadsFieldsAsTheMergeDoes(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want []string
+	}{
+		{"case-folded fields", `{"mcpServers":{"gh":{"Command":"x","URL":"u"}}}`, nil},
+		{"null server", `{"mcpServers":{"gh":null}}`, nil},
+		{"flat file", `{"command":"x","cwd":"/tmp"}`, []string{`server "gh": cwd not installed (syllago writes only type, command, args, url, env)`}},
+		{"undecodable server read flat", `{"command":"run","headers":{},"mcpServers":{"gh":{"command":123,"alwaysAllow":["x"]}}}`, []string{`server "gh": headers, mcpServers not installed (syllago writes only type, command, args, url, env)`}},
+		{"last decodable duplicate", `{"mcpServers":{"gh":{"command":"a","cwd":"/"},"gh":{"command":1,"alwaysAllow":[]}}}`, []string{`server "gh": cwd not installed (syllago writes only type, command, args, url, env)`}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := droppedServerFields([]byte(tt.raw), "gh", "mcpServers", []string{"gh"}); !slices.Equal(got, tt.want) {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
