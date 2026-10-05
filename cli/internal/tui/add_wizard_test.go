@@ -1048,7 +1048,7 @@ func TestDiscoverFromLocalPath_ReturnsItems(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	items, _, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1101,7 +1101,7 @@ func TestDiscoverFromLocalPath_TypeFilter(t *testing.T) {
 	}
 
 	// Request only Rules
-	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	items, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1135,7 +1135,7 @@ func TestDiscoverFromLocalPath_NoDuplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	items, _, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1160,7 +1160,7 @@ func TestDiscoverFromLocalPath_EmptyDir(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	items, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath on empty dir: %v", err)
 	}
@@ -1191,7 +1191,7 @@ func TestDiscoverFromLocalPath_AnalyzerConfirmItemsMerged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	_, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1224,7 +1224,7 @@ func TestDiscoverFromLocalPath_ConfirmItemsReturned(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Hooks}, "")
+	_, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Hooks}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1259,7 +1259,7 @@ func TestDiscoverFromLocalPath_RootLevelRule_NoSourceDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	items, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1298,7 +1298,7 @@ func TestDiscoverFromLocalPath_NoFrontmatter_LabelNotBlank(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, confirm, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
+	items, confirm, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Rules}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}
@@ -1341,7 +1341,7 @@ func TestDiscoverFromLocalPath_RelativePathPopulated(t *testing.T) {
 		}
 	}
 
-	items, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
+	items, _, _, err := discoverFromLocalPath(dir, []catalog.ContentType{catalog.Skills}, "")
 	if err != nil {
 		t.Fatalf("discoverFromLocalPath: %v", err)
 	}

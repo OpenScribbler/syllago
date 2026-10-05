@@ -938,3 +938,31 @@ func TestAddFromSettings_SuffixedServerKeepsItsKey(t *testing.T) {
 	}
 	t.Fatalf("the Library lists nothing at %s", r.Dest)
 }
+
+// A folder imported from elsewhere yields the entries of its own files,
+// never those of the user's settings.
+func TestDiscoverSettingsFiles_ReadsOnlyTheFilesGiven(t *testing.T) {
+	_, globalDir := settingsEnv(t)
+	home, _ := os.UserHomeDir()
+	writeFile(t, filepath.Join(home, ".claude.json"), `{"mcpServers": {"home-db": {"command": "mine"}}}`)
+	writeFile(t, filepath.Join(home, ".claude", "settings.json"), `{"mcpServers": {"home-db": {"command": "mine"}}}`)
+	folder := t.TempDir()
+	good := filepath.Join(folder, ".mcp.json")
+	broken := filepath.Join(folder, ".claude", "settings.json")
+	writeFile(t, good, `{"mcpServers": {"db": {"command": "db-server"}}}`)
+	writeFile(t, broken, `{"mcpServers": `)
+
+	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, []string{good, broken}, globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettingsFiles: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "db" || items[0].Scope != "project" || items[0].Status != StatusNew {
+		t.Errorf("items %v, want the folder's db server alone, new and project scope", itemNames(items))
+	}
+	if len(unread) != 1 || !strings.Contains(unread[0].Error(), broken) {
+		t.Errorf("unread = %v, want the broken file", unread)
+	}
+	if _, _, err := DiscoverSettingsFiles(provider.ClaudeCode, []string{good}, globalDir, catalog.Rules); err == nil {
+		t.Error("rules: want an error, since rules are not kept in settings files")
+	}
+}

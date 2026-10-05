@@ -152,13 +152,21 @@ func TestAddSingleItemOutdatedHookRotatesInstallRecord(t *testing.T) {
 		Event: "before_tool_execute",
 		Hooks: []converter.HookEntry{{Type: "command", Command: "echo updated"}},
 	}
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	writeTUITestFile(t, settingsPath, []byte(`{"hooks": {}}`))
+	s := &add.SettingsItem{
+		DiscoveryItem: add.DiscoveryItem{Name: "my-hook", Type: catalog.Hooks, Path: settingsPath, Scope: "project", Status: add.StatusOutdated},
+		Hook:          &hook,
+		Dest:          libraryPath,
+	}
 	item := addDiscoveryItem{
-		name:       "my-hook",
-		itemType:   catalog.Hooks,
-		overwrite:  true,
-		status:     add.StatusOutdated,
-		hookData:   &hook,
-		underlying: &add.DiscoveryItem{Name: "my-hook", Type: catalog.Hooks, Status: add.StatusOutdated},
+		name:        "my-hook",
+		displayName: "my-hook",
+		itemType:    catalog.Hooks,
+		overwrite:   true,
+		status:      add.StatusOutdated,
+		underlying:  &s.DiscoveryItem,
+		settings:    s,
 	}
 
 	result := addSingleItem(item, contentRoot, "", "acme/tools", "private", "claude-code", "sha-new")

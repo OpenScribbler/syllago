@@ -48,6 +48,7 @@ type SettingsItem struct {
 // Dest and Status assume every discovered item is added; AddFromSettings
 // places the items it is given afresh.
 func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
+	var files []settingsFile
 	switch ct {
 	case catalog.Hooks:
 		locations, err := installer.FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
@@ -55,51 +56,62 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 			return nil, nil, fmt.Errorf("finding settings locations: %w", err)
 		}
 		for _, loc := range locations {
-			data, err := os.ReadFile(loc.Path)
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					unread = append(unread, err)
-				}
-				continue
-			}
-			if !gjson.ValidBytes(data) {
-				unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", loc.Path))
-				continue
-			}
-			// A settings file kept for other settings holds no hooks.
-			if !gjson.GetBytes(data, "hooks").Exists() {
-				continue
-			}
-			hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
-			if err != nil {
-				unread = append(unread, fmt.Errorf("parsing %s: %w", loc.Path, err))
-				continue
-			}
-			names := hookNames(hooks)
-			for i, hook := range hooks {
-				items = append(items, SettingsItem{
-					DiscoveryItem: DiscoveryItem{Name: names[i], Type: catalog.Hooks, Path: loc.Path, Scope: loc.Scope.String()},
-					Hook:          &hook,
-				})
-			}
+			files = append(files, settingsFile{path: loc.Path, scope: loc.Scope.String()})
 		}
 	case catalog.MCP:
 		for _, loc := range installer.FindMCPLocations(prov, projectRoot, baseDir) {
-			data, err := os.ReadFile(loc.Path)
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					unread = append(unread, err)
-				}
-				continue
+			files = append(files, settingsFile{path: loc.Path, scope: loc.Scope.String(), jsonKey: loc.JSONKey})
+		}
+	default:
+		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
+	}
+	items, unread = readSettings(prov, files, globalDir, ct)
+	return items, unread, nil
+}
+
+// DiscoverSettingsFiles reads the hooks or MCP servers (ct picks which) in
+// the files at paths, which hold prov's settings for one project, and
+// places them as DiscoverSettings does. It reads those files alone, so a
+// folder imported from elsewhere never pulls in the user's own settings.
+func DiscoverSettingsFiles(prov provider.Provider, paths []string, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
+	if ct != catalog.Hooks && ct != catalog.MCP {
+		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
+	}
+	files := make([]settingsFile, len(paths))
+	for i, path := range paths {
+		files[i] = settingsFile{path: path, scope: installer.ScopeProject.String(), jsonKey: installer.MCPJSONKey(prov)}
+	}
+	items, unread = readSettings(prov, files, globalDir, ct)
+	return items, unread, nil
+}
+
+// settingsFile is one file to read settings items from: its scope, and for
+// MCP servers the JSON path they sit under.
+type settingsFile struct {
+	path, scope, jsonKey string
+}
+
+// readSettings reads the hooks or MCP servers in files and places them.
+// A file that is missing is skipped; one that cannot be read or parsed is
+// reported in unread.
+func readSettings(prov provider.Provider, files []settingsFile, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error) {
+	for _, f := range files {
+		data, err := os.ReadFile(f.path)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				unread = append(unread, err)
 			}
-			if prov.Slug == "opencode" {
-				data = converter.StripJSONCComments(data)
-			}
-			if !gjson.ValidBytes(data) {
-				unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", loc.Path))
-				continue
-			}
-			servers := gjson.GetBytes(data, loc.JSONKey)
+			continue
+		}
+		if ct == catalog.MCP && prov.Slug == "opencode" {
+			data = converter.StripJSONCComments(data)
+		}
+		if !gjson.ValidBytes(data) {
+			unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", f.path))
+			continue
+		}
+		if ct == catalog.MCP {
+			servers := gjson.GetBytes(data, f.jsonKey)
 			if !servers.Exists() || servers.Type != gjson.JSON {
 				continue
 			}
@@ -111,15 +123,30 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 					return true
 				}
 				items = append(items, SettingsItem{
-					DiscoveryItem: DiscoveryItem{Name: key.String(), Type: catalog.MCP, Path: loc.Path, Scope: loc.Scope.String()},
+					DiscoveryItem: DiscoveryItem{Name: key.String(), Type: catalog.MCP, Path: f.path, Scope: f.scope},
 					ServerKey:     key.String(),
 					Server:        json.RawMessage(value.Raw),
 				})
 				return true
 			})
+			continue
 		}
-	default:
-		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
+		// A settings file kept for other settings holds no hooks.
+		if !gjson.GetBytes(data, "hooks").Exists() {
+			continue
+		}
+		hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
+		if err != nil {
+			unread = append(unread, fmt.Errorf("parsing %s: %w", f.path, err))
+			continue
+		}
+		names := hookNames(hooks)
+		for i, hook := range hooks {
+			items = append(items, SettingsItem{
+				DiscoveryItem: DiscoveryItem{Name: names[i], Type: catalog.Hooks, Path: f.path, Scope: f.scope},
+				Hook:          &hook,
+			})
+		}
 	}
 
 	claimed := map[string]bool{}
@@ -127,7 +154,7 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 		items[i].Dest, items[i].Status = settingsDest(globalDir, prov.Slug, &items[i], claimed)
 		claimed[items[i].Dest] = true
 	}
-	return items, unread, nil
+	return items, unread
 }
 
 // hookNames names each hook of one settings file. A hook whose derived

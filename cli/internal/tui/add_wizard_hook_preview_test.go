@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 )
@@ -282,13 +281,13 @@ func TestReadHookPreviewContent_UnreferencedScriptRejected(t *testing.T) {
 	}
 }
 
-// TestNativeItemsToDiscovery_HooksSplitPerEntry verifies that when local-path
+// TestDiscoverSettingsFromFolder_HooksSplitPerEntry verifies that when local-path
 // discovery surfaces a settings.json containing multiple events/matchers,
-// nativeItemsToDiscovery produces ONE addDiscoveryItem per canonical hook —
+// discoverSettingsFromFolder produces ONE addDiscoveryItem per canonical hook —
 // each with its own hookData — rather than a single item whose drill-in shows
 // the whole settings.json. This is the regression test for the "add wizard
 // shows multiple events under one name" bug.
-func TestNativeItemsToDiscovery_HooksSplitPerEntry(t *testing.T) {
+func TestDiscoverSettingsFromFolder_HooksSplitPerEntry(t *testing.T) {
 	baseDir := t.TempDir()
 	settingsRel := filepath.Join(".claude", "settings.json")
 	settingsAbs := filepath.Join(baseDir, settingsRel)
@@ -328,7 +327,10 @@ func TestNativeItemsToDiscovery_HooksSplitPerEntry(t *testing.T) {
 	}
 	typeSet := map[catalog.ContentType]bool{catalog.Hooks: true}
 
-	items := nativeItemsToDiscovery(baseDir, result, typeSet, add.LibraryIndex{})
+	items, _, unread := discoverSettingsFromFolder(baseDir, result, nil, typeSet, t.TempDir())
+	if len(unread) > 0 {
+		t.Fatalf("unread = %v", unread)
+	}
 
 	if len(items) != 3 {
 		t.Fatalf("expected 3 discovery items (one per canonical hook), got %d", len(items))

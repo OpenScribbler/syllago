@@ -981,6 +981,7 @@ func (m *addWizardModel) handleDiscoveryDone(msg addDiscoveryDoneMsg) (*addWizar
 			hookData:          di.hookData,   // needed for triage preview + drill-in
 			hookSourceDir:     di.hookSourceDir,
 			settings:          di.settings,
+			provider:          di.provider,
 			catalogItem:       di.catalogItem, // original item with correct Files list
 			splittable:        di.splittable,
 			splitSectionCount: di.splitSectionCount,
