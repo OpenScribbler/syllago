@@ -111,7 +111,7 @@ func TestAddSingleItem_ProviderMCPAddsOnlyThatServer(t *testing.T) {
 	projectRoot, library, _ := providerSettingsEnv(t)
 	db := mergedProviderItems(t, projectRoot, library)["db"]
 
-	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("status = %q err=%v, want added", result.status, result.err)
 	}
@@ -140,7 +140,7 @@ func TestAddSingleItem_ProviderHookKeepsItsScope(t *testing.T) {
 		t.Fatal("no hook discovered")
 	}
 
-	result := addSingleItem(hook, nil, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(hook, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "added" {
 		t.Fatalf("status = %q err=%v, want added", result.status, result.err)
 	}
@@ -180,7 +180,7 @@ func TestAddSingleItem_ProviderSettingsLeavesPinnedItem(t *testing.T) {
 	db := mergedProviderItems(t, projectRoot, library)["db"]
 	db.overwrite = true
 
-	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -222,7 +222,7 @@ func TestAddSingleItem_ProviderSettingsLeavesPinnedSuffixedServer(t *testing.T) 
 	}
 	db.overwrite = true
 
-	result := addSingleItem(db, nil, library, projectRoot, "", "", "claude-code", "")
+	result := addSingleItem(db, library, projectRoot, "", "", "claude-code", "")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -289,6 +289,50 @@ func TestAddItemCmd_PlacesSettingsItemsAfterEarlierOnes(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(library, string(catalog.MCP), "claude-code", dir, "config.json")); err != nil {
 			t.Errorf("%s: %v", dir, err)
 		}
+	}
+}
+
+// Regression: a server discovered beside a same-name server already in the
+// Library was shown as new, but the wizard placed it again counting only
+// the selected items, landed it on the first server's directory and
+// skipped it as already added.
+func TestAddItemCmd_AddsANewServerBesideAnUnselectedOne(t *testing.T) {
+	projectRoot, library, _ := providerSettingsEnv(t)
+	writeTUITestFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), []byte(`{"mcpServers": {"db": {"command": "from-settings"}}}`))
+	if err := os.Remove(filepath.Join(projectRoot, ".mcp.json")); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := discoverSettingsFromProvider(provider.ClaudeCode, projectRoot, "", library, catalog.MCP)
+	if len(first) != 1 {
+		t.Fatalf("discovered %d items, want one", len(first))
+	}
+	if r := addSingleItem(first[0], library, projectRoot, "", "", "claude-code", ""); r.status != "added" {
+		t.Fatalf("first add: status %q err %v", r.status, r.err)
+	}
+	writeTUITestFile(t, filepath.Join(projectRoot, ".mcp.json"), []byte(`{"mcpServers": {"db": {"command": "from-mcp-json"}}}`))
+	items, _ := discoverSettingsFromProvider(provider.ClaudeCode, projectRoot, "", library, catalog.MCP)
+	if len(items) != 2 {
+		t.Fatalf("discovered %d items, want two", len(items))
+	}
+
+	m := testOpenAddWizard(t)
+	m.source = addSourceProvider
+	m.providers = []provider.Provider{provider.ClaudeCode}
+	m.providerCursor = 0
+	m.contentRoot, m.projectRoot = library, projectRoot
+	m.discoveredItems = items
+	m.actionableCount = len(items)
+	m.discoveryList = m.buildDiscoveryList()
+	if sel := m.selectedItems(); len(sel) != 1 || sel[0].settings.Path != filepath.Join(projectRoot, ".mcp.json") {
+		t.Fatalf("selected %d items, want only the .mcp.json server", len(sel))
+	}
+	msg := m.addItemCmd(0)().(addExecItemDoneMsg)
+	if msg.result.status != "added" {
+		t.Fatalf("status %q err %v, want added", msg.result.status, msg.result.err)
+	}
+	data, _ := os.ReadFile(filepath.Join(library, string(catalog.MCP), "claude-code", "db-2", "config.json"))
+	if !strings.Contains(string(data), "from-mcp-json") {
+		t.Errorf("db-2/config.json = %s, want the .mcp.json server", data)
 	}
 }
 

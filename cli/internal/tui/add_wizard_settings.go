@@ -104,9 +104,9 @@ func mcpRisks(server gjson.Result) []catalog.RiskIndicator {
 
 // addSettingsEntry adds a hook or MCP server read from a provider's
 // settings file, as `syllago add` does. A pinned library item is left as it
-// is and reported as pinned. The item is placed after placed, the settings
-// items this add wrote before it.
-func addSettingsEntry(item addDiscoveryItem, placed []add.SettingsItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
+// is and reported as pinned. The item lands where discovery placed it, the
+// place the review step showed.
+func addSettingsEntry(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	s := *item.settings
 	// The review step's rename lands in metadata only. A display name that
 	// is just the entry's name is left out, so a hook placed at a -N
@@ -124,13 +124,13 @@ func addSettingsEntry(item addDiscoveryItem, placed []add.SettingsItem, contentR
 	}
 	plan := opts
 	plan.DryRun = true
-	planned := add.AddFromSettingsAfter(placed, []add.SettingsItem{s}, plan, projectRoot, contentRoot)[0]
+	planned := add.AddPlacedSettings([]add.SettingsItem{s}, plan, projectRoot, contentRoot)[0]
 
 	var r add.SettingsResult
 	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
 		Destinations: []lifecycle.Destination{{Type: item.itemType, Name: planned.LibraryName, Path: planned.Dest}},
 		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
-			r = add.AddFromSettingsAfter(placed, []add.SettingsItem{s}, opts, projectRoot, contentRoot)[0]
+			r = add.AddPlacedSettings([]add.SettingsItem{s}, opts, projectRoot, contentRoot)[0]
 			return []lifecycle.Written{{Path: r.Dest, SourceSHA: srcSHA}}, nil
 		},
 	})

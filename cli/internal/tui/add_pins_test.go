@@ -23,7 +23,7 @@ func TestAddSingleItemOverwriteRotatesInstallRecord(t *testing.T) {
 	coord, oldHash := seedTUILibraryWriter(t, storePath, libraryPath)
 	item := overwriteWriterItem(t)
 
-	result := addSingleItem(item, nil, contentRoot, "", "acme/tools", "private", "", "sha-new")
+	result := addSingleItem(item, contentRoot, "", "acme/tools", "private", "", "sha-new")
 	if result.status != "updated" {
 		t.Fatalf("status = %q err=%v, want updated", result.status, result.err)
 	}
@@ -60,7 +60,7 @@ func TestAddSingleItemOverwriteLeavesPinnedItem(t *testing.T) {
 
 	// The new content comes from another registry: the pin belongs to the
 	// item already in the Library, whatever the incoming source.
-	result := addSingleItem(overwriteWriterItem(t), nil, contentRoot, "", "other/tools", "private", "", "sha-new")
+	result := addSingleItem(overwriteWriterItem(t), contentRoot, "", "other/tools", "private", "", "sha-new")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -87,7 +87,7 @@ func TestAddSingleItemDisplayNameStillChecksPin(t *testing.T) {
 	item := overwriteWriterItem(t)
 	item.name = "Writer Display"
 
-	result := addSingleItem(item, nil, contentRoot, "", "acme/tools", "private", "", "sha-new")
+	result := addSingleItem(item, contentRoot, "", "acme/tools", "private", "", "sha-new")
 	if result.status != "pinned" {
 		t.Fatalf("status = %q err=%v, want pinned", result.status, result.err)
 	}
@@ -161,7 +161,7 @@ func TestAddSingleItemOutdatedHookRotatesInstallRecord(t *testing.T) {
 		underlying: &add.DiscoveryItem{Name: "my-hook", Type: catalog.Hooks, Status: add.StatusOutdated},
 	}
 
-	result := addSingleItem(item, nil, contentRoot, "", "acme/tools", "private", "claude-code", "sha-new")
+	result := addSingleItem(item, contentRoot, "", "acme/tools", "private", "claude-code", "sha-new")
 	if result.err != nil {
 		t.Fatalf("addSingleItem: status=%q err=%v", result.status, result.err)
 	}

@@ -775,27 +775,63 @@ func TestAddFromSettings_TaintSurvivesASecondAdd(t *testing.T) {
 	}
 }
 
-// Regression: adding two same-scope, same-name servers one call at a time
-// placed the second on the first's directory and skipped it as added.
-func TestAddFromSettingsAfter_PlacesBesideEarlierItems(t *testing.T) {
+// Regression: a server discovered beside a same-scope, same-name server
+// already in the Library was shown as new at db-2, but adding it alone
+// placed it again, on the first server's directory, and skipped it.
+func TestAddPlacedSettings_LandsWhereDiscoveryPlacedIt(t *testing.T) {
 	projectRoot, globalDir := settingsEnv(t)
-	item := func(file, command string) SettingsItem {
-		return SettingsItem{
-			DiscoveryItem: DiscoveryItem{Name: "db", Type: catalog.MCP, Path: filepath.Join(projectRoot, file), Scope: "project"},
-			ServerKey:     "db",
-			Server:        json.RawMessage(`{"command": "` + command + `"}`),
-		}
-	}
-	first, second := item(".mcp.json", "one"), item(filepath.Join(".claude", "settings.json"), "two")
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"mcpServers": {"db": {"command": "one"}}}`)
 	opts := AddOptions{Provider: "claude-code"}
-	AddFromSettings([]SettingsItem{first}, opts, projectRoot, globalDir)
+	first, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(first) != 1 {
+		t.Fatalf("DiscoverSettings: items %v err %v", itemNames(first), err)
+	}
+	AddFromSettings(first, opts, projectRoot, globalDir)
 
-	r := AddFromSettingsAfter([]SettingsItem{first}, []SettingsItem{second}, opts, projectRoot, globalDir)[0]
+	writeFile(t, filepath.Join(projectRoot, ".mcp.json"), `{"mcpServers": {"db": {"command": "two"}}}`)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(items) != 2 || items[1].Status != StatusNew {
+		t.Fatalf("DiscoverSettings: items %v err %v, want the .mcp.json server second and new", itemNames(items), err)
+	}
+	r := AddPlacedSettings(items[1:], opts, projectRoot, globalDir)[0]
 	if want := filepath.Join(globalDir, "mcp", "claude-code", "db-2"); r.Status != AddStatusAdded || r.Dest != want {
 		t.Fatalf("status %v dest %s, want added at %s", r.Status, r.Dest, want)
 	}
 	if data, _ := os.ReadFile(filepath.Join(r.Dest, "config.json")); !strings.Contains(string(data), `"two"`) {
 		t.Errorf("config.json = %s, want the second server", data)
+	}
+}
+
+// Regression: an add naming its registry recorded no hash, so the same
+// settings added again from a plain file did not find the private item
+// and lost its registry.
+func TestAddFromSettings_RegistryAddRecordsItsHash(t *testing.T) {
+	const servers = `{"mcpServers": {"db": {"command": "db-server"}}}` + "\n"
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), servers)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil || len(items) != 1 {
+		t.Fatalf("DiscoverSettings: items %v err %v", itemNames(items), err)
+	}
+	private := AddOptions{Provider: "claude-code", SourceRegistry: "acme/private", SourceVisibility: "private"}
+	if r := AddFromSettings(items, private, projectRoot, globalDir)[0]; r.Status != AddStatusAdded {
+		t.Fatalf("first add: status %v err %v", r.Status, r.Error)
+	}
+
+	plain := filepath.Join(t.TempDir(), "settings.json")
+	writeFile(t, plain, servers)
+	again := items[0]
+	again.Path, again.Scope = plain, "global"
+	r := AddFromSettings([]SettingsItem{again}, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
+	if r.Status != AddStatusAdded {
+		t.Fatalf("second add: status %v err %v", r.Status, r.Error)
+	}
+	meta, err := metadata.Load(r.Dest)
+	if err != nil || meta == nil {
+		t.Fatalf("metadata.Load: %v", err)
+	}
+	if meta.SourceRegistry != "acme/private" || meta.SourceVisibility != "private" {
+		t.Errorf("registry %q visibility %q, want acme/private private", meta.SourceRegistry, meta.SourceVisibility)
 	}
 }
 

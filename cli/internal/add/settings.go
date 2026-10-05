@@ -223,23 +223,21 @@ type SettingsResult struct {
 // left as it is unless opts.Force. projectRoot names the project a
 // project-scope item came from.
 func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
-	return AddFromSettingsAfter(nil, items, opts, projectRoot, globalDir)
+	placed := slices.Clone(items)
+	claimed := map[string]bool{}
+	for i := range placed {
+		placed[i].Dest, placed[i].Status = settingsDest(globalDir, opts.Provider, &placed[i], claimed)
+		claimed[placed[i].Dest] = true
+	}
+	return AddPlacedSettings(placed, opts, projectRoot, globalDir)
 }
 
-// AddFromSettingsAfter adds items as AddFromSettings does, as the later
-// part of an add whose earlier calls added placed. The placed items claim
-// their directories first, so two items that share a scope and a name
-// land side by side when they are added one call at a time.
-func AddFromSettingsAfter(placed, items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
+// AddPlacedSettings adds items as AddFromSettings does, each at the Dest
+// and with the Status DiscoverSettings gave it, so an add of some of the
+// discovered items lands each where discovery reported it.
+func AddPlacedSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
 	results := make([]SettingsResult, 0, len(items))
-	claimed := map[string]bool{}
-	for _, item := range placed {
-		dest, _ := settingsDest(globalDir, opts.Provider, &item, claimed)
-		claimed[dest] = true
-	}
 	for _, item := range items {
-		item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
-		claimed[item.Dest] = true
 		results = append(results, addSettingsItem(item, opts, projectRoot, globalDir))
 	}
 	return results
@@ -324,6 +322,11 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		SourceScope:      item.Scope,
 		SourceName:       item.Name,
 	}
+	// The hash lets a later add of the same file find this item, whichever
+	// registry it came from.
+	if raw, err := os.ReadFile(item.Path); err == nil {
+		meta.SourceHash = sourceHash(raw)
+	}
 	if opts.SourceRegistry != "" {
 		meta.SourceType = "registry"
 		meta.SourceSHA = opts.SourceSHA
@@ -332,12 +335,8 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		// through a symlink into the Library, or one whose content matches
 		// private Library content, keeps that content's registry.
 		reg, vis := traceSymlinkTaint(item.Path, globalDir)
-		if raw, err := os.ReadFile(item.Path); err == nil {
-			// The hash lets a later add of the same file find this item.
-			meta.SourceHash = sourceHash(raw)
-			if reg == "" {
-				reg, vis = hashMatchTaint(meta.SourceHash, globalDir)
-			}
+		if reg == "" && meta.SourceHash != "" {
+			reg, vis = hashMatchTaint(meta.SourceHash, globalDir)
 		}
 		if reg != "" {
 			meta.SourceRegistry, meta.SourceVisibility = reg, vis
