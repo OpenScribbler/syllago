@@ -197,6 +197,8 @@ func exactToolNames(matcher string) (names []string, ok bool) {
 		if part == "*" || part == ".*" {
 			return nil, true
 		}
+	}
+	for _, part := range parts {
 		if strings.ContainsAny(part, `.*+?()[]{}^$\`) {
 			return nil, false
 		}

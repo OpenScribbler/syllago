@@ -242,6 +242,8 @@ func TestAnalyzeHookCompat_PiMatcherShapes(t *testing.T) {
 		{"*", CompatFull},
 		{"shell|file_read", CompatFull},
 		{"file_.*", CompatBroken},
+		{"file_.*|.*", CompatFull},
+		{".*|file_.*", CompatFull},
 	}
 	for _, tc := range cases {
 		t.Run(tc.matcher, func(t *testing.T) {

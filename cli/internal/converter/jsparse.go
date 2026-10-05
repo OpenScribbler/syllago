@@ -327,6 +327,25 @@ func extractToolNameGuard(block string) string {
 	if idx < 0 {
 		return ""
 	}
+	// A guard on several tools lists them before the comparison:
+	// if (!["bash", "read"].includes(event.toolName)) return;
+	if before := block[:idx]; strings.HasSuffix(before, "].includes(") {
+		open := strings.LastIndex(before, "[")
+		var names []string
+		for rest := before[open+1 : len(before)-len("].includes(")]; ; {
+			name, ok := firstStringLiteral(rest)
+			if !ok {
+				break
+			}
+			names = append(names, name)
+			comma := strings.Index(rest, ",")
+			if comma < 0 {
+				break
+			}
+			rest = rest[comma+1:]
+		}
+		return strings.Join(names, "|")
+	}
 	matcher, _ := firstStringLiteral(block[idx:])
 	return matcher
 }
