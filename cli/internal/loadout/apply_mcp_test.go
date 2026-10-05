@@ -243,6 +243,9 @@ func TestApply_FailedRollbackKeepsTheSnapshot(t *testing.T) {
 			if loadErr != nil {
 				t.Fatalf("snapshot.Load after the failed rollback: %v", loadErr)
 			}
+			if !strings.Contains(err.Error(), "createdFiles and symlinks") {
+				t.Errorf("Apply: got %v, want the by-hand steps to name the created files and symlinks", err)
+			}
 			if !strings.Contains(err.Error(), snapDir) {
 				t.Errorf("Apply: got %v, want it to name the kept snapshot %s", err, snapDir)
 			}

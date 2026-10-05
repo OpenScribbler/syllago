@@ -465,9 +465,7 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 		return mcpMerge{}, fmt.Errorf("reading %s: invalid JSON; fix or delete the file", cfgPath)
 	}
 
-	if serverName, ok := legacyMCPInstalled(repoRoot, item, entries, prov, fileData, jsonKey); ok {
-		return mcpMerge{}, fmt.Errorf("MCP server %q %w", serverName, ErrMCPInstalled)
-	}
+	legacy := legacyMCPServers(repoRoot, item, entries, prov.Slug)
 
 	// Merge each server entry into the target config
 	var serverNames []string
@@ -481,6 +479,14 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 
 		// H2: Check for collision with user-defined (non-syllago) server keys
 		if existing := gjson.GetBytes(fileData, key); existing.Exists() {
+			// A record under the legacy root can outlive its server, and
+			// one for a provider whose config lives in the project
+			// describes another file, so it counts only for a server this
+			// file holds, as status reports it.
+			if legacy[name] {
+				sameName = name
+				continue
+			}
 			// Check if this key was installed by syllago (safe to overwrite)
 			syllagoManaged := mcpServerClaimed(inst, name, prov.Slug, true)
 			if !syllagoManaged {
@@ -509,9 +515,9 @@ func mergeMCP(item catalog.ContentItem, prov provider.Provider, repoRoot string,
 	return mcpMerge{rawData: rawData, entries: entries, jsonKey: jsonKey, cfgPath: cfgPath, data: fileData, serverNames: serverNames, keys: keys}, nil
 }
 
-// ErrMCPInstalled is the merge's error for a server a record under the
-// legacy root already placed, or one the target config already holds with
-// the same settings.
+// ErrMCPInstalled is the merge's error for an item whose servers the target
+// config already holds, each placed by a record under the legacy root or
+// with the same settings.
 var ErrMCPInstalled = errors.New("already installed")
 
 // jsonEqual reports whether a and b decode to the same JSON value, so a
@@ -729,31 +735,29 @@ func mcpStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot 
 	return StatusNotInstalled, instErr
 }
 
-// legacyMCPInstalled reports whether the legacy root's installed.json
-// records item, or one of its servers, as installed on the provider with
-// slug provSlug. fileData is that provider's MCP config and jsonKey its
-// servers key.
-func legacyMCPInstalled(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, prov provider.Provider, fileData []byte, jsonKey string) (string, bool) {
+// legacyMCPServers returns the names in entries that the legacy root's
+// installed.json records as installed on the provider with slug provSlug,
+// by a record for item or by any record that names the server.
+func legacyMCPServers(repoRoot string, item catalog.ContentItem, entries map[string]json.RawMessage, provSlug string) map[string]bool {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
-		return "", false
+		return nil
 	}
 	inst, err := LoadInstalled(legacyRoot)
 	if err != nil {
-		return "", false
+		return nil
 	}
-	// A record can outlive its server, and a record for a provider whose
-	// config lives in the project describes another file, so only a server
-	// this file holds counts as installed, as status reports it.
-	if idx := findMCPInstallRecord(inst, item, prov.Slug); idx >= 0 && mcpRecordInConfig(inst.MCP[idx], item.Name, fileData, jsonKey) {
-		return item.Name, true
+	var itemKeys []string
+	if idx := findMCPInstallRecord(inst, item, provSlug); idx >= 0 {
+		itemKeys = inst.MCP[idx].serverKeys(item.Name)
 	}
+	claimed := make(map[string]bool)
 	for name := range entries {
-		if gjson.GetBytes(fileData, jsonKey+"."+name).Exists() && mcpServerClaimed(inst, name, prov.Slug, true) {
-			return name, true
+		if slices.Contains(itemKeys, name) || mcpServerClaimed(inst, name, provSlug, true) {
+			claimed[name] = true
 		}
 	}
-	return "", false
+	return claimed
 }
 
 // mcpRecordInConfig reports whether any server the entry placed is in

@@ -143,9 +143,10 @@ func mcpRisks(item ContentItem) []RiskIndicator {
 		}
 		lines := strings.Split(string(data), "\n")
 
-		// MCP config format: {"mcpServers": {"name": {"env": {...}}}}
+		// MCP config format: {"mcpServers": {"name": {"env": {...}}}}, or
+		// Zed's context_servers in place of mcpServers.
 		hasEnv := false
-		gjson.GetBytes(data, "mcpServers").ForEach(func(_, srv gjson.Result) bool {
+		MCPServersWrapper(data).ForEach(func(_, srv gjson.Result) bool {
 			if srv.Get("env").Exists() {
 				hasEnv = true
 			}

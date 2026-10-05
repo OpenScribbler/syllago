@@ -400,6 +400,42 @@ func TestInstallMCP_PlacesTheServersASharedConfigLacks(t *testing.T) {
 	}
 }
 
+// A server of a bundle that a legacy record placed in the target config is
+// left out, and the bundle's other servers are placed.
+func TestInstallMCP_PlacesTheServersALegacyRecordLacks(t *testing.T) {
+	legacyRoot := isolateLegacyRoot(t)
+	dir := t.TempDir()
+	paths := map[string]string{"claude-code": filepath.Join(dir, "claude.json")}
+	overrideMCPConfigPaths(t, paths)
+	if err := os.WriteFile(paths["claude-code"], []byte(`{"mcpServers":{"a":{"command":"old"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{MCP: []InstalledMCP{{Name: "a", ServerKey: "a", Provider: "claude-code"}}}); err != nil {
+		t.Fatal(err)
+	}
+	projectRoot := t.TempDir()
+	itemDir := filepath.Join(projectRoot, "mcp", "bundle")
+	if err := os.MkdirAll(itemDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"a":{"command":"node"},"b":{"command":"y"}}}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	item := catalog.ContentItem{Name: "bundle", Type: catalog.MCP, Path: itemDir}
+
+	if _, err := installMCP(item, provider.ClaudeCode, projectRoot); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+	got, _ := os.ReadFile(paths["claude-code"])
+	if gjson.GetBytes(got, "mcpServers.a.command").String() != "old" || gjson.GetBytes(got, "mcpServers.b.command").String() != "y" {
+		t.Errorf("config: got %s, want a unchanged and b placed", got)
+	}
+	inst, err := LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 1 || !slices.Equal(inst.MCP[0].ServerNames, []string{"b"}) {
+		t.Errorf("records: got %+v (%v), want one claiming only b", inst, err)
+	}
+}
+
 // A legacy record for a config every project shares can outlive its server.
 // Status then reports the server missing, so install places it.
 func TestInstallMCP_StaleLegacyRecordOnASharedConfig(t *testing.T) {
