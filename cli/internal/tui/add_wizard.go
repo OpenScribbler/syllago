@@ -2478,7 +2478,7 @@ func buildHookPreviewFiles(item addDiscoveryItem) []string {
 			continue
 		}
 		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
-		if !ok {
+		if !ok || !bundlesScript(item, resolved) {
 			continue
 		}
 		base := filepath.Base(resolved)
@@ -2492,6 +2492,12 @@ func buildHookPreviewFiles(item addDiscoveryItem) []string {
 		seen[base] = true
 	}
 	return files
+}
+
+// bundlesScript reports whether an add of item would bundle the script at
+// resolved: for a hook imported from a folder, one inside that folder.
+func bundlesScript(item addDiscoveryItem, resolved string) bool {
+	return item.settings == nil || item.settings.ScriptRoot == "" || converter.ResolvesWithin(resolved, item.settings.ScriptRoot)
 }
 
 // resolveHookScriptPath resolves a hook command's script reference to an
@@ -2553,7 +2559,7 @@ func readHookPreviewContent(item addDiscoveryItem, relPath string) (string, erro
 			continue
 		}
 		resolved, ok := resolveHookScriptPath(ref, item.hookSourceDir)
-		if !ok || filepath.Base(resolved) != relPath {
+		if !ok || filepath.Base(resolved) != relPath || !bundlesScript(item, resolved) {
 			continue
 		}
 		data, err := os.ReadFile(resolved)

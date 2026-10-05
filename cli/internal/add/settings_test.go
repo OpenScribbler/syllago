@@ -439,7 +439,9 @@ func TestAddFromSettings_MCPConfigHoldsOneServer(t *testing.T) {
 	}
 }
 
-func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
+// An item whose Library copy differs from what an add would write reads
+// outdated, and an add leaves it alone without force.
+func TestAddFromSettings_ChangedItemNeedsForce(t *testing.T) {
 	items, projectRoot, globalDir := discoverHooks(t)
 	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
 	hookPath := filepath.Join(items[0].Dest, "hook.json")
@@ -449,13 +451,13 @@ func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
-	if again[0].Status != StatusInLibrary || again[0].Dest != items[0].Dest {
-		t.Fatalf("re-discovery: status %v dest %s, want in library at %s", again[0].Status, again[0].Dest, items[0].Dest)
+	if again[0].Status != StatusOutdated || again[0].Dest != items[0].Dest {
+		t.Fatalf("re-discovery: status %v dest %s, want outdated at %s", again[0].Status, again[0].Dest, items[0].Dest)
 	}
 
 	r := AddFromSettings(again[:1], AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
-	if r.Status != AddStatusUpToDate {
-		t.Errorf("status = %v, want up to date", r.Status)
+	if r.Status != AddStatusSkipped {
+		t.Errorf("status = %v, want skipped", r.Status)
 	}
 	if data, _ := os.ReadFile(hookPath); string(data) != `{"edited": true}` {
 		t.Errorf("hook.json changed without force: %s", data)
@@ -952,7 +954,7 @@ func TestDiscoverSettingsFiles_ReadsOnlyTheFilesGiven(t *testing.T) {
 	writeFile(t, good, `{"mcpServers": {"db": {"command": "db-server"}}}`)
 	writeFile(t, broken, `{"mcpServers": `)
 
-	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, t.TempDir(), []string{good, broken}, globalDir, catalog.MCP)
+	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, folder, []string{good, broken}, globalDir, catalog.MCP)
 	if err != nil {
 		t.Fatalf("DiscoverSettingsFiles: %v", err)
 	}
@@ -979,5 +981,80 @@ func TestDiscoverSettingsFiles_ZedSettingsWithComments(t *testing.T) {
 	}
 	if len(items) != 1 || items[0].Name != "db" {
 		t.Errorf("items %v, want the db server", itemNames(items))
+	}
+}
+
+// Regression: a settings entry already added read as in the Library
+// whatever had changed since, so an add never offered the change.
+func TestDiscoverSettings_ChangedEntryReadsOutdated(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	settings := filepath.Join(projectRoot, ".claude", "settings.json")
+	writeFile(t, settings, `{"mcpServers": {"db": {"command": "db-server"}, "web": {"url": "https://example.com/mcp"}}}`)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
+
+	writeFile(t, settings, `{"mcpServers": {"db": {"command": "db-server-v2"}, "web": {"url": "https://example.com/mcp"}}}`)
+	again, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	status := map[string]ItemStatus{}
+	for _, it := range again {
+		status[it.Name] = it.Status
+	}
+	if status["db"] != StatusOutdated || status["web"] != StatusInLibrary {
+		t.Errorf("db %v, web %v; want db outdated and web in the Library", status["db"], status["web"])
+	}
+	for _, r := range AddFromSettings(again, AddOptions{Provider: "claude-code", Force: true}, projectRoot, globalDir) {
+		if r.Name == "db" && r.Status != AddStatusUpdated {
+			t.Errorf("forced db status = %v, want updated", r.Status)
+		}
+	}
+	if data, _ := os.ReadFile(filepath.Join(globalDir, "mcp", "claude-code", "db", "config.json")); !strings.Contains(string(data), "db-server-v2") {
+		t.Errorf("config.json = %s, want the changed server", data)
+	}
+}
+
+// A hook whose bundled script changed reads outdated too, since an add
+// would copy the new script.
+func TestDiscoverSettings_ChangedScriptReadsOutdated(t *testing.T) {
+	items, projectRoot, globalDir := discoverHooks(t)
+	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "check.sh"), "#!/bin/sh\nexit 1\n")
+	again, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	for i, it := range again {
+		usesScript := strings.Contains(it.Hook.Hooks[0].Command, "check.sh")
+		if want := map[bool]ItemStatus{true: StatusOutdated, false: StatusInLibrary}[usesScript]; it.Status != want {
+			t.Errorf("item %d %s: status %v, want %v", i, it.Name, it.Status, want)
+		}
+	}
+}
+
+// Regression: a folder's settings file that linked outside it was read, so
+// an import brought in content from wherever the link pointed.
+func TestDiscoverSettingsFiles_SkipsALinkOutsideTheFolder(t *testing.T) {
+	_, globalDir := settingsEnv(t)
+	outside := filepath.Join(t.TempDir(), "secrets.json")
+	writeFile(t, outside, `{"mcpServers": {"leak": {"command": "secret"}}}`)
+	folder := t.TempDir()
+	link := filepath.Join(folder, ".mcp.json")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatal(err)
+	}
+	items, unread, err := DiscoverSettingsFiles(provider.ClaudeCode, folder, []string{link}, globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettingsFiles: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("items %v, want none from outside the folder", itemNames(items))
+	}
+	if len(unread) != 1 || !strings.Contains(unread[0].Error(), "links outside") {
+		t.Errorf("unread = %v, want the link reported", unread)
 	}
 }

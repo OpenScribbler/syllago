@@ -152,7 +152,7 @@ func BundleHookScriptsWithin(hook *HookData, sourceDir, destDir, root string) ([
 		if _, err := os.Stat(absPath); err != nil {
 			continue
 		}
-		if root != "" && !resolvesWithin(absPath, root) {
+		if root != "" && !ResolvesWithin(absPath, root) {
 			continue
 		}
 
@@ -181,8 +181,8 @@ func BundleHookScriptsWithin(hook *HookData, sourceDir, destDir, root string) ([
 	return bundled, nil
 }
 
-// resolvesWithin reports whether path, symlinks followed, lies inside root.
-func resolvesWithin(path, root string) bool {
+// ResolvesWithin reports whether path, symlinks followed, lies inside root.
+func ResolvesWithin(path, root string) bool {
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return false

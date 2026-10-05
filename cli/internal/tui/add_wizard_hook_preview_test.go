@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
+	"github.com/OpenScribbler/syllago/cli/internal/add"
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 )
@@ -351,5 +353,33 @@ func TestDiscoverSettingsFromFolder_HooksSplitPerEntry(t *testing.T) {
 			t.Errorf("duplicate discovery name %q — each hook must get a unique derived name", it.name)
 		}
 		names[it.name] = true
+	}
+}
+
+// Regression: the preview of a hook imported from a folder listed and read
+// scripts outside the folder, which an add never brings.
+func TestHookPreview_FolderHookShowsOnlyItsOwnScripts(t *testing.T) {
+	folder := t.TempDir()
+	_ = os.WriteFile(filepath.Join(folder, "lint.sh"), []byte("echo lint"), 0o755)
+	outside := filepath.Join(t.TempDir(), "secret.sh")
+	_ = os.WriteFile(outside, []byte("TOKEN=1"), 0o600)
+	item := addDiscoveryItem{
+		name:     "linter",
+		itemType: catalog.Hooks,
+		hookData: &converter.HookData{
+			Event: "before_tool_execute",
+			Hooks: []converter.HookEntry{
+				{Type: "command", Command: "bash ./lint.sh"},
+				{Type: "command", Command: "bash " + outside},
+			},
+		},
+		hookSourceDir: folder,
+		settings:      &add.SettingsItem{ScriptRoot: folder},
+	}
+	if files := buildHookPreviewFiles(item); !slices.Equal(files, []string{"hook.json", "lint.sh"}) {
+		t.Errorf("files = %v, want hook.json and lint.sh", files)
+	}
+	if _, err := readHookPreviewContent(item, "secret.sh"); err == nil {
+		t.Error("read secret.sh, want it refused as outside the folder")
 	}
 }

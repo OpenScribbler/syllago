@@ -710,6 +710,9 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 		case add.AddStatusUpToDate:
 			fmt.Fprintf(output.Writer, "  SKIP %s (already exists, use --force to overwrite)\n", filepath.Base(r.Dest))
 			continue
+		case add.AddStatusSkipped:
+			fmt.Fprintf(output.Writer, "  SKIP %s (changed since it was added, use --force to update)\n", filepath.Base(r.Dest))
+			continue
 		case add.AddStatusError:
 			fmt.Fprintf(output.ErrWriter, "Warning: failed to add %s: %v\n", item.Name, r.Error)
 			continue

@@ -1,6 +1,7 @@
 package add
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,7 +48,9 @@ type SettingsItem struct {
 // directory holds a different item, or the same item added from another
 // scope, the item takes the first -N directory that is free or holds it,
 // so project and global copies sit side by side and a second add finds
-// the first. Status is StatusInLibrary when Dest already holds the item.
+// the first. Status is StatusInLibrary when Dest already holds the item
+// as an add would write it, and StatusOutdated when it holds the item as
+// it was before a change.
 // Dest and Status assume every discovered item is added; AddFromSettings
 // places the items it is given afresh.
 func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
@@ -74,18 +77,26 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 
 // DiscoverSettingsFiles reads the hooks or MCP servers (ct picks which) in
 // the files at paths, which hold prov's settings for the folder root, and
-// places them as DiscoverSettings does. It reads those files alone, and a
-// hook brings only the scripts inside root, so a folder imported from
-// elsewhere never pulls in the user's own settings or files.
+// places them as DiscoverSettings does. It reads those files alone, skips
+// one that links outside root, and a hook brings only the scripts inside
+// root, so a folder imported from elsewhere never pulls in the user's own
+// settings or files.
 func DiscoverSettingsFiles(prov provider.Provider, root string, paths []string, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
 	if ct != catalog.Hooks && ct != catalog.MCP {
 		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
 	}
-	files := make([]settingsFile, len(paths))
-	for i, path := range paths {
-		files[i] = settingsFile{path: path, scope: installer.ScopeProject.String(), jsonKey: installer.MCPJSONKey(prov)}
+	var files []settingsFile
+	for _, path := range paths {
+		// A settings file that links outside root would bring in content
+		// the folder does not hold.
+		if _, err := os.Lstat(path); err == nil && root != "" && !converter.ResolvesWithin(path, root) {
+			unread = append(unread, fmt.Errorf("%s: links outside %s; skipped", path, root))
+			continue
+		}
+		files = append(files, settingsFile{path: path, scope: installer.ScopeProject.String(), jsonKey: installer.MCPJSONKey(prov)})
 	}
-	items, unread = readSettings(prov, files, globalDir, ct)
+	read, readErrs := readSettings(prov, files, globalDir, ct)
+	items, unread = read, append(unread, readErrs...)
 	for i := range items {
 		items[i].ScriptRoot = root
 	}
@@ -223,6 +234,9 @@ func settingsDest(globalDir, provSlug string, item *SettingsItem, claimed map[st
 	slices.Sort(held)
 	for _, i := range held {
 		if !claimed[dir(i)] && holdsItem(dir(i), i, item) {
+			if changedFrom(item, dir(i)) {
+				return dir(i), StatusOutdated
+			}
 			return dir(i), StatusInLibrary
 		}
 	}
@@ -318,8 +332,12 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		r.Status, r.Error = AddStatusError, err
 		return r
 	}
-	if item.Status == StatusInLibrary && !opts.Force {
+	switch {
+	case item.Status == StatusInLibrary && !opts.Force:
 		r.Status = AddStatusUpToDate
+		return r
+	case item.Status == StatusOutdated && !opts.Force:
+		r.Status = AddStatusSkipped
 		return r
 	}
 	r.Status = AddStatusAdded
@@ -334,38 +352,17 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 	}
 
 	metaName := item.Name
-	var bundledMeta []metadata.BundledScriptMeta
-	switch item.Type {
-	case catalog.Hooks:
+	if item.Type == catalog.Hooks {
 		metaName = filepath.Base(item.Dest)
-		// Bundling rewrites each command's script path, so it works on a
-		// copy that leaves the caller's item as discovered.
-		hook := *item.Hook
-		hook.Hooks = slices.Clone(hook.Hooks)
-		bundled, err := converter.BundleHookScriptsWithin(&hook, filepath.Dir(item.Path), item.Dest, item.ScriptRoot)
-		r.Bundled, r.BundleErr = len(bundled), err
-		for _, b := range bundled {
-			bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{OriginalPath: b.OriginalPath, Filename: b.Filename})
-		}
-		manifest, err := converter.ManifestFromHookData(hook)
-		if err != nil {
-			return fail(fmt.Errorf("building manifest: %w", err))
-		}
-		hookJSON, err := json.MarshalIndent(manifest, "", "  ")
-		if err != nil {
-			return fail(fmt.Errorf("marshaling hook: %w", err))
-		}
-		if err := os.WriteFile(filepath.Join(item.Dest, "hook.json"), hookJSON, 0o644); err != nil {
-			return fail(fmt.Errorf("writing hook.json: %w", err))
-		}
-	case catalog.MCP:
-		// Every Library MCP config keeps its servers under mcpServers, the
-		// key the catalog reads server names from, whichever key the
-		// provider's settings file used.
-		configJSON := fmt.Sprintf("{\n  \"mcpServers\": {\n    %q: %s\n  }\n}", item.ServerKey, item.Server)
-		if err := os.WriteFile(filepath.Join(item.Dest, "config.json"), []byte(configJSON), 0o644); err != nil {
-			return fail(fmt.Errorf("writing config.json: %w", err))
-		}
+	}
+	bundled, bundleErr, err := writeSettingsContent(&item, item.Dest)
+	if err != nil {
+		return fail(err)
+	}
+	r.Bundled, r.BundleErr = len(bundled), bundleErr
+	var bundledMeta []metadata.BundledScriptMeta
+	for _, b := range bundled {
+		bundledMeta = append(bundledMeta, metadata.BundledScriptMeta{OriginalPath: b.OriginalPath, Filename: b.Filename})
 	}
 
 	if item.DisplayName != "" {
@@ -414,4 +411,69 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir 
 		return fail(fmt.Errorf("writing metadata: %w", err))
 	}
 	return r
+}
+
+// writeSettingsContent writes item's Library files into dir: a hook's
+// hook.json with the scripts it bundles, or a server's config.json.
+// bundleErr is a script that could not be copied, which leaves the hook
+// written.
+func writeSettingsContent(item *SettingsItem, dir string) (bundled []converter.BundledScript, bundleErr, err error) {
+	switch item.Type {
+	case catalog.Hooks:
+		if item.Hook == nil {
+			return nil, nil, fmt.Errorf("%s holds no hook", item.Name)
+		}
+		// Bundling rewrites each command's script path, so it works on a
+		// copy that leaves the caller's item as discovered.
+		hook := *item.Hook
+		hook.Hooks = slices.Clone(hook.Hooks)
+		bundled, bundleErr = converter.BundleHookScriptsWithin(&hook, filepath.Dir(item.Path), dir, item.ScriptRoot)
+		manifest, err := converter.ManifestFromHookData(hook)
+		if err != nil {
+			return nil, nil, fmt.Errorf("building manifest: %w", err)
+		}
+		hookJSON, err := json.MarshalIndent(manifest, "", "  ")
+		if err != nil {
+			return nil, nil, fmt.Errorf("marshaling hook: %w", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "hook.json"), hookJSON, 0o644); err != nil {
+			return nil, nil, fmt.Errorf("writing hook.json: %w", err)
+		}
+	case catalog.MCP:
+		// Every Library MCP config keeps its servers under mcpServers, the
+		// key the catalog reads server names from, whichever key the
+		// provider's settings file used.
+		configJSON := fmt.Sprintf("{\n  \"mcpServers\": {\n    %q: %s\n  }\n}", item.ServerKey, item.Server)
+		if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(configJSON), 0o644); err != nil {
+			return nil, nil, fmt.Errorf("writing config.json: %w", err)
+		}
+	}
+	return bundled, bundleErr, nil
+}
+
+// changedFrom reports whether adding item would write files other than
+// the ones dest holds: a changed hook, script, or server.
+func changedFrom(item *SettingsItem, dest string) bool {
+	tmp, err := os.MkdirTemp("", "syllago-settings-")
+	if err != nil {
+		return false
+	}
+	defer func() { _ = os.RemoveAll(tmp) }()
+	if _, _, err := writeSettingsContent(item, tmp); err != nil {
+		return false
+	}
+	entries, err := os.ReadDir(tmp)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		want, err := os.ReadFile(filepath.Join(tmp, e.Name()))
+		if err != nil {
+			return false
+		}
+		if got, err := os.ReadFile(filepath.Join(dest, e.Name())); err != nil || !bytes.Equal(got, want) {
+			return true
+		}
+	}
+	return false
 }

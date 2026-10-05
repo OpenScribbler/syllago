@@ -252,7 +252,7 @@ func addSettingsEntry(item addDiscoveryItem, contentRoot, projectRoot, srcReg, s
 		return addExecResult{name: item.name, status: "added"}
 	case add.AddStatusUpdated:
 		return addExecResult{name: item.name, status: "updated"}
-	case add.AddStatusUpToDate:
+	case add.AddStatusUpToDate, add.AddStatusSkipped:
 		return addExecResult{name: item.name, status: "skipped"}
 	default:
 		return addExecResult{name: item.name, status: "error", err: r.Error}
