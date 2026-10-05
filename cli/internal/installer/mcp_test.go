@@ -1789,3 +1789,15 @@ func TestInstallMCP_Devin_RefusesConflictWithUserEntry(t *testing.T) {
 		t.Errorf("user-owned command overwritten: got %q, want python", got)
 	}
 }
+
+// A Library config keeps its servers under mcpServers whichever provider
+// it came from, so a provider with its own key still finds them.
+func TestExtractServerEntries_FallsBackToMCPServers(t *testing.T) {
+	entries, err := ExtractServerEntries([]byte(`{"mcpServers": {"db": {"command": "db-server"}}}`), "db-2", "context_servers")
+	if err != nil {
+		t.Fatalf("ExtractServerEntries: %v", err)
+	}
+	if _, ok := entries["db"]; !ok || len(entries) != 1 {
+		t.Errorf("entries = %v, want db alone", entries)
+	}
+}

@@ -28,10 +28,9 @@ type SettingsItem struct {
 	// Hook is the single hook a hooks item holds.
 	Hook *converter.HookData
 	// ServerKey and Server are an MCP item's server name and its raw JSON
-	// entry; JSONKey is the settings key the servers sit under.
+	// entry.
 	ServerKey string
 	Server    json.RawMessage
-	JSONKey   string
 	Dest      string
 }
 
@@ -61,6 +60,14 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 				if !errors.Is(err, fs.ErrNotExist) {
 					unread = append(unread, err)
 				}
+				continue
+			}
+			if !gjson.ValidBytes(data) {
+				unread = append(unread, fmt.Errorf("parsing %s: invalid JSON", loc.Path))
+				continue
+			}
+			// A settings file kept for other settings holds no hooks.
+			if !gjson.GetBytes(data, "hooks").Exists() {
 				continue
 			}
 			hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
@@ -97,11 +104,16 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 				continue
 			}
 			servers.ForEach(func(key, value gjson.Result) bool {
+				// The name becomes a Library directory, and the catalog lists
+				// no server whose name could not be one.
+				if !catalog.IsValidItemName(key.String()) {
+					unread = append(unread, fmt.Errorf("%s: MCP server %q: a Library item name holds only letters, digits, - and _", loc.Path, key.String()))
+					return true
+				}
 				items = append(items, SettingsItem{
 					DiscoveryItem: DiscoveryItem{Name: key.String(), Type: catalog.MCP, Path: loc.Path, Scope: loc.Scope.String()},
 					ServerKey:     key.String(),
 					Server:        json.RawMessage(value.Raw),
-					JSONKey:       loc.JSONKey,
 				})
 				return true
 			})
@@ -196,14 +208,17 @@ func holdsItem(dest string, i int, item *SettingsItem) bool {
 	return meta.SourceScope == item.Scope && (meta.SourceName == item.Name || meta.SourceName == "" && i == 1)
 }
 
-// SettingsResult is the outcome of adding one settings item. Bundled
-// counts the hook scripts copied beside it; BundleErr is a script that
-// could not be copied, which leaves the hook added.
+// SettingsResult is the outcome of adding one settings item. LibraryName
+// is the name the Library lists the item at Dest under, which install
+// records and pins are keyed on. Bundled counts the hook scripts copied
+// beside it; BundleErr is a script that could not be copied, which leaves
+// the hook added.
 type SettingsResult struct {
 	AddResult
-	Dest      string
-	Bundled   int
-	BundleErr error
+	Dest        string
+	LibraryName string
+	Bundled     int
+	BundleErr   error
 }
 
 // AddFromSettings writes each item to the Library under globalDir: a hook
@@ -214,18 +229,57 @@ type SettingsResult struct {
 // left as it is unless opts.Force. projectRoot names the project a
 // project-scope item came from.
 func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
-	results := make([]SettingsResult, 0, len(items))
+	placed := slices.Clone(items)
+	claimed := map[string]bool{}
+	for i := range placed {
+		placed[i].Dest, placed[i].Status = settingsDest(globalDir, opts.Provider, &placed[i], claimed)
+		claimed[placed[i].Dest] = true
+	}
+	return AddPlacedSettings(placed, opts, projectRoot, globalDir)
+}
+
+// AddPlacedSettings adds items as AddFromSettings does, each at the Dest
+// and with the Status DiscoverSettings gave it, so an add of some of the
+// discovered items lands each where discovery reported it. An item whose
+// directory has changed since, taken by other content or emptied, is
+// placed again rather than written over what is there now.
+func AddPlacedSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
 	claimed := map[string]bool{}
 	for _, item := range items {
-		item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
 		claimed[item.Dest] = true
-		results = append(results, addSettingsItem(item, opts, projectRoot))
+	}
+	results := make([]SettingsResult, 0, len(items))
+	for _, item := range items {
+		if !stillPlaced(&item) {
+			delete(claimed, item.Dest)
+			item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
+			claimed[item.Dest] = true
+		}
+		results = append(results, addSettingsItem(item, opts, projectRoot, globalDir))
 	}
 	return results
 }
 
-func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) SettingsResult {
-	r := SettingsResult{AddResult: AddResult{Name: item.Name, Type: item.Type}, Dest: item.Dest}
+// stillPlaced reports whether item's Dest is as discovery found it: free
+// for a new item, and holding the item for one already in the Library.
+func stillPlaced(item *SettingsItem) bool {
+	_, err := os.Stat(item.Dest)
+	if item.Status == StatusNew {
+		return err != nil
+	}
+	i := 1
+	if filepath.Base(item.Dest) != item.Name {
+		i = 2
+	}
+	return err == nil && holdsItem(item.Dest, i, item)
+}
+
+func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot, globalDir string) SettingsResult {
+	r := SettingsResult{AddResult: AddResult{Name: item.Name, Type: item.Type}, Dest: item.Dest, LibraryName: filepath.Base(item.Dest)}
+	// The Library lists a server under its key, whatever directory holds it.
+	if item.Type == catalog.MCP {
+		r.LibraryName = item.ServerKey
+	}
 	fail := func(err error) SettingsResult {
 		r.Status, r.Error = AddStatusError, err
 		return r
@@ -271,7 +325,10 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) Set
 			return fail(fmt.Errorf("writing hook.json: %w", err))
 		}
 	case catalog.MCP:
-		configJSON := fmt.Sprintf("{\n  %q: {\n    %q: %s\n  }\n}", item.JSONKey, item.ServerKey, item.Server)
+		// Every Library MCP config keeps its servers under mcpServers, the
+		// key the catalog reads server names from, whichever key the
+		// provider's settings file used.
+		configJSON := fmt.Sprintf("{\n  \"mcpServers\": {\n    %q: %s\n  }\n}", item.ServerKey, item.Server)
 		if err := os.WriteFile(filepath.Join(item.Dest, "config.json"), []byte(configJSON), 0o644); err != nil {
 			return fail(fmt.Errorf("writing config.json: %w", err))
 		}
@@ -296,9 +353,25 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) Set
 		SourceScope:      item.Scope,
 		SourceName:       item.Name,
 	}
+	// The hash lets a later add of the same file find this item, whichever
+	// registry it came from.
+	if raw, err := os.ReadFile(item.Path); err == nil {
+		meta.SourceHash = sourceHash(raw)
+	}
 	if opts.SourceRegistry != "" {
 		meta.SourceType = "registry"
 		meta.SourceSHA = opts.SourceSHA
+	} else {
+		// Laundering defense, as for any other add: a settings file reached
+		// through a symlink into the Library, or one whose content matches
+		// private Library content, keeps that content's registry.
+		reg, vis := traceSymlinkTaint(item.Path, globalDir)
+		if reg == "" && meta.SourceHash != "" {
+			reg, vis = hashMatchTaint(meta.SourceHash, globalDir)
+		}
+		if reg != "" {
+			meta.SourceRegistry, meta.SourceVisibility = reg, vis
+		}
 	}
 	if item.Scope == "project" && projectRoot != "" {
 		meta.SourceProject = filepath.Base(projectRoot)

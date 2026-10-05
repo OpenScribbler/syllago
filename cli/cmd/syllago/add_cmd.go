@@ -654,7 +654,7 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "finding settings locations", "Check provider config directory exists", err.Error())
 	}
 	for _, uerr := range unread {
-		fmt.Fprintf(output.ErrWriter, "Warning: skipped a settings file: %v\n", uerr)
+		fmt.Fprintf(output.ErrWriter, "Warning: skipped settings: %v\n", uerr)
 	}
 
 	noun := "hooks"

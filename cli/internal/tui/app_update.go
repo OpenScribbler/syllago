@@ -429,9 +429,18 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case addDiscoveryDoneMsg:
 		if a.addWizard != nil {
+			current := msg.seq == a.addWizard.seq
 			_, cmd := a.addWizard.Update(msg)
 			if msg.err != nil {
 				toastCmd := a.toast.Push("Discovery failed: "+msg.err.Error(), toastError)
+				return a, tea.Batch(cmd, toastCmd)
+			}
+			if current && len(msg.warnings) > 0 {
+				details := make([]string, len(msg.warnings))
+				for i, w := range msg.warnings {
+					details[i] = w.Error()
+				}
+				toastCmd := a.toast.PushDetails(fmt.Sprintf("Skipped %d settings file(s) or entries", len(msg.warnings)), details, toastWarning)
 				return a, tea.Batch(cmd, toastCmd)
 			}
 			return a, cmd

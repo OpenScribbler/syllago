@@ -129,6 +129,13 @@ func BuildLibraryIndex(globalDir string) (LibraryIndex, error) {
 				}
 				key := string(ct) + "/" + e.Name()
 				idx[key] = meta
+				if meta == nil {
+					// A directory with no metadata may group items by
+					// provider, as settings adds place MCP servers.
+					if err := indexGrouped(idx, key, itemDir); err != nil {
+						return nil, err
+					}
+				}
 			}
 		} else {
 			// Provider-specific: typeDir/<provider>/<name>/
@@ -504,6 +511,28 @@ func traceSymlinkTaint(filePath, globalDir string) (srcRegistry, srcVisibility s
 		return "", ""
 	}
 	return meta.SourceRegistry, meta.SourceVisibility
+}
+
+// indexGrouped adds to idx, under key/<name>, each subdirectory of dir that
+// holds metadata.
+func indexGrouped(idx LibraryIndex, key, dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	for _, e := range entries {
+		if !e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		meta, err := metadata.Load(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return fmt.Errorf("loading metadata for %s/%s: %w", key, e.Name(), err)
+		}
+		if meta != nil {
+			idx[key+"/"+e.Name()] = meta
+		}
+	}
+	return nil
 }
 
 // hashMatchTaint scans all library items with private taint and checks if

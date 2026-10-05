@@ -261,8 +261,12 @@ func readMCPConfig(cfgPath string, prov provider.Provider) ([]byte, error) {
 func ExtractServerEntries(rawData []byte, itemName string, jsonKey string) (map[string]json.RawMessage, error) {
 	entries := make(map[string]json.RawMessage)
 
-	// Check for nested format: config.json wraps entries in the provider key
+	// Check for nested format: config.json wraps entries in the provider
+	// key, or in mcpServers, the key settings adds write to the Library.
 	wrapper := gjson.GetBytes(rawData, jsonKey)
+	if !wrapper.Exists() {
+		wrapper = gjson.GetBytes(rawData, "mcpServers")
+	}
 	if wrapper.Exists() && wrapper.Type == gjson.JSON {
 		// Nested format — extract each server entry
 		wrapper.ForEach(func(key, value gjson.Result) bool {

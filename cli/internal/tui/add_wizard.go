@@ -20,7 +20,6 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
-	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -92,13 +91,14 @@ type addConfirmItem struct {
 	catalogItem *catalog.ContentItem // original catalog item when available
 
 	// Risk indicators pre-computed during discovery. For hooks these come from
-	// the hook command/URL analysis in hooksFromSettingsFile, not file content.
+	// the hook command/URL analysis in hookRisks, not file content.
 	risks []catalog.RiskIndicator
 
 	// Hook-specific: mirrors addDiscoveryItem fields so triage preview and
 	// mergeConfirmIntoDiscovery can reconstruct a full hook discovery item.
 	hookData      *converter.HookData
 	hookSourceDir string
+	settings      *add.SettingsItem
 
 	// Splittable mirrors the addDiscoveryItem field so the Review step (after
 	// mergeConfirmIntoDiscovery) can still render the monolithic-rule hint.
@@ -117,7 +117,8 @@ type addDiscoveryDoneMsg struct {
 	items            []addDiscoveryItem
 	confirmItems     []addConfirmItem // items requiring user triage
 	err              error
-	tmpDir           string // non-empty for git URL source
+	warnings         []error // settings files discovery could not read
+	tmpDir           string  // non-empty for git URL source
 	sourceRegistry   string
 	sourceVisibility string
 }
@@ -154,10 +155,14 @@ type addDiscoveryItem struct {
 	underlying   *add.DiscoveryItem
 	catalogItem  *catalog.ContentItem // original catalog item when available (has correct Files/Path)
 
-	// Hook-specific: populated by discoverHooksFromProvider so addSingleItem
-	// can write a proper flat hook.json instead of copying settings.json.
+	// Hook-specific: a hook read out of a settings file, rendered as a flat
+	// hook.json for preview instead of the settings file it came from.
 	hookData      *converter.HookData
 	hookSourceDir string // directory of the settings.json, used to resolve relative script paths
+
+	// settings is set for a hook or MCP server read from a provider's
+	// settings file; addSingleItem adds it through add.AddFromSettings.
+	settings *add.SettingsItem
 
 	confidence      float64
 	detectionSource string
@@ -998,6 +1003,7 @@ func (m *addWizardModel) mergeConfirmIntoDiscovery() {
 			di.hookData = item.hookData
 			di.hookSourceDir = item.hookSourceDir
 		}
+		di.settings = item.settings
 
 		// Preserve splittability + Heuristic-step decision.
 		di.splittable = item.splittable
@@ -1456,8 +1462,8 @@ func (m *addWizardModel) startDiscoveryCmd() tea.Cmd {
 		projectRoot := m.projectRoot
 		cfg := m.cfg
 		return func() tea.Msg {
-			items, confirmItems, err := discoverFromProvider(prov, projectRoot, cfg, contentRoot, types)
-			return addDiscoveryDoneMsg{seq: seq, items: items, confirmItems: confirmItems, err: err}
+			items, unread, err := discoverFromProvider(prov, projectRoot, cfg, contentRoot, types)
+			return addDiscoveryDoneMsg{seq: seq, items: items, warnings: unread, err: err}
 		}
 
 	case addSourceRegistry:
@@ -1712,6 +1718,7 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 	}
 	item := items[index]
 	contentRoot := m.contentRoot
+	projectRoot := m.projectRoot
 	sourceReg := m.sourceRegistry
 	sourceVis := m.sourceVisibility
 	sourceSHA := m.executeSourceSHA
@@ -1728,7 +1735,7 @@ func (m *addWizardModel) addItemCmd(index int) tea.Cmd {
 				sourceSHA = head
 			}
 		}
-		result := addSingleItem(item, contentRoot, sourceReg, sourceVis, provSlug, sourceSHA)
+		result := addSingleItem(item, contentRoot, projectRoot, sourceReg, sourceVis, provSlug, sourceSHA)
 		return addExecItemDoneMsg{seq: seq, index: index, result: result, sourceSHA: sourceSHA}
 	}
 }
@@ -1751,7 +1758,7 @@ func discoverFromProvider(
 	cfg *config.Config,
 	contentRoot string,
 	selectedTypes []catalog.ContentType,
-) ([]addDiscoveryItem, []addConfirmItem, error) {
+) ([]addDiscoveryItem, []error, error) {
 	// Build resolver from config
 	var resolver *config.PathResolver
 	if cfg != nil {
@@ -1829,53 +1836,29 @@ func discoverFromProvider(
 		items = append(items, item)
 	}
 
-	// Hooks discovery (JSON merge — separate from file-based)
-	if typeSet[catalog.Hooks] {
-		hookItems := discoverHooksFromProvider(prov, projectRoot, resolver, contentRoot)
-		items = append(items, hookItems...)
-	}
-
-	// MCP discovery (JSON merge — separate from file-based)
-	if typeSet[catalog.MCP] {
-		mcpItems := discoverMcpFromProvider(prov, projectRoot, resolver, contentRoot)
-		items = append(items, mcpItems...)
-	}
-
-	// Provider sources use pattern-only detection (I11: no analyzer for provider dirs)
-	return items, nil, nil
-}
-
-// discoverHooksFromProvider reads provider settings files and extracts
-// individual hook entries, annotated with library status.
-func discoverHooksFromProvider(prov provider.Provider, projectRoot string, resolver *config.PathResolver, contentRoot string) []addDiscoveryItem {
+	// Hooks and MCP servers live inside settings files (JSON merge).
 	baseDir := ""
 	if resolver != nil {
 		baseDir = resolver.BaseDir(prov.Slug)
 	}
-	locations, err := installer.FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
-	if err != nil {
-		return nil
+	var unread []error
+	seen := map[string]bool{}
+	for _, ct := range []catalog.ContentType{catalog.Hooks, catalog.MCP} {
+		if typeSet[ct] {
+			settingsItems, errs := discoverSettingsFromProvider(prov, projectRoot, baseDir, contentRoot, ct)
+			items = append(items, settingsItems...)
+			// A file holding both hooks and servers fails both reads alike.
+			for _, err := range errs {
+				if !seen[err.Error()] {
+					seen[err.Error()] = true
+					unread = append(unread, err)
+				}
+			}
+		}
 	}
 
-	idx, err := add.BuildLibraryIndex(contentRoot)
-	if err != nil {
-		return nil
-	}
-
-	var result []addDiscoveryItem
-	for _, loc := range locations {
-		data, err := os.ReadFile(loc.Path)
-		if err != nil {
-			continue
-		}
-		hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
-		if err != nil {
-			continue
-		}
-		items := hooksFromSettingsFile(loc.Path, prov.Slug, loc.Scope.String(), idx, hooks)
-		result = append(result, items...)
-	}
-	return result
+	// Provider sources use pattern-only detection (I11: no analyzer for provider dirs)
+	return items, unread, nil
 }
 
 // hooksFromSettingsFile converts an already-parsed list of HookData from a
@@ -1917,26 +1900,6 @@ func hooksFromSettingsFile(
 			Scope:  scope,
 		}
 
-		var hookRisks []catalog.RiskIndicator
-		for _, entry := range hookCopy.Hooks {
-			if entry.Command != "" {
-				hookRisks = append(hookRisks, catalog.RiskIndicator{
-					Label:       "Runs commands",
-					Description: "Hook executes: " + truncate(entry.Command, 60),
-					Level:       catalog.RiskHigh,
-				})
-				break
-			}
-			if entry.URL != "" {
-				hookRisks = append(hookRisks, catalog.RiskIndicator{
-					Label:       "Network access",
-					Description: "Hook calls: " + truncate(entry.URL, 60),
-					Level:       catalog.RiskMedium,
-				})
-				break
-			}
-		}
-
 		homeDir, _ := os.UserHomeDir()
 		relPath := providerRelPath(settingsPath, "", homeDir)
 		if relPath != "" {
@@ -1949,98 +1912,10 @@ func hooksFromSettingsFile(
 			relativePath:  relPath,
 			status:        status,
 			scope:         scope,
-			risks:         hookRisks,
+			risks:         hookRisks(hookCopy),
 			underlying:    &di,
 			hookData:      &hookCopy,
 			hookSourceDir: sourceDir,
-		})
-	}
-	return result
-}
-
-// discoverMcpFromProvider reads provider MCP config files and extracts
-// individual server entries, annotated with library status.
-func discoverMcpFromProvider(prov provider.Provider, projectRoot string, resolver *config.PathResolver, contentRoot string) []addDiscoveryItem {
-	baseDir := ""
-	if resolver != nil {
-		baseDir = resolver.BaseDir(prov.Slug)
-	}
-	locations := installer.FindMCPLocations(prov, projectRoot, baseDir)
-
-	idx, err := add.BuildLibraryIndex(contentRoot)
-	if err != nil {
-		return nil
-	}
-
-	var result []addDiscoveryItem
-	for _, loc := range locations {
-		data, err := os.ReadFile(loc.Path)
-		if err != nil {
-			continue
-		}
-		if prov.Slug == "opencode" {
-			data = converter.StripJSONCComments(data)
-		}
-
-		servers := gjson.GetBytes(data, loc.JSONKey)
-		if !servers.Exists() || servers.Type != gjson.JSON {
-			continue
-		}
-		servers.ForEach(func(key, val gjson.Result) bool {
-			name := key.String()
-			libKey := string(catalog.MCP) + "/" + prov.Slug + "/" + name
-			_, inLib := idx[libKey]
-			status := add.StatusNew
-			if inLib {
-				status = add.StatusInLibrary
-			}
-			di := add.DiscoveryItem{
-				Name:   name,
-				Type:   catalog.MCP,
-				Path:   loc.Path,
-				Status: status,
-				Scope:  loc.Scope.String(),
-			}
-
-			// Compute risk from actual server config
-			var mcpRisks []catalog.RiskIndicator
-			cmd := val.Get("command").String()
-			url := val.Get("url").String()
-			transport := val.Get("type").String() // "stdio", "sse", "http"
-			hasEnv := val.Get("env").Exists() && len(val.Get("env").Map()) > 0
-
-			if cmd != "" {
-				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
-					Label:       "Runs process",
-					Description: "Launches: " + truncate(cmd, 60),
-					Level:       catalog.RiskHigh,
-				})
-			}
-			if url != "" || transport == "sse" || transport == "http" {
-				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
-					Label:       "Network access",
-					Description: "Connects to remote endpoint",
-					Level:       catalog.RiskMedium,
-				})
-			}
-			if hasEnv {
-				mcpRisks = append(mcpRisks, catalog.RiskIndicator{
-					Label:       "Environment variables",
-					Description: "Server receives environment variables",
-					Level:       catalog.RiskMedium,
-				})
-			}
-
-			result = append(result, addDiscoveryItem{
-				name:       name,
-				itemType:   catalog.MCP,
-				path:       loc.Path,
-				status:     status,
-				scope:      loc.Scope.String(),
-				risks:      mcpRisks,
-				underlying: &di,
-			})
-			return true
 		})
 	}
 	return result
@@ -2327,7 +2202,7 @@ func nativeItemsToDiscovery(
 			// Hooks need special handling: each NativeItem is one hook inside
 			// a shared settings.json, but drill-in/library want one flat
 			// hook.json per entry. Parse the settings file and split it the
-			// same way discoverHooksFromProvider does so the drill-in shows
+			// way the provider source does so the drill-in shows
 			// just the single hook (not the whole settings.json).
 			if ct == catalog.Hooks {
 				seen := make(map[string]bool)
@@ -2523,7 +2398,8 @@ func discoverFromGitURL(
 
 // addSingleItem adds a single item to the library. A pinned library item
 // is left as it is and reported as pinned.
-func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
+// addSingleItem adds item to the Library.
+func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA string) addExecResult {
 	if item.underlying == nil {
 		return addExecResult{
 			name:   item.name,
@@ -2538,6 +2414,9 @@ func addSingleItem(item addDiscoveryItem, contentRoot, srcReg, srcVis, provSlug,
 	// generic add.AddItems copy flow.
 	if item.itemType == catalog.Rules && item.splittable && item.splitChosen {
 		return addSplitRuleItem(item, contentRoot, provSlug)
+	}
+	if item.settings != nil {
+		return addSettingsEntry(item, contentRoot, projectRoot, srcReg, srcVis, provSlug, srcSHA)
 	}
 
 	// The generic write lands under the discovered name; item.name may be a
