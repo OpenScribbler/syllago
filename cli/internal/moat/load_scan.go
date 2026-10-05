@@ -38,6 +38,16 @@ type ScanResult struct {
 	Config          *config.Config
 }
 
+// LoadConfig merges the global, content-root and project-root configs, in
+// that order of precedence from lowest to highest, the way LoadAndScan
+// does. A config that fails to load counts as empty.
+func LoadConfig(root, projectRoot string) *config.Config {
+	globalCfg, _ := config.LoadGlobal()
+	projectCfg, _ := config.Load(projectRoot)
+	contentCfg, _ := config.Load(root)
+	return config.Merge(globalCfg, config.Merge(contentCfg, projectCfg))
+}
+
 // LoadAndScan performs the full config-load + registry-enumerate +
 // lockfile-load + scan + enrich pipeline and returns a ScanResult.
 //
@@ -50,10 +60,7 @@ type ScanResult struct {
 // TUI — the embedded I/O (file reads, sigstore verification on first
 // call per process) would violate .claude/rules/tui-elm.md rule #2.
 func LoadAndScan(root, projectRoot string, now time.Time) (*ScanResult, error) {
-	globalCfg, _ := config.LoadGlobal()
-	projectCfg, _ := config.Load(projectRoot)
-	contentCfg, _ := config.Load(root)
-	merged := config.Merge(globalCfg, config.Merge(contentCfg, projectCfg))
+	merged := LoadConfig(root, projectRoot)
 
 	cacheDir, _ := config.GlobalDirPath()
 

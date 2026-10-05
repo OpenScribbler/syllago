@@ -315,18 +315,16 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		return output.NewStructuredError(output.ErrCatalogNotFound, "could not find syllago content repository", "Run 'syllago init' to create a new content repo in the current directory")
 	}
 
-	// Load project config to get registry list and preferences
-	projectCfg, cfgErr := config.Load(root)
-	if cfgErr != nil {
-		projectCfg = &config.Config{}
+	projectRoot, _ := findProjectRoot()
+	if projectRoot == "" {
+		projectRoot = root
 	}
 
-	// Load global config and merge with project config
-	globalCfg, _ := config.LoadGlobal()
-	if globalCfg == nil {
-		globalCfg = &config.Config{}
-	}
-	cfg := config.Merge(globalCfg, projectCfg)
+	// The startup preferences come from the config the scan below merges.
+	// A content-root config that fails to parse leaves auto-sync and
+	// auto-update off.
+	_, cfgErr := config.Load(root)
+	cfg := moat.LoadConfig(root, projectRoot)
 
 	// Auto-sync registries if enabled (5-second timeout; failure is non-fatal)
 	if cfgErr == nil && cfg.Preferences["registryAutoSync"] == "true" && len(cfg.Registries) > 0 {
@@ -349,53 +347,21 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		cancel()
 	}
 
-	projectRoot, _ := findProjectRoot()
-	if projectRoot == "" {
-		projectRoot = root
-	}
-
-	// MOAT enrichment inputs — matches the TUI rescan path (app.go) so trust
-	// surfaces appear on first-load instead of only after an implicit rescan.
-	// Fix for syllago-scgjl: startup used to call ScanWithGlobalAndRegistries
-	// directly, bypassing EnrichFromMOATManifests. A non-MOAT config is a
-	// no-op here.
-	cacheDir, _ := config.GlobalDirPath()
-	lf, _ := moat.LoadLockfile(moat.LockfilePath(projectRoot))
-
-	// Build registry sources from config. MOAT registries are cache-backed
-	// (never git-cloned), so include them unconditionally — keeping the
-	// IsCloned guard for them would hide every freshly-added MOAT registry
-	// from the gallery until something else cloned a sibling git repo.
-	// Mirrors moat.LoadAndScan; the two paths must stay in sync until the
-	// startup path is migrated to call LoadAndScan directly.
-	var regSources []catalog.RegistrySource
-	for _, r := range cfg.Registries {
-		if r.IsMOAT() {
-			regSources = append(regSources, catalog.RegistrySource{
-				Name: r.Name,
-				Path: filepath.Join(cacheDir, "moat", "registries", r.Name),
-			})
-			continue
-		}
-		if registry.IsCloned(r.Name) {
-			dir, _ := registry.CloneDir(r.Name)
-			regSources = append(regSources, catalog.RegistrySource{Name: r.Name, Path: dir})
-		}
-	}
-
-	cat, err := moat.ScanAndEnrich(cfg, root, projectRoot, regSources, lf, cacheDir, time.Now())
+	// The same load the TUI's rescan runs, so the trust gate and MOAT trust
+	// surfaces hold from the first render.
+	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "catalog scan failed", "Check that the content directory exists and is readable", err.Error())
 	}
 
 	// Auto-cleanup: remove local items whose ID matches a shared item
-	cleaned, _ := catalog.CleanupPromotedItems(cat)
+	cleaned, _ := catalog.CleanupPromotedItems(scan.Catalog)
 	if len(cleaned) > 0 {
 		for _, c := range cleaned {
 			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 		}
 		// Rescan after cleanup
-		cat, err = moat.ScanAndEnrich(cfg, root, projectRoot, regSources, lf, cacheDir, time.Now())
+		scan, err = moat.LoadAndScan(root, projectRoot, time.Now())
 		if err != nil {
 			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "error rescanning catalog", "Check that the content directory exists and is readable", err.Error())
 		}
@@ -411,7 +377,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	autoUpdate := cfgErr == nil && cfg.Preferences["autoUpdate"] == "true"
 
 	isReleaseBuild := buildCommit == "" && version != ""
-	app := tui.NewApp(cat, providers, version, autoUpdate, regSources, cfg, isReleaseBuild, root, projectRoot)
+	app := tui.NewApp(scan, providers, version, autoUpdate, isReleaseBuild, root, projectRoot)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),

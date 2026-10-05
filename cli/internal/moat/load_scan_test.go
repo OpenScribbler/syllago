@@ -168,3 +168,33 @@ func TestLoadAndScan_IncludesUnsynced_MOAT(t *testing.T) {
 		t.Errorf("MOAT path = %q; want %q", res.RegistrySources[0].Path, want)
 	}
 }
+
+// The project root's config wins over the content root's, which wins over
+// the global config, and registries from all three are kept.
+func TestLoadConfig_Precedence(t *testing.T) {
+	withIsolatedGlobals(t)
+	root, projectRoot := t.TempDir(), t.TempDir()
+	save := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("save config: %v", err)
+		}
+	}
+	save(config.SaveGlobal(&config.Config{Preferences: map[string]string{"registryAutoSync": "true", "autoUpdate": "true"}}))
+	save(config.Save(root, &config.Config{Preferences: map[string]string{"autoUpdate": "false"}}))
+	save(config.Save(projectRoot, &config.Config{
+		Preferences: map[string]string{"registryAutoSync": "false"},
+		Registries:  []config.Registry{{Name: "project-only", URL: "https://example.com/r.git"}},
+	}))
+
+	cfg := LoadConfig(root, projectRoot)
+	if got := cfg.Preferences["registryAutoSync"]; got != "false" {
+		t.Errorf("registryAutoSync = %q, want the project root's false", got)
+	}
+	if got := cfg.Preferences["autoUpdate"]; got != "false" {
+		t.Errorf("autoUpdate = %q, want the content root's false", got)
+	}
+	if len(cfg.Registries) != 1 || cfg.Registries[0].Name != "project-only" {
+		t.Errorf("registries = %+v, want the project root's", cfg.Registries)
+	}
+}

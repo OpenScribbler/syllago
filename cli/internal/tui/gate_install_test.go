@@ -193,6 +193,36 @@ func TestInstallGate_HardBlockToastsAndAborts(t *testing.T) {
 	}
 }
 
+// The trust gate holds from the first render: an app built from a scan
+// result refuses a revoked item before any rescan has run, whether the
+// manifest or the lockfile records the revocation.
+func TestInstallGate_NewAppAppliesScanGate(t *testing.T) {
+	for name, fx := range map[string]gateFixture{
+		"manifest": {revocationSource: moat.RevocationSourceRegistry, revocationReason: "malicious"},
+		"lockfile": {lockfileRevoked: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			gated, item := gateTestApp(t, fx)
+			app := NewApp(&moat.ScanResult{
+				Catalog:    testCatalog(t),
+				Config:     testConfig(),
+				GateInputs: gated.moatGate,
+				Lockfile:   gated.moatLockfile,
+			}, testProviders(), "0.0.0-test", false, false, "", "")
+			m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
+			m, _ = m.(App).Update(gateInstallMsg(item))
+			a := m.(App)
+
+			if a.pendingInstall != nil {
+				t.Error("a revoked item must not be stashed for install")
+			}
+			if !strings.Contains(currentToastText(a), "Refused") {
+				t.Errorf("expected a refusal toast; got %q", currentToastText(a))
+			}
+		})
+	}
+}
+
 func TestInstallGate_LockfileArchivalRevocationHardBlocks(t *testing.T) {
 	// Archival revocation is permanent per G-15 — even with no live
 	// revocation in the manifest, the lockfile alone must hard-block.

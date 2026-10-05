@@ -7,6 +7,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
 
 // TestApp_HandlesAddCompletedMsgViaRefreshContent verifies that when the
@@ -19,7 +20,7 @@ func TestApp_HandlesAddCompletedMsgViaRefreshContent(t *testing.T) {
 	// Build an App rooted at a real content directory so rescanCatalog has
 	// something to scan after addCompletedMsg fires.
 	contentRoot := t.TempDir()
-	app := NewApp(&catalog.Catalog{}, nil, "0.0.0-test", false, nil, &config.Config{}, false, contentRoot, "")
+	app := NewApp(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: &config.Config{}}, nil, "0.0.0-test", false, false, contentRoot, "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
