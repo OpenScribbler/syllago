@@ -2,7 +2,9 @@ package add
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -33,28 +35,34 @@ type SettingsItem struct {
 // DiscoverSettings reads every settings file prov keeps hooks or MCP
 // servers in (ct picks which) and returns one item per hook or server.
 // Two hooks in one file that derive the same name are told apart with -2,
-// -3, and so on.
+// -3, and so on. A settings file that cannot be read or parsed is left
+// out and reported in unread.
 //
 // Items land under <type>/<provider>/<name> in the Library. When that
-// directory holds an item added from another scope, the item takes the
-// first -N directory that is free or holds an item of its own scope, so
-// project and global copies sit side by side and a second add finds the
-// first. Status is StatusInLibrary when Dest already holds the item.
-func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir string, ct catalog.ContentType) ([]SettingsItem, error) {
-	var items []SettingsItem
+// directory holds a different item, or the same item added from another
+// scope, the item takes the first -N directory that is free or holds it,
+// so project and global copies sit side by side and a second add finds
+// the first. Status is StatusInLibrary when Dest already holds the item.
+// Dest and Status assume every discovered item is added; AddFromSettings
+// places the items it is given afresh.
+func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir string, ct catalog.ContentType) (items []SettingsItem, unread []error, err error) {
 	switch ct {
 	case catalog.Hooks:
 		locations, err := installer.FindSettingsLocationsWithBase(prov, projectRoot, baseDir)
 		if err != nil {
-			return nil, fmt.Errorf("finding settings locations: %w", err)
+			return nil, nil, fmt.Errorf("finding settings locations: %w", err)
 		}
 		for _, loc := range locations {
 			data, err := os.ReadFile(loc.Path)
 			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					unread = append(unread, err)
+				}
 				continue
 			}
 			hooks, err := converter.SplitSettingsHooks(data, prov.Slug)
 			if err != nil {
+				unread = append(unread, fmt.Errorf("parsing %s: %w", loc.Path, err))
 				continue
 			}
 			seen := map[string]int{}
@@ -74,6 +82,9 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 		for _, loc := range installer.FindMCPLocations(prov, projectRoot, baseDir) {
 			data, err := os.ReadFile(loc.Path)
 			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					unread = append(unread, err)
+				}
 				continue
 			}
 			if prov.Slug == "opencode" {
@@ -94,7 +105,7 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 			})
 		}
 	default:
-		return nil, fmt.Errorf("content type %s is not kept in settings files", ct)
+		return nil, nil, fmt.Errorf("content type %s is not kept in settings files", ct)
 	}
 
 	claimed := map[string]bool{}
@@ -102,11 +113,14 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 		items[i].Dest, items[i].Status = settingsDest(globalDir, prov.Slug, &items[i], claimed)
 		claimed[items[i].Dest] = true
 	}
-	return items, nil
+	return items, unread, nil
 }
 
 // settingsDest picks the Library directory for item, skipping directories
-// another item of this discovery has claimed.
+// another item of this run has claimed. A directory holds the item when
+// its metadata records the item's scope and settings name. One added
+// before names were recorded holds it at the base directory only, since
+// only a real item of that name can sit at a -N directory without one.
 func settingsDest(globalDir, provSlug string, item *SettingsItem, claimed map[string]bool) (string, ItemStatus) {
 	base := filepath.Join(globalDir, string(item.Type), provSlug, item.Name)
 	for i := 1; ; i++ {
@@ -122,7 +136,13 @@ func settingsDest(globalDir, provSlug string, item *SettingsItem, claimed map[st
 			return dest, StatusNew
 		}
 		meta, _ := metadata.Load(dest)
-		if meta == nil || meta.SourceScope == "" || meta.SourceScope == item.Scope {
+		if meta == nil || meta.SourceScope == "" {
+			if i == 1 {
+				return dest, StatusInLibrary
+			}
+			continue
+		}
+		if meta.SourceScope == item.Scope && (meta.SourceName == item.Name || meta.SourceName == "" && i == 1) {
 			return dest, StatusInLibrary
 		}
 	}
@@ -138,14 +158,19 @@ type SettingsResult struct {
 	BundleErr error
 }
 
-// AddFromSettings writes each item to its Dest: a hook as a hooks/0.1
-// manifest with the scripts its commands name, an MCP server as a
-// config.json holding that server alone. An item already in the Library
-// is left as it is unless opts.Force. projectRoot names the project a
+// AddFromSettings writes each item to the Library under globalDir: a hook
+// as a hooks/0.1 manifest with the scripts its commands name, an MCP
+// server as a config.json holding that server alone. Each item is placed
+// as DiscoverSettings places it, counting only the items given here, so
+// an item left out claims no directory. An item already in the Library is
+// left as it is unless opts.Force. projectRoot names the project a
 // project-scope item came from.
-func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot string) []SettingsResult {
+func AddFromSettings(items []SettingsItem, opts AddOptions, projectRoot, globalDir string) []SettingsResult {
 	results := make([]SettingsResult, 0, len(items))
+	claimed := map[string]bool{}
 	for _, item := range items {
+		item.Dest, item.Status = settingsDest(globalDir, opts.Provider, &item, claimed)
+		claimed[item.Dest] = true
 		results = append(results, addSettingsItem(item, opts, projectRoot))
 	}
 	return results
@@ -218,6 +243,7 @@ func addSettingsItem(item SettingsItem, opts AddOptions, projectRoot string) Set
 		SourceRegistry:   opts.SourceRegistry,
 		SourceVisibility: opts.SourceVisibility,
 		SourceScope:      item.Scope,
+		SourceName:       item.Name,
 	}
 	if opts.SourceRegistry != "" {
 		meta.SourceType = "registry"

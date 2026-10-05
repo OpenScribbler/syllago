@@ -63,6 +63,7 @@ type Meta struct {
 	AddedAt          *time.Time          `yaml:"added_at,omitempty"`          // when content was added to library
 	AddedBy          string              `yaml:"added_by,omitempty"`          // e.g. "syllago v0.1.0"
 	SourceScope      string              `yaml:"source_scope,omitempty"`      // "global" or "project"
+	SourceName       string              `yaml:"source_name,omitempty"`       // name in the settings file a hook or MCP server was added from
 	SourceProject    string              `yaml:"source_project,omitempty"`    // project directory name (only when scope is "project")
 
 	// Content-signal detection fields — scanner-computed, never read from incoming YAML.

@@ -618,7 +618,7 @@ func discoverSettingsForDisplay(root, fromSlug string, resolver *config.PathReso
 	if resolver != nil {
 		baseDir = resolver.BaseDir(fromSlug)
 	}
-	items, err := add.DiscoverSettings(*prov, root, baseDir, globalDir, ct)
+	items, _, err := add.DiscoverSettings(*prov, root, baseDir, globalDir, ct)
 	if err != nil {
 		return nil
 	}
@@ -649,9 +649,12 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 	if resolver != nil {
 		baseDir = resolver.BaseDir(prov.Slug)
 	}
-	found, err := add.DiscoverSettings(*prov, root, baseDir, globalDir, ct)
+	found, unread, err := add.DiscoverSettings(*prov, root, baseDir, globalDir, ct)
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrSystemIO, "finding settings locations", "Check provider config directory exists", err.Error())
+	}
+	for _, uerr := range unread {
+		fmt.Fprintf(output.ErrWriter, "Warning: skipped a settings file: %v\n", uerr)
 	}
 
 	noun := "hooks"
@@ -662,9 +665,14 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 	for _, ex := range exclude {
 		excludeSet[ex] = true
 	}
+	// --exclude takes a name the preview shows. A hook's derived name also
+	// excludes the same-named hooks told apart by a -N suffix.
+	excluded := func(item add.SettingsItem) bool {
+		return excludeSet[item.Name] || ct == catalog.Hooks && excludeSet[converter.DeriveHookName(*item.Hook)]
+	}
 	var items []add.SettingsItem
 	for _, item := range found {
-		if (scope == "all" || item.Scope == scope) && !excludeSet[item.Name] {
+		if (scope == "all" || item.Scope == scope) && !excluded(item) {
 			item.DisplayName = displayName
 			items = append(items, item)
 		}
@@ -696,7 +704,7 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 		SourceVisibility: srcVisibility,
 	}
 	count := 0
-	for i, r := range add.AddFromSettings(items, opts, root) {
+	for i, r := range add.AddFromSettings(items, opts, root, globalDir) {
 		item := items[i]
 		switch r.Status {
 		case add.AddStatusUpToDate:

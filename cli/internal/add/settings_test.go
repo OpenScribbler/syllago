@@ -56,7 +56,7 @@ func TestDiscoverSettings_HooksSuffixSameNameWithinFile(t *testing.T) {
 	projectRoot, globalDir := settingsEnv(t)
 	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
 
-	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestDiscoverSettings_HookSuffixesAreStable(t *testing.T) {
 }`)
 	var first string
 	for i := 0; i < 30; i++ {
-		items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+		items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
 		if err != nil {
 			t.Fatalf("DiscoverSettings: %v", err)
 		}
@@ -119,7 +119,7 @@ func TestDiscoverSettings_MCPServers(t *testing.T) {
   "unrelated": {"keep": "out"}
 }`)
 
-	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestDiscoverSettings_OpenCodeJSONC(t *testing.T) {
   }
 }`)
 
-	items, err := DiscoverSettings(provider.OpenCode, projectRoot, "", globalDir, catalog.MCP)
+	items, _, err := DiscoverSettings(provider.OpenCode, projectRoot, "", globalDir, catalog.MCP)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestDiscoverSettings_OpenCodeJSONC(t *testing.T) {
 
 func TestDiscoverSettings_RejectsOtherTypes(t *testing.T) {
 	projectRoot, globalDir := settingsEnv(t)
-	if _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Rules); err == nil {
+	if _, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Rules); err == nil {
 		t.Error("DiscoverSettings for rules: err = nil, want an error")
 	}
 }
@@ -173,6 +173,18 @@ func saveScoped(t *testing.T, dir, scope string) {
 		t.Fatal(err)
 	}
 	if err := metadata.Save(dir, &metadata.Meta{Name: filepath.Base(dir), SourceScope: scope}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// saveNamed records dir as an item added from settings in scope under
+// sourceName.
+func saveNamed(t *testing.T, dir, scope, sourceName string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := metadata.Save(dir, &metadata.Meta{Name: filepath.Base(dir), SourceScope: scope, SourceName: sourceName}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -210,10 +222,34 @@ func TestSettingsDest(t *testing.T) {
 			name: "a re-run finds the earlier -2",
 			setup: func(t *testing.T, g string) {
 				saveScoped(t, base(g), "global")
-				saveScoped(t, base(g)+"-2", "project")
+				saveNamed(t, base(g)+"-2", "project", "guard")
 			},
 			wantSuffix: "-2",
 			wantStatus: StatusInLibrary,
+		},
+		{
+			name:       "the base holding another item of this scope moves to -2",
+			setup:      func(t *testing.T, g string) { saveNamed(t, base(g), "project", "other") },
+			wantSuffix: "-2",
+			wantStatus: StatusNew,
+		},
+		{
+			name: "a -2 holding a real item of that name is passed over",
+			setup: func(t *testing.T, g string) {
+				saveScoped(t, base(g), "global")
+				saveNamed(t, base(g)+"-2", "project", "guard-2")
+			},
+			wantSuffix: "-3",
+			wantStatus: StatusNew,
+		},
+		{
+			name: "a -2 that records no name is a real item of that name",
+			setup: func(t *testing.T, g string) {
+				saveScoped(t, base(g), "global")
+				saveScoped(t, base(g)+"-2", "project")
+			},
+			wantSuffix: "-3",
+			wantStatus: StatusNew,
 		},
 		{
 			name:       "a directory claimed in this run is skipped",
@@ -249,7 +285,7 @@ func discoverHooks(t *testing.T) (items []SettingsItem, projectRoot, globalDir s
 	projectRoot, globalDir = settingsEnv(t)
 	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
 	writeFile(t, filepath.Join(projectRoot, ".claude", "check.sh"), "#!/bin/sh\nexit 0\n")
-	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -257,8 +293,8 @@ func discoverHooks(t *testing.T) (items []SettingsItem, projectRoot, globalDir s
 }
 
 func TestAddFromSettings_HooksWriteManifestsAndScripts(t *testing.T) {
-	items, projectRoot, _ := discoverHooks(t)
-	results := AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot)
+	items, projectRoot, globalDir := discoverHooks(t)
+	results := AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
 
 	for _, r := range results {
 		if r.Status != AddStatusAdded {
@@ -308,11 +344,11 @@ func TestAddFromSettings_MCPConfigHoldsOneServer(t *testing.T) {
   },
   "permissions": {"allow": ["Bash"]}
 }`)
-	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
-	results := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot)
+	results := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
 	if results[0].Status != AddStatusAdded {
 		t.Fatalf("status %v err %v, want added", results[0].Status, results[0].Error)
 	}
@@ -346,12 +382,12 @@ func TestAddFromSettings_MCPConfigHoldsOneServer(t *testing.T) {
 }
 
 func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
-	items, projectRoot, _ := discoverHooks(t)
-	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot)
+	items, projectRoot, globalDir := discoverHooks(t)
+	AddFromSettings(items, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
 	hookPath := filepath.Join(items[0].Dest, "hook.json")
 	writeFile(t, hookPath, `{"edited": true}`)
 
-	again, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", filepath.Dir(filepath.Dir(filepath.Dir(items[0].Dest))), catalog.Hooks)
+	again, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", filepath.Dir(filepath.Dir(filepath.Dir(items[0].Dest))), catalog.Hooks)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -359,7 +395,7 @@ func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
 		t.Fatalf("re-discovery: status %v dest %s, want in library at %s", again[0].Status, again[0].Dest, items[0].Dest)
 	}
 
-	r := AddFromSettings(again[:1], AddOptions{Provider: "claude-code"}, projectRoot)[0]
+	r := AddFromSettings(again[:1], AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
 	if r.Status != AddStatusUpToDate {
 		t.Errorf("status = %v, want up to date", r.Status)
 	}
@@ -367,7 +403,7 @@ func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
 		t.Errorf("hook.json changed without force: %s", data)
 	}
 
-	r = AddFromSettings(again[:1], AddOptions{Provider: "claude-code", Force: true}, projectRoot)[0]
+	r = AddFromSettings(again[:1], AddOptions{Provider: "claude-code", Force: true}, projectRoot, globalDir)[0]
 	if r.Status != AddStatusUpdated {
 		t.Errorf("forced status = %v, want updated", r.Status)
 	}
@@ -377,8 +413,8 @@ func TestAddFromSettings_UpToDateWithoutForce(t *testing.T) {
 }
 
 func TestAddFromSettings_DryRunWritesNothing(t *testing.T) {
-	items, projectRoot, _ := discoverHooks(t)
-	results := AddFromSettings(items, AddOptions{Provider: "claude-code", DryRun: true}, projectRoot)
+	items, projectRoot, globalDir := discoverHooks(t)
+	results := AddFromSettings(items, AddOptions{Provider: "claude-code", DryRun: true}, projectRoot, globalDir)
 	for i, r := range results {
 		if r.Status != AddStatusAdded {
 			t.Errorf("%s: status %v, want added", r.Name, r.Status)
@@ -390,7 +426,7 @@ func TestAddFromSettings_DryRunWritesNothing(t *testing.T) {
 }
 
 func TestAddFromSettings_RegistryAndDisplayName(t *testing.T) {
-	items, projectRoot, _ := discoverHooks(t)
+	items, projectRoot, globalDir := discoverHooks(t)
 	item := items[0]
 	item.DisplayName = "Bash guard"
 	r := AddFromSettings([]SettingsItem{item}, AddOptions{
@@ -398,7 +434,7 @@ func TestAddFromSettings_RegistryAndDisplayName(t *testing.T) {
 		SourceRegistry:   "team-reg",
 		SourceVisibility: "private",
 		SourceSHA:        "abc123",
-	}, projectRoot)[0]
+	}, projectRoot, globalDir)[0]
 	if r.Status != AddStatusAdded {
 		t.Fatalf("status %v err %v, want added", r.Status, r.Error)
 	}
@@ -418,7 +454,7 @@ func TestAddFromSettings_UnwritableDestIsAnError(t *testing.T) {
 	items, projectRoot, globalDir := discoverHooks(t)
 	// A file where the provider directory should be blocks MkdirAll.
 	writeFile(t, filepath.Join(globalDir, "hooks", "claude-code"), "not a dir")
-	r := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot)[0]
+	r := AddFromSettings(items[:1], AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
 	if r.Status != AddStatusError || r.Error == nil {
 		t.Errorf("status %v err %v, want an error", r.Status, r.Error)
 	}
@@ -431,7 +467,7 @@ func TestAddFromSettings_CrossScopeHookNamedForItsDir(t *testing.T) {
 	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), settingsHooksJSON)
 	saveScoped(t, filepath.Join(globalDir, "hooks", "claude-code", "guard"), "global")
 
-	items, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
 	if err != nil {
 		t.Fatalf("DiscoverSettings: %v", err)
 	}
@@ -439,12 +475,77 @@ func TestAddFromSettings_CrossScopeHookNamedForItsDir(t *testing.T) {
 	if filepath.Base(guard.Dest) != "guard-2" {
 		t.Fatalf("Dest = %s, want guard-2 beside the global guard", guard.Dest)
 	}
-	AddFromSettings([]SettingsItem{guard}, AddOptions{Provider: "claude-code"}, projectRoot)
+	AddFromSettings([]SettingsItem{guard}, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)
 	meta, err := metadata.Load(guard.Dest)
 	if err != nil || meta == nil {
 		t.Fatalf("load metadata: %v", err)
 	}
 	if meta.Name != "guard-2" {
 		t.Errorf("Name = %q, want guard-2", meta.Name)
+	}
+}
+
+// A server named like another's -2 directory is never taken for it, so
+// forcing the add cannot overwrite it.
+func TestAddFromSettings_RealDashTwoServerKeptApart(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"mcpServers": {"db": {"command": "db-server"}}}`)
+	dir := filepath.Join(globalDir, "mcp", "claude-code")
+	saveNamed(t, filepath.Join(dir, "db"), "global", "db")
+	saveNamed(t, filepath.Join(dir, "db-2"), "project", "db-2")
+	writeFile(t, filepath.Join(dir, "db-2", "config.json"), `{"mcpServers": {"db-2": {"command": "other"}}}`)
+
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	r := AddFromSettings(items, AddOptions{Provider: "claude-code", Force: true}, projectRoot, globalDir)[0]
+	if r.Status != AddStatusAdded || filepath.Base(r.Dest) != "db-3" {
+		t.Errorf("status %v dest %s, want added at db-3", r.Status, r.Dest)
+	}
+	if data, _ := os.ReadFile(filepath.Join(dir, "db-2", "config.json")); !strings.Contains(string(data), "other") {
+		t.Errorf("db-2 was overwritten: %s", data)
+	}
+}
+
+// A discovered item the caller leaves out claims no directory, so the
+// items it does add land where a later add of them alone finds them.
+func TestAddFromSettings_LeftOutItemClaimsNothing(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	const servers = `{"mcpServers": {"db": {"command": "db-server"}}}`
+	writeFile(t, filepath.Join(os.Getenv("HOME"), ".claude", "settings.json"), servers)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), servers)
+
+	items, _, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	var project []SettingsItem
+	for _, item := range items {
+		if item.Scope == "project" {
+			project = append(project, item)
+		}
+	}
+	if len(items) != 2 || len(project) != 1 {
+		t.Fatalf("discovered %d items, %d project; want 2 and 1", len(items), len(project))
+	}
+	r := AddFromSettings(project, AddOptions{Provider: "claude-code"}, projectRoot, globalDir)[0]
+	if filepath.Base(r.Dest) != "db" {
+		t.Errorf("Dest = %s, want db", r.Dest)
+	}
+}
+
+// A settings file that does not parse is reported rather than read as
+// holding nothing.
+func TestDiscoverSettings_ReportsUnparseableFile(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".claude", "settings.json"), `{"hooks": `)
+
+	items, unread, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.Hooks)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if len(items) != 0 || len(unread) != 1 || !strings.Contains(unread[0].Error(), "settings.json") {
+		t.Errorf("items %d unread %v, want none and one error naming the file", len(items), unread)
 	}
 }

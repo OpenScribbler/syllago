@@ -108,3 +108,48 @@ func TestAddSettings_MCPDiscoveryShowsInLibrary(t *testing.T) {
 		t.Errorf("status = %v, want in library", items[0].Status)
 	}
 }
+
+// Excluding a hook's derived name leaves out every handler that derives
+// it; excluding a suffixed name leaves out that handler alone.
+func TestAddSettings_ExcludeDerivedNameCoversSuffixes(t *testing.T) {
+	const settings = `{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "echo one", "statusMessage": "guard"}]},
+      {"matcher": "Edit", "hooks": [{"type": "command", "command": "echo two", "statusMessage": "guard"}]}
+    ]
+  }
+}`
+	for _, tc := range []struct{ exclude, want string }{
+		{"guard", ""},
+		{"guard-2", "guard"},
+	} {
+		t.Run(tc.exclude, func(t *testing.T) {
+			projectRoot, globalDir := settingsAddEnv(t, settings)
+			_, _ = output.SetForTest(t)
+			if err := runAddSettings(catalog.Hooks, projectRoot, "claude-code", false, []string{tc.exclude}, false, "project", nil, "", "", ""); err != nil {
+				t.Fatalf("runAddSettings: %v", err)
+			}
+			entries, _ := os.ReadDir(filepath.Join(globalDir, "hooks", "claude-code"))
+			var got []string
+			for _, e := range entries {
+				got = append(got, e.Name())
+			}
+			if strings.Join(got, ",") != tc.want {
+				t.Errorf("hook dirs = %v, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A settings file that does not parse is named in a warning.
+func TestAddSettings_UnparseableSettingsWarns(t *testing.T) {
+	projectRoot, _ := settingsAddEnv(t, `{"hooks": `)
+	_, stderr := output.SetForTest(t)
+	if err := runAddSettings(catalog.Hooks, projectRoot, "claude-code", false, nil, false, "project", nil, "", "", ""); err != nil {
+		t.Fatalf("runAddSettings: %v", err)
+	}
+	if !strings.Contains(stderr.String(), "Warning: skipped a settings file") || !strings.Contains(stderr.String(), "settings.json") {
+		t.Errorf("stderr = %q, want a warning naming the settings file", stderr.String())
+	}
+}
