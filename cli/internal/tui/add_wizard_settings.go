@@ -18,7 +18,7 @@ import (
 // discoverSettingsFromProvider reads prov's settings files for the hooks or
 // MCP servers (ct picks which) and returns one discovery item per entry,
 // placed and annotated with library status by add.DiscoverSettings. A
-// settings file that could not be read is returned in unread.
+// settings file or entry that could not be read is returned in unread.
 func discoverSettingsFromProvider(prov provider.Provider, projectRoot, baseDir, contentRoot string, ct catalog.ContentType) ([]addDiscoveryItem, []error) {
 	settings, unread, err := add.DiscoverSettings(prov, projectRoot, baseDir, contentRoot, ct)
 	if err != nil {

@@ -104,6 +104,12 @@ func DiscoverSettings(prov provider.Provider, projectRoot, baseDir, globalDir st
 				continue
 			}
 			servers.ForEach(func(key, value gjson.Result) bool {
+				// The name becomes a Library directory, and the catalog lists
+				// no server whose name could not be one.
+				if !catalog.IsValidItemName(key.String()) {
+					unread = append(unread, fmt.Errorf("%s: MCP server %q: a Library item name holds only letters, digits, - and _", loc.Path, key.String()))
+					return true
+				}
 				items = append(items, SettingsItem{
 					DiscoveryItem: DiscoveryItem{Name: key.String(), Type: catalog.MCP, Path: loc.Path, Scope: loc.Scope.String()},
 					ServerKey:     key.String(),

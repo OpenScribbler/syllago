@@ -440,7 +440,7 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				for i, w := range msg.warnings {
 					details[i] = w.Error()
 				}
-				toastCmd := a.toast.PushDetails(fmt.Sprintf("Skipped %d settings file(s) that could not be read", len(msg.warnings)), details, toastWarning)
+				toastCmd := a.toast.PushDetails(fmt.Sprintf("Skipped %d settings file(s) or entries", len(msg.warnings)), details, toastWarning)
 				return a, tea.Batch(cmd, toastCmd)
 			}
 			return a, cmd

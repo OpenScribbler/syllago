@@ -149,7 +149,7 @@ func TestAddSettings_UnparseableSettingsWarns(t *testing.T) {
 	if err := runAddSettings(catalog.Hooks, projectRoot, "claude-code", false, nil, false, "project", nil, "", "", ""); err != nil {
 		t.Fatalf("runAddSettings: %v", err)
 	}
-	if !strings.Contains(stderr.String(), "Warning: skipped a settings file") || !strings.Contains(stderr.String(), "settings.json") {
+	if !strings.Contains(stderr.String(), "Warning: skipped settings") || !strings.Contains(stderr.String(), "settings.json") {
 		t.Errorf("stderr = %q, want a warning naming the settings file", stderr.String())
 	}
 }

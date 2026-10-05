@@ -859,6 +859,23 @@ func TestAddPlacedSettings_AddsBackAnItemRemovedSinceDiscovery(t *testing.T) {
 	}
 }
 
+// Regression: a server's name became its Library directory as written, so
+// a name holding a path wrote outside the Library.
+func TestDiscoverSettings_SkipsAServerNamedLikeAPath(t *testing.T) {
+	projectRoot, globalDir := settingsEnv(t)
+	writeFile(t, filepath.Join(projectRoot, ".mcp.json"), `{"mcpServers": {"../../escape": {"command": "x"}, "db/child": {"command": "y"}, "db": {"command": "z"}}}`)
+	items, unread, err := DiscoverSettings(provider.ClaudeCode, projectRoot, "", globalDir, catalog.MCP)
+	if err != nil {
+		t.Fatalf("DiscoverSettings: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "db" {
+		t.Errorf("items %v, want db alone", itemNames(items))
+	}
+	if len(unread) != 2 || !strings.Contains(unread[0].Error(), "escape") || !strings.Contains(unread[1].Error(), "db/child") {
+		t.Errorf("unread = %v, want both path-like names reported", unread)
+	}
+}
+
 // Regression: an add naming its registry recorded no hash, so the same
 // settings added again from a plain file did not find the private item
 // and lost its registry.
