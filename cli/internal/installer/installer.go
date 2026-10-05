@@ -620,11 +620,11 @@ func installWithRenderTo(item catalog.ContentItem, prov provider.Provider, conv 
 // provider it came from loses nothing. The warnings are advisory, so a
 // conversion that fails reports none.
 func placedNotices(item catalog.ContentItem, prov provider.Provider) []Notice {
-	if item.Type == catalog.Hooks || item.Provider == prov.Slug {
+	if item.Type == catalog.Hooks {
 		return nil
 	}
 	c, err := converter.ConvertItem(item, prov, "")
-	if err != nil {
+	if err != nil || c.From == prov.Slug {
 		return nil
 	}
 	return conversionNotices(item, c.Warnings)

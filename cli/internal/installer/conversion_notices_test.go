@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
@@ -189,5 +190,24 @@ func TestInstallMCP_ReadsTheServerInItsSourceFormat(t *testing.T) {
 	want := `gh: server "gh": autoApprove dropped (not documented by Cursor)`
 	if got := conversionWarnings(placement.Notices); !slices.Contains(got, want) {
 		t.Errorf("expected warning %q, got %q", want, got)
+	}
+}
+
+// TestInstall_ItemAddedFromTheTargetLosesNothing: a universal item records
+// the provider it was added from in its metadata rather than its
+// directory, and placing it back there loses nothing.
+func TestInstall_ItemAddedFromTheTargetLosesNothing(t *testing.T) {
+	skillDir := filepath.Join(t.TempDir(), "skills", "fmt")
+	os.MkdirAll(skillDir, 0755)
+	skill := "---\nname: fmt\ndescription: Formats code\nhooks:\n  PreToolUse:\n    - matcher: Bash\n      hooks:\n        - type: command\n          command: echo hi\n---\n\nFormat it.\n"
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(skill), 0644)
+	item := catalog.ContentItem{Name: "fmt", Type: catalog.Skills, Path: skillDir, Meta: &metadata.Meta{SourceProvider: "gemini-cli"}}
+
+	placement, err := Install(item, provider.GeminiCLI, t.TempDir(), MethodSymlink, t.TempDir(), ScanOptions{})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if got := conversionWarnings(placement.Notices); len(got) != 0 {
+		t.Errorf("expected no conversion warnings, got %q", got)
 	}
 }
