@@ -72,6 +72,13 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 			}
 		}
 
+		if len(manifest.CreatedFiles) > 0 {
+			fmt.Fprintln(output.Writer, "\nFiles the loadout created, to delete:")
+			for _, f := range manifest.CreatedFiles {
+				fmt.Fprintf(output.Writer, "  %s\n", f)
+			}
+		}
+
 		fmt.Fprintln(output.Writer, "\nNote: Any changes you made to settings.json or .claude.json after")
 		fmt.Fprintln(output.Writer, "applying the loadout will be lost — the original files are restored")
 		fmt.Fprintln(output.Writer, "from a snapshot.")

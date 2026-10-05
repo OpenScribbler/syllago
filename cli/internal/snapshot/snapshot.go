@@ -43,6 +43,9 @@ type SnapshotManifest struct {
 	// only files under the home directory, which restore to the home
 	// directory joined with the backup's path.
 	Destinations map[string]string `json:"destinations,omitempty"`
+	// CreatedFiles holds the absolute paths that did not exist at Create.
+	// Restore removes them, so a config the apply created goes with it.
+	CreatedFiles []string `json:"createdFiles,omitempty"`
 }
 
 // Destination returns the absolute path the backup at rel restores to.
@@ -87,6 +90,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 	var backedUp []string
 	hashes := make(map[string]string)
 	destinations := make(map[string]string)
+	var created []string
 	for i, absPath := range filesToBackup {
 		rel, err := filepath.Rel(home, absPath)
 		if err != nil || !filepath.IsLocal(rel) {
@@ -100,7 +104,8 @@ func Create(projectRoot string, loadoutName string, mode string,
 
 		if err := copyFile(absPath, destPath); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				continue // skip files that don't exist
+				created = append(created, absPath)
+				continue
 			}
 			return "", fmt.Errorf("backing up %s: %w", absPath, err)
 		}
@@ -127,6 +132,7 @@ func Create(projectRoot string, loadoutName string, mode string,
 		Symlinks:       symlinks,
 		HookScripts:    hookScripts,
 		Destinations:   destinations,
+		CreatedFiles:   created,
 	}
 
 	manifestData, err := json.MarshalIndent(manifest, "", "  ")
@@ -204,7 +210,8 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 }
 
 // Restore reads backed-up files from snapshotDir and writes them back to their
-// original absolute paths. Does not remove symlinks (caller does that).
+// original absolute paths, then removes the files that did not exist at
+// Create. Does not remove symlinks (caller does that).
 //
 // Each destination is lstat'd before it is opened for write: if a path is
 // currently a symlink, Restore refuses to write through it. This blocks the
@@ -239,6 +246,11 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 
 		if err := restoreToFile(srcPath, destPath); err != nil {
 			return fmt.Errorf("restoring %s: %w", rel, err)
+		}
+	}
+	for _, path := range manifest.CreatedFiles {
+		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("removing %s: %w", path, err)
 		}
 	}
 

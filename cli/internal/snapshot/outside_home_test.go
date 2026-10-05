@@ -106,3 +106,31 @@ func TestLoad_SkipsADirectoryWithoutAManifest(t *testing.T) {
 		t.Errorf("Load: got %s (%s), want %s", loadedDir, manifest.LoadoutName, snapshotDir)
 	}
 }
+
+// TestRestore_RemovesAFileTheApplyCreated: a config that did not exist
+// when the snapshot was taken goes away on restore, so a server the apply
+// wrote into it does not outlive the loadout. One already gone is fine.
+func TestRestore_RemovesAFileTheApplyCreated(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	cfgPath := filepath.Join(projectRoot, ".cursor", "mcp.json")
+	gone := filepath.Join(projectRoot, "gone.json")
+
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{cfgPath, gone}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.MkdirAll(filepath.Dir(cfgPath), 0755)
+	os.WriteFile(cfgPath, []byte(`{"mcpServers":{"srv":{}}}`), 0644)
+
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(snapshotDir, manifest); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if _, err := os.Stat(cfgPath); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("created config still there (stat err %v)", err)
+	}
+}

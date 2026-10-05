@@ -20,6 +20,7 @@ type RemoveOptions struct {
 // RemoveResult describes what was reverted.
 type RemoveResult struct {
 	RestoredFiles   []string // absolute paths of files restored from snapshot
+	RemovedFiles    []string // absolute paths of files the apply created, deleted
 	RemovedSymlinks []string // absolute paths of symlinks deleted
 	LoadoutName     string
 }
@@ -65,6 +66,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	for _, rel := range manifest.BackedUpFiles {
 		result.RestoredFiles = append(result.RestoredFiles, manifest.Destination(home, rel))
 	}
+	result.RemovedFiles = manifest.CreatedFiles
 
 	// Step 2: Delete symlinks
 	for _, sr := range manifest.Symlinks {
