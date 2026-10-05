@@ -38,8 +38,8 @@ type Conversion struct {
 // ConvertItem converts a library item to the target provider's format.
 // from overrides the item's source provider; when it is "", the provider
 // recorded when the item was added wins over the provider directory the
-// item sits in, and content that does not read as that provider's format
-// is read as canonical. A target that cannot hold the content returns a
+// item sits in, and content that does not read as the recorded provider's
+// format is read as canonical. A target that cannot hold the content returns a
 // Conversion whose Content is nil, with the warnings that say why.
 func ConvertItem(item catalog.ContentItem, to provider.Provider, from string) (*Conversion, error) {
 	conv := For(item.Type)
@@ -54,9 +54,10 @@ func ConvertItem(item catalog.ContentItem, to provider.Provider, from string) (*
 	if err != nil {
 		return nil, err
 	}
-	explicit := from != ""
+	recorded := false
 	if from == "" && item.Meta != nil {
 		from = item.Meta.SourceProvider
+		recorded = from != ""
 	}
 	if from == "" {
 		from = item.Provider
@@ -76,10 +77,12 @@ func ConvertItem(item catalog.ContentItem, to provider.Provider, from string) (*
 	}
 
 	canonical, err := conv.Canonicalize(raw, from)
-	if err != nil && !explicit && from != "" {
+	if err != nil && recorded {
 		// An add that names the content type stores the canonical form
 		// while recording the provider the item came from, so content that
-		// does not read as that provider's format is read as canonical.
+		// does not read as that provider's format is read as canonical. A
+		// provider directory records no such add, so its content must read
+		// as that provider's format.
 		if asCanonical, canonErr := conv.Canonicalize(raw, ""); canonErr == nil {
 			canonical, err = asCanonical, nil
 			c.From = ""
@@ -178,6 +181,8 @@ func hookCompat(c *Conversion, slug string) (CompatLevel, []string, error) {
 	worst := CompatFull
 	var notes []string
 	for _, h := range hooks.Hooks {
+		// Conversion reads an event name the way it is written here.
+		h.Event = CanonicalHookEvent(h.Event, c.From, slug)
 		cr := AnalyzeHookCompat(hookDataFromCanonical(h), slug)
 		worst = max(worst, cr.Level)
 		if cr.Level > CompatFull && cr.Notes != "" && !slices.Contains(notes, cr.Notes) {

@@ -211,3 +211,24 @@ func TestInstall_ItemAddedFromTheTargetLosesNothing(t *testing.T) {
 		t.Errorf("expected no conversion warnings, got %q", got)
 	}
 }
+
+// TestInstallMCP_ReportsWhatATypedAddLoses: an add that names the content
+// type stores the server as canonical while recording Cline as its source,
+// and Cursor still loses the canonical autoApprove the merge writes.
+func TestInstallMCP_ReportsWhatATypedAddLoses(t *testing.T) {
+	isolateLegacyRoot(t)
+	overrideMCPConfigPaths(t, map[string]string{"cursor": filepath.Join(t.TempDir(), "cursor-mcp.json")})
+	itemDir := filepath.Join(t.TempDir(), "mcp", "gh")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "config.json"), []byte(`{"mcpServers":{"gh":{"command":"gh-mcp","autoApprove":["list"]}}}`), 0644)
+	item := catalog.ContentItem{Name: "gh", Type: catalog.MCP, Path: itemDir, Meta: &metadata.Meta{SourceProvider: "cline"}}
+
+	placement, err := installMCP(item, provider.Cursor, t.TempDir())
+	if err != nil {
+		t.Fatalf("installMCP: %v", err)
+	}
+	want := `gh: server "gh": autoApprove dropped (not documented by Cursor)`
+	if got := conversionWarnings(placement.Notices); !slices.Contains(got, want) {
+		t.Errorf("expected warning %q, got %q", want, got)
+	}
+}

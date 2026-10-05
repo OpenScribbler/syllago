@@ -252,6 +252,36 @@ func TestConvertItem_TypedAddIsReadAsCanonical(t *testing.T) {
 	}
 }
 
+// TestConvertItem_ProviderDirectoryContentMustParse: an item that sits in
+// a provider's directory without a recorded add is in that provider's
+// format, so content that does not parse as it is an error rather than a
+// canonical body.
+func TestConvertItem_ProviderDirectoryContentMustParse(t *testing.T) {
+	item := writeItem(t, catalog.Commands, "command.toml", "description = \"Review\"\nprompt = \"\"\"Review the diff.\n")
+	item.Provider = "gemini-cli"
+
+	if _, err := ConvertItem(item, providerBySlug(t, "claude-code"), ""); !errors.Is(err, ErrUnreadable) {
+		t.Errorf("err = %v, want ErrUnreadable", err)
+	}
+}
+
+// TestCompatReport_NativeEventNameIsSupported: a legacy hook file that
+// names no source provider and writes Claude Code's own event name converts
+// to Claude Code losing nothing, and its rating says so.
+func TestCompatReport_NativeEventNameIsSupported(t *testing.T) {
+	item := writeItem(t, catalog.Hooks, "hook.json", `{"event":"PreToolUse","matcher":"Bash","hooks":[{"type":"command","command":"./check.sh"}]}`)
+
+	report, err := CompatReport(item)
+	if err != nil {
+		t.Fatalf("CompatReport: %v", err)
+	}
+	for _, row := range report {
+		if row.Provider.Slug == "claude-code" && (row.Level != CompatFull || len(row.Warnings) != 0) {
+			t.Errorf("claude-code: level %v, warnings %q; want full with none", row.Level, row.Warnings)
+		}
+	}
+}
+
 func TestCompatReport_DroppedEventBreaksTheItemForClaudeCode(t *testing.T) {
 	// Claude Code has no before_model event, so it writes one hook of two.
 	item := writeItem(t, catalog.Hooks, "hook.json", `{"spec":"hooks/0.1","hooks":[`+
