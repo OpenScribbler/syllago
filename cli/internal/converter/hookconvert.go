@@ -17,6 +17,18 @@ var ErrNoHookEncoder = errors.New("syllago cannot write hooks for this provider"
 // A target with no adapter returns ErrNoHookEncoder. A result with nil
 // Content means the target can represent none of the hooks.
 func ConvertHooks(raw []byte, fromSlug, toSlug string) (*Result, error) {
+	return convertHooks(raw, fromSlug, toSlug, false)
+}
+
+// ConvertHooksWrappingLLM is ConvertHooks, except that a prompt or agent
+// hook the target cannot run becomes a command hook running a generated
+// script that asks the target's CLI, instead of being dropped. The scripts
+// come back in ExtraFiles, named as the hook commands call them.
+func ConvertHooksWrappingLLM(raw []byte, fromSlug, toSlug string) (*Result, error) {
+	return convertHooks(raw, fromSlug, toSlug, true)
+}
+
+func convertHooks(raw []byte, fromSlug, toSlug string, wrapLLM bool) (*Result, error) {
 	hooks, err := DecodeHooks(raw, fromSlug)
 	if err != nil {
 		return nil, err
@@ -28,12 +40,24 @@ func ConvertHooks(raw []byte, fromSlug, toSlug string) (*Result, error) {
 	for i, h := range hooks.Hooks {
 		hooks.Hooks[i].Event = CanonicalHookEvent(h.Event, fromSlug, toSlug)
 	}
+	var wrappers map[string][]byte
+	var wrapWarnings []ConversionWarning
+	if wrapLLM && !adapter.Capabilities().SupportsLLMHooks {
+		wrappers, wrapWarnings = wrapLLMHooks(hooks, toSlug)
+	}
 	enc, err := adapter.Encode(hooks)
 	if err != nil {
 		return nil, err
 	}
 	res := &Result{Content: enc.Content, Filename: enc.Filename, ExtraFiles: enc.Scripts}
-	for _, w := range append(enc.Warnings, CheckStructuredOutputLoss(fromSlug, toSlug)...) {
+	for name, content := range wrappers {
+		if res.ExtraFiles == nil {
+			res.ExtraFiles = map[string][]byte{}
+		}
+		res.ExtraFiles[name] = content
+	}
+	warnings := append(wrapWarnings, enc.Warnings...)
+	for _, w := range append(warnings, CheckStructuredOutputLoss(fromSlug, toSlug)...) {
 		text := w.Description
 		if w.Suggestion != "" {
 			text += " (" + w.Suggestion + ")"
@@ -172,4 +196,30 @@ func CanonicalHookFromManifest(h Hook) (CanonicalHook, error) {
 		}
 	}
 	return ch, nil
+}
+
+// wrapLLMHooks replaces each prompt or agent hook with a command hook that
+// runs a generated wrapper script, and returns the scripts by file name.
+func wrapLLMHooks(hooks *CanonicalHooks, toSlug string) (map[string][]byte, []ConversionWarning) {
+	scripts := map[string][]byte{}
+	var warnings []ConversionWarning
+	for i, h := range hooks.Hooks {
+		if h.Handler.Type != "prompt" && h.Handler.Type != "agent" {
+			continue
+		}
+		name, content := generateLLMWrapperScript(HookEntry{Type: h.Handler.Type, Prompt: h.Handler.Prompt}, toSlug, h.Event, len(scripts))
+		scripts[name] = content
+		hooks.Hooks[i].Handler = HookHandler{
+			Type:          "command",
+			Command:       "./" + name,
+			Timeout:       30, // the CLI call needs longer than a command check
+			StatusMessage: fmt.Sprintf("syllago-generated: LLM-evaluated hook (from %s)", h.Handler.Type),
+		}
+		warnings = append(warnings, ConversionWarning{
+			Severity:    "info",
+			Capability:  "llm_evaluated",
+			Description: fmt.Sprintf("LLM hook (type: %q) converted to wrapper script %s", h.Handler.Type, name),
+		})
+	}
+	return scripts, warnings
 }

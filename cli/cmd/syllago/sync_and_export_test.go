@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/registry"
@@ -531,7 +532,7 @@ func TestRunExportOp_JSONMergeCrossProvider(t *testing.T) {
 	// A hook item with source_provider set triggers the JSON-merge cross-provider
 	// converter branch. The hooks converter renders to the target provider.
 	root := setupExportRepo(t)
-	hookDir := filepath.Join(root, "hooks", "x-hook")
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
 	os.MkdirAll(hookDir, 0755)
 	os.WriteFile(filepath.Join(hookDir, "hooks.json"), []byte(`{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo hi"}]}]}}`), 0644)
 	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
@@ -554,16 +555,62 @@ func TestRunExportOp_JSONMergeCrossProvider(t *testing.T) {
 	}
 	t.Cleanup(func() { provider.AllProviders = orig })
 
-	_, stderr := output.SetForTest(t)
+	stdout, stderr := output.SetForTest(t)
 
 	err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", "", "", false)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
-	// Exercises the JSON-merge branch: either "Skipping ... requires JSON merge" or
-	// "(converted, merge manually)" depending on whether metadata was loaded.
-	if !strings.Contains(stderr.String(), "JSON merge") && !strings.Contains(stderr.String(), "Skipping") {
-		t.Errorf("expected JSON merge or skip message, got: %s", stderr.String())
+	if !strings.Contains(stdout.String(), "(converted, merge manually)") {
+		t.Errorf("expected a converted export, got stdout %q, stderr %q", stdout.String(), stderr.String())
+	}
+}
+
+// Regression: sync-install rendered hooks through a second encoder, so the
+// exported file could differ from what install writes, and a Library hook
+// manifest went out unconverted.
+func TestRunExportOp_HookExportUsesTheInstallEncoder(t *testing.T) {
+	root := setupExportRepo(t)
+	hookDir := filepath.Join(root, "hooks", "claude-code", "x-hook")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","matcher":"shell","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`), 0644)
+	os.WriteFile(filepath.Join(hookDir, ".syllago.yaml"), []byte("id: x-hook\nname: x-hook\nsource_provider: claude-code\n"), 0644)
+
+	withFakeRepoRoot(t, root)
+	syllagoDir := filepath.Join(root, ".syllago")
+	os.MkdirAll(syllagoDir, 0755)
+	os.WriteFile(filepath.Join(syllagoDir, "config.json"), []byte(`{"providers":[]}`), 0644)
+
+	orig := append([]provider.Provider(nil), provider.AllProviders...)
+	provider.AllProviders = []provider.Provider{
+		{
+			Name: "Gemini",
+			Slug: "gemini-cli",
+			InstallDir: func(string, catalog.ContentType) string {
+				return provider.JSONMergeSentinel
+			},
+			SupportsType: func(ct catalog.ContentType) bool { return ct == catalog.Hooks },
+		},
+	}
+	t.Cleanup(func() { provider.AllProviders = orig })
+	stdout, stderr := output.SetForTest(t)
+
+	if err := runInstallOp(root, "gemini-cli", "hooks", "", "shared", converter.LLMHooksModeGenerate, "", false); err != nil {
+		t.Fatalf("runInstallOp: %v", err)
+	}
+	exported, _ := filepath.Glob(filepath.Join(hookDir, "exported-gemini-cli-*"))
+	if len(exported) != 1 {
+		t.Fatalf("want one exported file, got %v\nstdout: %s\nstderr: %s", exported, stdout, stderr)
+	}
+	data, _ := os.ReadFile(exported[0])
+	for _, want := range []string{`"BeforeTool"`, `"run_shell_command"`, `./syllago-llm-hook-`} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("exported hooks missing %s:\n%s", want, data)
+		}
+	}
+	scripts, _ := filepath.Glob(filepath.Join(hookDir, "syllago-llm-hook-*.sh"))
+	if len(scripts) != 1 {
+		t.Errorf("want one wrapper script, got %v", scripts)
 	}
 }
 
