@@ -183,6 +183,10 @@ func runInspect(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+		if rendered.Content == nil {
+			// The warnings say why nothing converted, so the error carries them.
+			return output.NewStructuredErrorDetail(output.ErrConvertNotSupported, fmt.Sprintf("%s is not compatible with %s format", item.Name, provName), "Try a different target provider", strings.Join(rendered.Warnings, "\n"))
+		}
 		result.AsProvider = provName
 		result.AsContent = string(rendered.Content)
 		result.AsWarnings = rendered.Warnings

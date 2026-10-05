@@ -437,6 +437,11 @@ func installToProvider(
 						srcProv = item.Meta.SourceProvider
 					}
 					if item.Type == catalog.Hooks {
+						// Install reads the hook's events through the provider it came from,
+						// so the warnings do too.
+						if srcProv == "" {
+							srcProv = item.Provider
+						}
 						if rendered, hErr := converter.ConvertHooks(raw, srcProv, prov.Slug); hErr == nil {
 							warnings = rendered.Warnings
 						}
