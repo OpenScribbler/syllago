@@ -35,7 +35,6 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/promote` | Local-to-shared content promotion |
 | `internal/gitutil` | Git operations (clone, pull, status) |
 | `internal/metadata` | Content metadata parsing |
-| `internal/model` | Shared data types |
 | `internal/output` | CLI output formatting (non-TUI) |
 | `internal/parse` | File parsing utilities |
 | `internal/sandbox` | Sandbox configuration |
