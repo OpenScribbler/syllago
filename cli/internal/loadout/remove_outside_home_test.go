@@ -72,11 +72,12 @@ func TestRemove_DeletesAFileTheApplyCreated(t *testing.T) {
 // entries and keeps one a later install added, whether or not the project
 // had an installed.json before the apply.
 func TestRemove_KeepsInstallsMadeAfterTheApply(t *testing.T) {
-	t.Parallel()
 	for _, existing := range []bool{false, true} {
 		t.Run(map[bool]string{false: "first apply", true: "existing installed.json"}[existing], func(t *testing.T) {
-			t.Parallel()
 			homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+			// Remove reads the provider's MCP config, which lives under HOME.
+			t.Setenv("HOME", homeDir)
+			t.Setenv("USERPROFILE", homeDir)
 			want := []string{"later"}
 			if existing {
 				earlier := &installer.Installed{MCP: []installer.InstalledMCP{{Name: "earlier", Source: "export", Provider: prov.Slug}}}
@@ -427,7 +428,7 @@ func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
 
 	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err == nil || !containsAll(err.Error(), "remove deleted "+created, "before running remove again") {
+	if err == nil || !containsAll(err.Error(), "remove deleted "+created, "move those under createdFiles to revertedFiles") {
 		t.Fatalf("Remove: got %v, want it to name %s and say to fix the manifest before retrying", err, created)
 	}
 }
@@ -452,5 +453,30 @@ func TestRemove_PointsAtACopyRecordedAsASymlink(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(placed, "sub")); err != nil {
 		t.Errorf("remove deleted inside %s: %v", placed, err)
+	}
+}
+
+// TestRemove_SaysToDeleteASnapshotItCannotDelete: a retry would restore the
+// backups again over any edit made since, so the message says to delete the
+// snapshot by hand rather than retry.
+func TestRemove_SaysToDeleteASnapshotItCannotDelete(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	snapshots := filepath.Dir(snapshotDir)
+	if err := os.Chmod(snapshots, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshots, 0o755) })
+
+	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), snapshotDir, "rather than running remove again") {
+		t.Fatalf("Remove: got %v, want it to say to delete %s by hand", err, snapshotDir)
 	}
 }

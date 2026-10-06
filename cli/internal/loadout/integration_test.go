@@ -582,6 +582,52 @@ func TestApply_RollbackNamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	}
 }
 
+// A rollback whose restore went through deleted every created file, so its
+// by-hand steps except those too.
+func TestApply_RollbackExceptsTheCreatedFilesItRestoredAway(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	// With no settings.json, the hook merge's file is one the apply creates.
+	if err := os.Remove(filepath.Join(homeDir, ".claude", "settings.json")); err != nil {
+		t.Fatal(err)
+	}
+	var locked []string
+	var created []string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		err := snapshot.Restore(dir, sm)
+		created = sm.CreatedFiles
+		// The snapshot cannot be rewritten, and the first copy cannot be deleted.
+		locked = []string{dir, filepath.Dir(sm.Symlinks[0].Path)}
+		for _, d := range locked {
+			if err := os.Chmod(d, 0o555); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+	t.Cleanup(func() {
+		for _, d := range locked {
+			os.Chmod(d, 0o755)
+		}
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if len(created) == 0 {
+		t.Fatal("the snapshot recorded no created file, so the test checks nothing")
+	}
+	if err == nil || !containsAll(err.Error(), append(created, "which rollback already deleted")...) {
+		t.Fatalf("Apply: got %v, want by-hand steps that except the created files %q", err, created)
+	}
+}
+
 // TestApply_PartialHookMergeRollback_RestoresSettingsJson is the deterministic
 // "partial merge is reverted" test. Unlike the previous test, this one
 // guarantees the first hook WAS applied before the second one fails — proving

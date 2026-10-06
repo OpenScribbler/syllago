@@ -179,6 +179,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		if readErr == nil {
 			restoreErr = restoreSnapshot(snapshotDir, sm)
 		}
+		restored := readErr == nil && restoreErr == nil
 		// A placement that will not go fails the rollback like a restore
 		// that will not, so the snapshot stays and records it.
 		removed, unplaceErr := unplace(placed)
@@ -197,9 +198,14 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			// gone, is not the apply's to delete if it appears. Until that
 			// is recorded, remove could delete one, so it is not offered.
 			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
+				// A restore that failed partway names what it deleted.
+				gone := removed
+				if restored {
+					gone = slices.Concat(sm.CreatedFiles, removed)
+				}
 				except := ""
-				if len(removed) > 0 {
-					except = " except " + strings.Join(removed, ", ") + ", which rollback already deleted"
+				if len(gone) > 0 {
+					except = " except " + strings.Join(gone, ", ") + ", which rollback already deleted"
 				}
 				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks%s, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, except, left)
 			}

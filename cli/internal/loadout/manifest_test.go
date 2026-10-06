@@ -168,7 +168,7 @@ commands:
 
 func TestParse_NonexistentFile(t *testing.T) {
 	t.Parallel()
-	_, err := Parse("/nonexistent/path/loadout.yaml")
+	_, err := Parse(filepath.Join(t.TempDir(), "nonexistent", "loadout.yaml"))
 	if err == nil {
 		t.Fatal("expected error for nonexistent file")
 	}

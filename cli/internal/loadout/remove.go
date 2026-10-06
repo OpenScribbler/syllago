@@ -86,7 +86,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	deleted := slices.Clone(manifest.CreatedFiles)
 	forget := func() error {
 		if err := snapshot.Forget(snapshotDir, deleted); err != nil {
-			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; take those paths out of its manifest.json before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
+			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; in its manifest.json, move those under createdFiles to revertedFiles and take those under symlinks out before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
 		}
 		return nil
 	}
@@ -116,8 +116,9 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 
 	// Step 4: Delete snapshot
+	// A retry would restore the backups again, over any edit made since.
 	if err := snapshot.Delete(snapshotDir); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("remove finished but could not delete %s: %w; delete it by hand rather than running remove again", snapshotDir, err)
 	}
 
 	return result, nil

@@ -434,7 +434,11 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			// A retry must not delete what appears at the paths this one
 			// already deleted.
-			return errors.Join(fmt.Errorf("removing %s: %w", path, err), Forget(snapshotDir, manifest.CreatedFiles[:i]))
+			removeErr := fmt.Errorf("removing %s: %w", path, err)
+			if err := Forget(snapshotDir, manifest.CreatedFiles[:i]); err != nil {
+				return fmt.Errorf("%w; restore deleted %s but could not record that in %s: %w; move those paths from createdFiles to revertedFiles in its manifest.json before trying again", removeErr, strings.Join(manifest.CreatedFiles[:i], ", "), snapshotDir, err)
+			}
+			return removeErr
 		}
 	}
 

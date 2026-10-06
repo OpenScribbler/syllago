@@ -395,3 +395,35 @@ func TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure(t *testing.T) {
 		t.Errorf("after the failed restore: created %q, reverted %q; want created %s, reverted %s", m.CreatedFiles, m.RevertedFiles, stuck, deleted)
 	}
 }
+
+// TestRestore_NamesWhatItDeletedWhenItCannotRecordIt: a restore that fails
+// partway and cannot rewrite the snapshot names the created files it
+// already deleted, which a retry would otherwise delete again.
+func TestRestore_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	stuck := filepath.Join(projectRoot, "stuck")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted, stuck}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	os.MkdirAll(filepath.Join(stuck, "sub"), 0755)
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := os.Chmod(snapshotDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0755) })
+
+	err = Restore(snapshotDir, manifest)
+	if err == nil || !strings.Contains(err.Error(), "restore deleted "+deleted+" but could not record that") {
+		t.Fatalf("Restore: got %v, want it to name %s as already deleted", err, deleted)
+	}
+}
