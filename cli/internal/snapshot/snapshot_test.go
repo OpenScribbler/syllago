@@ -204,15 +204,24 @@ func TestLoad_ReturnsLatestSnapshot(t *testing.T) {
 // left its provider with nothing to restore.
 func TestCreate_SameSecondKeepsBothSnapshots(t *testing.T) {
 	t.Parallel()
-	projectRoot := t.TempDir()
-
-	first, err := Create(projectRoot, "first", "keep", nil, nil, nil)
-	if err != nil {
-		t.Fatalf("first Create: %v", err)
-	}
-	second, err := Create(projectRoot, "second", "keep", nil, nil, nil)
-	if err != nil {
-		t.Fatalf("second Create: %v", err)
+	// Retry until both calls land in one second, so the test exercises a
+	// collision rather than passing on a second boundary.
+	var projectRoot, first, second string
+	for attempt := 0; ; attempt++ {
+		projectRoot = t.TempDir()
+		var err error
+		if first, err = Create(projectRoot, "first", "keep", nil, nil, nil); err != nil {
+			t.Fatalf("first Create: %v", err)
+		}
+		if second, err = Create(projectRoot, "second", "keep", nil, nil, nil); err != nil {
+			t.Fatalf("second Create: %v", err)
+		}
+		if filepath.Base(first)[:15] == filepath.Base(second)[:15] {
+			break
+		}
+		if attempt == 4 {
+			t.Fatal("no two Creates landed in one second in 5 attempts")
+		}
 	}
 	if first == second {
 		t.Fatalf("both snapshots use %s", first)

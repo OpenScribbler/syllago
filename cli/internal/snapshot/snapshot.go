@@ -240,7 +240,7 @@ func Load(projectRoot string) (*SnapshotManifest, string, error) {
 		return nil, "", fmt.Errorf("reading snapshots dir: %w", err)
 	}
 
-	// Filter to snapshots and sort by name (timestamp-based, newest last).
+	// Filter to snapshots and sort by name (timestamp-based, newest first).
 	// Earlier versions wrote backups of files outside the home directory
 	// beside the snapshots rather than inside one, and a directory without
 	// a manifest is one of those.
