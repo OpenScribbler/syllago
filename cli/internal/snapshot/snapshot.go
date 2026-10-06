@@ -21,7 +21,7 @@ import (
 // ErrNoSnapshot is returned by Load when no snapshot exists.
 var ErrNoSnapshot = errors.New("no active snapshot")
 
-// SnapshotManifest is written to .syllago/snapshots/<timestamp>/manifest.json.
+// SnapshotManifest is written to .syllago/snapshots/<timestamp>[-NNN]/manifest.json.
 //
 // BackedUpHashes carries hex-encoded sha256 of each backup file at Create
 // time, keyed by the same relative path used in BackedUpFiles. Restore
