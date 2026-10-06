@@ -8,6 +8,7 @@ run:
 linters:
   default: none
   enable:
+    - depguard
     - errcheck
     - errorlint
     - gocyclo
@@ -21,6 +22,75 @@ linters:
     - unconvert
     - unused
   settings:
+    depguard:
+      # Import direction. Each list applies to every file its globs match,
+      # tests included, and denies by prefix unless the entry ends in $.
+      # ${config-path} keeps the checkout's parent directories out of the
+      # globs. On native Windows it expands with backslashes, which the globs
+      # read as escapes, so the rules match nothing there; CI lints on Linux.
+      rules:
+        # Workflows compose the core packages and each other, and the TUI may
+        # call any of them. Everything else under internal/ is core, a
+        # workflow's sub-package included, so a new package starts out bound
+        # by this.
+        core-imports-no-workflow:
+          files:
+            - "${config-path}/internal/*.go"
+            - "${config-path}/internal/**/*.go"
+            - "!${config-path}/internal/add/*.go"
+            - "!${config-path}/internal/doctor/*.go"
+            - "!${config-path}/internal/librarymigrate/*.go"
+            - "!${config-path}/internal/lifecycle/*.go"
+            - "!${config-path}/internal/loadout/*.go"
+            - "!${config-path}/internal/moatinstall/*.go"
+            - "!${config-path}/internal/promote/*.go"
+            - "!${config-path}/internal/registryops/*.go"
+            - "!${config-path}/internal/rollback/*.go"
+            - "!${config-path}/internal/tui/**"
+          deny:
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/add$"
+              desc: add is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/doctor$"
+              desc: doctor is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/librarymigrate$"
+              desc: librarymigrate is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/lifecycle$"
+              desc: lifecycle is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/loadout$"
+              desc: loadout is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/moatinstall$"
+              desc: moatinstall is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/promote$"
+              desc: promote is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/registryops$"
+              desc: registryops is a workflow; core packages must not depend on workflows
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/rollback$"
+              desc: rollback is a workflow; core packages must not depend on workflows
+        # Shared logic stays front-end-neutral, so the CLI, the TUI and a GUI
+        # can all call it. Under internal/, only the TUI imports the TUI, a
+        # terminal UI library, Cobra or pflag.
+        shared-imports-no-front-end:
+          files:
+            - "${config-path}/internal/*.go"
+            - "${config-path}/internal/**/*.go"
+            - "!${config-path}/internal/tui/**"
+          deny:
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui$"
+              desc: shared packages must not depend on the TUI
+            - pkg: "github.com/OpenScribbler/syllago/cli/internal/tui/"
+              desc: shared packages must not depend on the TUI
+            - pkg: github.com/charmbracelet
+              desc: terminal UI belongs in internal/tui
+            - pkg: charm.land/
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/lrstanley/bubblezone
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/muesli/termenv
+              desc: terminal UI belongs in internal/tui
+            - pkg: github.com/spf13/cobra
+              desc: command wiring belongs under cmd/
+            - pkg: github.com/spf13/pflag
+              desc: command wiring belongs under cmd/
     errcheck:
       # CLI output, string builders, and scan helpers — errors are not actionable.
       exclude-functions:

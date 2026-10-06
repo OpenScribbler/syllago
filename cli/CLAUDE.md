@@ -35,12 +35,17 @@ go test ./internal/tui/ -update-golden   # Regenerate golden files after visual 
 | `internal/promote` | Local-to-shared content promotion |
 | `internal/gitutil` | Git operations (clone, pull, status) |
 | `internal/metadata` | Content metadata parsing |
-| `internal/model` | Shared data types |
 | `internal/output` | CLI output formatting (non-TUI) |
 | `internal/parse` | File parsing utilities |
 | `internal/sandbox` | Sandbox configuration |
 | `internal/snapshot` | Snapshot management |
 | `internal/updater` | Self-update logic |
+
+### Import direction
+
+Workflow packages (`add`, `doctor`, `librarymigrate`, `lifecycle`, `loadout`, `moatinstall`, `promote`, `registryops`, `rollback`) compose the core packages and each other. Every other package under `internal/` except `internal/tui` is core and never imports a workflow, so a new package starts out as core. Nothing under `internal/` except `internal/tui` imports the TUI, a terminal UI library (Charm, bubblezone, termenv), Cobra or pflag, which keeps shared logic usable from the CLI, the TUI and a GUI. depguard enforces both rules in `.golangci.yml`. A new workflow package needs a `!` entry under `files` and a `deny` entry in that file's `core-imports-no-workflow` rule.
+
+Cross a package line by calling the other package's exported functions and types. Add a Go interface only where a second implementation exists or a test needs to substitute one, and define it in the package that consumes it.
 
 ## Go Conventions
 
