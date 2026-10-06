@@ -140,6 +140,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			symlinkRecords = append(symlinkRecords, snapshot.SymlinkRecord{
 				Path:   a.Detail,
 				Target: symlinkSource(*ref),
+				Copied: opts.Method == installer.MethodCopy,
 			})
 		}
 		if a.Action == "merge-hook" {
@@ -169,9 +170,9 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		if readErr == nil {
 			restoreErr = restoreSnapshot(snapshotDir, sm)
 		}
-		// Remove any symlinks we may have partially created
+		// Remove any symlinks or copies we may have partially created
 		for _, sr := range symlinkRecords {
-			_ = os.Remove(sr.Path)
+			_ = removePlaced(sr)
 		}
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and

@@ -465,6 +465,67 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 	}
 }
 
+// Regression: a copy-mode apply places each rule as a directory, and remove
+// deleted it with os.Remove, which fails on a non-empty directory. Remove
+// stopped after restoring the files and kept the snapshot, so the loadout
+// could never be removed.
+func TestKeepRoundTrip_CopyModeRemoveDeletesCopies(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		Method:      installer.MethodCopy,
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+	if _, err := Apply(manifest, cat, prov, opts); err != nil {
+		t.Fatalf("Apply (copy): %v", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	info, err := os.Lstat(copyPath)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("expected a copied directory at %s; info=%v err=%v", copyPath, info, err)
+	}
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("copy %s should be gone after remove; got err=%v", copyPath, err)
+	}
+	if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot should be gone after remove; got: %v", err)
+	}
+}
+
+// Regression: rollback deleted copies with os.Remove too, so a failed
+// copy-mode apply left every copied directory behind.
+func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+
+	// An empty event trips HookDataFromManifest after the rule is copied.
+	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
+	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"matcher":".*","handler":{"type":"command","command":"echo oops"}}]}`), 0644)
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		Method:      installer.MethodCopy,
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+	if _, err := Apply(manifest, cat, prov, opts); err == nil || !containsAll(err.Error(), "rolled back") {
+		t.Fatalf("expected a rolled-back apply error, got %v", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("copy %s should be gone after rollback; got err=%v", copyPath, err)
+	}
+}
+
 // TestApply_PartialHookMergeRollback_RestoresSettingsJson is the deterministic
 // "partial merge is reverted" test. Unlike the previous test, this one
 // guarantees the first hook WAS applied before the second one fails — proving

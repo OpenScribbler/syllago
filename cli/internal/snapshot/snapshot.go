@@ -57,10 +57,12 @@ func (m *SnapshotManifest) Destination(home, rel string) string {
 	return filepath.Join(home, rel)
 }
 
-// SymlinkRecord tracks a symlink created during apply.
+// SymlinkRecord tracks a symlink created during apply, or the copy placed
+// instead when the apply ran in copy mode.
 type SymlinkRecord struct {
-	Path   string `json:"path"`   // absolute path of the symlink
-	Target string `json:"target"` // absolute path it points to
+	Path   string `json:"path"`             // absolute path of the symlink or copy
+	Target string `json:"target"`           // absolute path it points to, or was copied from
+	Copied bool   `json:"copied,omitempty"` // a copy, which may be a directory
 }
 
 // snapshotsDir returns the path to .syllago/snapshots/.

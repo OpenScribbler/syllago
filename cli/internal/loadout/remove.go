@@ -74,8 +74,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 
 	// Step 2: Delete symlinks
 	for _, sr := range manifest.Symlinks {
-		err := os.Remove(sr.Path)
-		if err != nil && !os.IsNotExist(err) {
+		if err := removePlaced(sr); err != nil {
 			return nil, err
 		}
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
@@ -101,6 +100,19 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 
 	return result, nil
+}
+
+// removePlaced deletes what an apply placed at sr.Path: the symlink, or
+// the copy when the apply ran in copy mode. A copied skill is a directory,
+// which os.Remove cannot delete. A path already gone is not an error.
+func removePlaced(sr snapshot.SymlinkRecord) error {
+	if sr.Copied {
+		return os.RemoveAll(sr.Path)
+	}
+	if err := os.Remove(sr.Path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 // SkipInstalledBackup drops installed.json from the files manifest restores.
