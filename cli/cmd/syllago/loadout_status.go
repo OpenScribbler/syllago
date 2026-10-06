@@ -60,7 +60,11 @@ func runLoadoutStatus(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(output.Writer, "Applied: %s\n", manifest.CreatedAt.Format("2006-01-02 15:04:05"))
 
 	if len(manifest.Symlinks) > 0 {
-		fmt.Fprintf(output.Writer, "\nInstalled symlinks:\n")
+		if manifest.Symlinks[0].Copied {
+			fmt.Fprintf(output.Writer, "\nInstalled copies:\n")
+		} else {
+			fmt.Fprintf(output.Writer, "\nInstalled symlinks:\n")
+		}
 		for _, s := range manifest.Symlinks {
 			fmt.Fprintf(output.Writer, "  %s -> %s\n", s.Path, s.Target)
 		}

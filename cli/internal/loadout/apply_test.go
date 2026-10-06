@@ -12,6 +12,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 )
 
@@ -731,5 +732,53 @@ func TestApply_RollbackReadsItsOwnSnapshot(t *testing.T) {
 	}
 	if entries, _ := os.ReadDir(filepath.Join(homeDir, ".claude", "rules")); len(entries) != 0 {
 		t.Errorf("rule symlink still there: %v", entries)
+	}
+}
+
+// Rollback deletes what the apply started to place and leaves a planned
+// path it never reached, which something else may have created since.
+func TestUnplace_SkipsUnreachedPaths(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	placedCopy := filepath.Join(dir, "placed")
+	unreached := filepath.Join(dir, "unreached")
+	for _, d := range []string{placedCopy, unreached} {
+		if err := os.MkdirAll(filepath.Join(d, "sub"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	records := []snapshot.SymlinkRecord{
+		{Path: placedCopy, Copied: true},
+		{Path: unreached, Copied: true},
+	}
+
+	if err := unplace(records, []string{placedCopy}); err != nil {
+		t.Fatalf("unplace: %v", err)
+	}
+	if _, err := os.Lstat(placedCopy); !os.IsNotExist(err) {
+		t.Errorf("placed copy should be gone; got err=%v", err)
+	}
+	if _, err := os.Lstat(filepath.Join(unreached, "sub")); err != nil {
+		t.Errorf("unreached path should be untouched: %v", err)
+	}
+}
+
+// A placement that will not delete is reported, so rollback keeps the
+// snapshot instead of claiming success.
+func TestUnplace_ReportsFailures(t *testing.T) {
+	t.Parallel()
+	parent := t.TempDir()
+	placedCopy := filepath.Join(parent, "placed")
+	if err := os.MkdirAll(filepath.Join(placedCopy, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(placedCopy, 0o555); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { os.Chmod(placedCopy, 0o755) })
+
+	err := unplace([]snapshot.SymlinkRecord{{Path: placedCopy, Copied: true}}, []string{placedCopy})
+	if err == nil {
+		t.Fatal("expected an error deleting a copy whose contents cannot be removed")
 	}
 }

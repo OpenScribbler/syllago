@@ -58,7 +58,12 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(output.Writer, "Active loadout: %s (%s)\n\n", manifest.LoadoutName, manifest.Mode)
 
 		if len(manifest.Symlinks) > 0 {
-			fmt.Fprintln(output.Writer, "Symlinks to remove:")
+			// One apply places everything by the same method.
+			if manifest.Symlinks[0].Copied {
+				fmt.Fprintln(output.Writer, "Copies to delete, with any files added to them:")
+			} else {
+				fmt.Fprintln(output.Writer, "Symlinks to remove:")
+			}
 			for _, s := range manifest.Symlinks {
 				fmt.Fprintf(output.Writer, "  %s\n", s.Path)
 			}

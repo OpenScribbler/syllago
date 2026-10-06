@@ -1,9 +1,11 @@
 package loadout
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -161,7 +163,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			warnings = append(warnings, fmt.Sprintf("skipped %s: %s", a.Name, a.Problem))
 		}
 	}
-	placeWarnings, applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
+	placeWarnings, placed, applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up. Read this apply's own
 		// snapshot, so another one in the directory cannot stop the restore.
@@ -170,10 +172,9 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		if readErr == nil {
 			restoreErr = restoreSnapshot(snapshotDir, sm)
 		}
-		// Remove any symlinks or copies we may have partially created
-		for _, sr := range symlinkRecords {
-			_ = removePlaced(sr)
-		}
+		// A placement that will not go fails the rollback like a restore
+		// that will not, so the snapshot stays and records it.
+		restoreErr = errors.Join(restoreErr, unplace(symlinkRecords, placed))
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and
 		// a restore that keeps failing leaves the backups to copy by hand and
@@ -221,12 +222,27 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 
 // applyActions executes each planned action against the filesystem and
 // returns what the placements warn about.
-func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) ([]string, error) {
+// unplace deletes the symlinks and copies a failed apply started to place.
+// A planned path it never reached is not the apply's to delete, even if
+// something appeared there after the preview.
+func unplace(records []snapshot.SymlinkRecord, placed []string) error {
+	var errs []error
+	for _, sr := range records {
+		if !slices.Contains(placed, sr.Path) {
+			continue
+		}
+		if err := removePlaced(sr); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) (warnings, placed []string, err error) {
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err != nil {
-		return nil, fmt.Errorf("loading installed.json: %w", err)
+		return nil, nil, fmt.Errorf("loading installed.json: %w", err)
 	}
-	var warnings []string
 
 	source := "loadout:" + loadoutName
 
@@ -237,19 +253,22 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		ref := findRefByName(refs, a.Type, a.Name)
 		if ref == nil {
-			return nil, fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
+			return nil, placed, fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
 		}
 
 		switch a.Action {
 		case "create-symlink":
 			srcPath := symlinkSource(*ref)
+			// Recorded before placing, so a copy that fails partway is
+			// still cleaned up.
+			placed = append(placed, a.Detail)
 			if opts.Method == installer.MethodCopy {
 				if err := installer.CopyContent(srcPath, a.Detail); err != nil {
-					return nil, fmt.Errorf("copying %s: %w", a.Name, err)
+					return nil, placed, fmt.Errorf("copying %s: %w", a.Name, err)
 				}
 			} else {
 				if err := installer.CreateSymlink(srcPath, a.Detail); err != nil {
-					return nil, fmt.Errorf("creating symlink for %s: %w", a.Name, err)
+					return nil, placed, fmt.Errorf("creating symlink for %s: %w", a.Name, err)
 				}
 			}
 			inst.Symlinks = append(inst.Symlinks, installer.InstalledSymlink{
@@ -261,13 +280,13 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		case "merge-hook":
 			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
-				return nil, fmt.Errorf("merging hook %s: %w", a.Name, err)
+				return nil, placed, fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
 		case "merge-mcp":
 			placement, err := installer.PlaceMCP(ref.Item, prov, opts.ProjectRoot, inst, source)
 			if err != nil {
-				return nil, fmt.Errorf("merging MCP %s: %w", a.Name, err)
+				return nil, placed, fmt.Errorf("merging MCP %s: %w", a.Name, err)
 			}
 			for _, n := range placement.Notices {
 				warnings = append(warnings, n.Message)
@@ -277,10 +296,10 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 	// Save all tracking in one write
 	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
-		return nil, fmt.Errorf("saving installed.json: %w", err)
+		return nil, placed, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return warnings, nil
+	return warnings, placed, nil
 }
 
 // settingsPathFor computes a provider's hook config path via the shared

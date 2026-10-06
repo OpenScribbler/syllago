@@ -100,6 +100,42 @@ func TestRunLoadoutRemove(t *testing.T) {
 			},
 		},
 		{
+			name: "copy-mode apply lists copies to delete rather than symlinks",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: "/tmp/already-gone-copy", Target: "/tmp/src", Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, stdout, stderr string) {
+				t.Helper()
+				if !strings.Contains(stdout, "Copies to delete, with any files added to them:") {
+					t.Errorf("expected copies section, got: %s", stdout)
+				}
+				if strings.Contains(stdout, "Symlinks to remove:") {
+					t.Errorf("copies should not be listed as symlinks, got: %s", stdout)
+				}
+			},
+		},
+		{
+			name: "relative symlink path is refused before anything changes",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: "relative/copy", Target: "/tmp/src", Copied: true},
+					},
+				})
+			},
+			wantErr: true,
+		},
+		{
 			name: "non-auto non-interactive JSON happy path prints result as JSON",
 			setup: func(t *testing.T, root string) {
 				writeSnapshot(t, root, &snapshot.SnapshotManifest{

@@ -501,14 +501,17 @@ func TestKeepRoundTrip_CopyModeRemoveDeletesCopies(t *testing.T) {
 }
 
 // Regression: rollback deleted copies with os.Remove too, so a failed
-// copy-mode apply left every copied directory behind.
+// copy-mode apply left every copied directory behind. Rules place in
+// manifest order, so int-rule is copied before int-rule-gone fails.
 func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
 	t.Parallel()
 	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
-
-	// An empty event trips HookDataFromManifest after the rule is copied.
-	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
-	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"matcher":".*","handler":{"type":"command","command":"echo oops"}}]}`), 0644)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
 
 	opts := ApplyOptions{
 		Mode:        "keep",
@@ -517,8 +520,9 @@ func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
 		HomeDir:     homeDir,
 		RepoRoot:    projectRoot,
 	}
-	if _, err := Apply(manifest, cat, prov, opts); err == nil || !containsAll(err.Error(), "rolled back") {
-		t.Fatalf("expected a rolled-back apply error, got %v", err)
+	_, err := Apply(manifest, cat, prov, opts)
+	if err == nil || !containsAll(err.Error(), "rolled back", "copying int-rule-gone") {
+		t.Fatalf("expected the second copy to fail and roll back, got %v", err)
 	}
 	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
 	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {

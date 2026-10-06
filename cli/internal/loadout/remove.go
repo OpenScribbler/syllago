@@ -61,6 +61,14 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		LoadoutName: manifest.LoadoutName,
 	}
 
+	// A copy is deleted with everything under it, so a path from a hand
+	// edit is refused before anything changes.
+	for _, sr := range manifest.Symlinks {
+		if !filepath.IsAbs(sr.Path) || filepath.Dir(sr.Path) == sr.Path {
+			return nil, fmt.Errorf("removing %q: not an absolute path below the filesystem root", sr.Path)
+		}
+	}
+
 	// Step 1: Restore backed-up files
 	home, _ := os.UserHomeDir()
 	SkipInstalledBackup(manifest, opts.ProjectRoot)
