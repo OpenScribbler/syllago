@@ -61,11 +61,9 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		LoadoutName: manifest.LoadoutName,
 	}
 
-	// A copy is deleted with everything under it, so a path from a hand
-	// edit is refused before anything changes.
 	for _, sr := range manifest.Symlinks {
-		if !filepath.IsAbs(sr.Path) || filepath.Dir(sr.Path) == sr.Path {
-			return nil, fmt.Errorf("removing %q: not an absolute path below the filesystem root", sr.Path)
+		if err := checkRemovablePath(sr.Path); err != nil {
+			return nil, err
 		}
 	}
 
@@ -108,6 +106,17 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 
 	return result, nil
+}
+
+// checkRemovablePath refuses a path removePlaced must not delete. A copy
+// is deleted with everything under it, so a path from a hand edit is
+// refused before anything changes. An apply records clean paths, and
+// "/home/u/.." would delete /home.
+func checkRemovablePath(p string) error {
+	if !filepath.IsAbs(p) || filepath.Clean(p) != p || filepath.Dir(p) == p {
+		return fmt.Errorf("removing %q: not a clean absolute path below the filesystem root", p)
+	}
+	return nil
 }
 
 // removePlaced deletes what an apply placed at sr.Path: the symlink, or

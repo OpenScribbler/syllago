@@ -767,6 +767,9 @@ func TestUnplace_SkipsUnreachedPaths(t *testing.T) {
 // snapshot instead of claiming success.
 func TestUnplace_ReportsFailures(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
 	parent := t.TempDir()
 	placedCopy := filepath.Join(parent, "placed")
 	if err := os.MkdirAll(filepath.Join(placedCopy, "sub"), 0o755); err != nil {
@@ -780,5 +783,102 @@ func TestUnplace_ReportsFailures(t *testing.T) {
 	err := unplace([]snapshot.SymlinkRecord{{Path: placedCopy, Copied: true}}, []string{placedCopy})
 	if err == nil {
 		t.Fatal("expected an error deleting a copy whose contents cannot be removed")
+	}
+}
+
+// Something that appears at a planned path after the preview is not the
+// apply's: it is refused, left alone, and never recorded as placed.
+func TestApplyActions_RefusesPathThatAppeared(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	for _, d := range []string{src, filepath.Join(dst, "mine")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	actions := []PlannedAction{{Type: catalog.Rules, Name: "r", Action: "create-symlink", Detail: dst}}
+	refs := []ResolvedRef{{Type: catalog.Rules, Name: "r", Item: catalog.ContentItem{Path: src}}}
+
+	_, placed, err := applyActions(actions, refs, provider.Provider{}, ApplyOptions{Method: installer.MethodCopy, ProjectRoot: dir}, "l")
+	if !errors.Is(err, fs.ErrExist) {
+		t.Fatalf("applyActions: got %v, want fs.ErrExist", err)
+	}
+	if len(placed) != 0 {
+		t.Errorf("placed: got %v, want nothing", placed)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "mine")); err != nil {
+		t.Errorf("what appeared at %s should be untouched: %v", dst, err)
+	}
+}
+
+// A copy that fails partway leaves a partial directory, which rollback
+// deletes with everything the copy wrote into it.
+func TestApply_CopyModeRollbackDeletesPartialCopy(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a file the test cannot read")
+	}
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	// rule.md copies first, then the unreadable file fails the copy.
+	unreadable := filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule", "z.md")
+	if err := os.WriteFile(unreadable, []byte("x"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolled back") {
+		t.Fatalf("Apply: got %v, want the copy to fail and roll back", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("partial copy %s should be gone after rollback; got err=%v", copyPath, err)
+	}
+}
+
+// A copy rollback cannot delete fails the rollback, so the snapshot stays,
+// and it lists only what the apply placed: a planned path the apply never
+// reached is not remove's to delete when something appears there.
+func TestApply_FailedCopyRollbackKeepsOnlyWhatItPlaced(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	rulesDir := filepath.Join(homeDir, ".claude", "rules")
+	copyPath := filepath.Join(rulesDir, "int-rule")
+	unreached := filepath.Join(rulesDir, "int-rule-gone")
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		if err := os.MkdirAll(filepath.Join(unreached, "mine"), 0o755); err != nil {
+			return err
+		}
+		if err := os.Chmod(copyPath, 0o555); err != nil {
+			return err
+		}
+		return snapshot.Restore(dir, sm)
+	}
+	t.Cleanup(func() { os.Chmod(copyPath, 0o755) })
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolling back failed") {
+		t.Fatalf("Apply: got %v, want a failed rollback", err)
+	}
+	sm, _, err := snapshot.Load(projectRoot)
+	if err != nil {
+		t.Fatalf("snapshot.Load after the failed rollback: %v", err)
+	}
+	if len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != copyPath {
+		t.Errorf("Symlinks: got %+v, want only %s", sm.Symlinks, copyPath)
+	}
+	if _, err := os.Stat(filepath.Join(unreached, "mine")); err != nil {
+		t.Errorf("unreached path should be untouched: %v", err)
 	}
 }

@@ -107,7 +107,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 					Mode:        "keep",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "/tmp/already-gone-copy", Target: "/tmp/src", Copied: true},
+						{Path: filepath.Join(root, "already-gone-copy"), Target: "/tmp/src", Copied: true},
 					},
 				})
 			},
@@ -120,20 +120,6 @@ func TestRunLoadoutRemove(t *testing.T) {
 					t.Errorf("copies should not be listed as symlinks, got: %s", stdout)
 				}
 			},
-		},
-		{
-			name: "relative symlink path is refused before anything changes",
-			setup: func(t *testing.T, root string) {
-				writeSnapshot(t, root, &snapshot.SnapshotManifest{
-					LoadoutName: "my-loadout",
-					Mode:        "keep",
-					CreatedAt:   fixedTime,
-					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "relative/copy", Target: "/tmp/src", Copied: true},
-					},
-				})
-			},
-			wantErr: true,
 		},
 		{
 			name: "non-auto non-interactive JSON happy path prints result as JSON",

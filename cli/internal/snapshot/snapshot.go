@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -198,10 +199,11 @@ func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
 }
 
 // DropUncreated drops from the snapshot's CreatedFiles and Symlinks each
-// path that does not exist. An apply calls it once its writes are done, or
-// once a failed apply has undone some of them: a path the apply did not
-// write, or has since removed, belongs to whoever makes it later.
-func DropUncreated(snapshotDir string) error {
+// path that does not exist, and from Symlinks each path not in placed. An
+// apply calls it once its writes are done, or once a failed apply has
+// undone some of them: a path the apply did not write, or has since
+// removed, belongs to whoever makes it later.
+func DropUncreated(snapshotDir string, placed []string) error {
 	manifest, err := ReadManifest(snapshotDir)
 	if err != nil {
 		return err
@@ -218,7 +220,7 @@ func DropUncreated(snapshotDir string) error {
 	}
 	var symlinks []SymlinkRecord
 	for _, sr := range manifest.Symlinks {
-		if exists(sr.Path) {
+		if slices.Contains(placed, sr.Path) && exists(sr.Path) {
 			symlinks = append(symlinks, sr)
 		}
 	}

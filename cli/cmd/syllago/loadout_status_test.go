@@ -96,6 +96,25 @@ func TestRunLoadoutStatus(t *testing.T) {
 			},
 		},
 		{
+			name: "copy-mode snapshot lists installed copies",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: "/home/user/.claude/rules/my-rule", Target: "/repo/rules/my-rule", Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, out string) {
+				t.Helper()
+				if !strings.Contains(out, "Installed copies") || strings.Contains(out, "Installed symlinks") {
+					t.Errorf("expected copies listed as copies, got: %s", out)
+				}
+			},
+		},
+		{
 			name: "active snapshot JSON output",
 			setup: func(t *testing.T, root string) {
 				writeSnapshot(t, root, &snapshot.SnapshotManifest{

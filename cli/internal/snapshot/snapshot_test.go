@@ -626,8 +626,9 @@ func TestDelete_RemovesDir(t *testing.T) {
 }
 
 // TestDropUncreated_DropsWhatDoesNotExist: a created file or symlink the
-// apply never made, or has removed, leaves the manifest, so a later
-// restore cannot delete what someone else puts at that path.
+// apply never made, or has removed, leaves the manifest, as does a symlink
+// the apply never placed, so a later restore cannot delete what someone
+// else puts at that path.
 func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -635,8 +636,9 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	gone := filepath.Join(tmpDir, "gone.json")
 	link := filepath.Join(tmpDir, "link")
 	goneLink := filepath.Join(tmpDir, "gone-link")
+	unplaced := filepath.Join(tmpDir, "unplaced")
 	snapshotDir, err := Create(tmpDir, "test-loadout", "keep", []string{made, gone},
-		[]SymlinkRecord{{Path: link, Target: tmpDir}, {Path: goneLink, Target: tmpDir}}, nil)
+		[]SymlinkRecord{{Path: link, Target: tmpDir}, {Path: goneLink, Target: tmpDir}, {Path: unplaced, Target: tmpDir}}, nil)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -644,8 +646,12 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	if err := os.Symlink(tmpDir, link); err != nil {
 		t.Fatal(err)
 	}
+	// Something else made the path the apply never reached.
+	if err := os.Mkdir(unplaced, 0755); err != nil {
+		t.Fatal(err)
+	}
 
-	if err := DropUncreated(snapshotDir); err != nil {
+	if err := DropUncreated(snapshotDir, []string{link, goneLink}); err != nil {
 		t.Fatalf("DropUncreated: %v", err)
 	}
 	m, err := ReadManifest(snapshotDir)

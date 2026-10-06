@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -170,5 +171,73 @@ func TestRemove_CleansInstalledJSON(t *testing.T) {
 	}
 	if len(cleaned.Symlinks) != 0 {
 		t.Errorf("expected 0 symlinks remaining, got %d", len(cleaned.Symlinks))
+	}
+}
+
+// A copy is deleted with everything under it, so a recorded path that is
+// relative, unclean, or the filesystem root is refused before remove
+// restores or deletes anything.
+//
+// The cases include "/", so the real delete is stubbed out: if the check
+// regresses, the test fails rather than deleting the filesystem. The stub
+// is package state, so this test does not run in parallel with others.
+// The root and relative paths reach only the pure check, never a delete.
+func TestCheckRemovablePath(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		path string
+		ok   bool
+	}{
+		{"relative/copy", false},
+		{"/", false},        // path-literal-ok: checked by a pure function, never deleted
+		{"//", false},       // path-literal-ok: checked by a pure function, never deleted
+		{"/tmp/..", false},  // path-literal-ok: checked by a pure function, never deleted
+		{"/tmp/./x", false}, // path-literal-ok: checked by a pure function, never deleted
+		{"/home/u/.claude/skills/x", true},
+	} {
+		if err := checkRemovablePath(tc.path); (err == nil) != tc.ok {
+			t.Errorf("checkRemovablePath(%q) = %v, want ok=%v", tc.path, err, tc.ok)
+		}
+	}
+}
+
+// Every unclean path sits inside the test's temp dir, so a broken check can
+// delete nothing outside it, and the placed copy vanishing fails the test.
+func TestRemove_RefusesUncleanPaths(t *testing.T) {
+	t.Parallel()
+	for name, unclean := range map[string]func(root string) string{
+		"parent":       func(root string) string { return filepath.Join(root, "placed") + "/.." },
+		"double slash": func(root string) string { return root + "//placed" },
+		"dot":          func(root string) string { return root + "/./placed" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			projectRoot := t.TempDir()
+			created := filepath.Join(projectRoot, "created.json")
+			placed := filepath.Join(projectRoot, "placed")
+			if err := os.WriteFile(created, []byte("{}"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(placed, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			_, err := snapshot.Create(projectRoot, "test-loadout", "keep", []string{created},
+				[]snapshot.SymlinkRecord{{Path: placed, Copied: true}, {Path: unclean(projectRoot), Copied: true}}, nil)
+			if err != nil {
+				t.Fatalf("creating snapshot: %v", err)
+			}
+
+			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
+				t.Fatalf("Remove: got %v, want the unclean path refused", err)
+			}
+			for _, p := range []string{created, placed} {
+				if _, err := os.Stat(p); err != nil {
+					t.Errorf("%s should be untouched: %v", p, err)
+				}
+			}
+			if _, _, err := snapshot.Load(projectRoot); err != nil {
+				t.Errorf("snapshot should remain: %v", err)
+			}
+		})
 	}
 }

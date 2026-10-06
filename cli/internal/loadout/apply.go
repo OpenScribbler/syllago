@@ -3,6 +3,7 @@ package loadout
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -184,10 +185,11 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, readErr, snapshotDir)
 		}
 		if restoreErr != nil {
-			// A file or symlink it lists that is gone now is not the apply's
-			// to delete if it appears again. Until that is recorded, remove
-			// could delete one, so it is not offered.
-			if err := snapshot.DropUncreated(snapshotDir); err != nil {
+			// A file or symlink it lists that is gone now, or that the apply
+			// never reached, is not the apply's to delete if it appears.
+			// Until that is recorded, remove could delete one, so it is not
+			// offered.
+			if err := snapshot.DropUncreated(snapshotDir, placed); err != nil {
 				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
 			}
 			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
@@ -208,7 +210,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 		autoRevertArmed = injected
 	}
-	if err := snapshot.DropUncreated(snapshotDir); err != nil {
+	if err := snapshot.DropUncreated(snapshotDir, placed); err != nil {
 		warnings = append(warnings, fmt.Sprintf("files this apply did not create may be deleted by loadout remove: %v", err))
 	}
 
@@ -220,8 +222,6 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}, nil
 }
 
-// applyActions executes each planned action against the filesystem and
-// returns what the placements warn about.
 // unplace deletes the symlinks and copies a failed apply started to place.
 // A planned path it never reached is not the apply's to delete, even if
 // something appeared there after the preview.
@@ -238,6 +238,8 @@ func unplace(records []snapshot.SymlinkRecord, placed []string) error {
 	return errors.Join(errs...)
 }
 
+// applyActions executes each planned action against the filesystem and
+// returns what the placements warn about and the paths it placed.
 func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) (warnings, placed []string, err error) {
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err != nil {
@@ -259,6 +261,22 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 		switch a.Action {
 		case "create-symlink":
 			srcPath := symlinkSource(*ref)
+			// The preview found nothing here. Something that has appeared
+			// since is not the apply's, so it is left alone and never
+			// recorded as placed.
+			if _, err := os.Lstat(a.Detail); !errors.Is(err, fs.ErrNotExist) {
+				if err == nil {
+					err = fs.ErrExist
+				}
+				return nil, placed, fmt.Errorf("placing %s at %s: %w", a.Name, a.Detail, err)
+			}
+			// A copy whose source is gone writes nothing, so it fails
+			// before it is recorded.
+			if opts.Method == installer.MethodCopy {
+				if _, err := os.Stat(srcPath); err != nil {
+					return nil, placed, fmt.Errorf("copying %s: %w", a.Name, err)
+				}
+			}
 			// Recorded before placing, so a copy that fails partway is
 			// still cleaned up.
 			placed = append(placed, a.Detail)
