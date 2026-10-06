@@ -110,7 +110,7 @@ func TestResolveItemID_UniversalType(t *testing.T) {
 
 func TestResolveItemID_NonexistentDir(t *testing.T) {
 	t.Parallel()
-	id := resolveItemID("/nonexistent", catalog.Rules, "claude-code", "missing")
+	id := resolveItemID(filepath.Join(t.TempDir(), "nonexistent"), catalog.Rules, "claude-code", "missing")
 	if id != "" {
 		t.Errorf("resolveItemID() = %q, want empty string", id)
 	}

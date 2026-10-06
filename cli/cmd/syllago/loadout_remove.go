@@ -116,7 +116,7 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing loadout failed", "Check filesystem permissions and try again", err.Error())
+		return output.NewStructuredErrorDetail(output.ErrSystemIO, "removing loadout failed", "Follow the steps in the error; if it names none, check filesystem permissions and try again", err.Error())
 	}
 
 	if !autoMode {

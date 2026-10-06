@@ -197,15 +197,24 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			// A placement this rollback deleted, or a created file that is
 			// gone, is not the apply's to delete if it appears. Until that
 			// is recorded, remove could delete one, so it is not offered.
-			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
+			// A config the restore deleted can reappear while the placements
+			// are removed, so it is forgotten by name rather than by absence.
+			gone := removed
+			if restored {
+				gone = slices.Concat(sm.CreatedFiles, removed)
+			}
+			if err := errors.Join(snapshot.Forget(snapshotDir, gone), snapshot.DropUncreated(snapshotDir)); err != nil {
+				var excepted []string
+				if len(gone) > 0 {
+					excepted = append(excepted, strings.Join(gone, ", ")+", which rollback already deleted")
+				}
 				// A restore that failed partway names what it deleted.
-				gone := removed
-				if restored {
-					gone = slices.Concat(sm.CreatedFiles, removed)
+				if !restored {
+					excepted = append(excepted, "any path the restore error names as deleted")
 				}
 				except := ""
-				if len(gone) > 0 {
-					except = " except " + strings.Join(gone, ", ") + ", which rollback already deleted"
+				if len(excepted) > 0 {
+					except = " except " + strings.Join(excepted, ", and ")
 				}
 				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks%s, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, except, left)
 			}
@@ -269,7 +278,7 @@ func leftBehind(placed []snapshot.SymlinkRecord, removed []string) string {
 	if len(left) == 0 {
 		return ""
 	}
-	return "; rollback could not delete " + strings.Join(left, ", ")
+	return "; rollback could not delete " + strings.Join(left, ", ") + ", which the snapshot may not record, so delete those by hand too"
 }
 
 // claim creates dst as an empty file, an empty directory, or the symlink
