@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -195,6 +196,68 @@ func TestLoad_ReturnsLatestSnapshot(t *testing.T) {
 	}
 	if dir != newerDir {
 		t.Errorf("expected dir %s, got %s", newerDir, dir)
+	}
+}
+
+// Regression: a multi-provider apply takes snapshots within one second, and
+// they shared a directory, so the second overwrote the first's manifest and
+// left its provider with nothing to restore.
+func TestCreate_SameSecondKeepsBothSnapshots(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+
+	first, err := Create(projectRoot, "first", "keep", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("first Create: %v", err)
+	}
+	second, err := Create(projectRoot, "second", "keep", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("second Create: %v", err)
+	}
+	if first == second {
+		t.Fatalf("both snapshots use %s", first)
+	}
+	for dir, want := range map[string]string{first: "first", second: "second"} {
+		m, err := ReadManifest(dir)
+		if err != nil {
+			t.Fatalf("ReadManifest(%s): %v", dir, err)
+		}
+		if m.LoadoutName != want {
+			t.Errorf("%s holds %q, want %q", dir, m.LoadoutName, want)
+		}
+	}
+	if _, dir, err := Load(projectRoot); err != nil || dir != second {
+		t.Errorf("Load = %s, %v; want %s", dir, err, second)
+	}
+}
+
+func TestMakeSnapshotDir_SuffixesSortInCreationOrder(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	parent := snapshotsDir(projectRoot)
+
+	var names []string
+	for i := 0; i < 12; i++ {
+		dir, err := makeSnapshotDir(parent, "20250101T000000")
+		if err != nil {
+			t.Fatalf("makeSnapshotDir #%d: %v", i, err)
+		}
+		names = append(names, filepath.Base(dir))
+		manifest := fmt.Sprintf(`{"loadoutName":"n%d","mode":"keep","symlinks":[]}`, i)
+		if err := os.WriteFile(filepath.Join(dir, "manifest.json"), []byte(manifest), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if names[0] != "20250101T000000" || names[1] != "20250101T000000-001" || names[11] != "20250101T000000-011" {
+		t.Errorf("names = %v", names)
+	}
+
+	m, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if m.LoadoutName != "n11" {
+		t.Errorf("Load returned %q, want the last created, n11", m.LoadoutName)
 	}
 }
 

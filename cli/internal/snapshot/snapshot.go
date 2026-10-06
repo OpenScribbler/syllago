@@ -76,10 +76,12 @@ func Create(projectRoot string, loadoutName string, mode string,
 	filesToBackup []string, symlinks []SymlinkRecord, hookScripts []string) (string, error) {
 
 	timestamp := time.Now().UTC().Format("20060102T150405")
-	snapshotDir := filepath.Join(snapshotsDir(projectRoot), timestamp)
+	snapshotDir, err := makeSnapshotDir(snapshotsDir(projectRoot), timestamp)
+	if err != nil {
+		return "", err
+	}
 	filesDir := filepath.Join(snapshotDir, "files")
-
-	if err := os.MkdirAll(filesDir, 0755); err != nil {
+	if err := os.Mkdir(filesDir, 0755); err != nil {
 		return "", fmt.Errorf("creating snapshot dir: %w", err)
 	}
 
@@ -145,6 +147,32 @@ func Create(projectRoot string, loadoutName string, mode string,
 	}
 
 	return snapshotDir, nil
+}
+
+// makeSnapshotDir creates a directory under parent named for timestamp and
+// returns its path. A multi-provider apply takes one snapshot per provider,
+// often within one second, so a taken name gets a counter suffix rather
+// than sharing the directory. The suffix has a fixed width so that Load's
+// sort by name keeps creation order: T150405, T150405-001, T150405-002.
+func makeSnapshotDir(parent, timestamp string) (string, error) {
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		return "", fmt.Errorf("creating snapshot dir: %w", err)
+	}
+	for n := 0; n < 1000; n++ {
+		name := timestamp
+		if n > 0 {
+			name = fmt.Sprintf("%s-%03d", timestamp, n)
+		}
+		dir := filepath.Join(parent, name)
+		err := os.Mkdir(dir, 0755)
+		if err == nil {
+			return dir, nil
+		}
+		if !errors.Is(err, fs.ErrExist) {
+			return "", fmt.Errorf("creating snapshot dir: %w", err)
+		}
+	}
+	return "", fmt.Errorf("creating snapshot dir: every name for %s is taken", timestamp)
 }
 
 // writeManifest replaces the snapshot's manifest through a rename, so a
