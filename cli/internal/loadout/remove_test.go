@@ -176,12 +176,8 @@ func TestRemove_CleansInstalledJSON(t *testing.T) {
 
 // A copy is deleted with everything under it, so a recorded path that is
 // relative, unclean, or the filesystem root is refused before remove
-// restores or deletes anything.
-//
-// The cases include "/", so the real delete is stubbed out: if the check
-// regresses, the test fails rather than deleting the filesystem. The stub
-// is package state, so this test does not run in parallel with others.
-// The root and relative paths reach only the pure check, never a delete.
+// restores or deletes anything. These paths reach only the pure check,
+// never a delete.
 func TestCheckRemovablePath(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
