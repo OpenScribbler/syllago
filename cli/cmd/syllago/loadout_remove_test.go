@@ -79,7 +79,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 					Mode:        "try",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "/tmp/already-gone-symlink", Target: "/tmp/src"},
+						{Path: filepath.Join(root, "already-gone-symlink"), Target: filepath.Join(root, "src")},
 					},
 				})
 			},
@@ -91,7 +91,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 				if !strings.Contains(stdout, "Symlinks to remove:") {
 					t.Errorf("expected symlinks section, got: %s", stdout)
 				}
-				if !strings.Contains(stdout, "/tmp/already-gone-symlink") {
+				if !strings.Contains(stdout, "already-gone-symlink") {
 					t.Errorf("expected symlink path in output, got: %s", stdout)
 				}
 				if !strings.Contains(stdout, `Loadout "my-loadout" removed`) {

@@ -626,9 +626,8 @@ func TestDelete_RemovesDir(t *testing.T) {
 }
 
 // TestDropUncreated_DropsWhatDoesNotExist: a created file or symlink the
-// apply never made, or has removed, leaves the manifest, as does a symlink
-// the apply never placed, so a later restore cannot delete what someone
-// else puts at that path.
+// apply never made, or has removed, leaves the manifest, so a later
+// restore cannot delete what someone else puts at that path.
 func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
@@ -636,9 +635,8 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	gone := filepath.Join(tmpDir, "gone.json")
 	link := filepath.Join(tmpDir, "link")
 	goneLink := filepath.Join(tmpDir, "gone-link")
-	unplaced := filepath.Join(tmpDir, "unplaced")
 	snapshotDir, err := Create(tmpDir, "test-loadout", "keep", []string{made, gone},
-		[]SymlinkRecord{{Path: link, Target: tmpDir}, {Path: goneLink, Target: tmpDir}, {Path: unplaced, Target: tmpDir}}, nil)
+		[]SymlinkRecord{{Path: link, Target: tmpDir}, {Path: goneLink, Target: tmpDir}}, nil)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -646,12 +644,8 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	if err := os.Symlink(tmpDir, link); err != nil {
 		t.Fatal(err)
 	}
-	// Something else made the path the apply never reached.
-	if err := os.Mkdir(unplaced, 0755); err != nil {
-		t.Fatal(err)
-	}
 
-	if err := DropUncreated(snapshotDir, []string{link, goneLink}); err != nil {
+	if err := DropUncreated(snapshotDir); err != nil {
 		t.Fatalf("DropUncreated: %v", err)
 	}
 	m, err := ReadManifest(snapshotDir)
@@ -663,5 +657,29 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	}
 	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != link {
 		t.Errorf("Symlinks: got %+v, want only %s", m.Symlinks, link)
+	}
+}
+
+// TestAddSymlink_AppendsToTheManifest: each record lands in the manifest on
+// disk, after the ones already there, so a crash keeps what was claimed.
+func TestAddSymlink_AppendsToTheManifest(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	first := SymlinkRecord{Path: filepath.Join(tmpDir, "first"), Target: tmpDir}
+	second := SymlinkRecord{Path: filepath.Join(tmpDir, "second"), Target: tmpDir, Copied: true}
+	snapshotDir, err := Create(tmpDir, "test-loadout", "keep", nil, []SymlinkRecord{first}, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	if err := AddSymlink(snapshotDir, second); err != nil {
+		t.Fatalf("AddSymlink: %v", err)
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if len(m.Symlinks) != 2 || m.Symlinks[0] != first || m.Symlinks[1] != second {
+		t.Errorf("Symlinks: got %+v, want %+v then %+v", m.Symlinks, first, second)
 	}
 }

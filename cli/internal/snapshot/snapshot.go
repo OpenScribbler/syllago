@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -198,12 +197,24 @@ func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
 	return nil
 }
 
+// AddSymlink records a path the apply has just claimed. An apply records
+// each one only once it exists, so a crash leaves an unrecorded copy
+// rather than a recorded path that remove would delete from someone else.
+func AddSymlink(snapshotDir string, rec SymlinkRecord) error {
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	manifest.Symlinks = append(manifest.Symlinks, rec)
+	return writeManifest(snapshotDir, manifest)
+}
+
 // DropUncreated drops from the snapshot's CreatedFiles and Symlinks each
-// path that does not exist, and from Symlinks each path not in placed. An
-// apply calls it once its writes are done, or once a failed apply has
-// undone some of them: a path the apply did not write, or has since
+// path that does not exist. An apply calls it once its writes are done, or
+// once a failed apply has undone some of them, and remove once it has
+// deleted the symlinks: a path the apply did not write, or has since
 // removed, belongs to whoever makes it later.
-func DropUncreated(snapshotDir string, placed []string) error {
+func DropUncreated(snapshotDir string) error {
 	manifest, err := ReadManifest(snapshotDir)
 	if err != nil {
 		return err
@@ -220,7 +231,7 @@ func DropUncreated(snapshotDir string, placed []string) error {
 	}
 	var symlinks []SymlinkRecord
 	for _, sr := range manifest.Symlinks {
-		if slices.Contains(placed, sr.Path) && exists(sr.Path) {
+		if exists(sr.Path) {
 			symlinks = append(symlinks, sr)
 		}
 	}
@@ -352,16 +363,17 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 		return fmt.Errorf("getting home dir: %w", err)
 	}
 
-	// Every path syllago records is absolute, so a relative one came from a
-	// hand edit and would resolve against wherever syllago runs.
+	// Every path syllago records is clean and absolute, so any other came
+	// from a hand edit: a relative one would resolve against wherever
+	// syllago runs, and "/home/u/../x" names a file other than it appears to.
 	for rel, dest := range manifest.Destinations {
-		if !filepath.IsAbs(dest) {
-			return fmt.Errorf("restoring %s: destination %q is not an absolute path", rel, dest)
+		if !filepath.IsAbs(dest) || filepath.Clean(dest) != dest {
+			return fmt.Errorf("restoring %s: destination %q is not a clean absolute path", rel, dest)
 		}
 	}
 	for _, path := range manifest.CreatedFiles {
-		if !filepath.IsAbs(path) {
-			return fmt.Errorf("removing %q: not an absolute path", path)
+		if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+			return fmt.Errorf("removing %q: not a clean absolute path", path)
 		}
 	}
 

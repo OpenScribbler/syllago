@@ -16,29 +16,10 @@ import (
 // setupIntegrationEnv creates a fully wired test environment with a catalog
 // containing a rule (symlink type) and a hook (merge type), plus a settings.json
 // with pre-existing content to verify non-destructive merge and restore.
-//
-// Key gotcha: the snapshot package stores backed-up files relative to
-// os.UserHomeDir(). If we put settings.json under a random temp dir,
-// filepath.Rel(home, path) produces "../../tmp/..." which escapes the
-// snapshot directory and corrupts the snapshots folder. So we create
-// a test directory under the real home dir for provider config files.
 func setupIntegrationEnv(t *testing.T) (homeDir, projectRoot string, manifest *Manifest, cat *catalog.Catalog, prov provider.Provider) {
 	t.Helper()
 	projectRoot = t.TempDir()
-
-	// Use a subdirectory under real home dir for provider config.
-	// This ensures snapshot backup paths stay clean (see comment above).
-	// We use t.Name() for uniqueness since filepath.Base(t.TempDir()) is
-	// always "001", "002" etc. and would collide across parallel tests.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-	// Replace slashes in test name (subtests use "/")
-	safeName := filepath.Base(projectRoot) + "-" + filepath.Base(t.Name())
-	homeDir = filepath.Join(home, ".syllago-inttest-"+safeName)
-	os.MkdirAll(homeDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(homeDir) })
+	homeDir = t.TempDir()
 
 	// Create .syllago dir
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
@@ -521,7 +502,7 @@ func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
 		RepoRoot:    projectRoot,
 	}
 	_, err := Apply(manifest, cat, prov, opts)
-	if err == nil || !containsAll(err.Error(), "rolled back", "copying int-rule-gone") {
+	if err == nil || !containsAll(err.Error(), "rolled back", "placing int-rule-gone") {
 		t.Fatalf("expected the second copy to fail and roll back, got %v", err)
 	}
 	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")

@@ -85,6 +85,11 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		}
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
 	}
+	// A retry after a later step fails must not delete what someone puts
+	// at a path this run already deleted.
+	if err := snapshot.DropUncreated(snapshotDir); err != nil {
+		return nil, err
+	}
 
 	// Step 3: Clean installed.json entries for this loadout. Apply does not
 	// back the file up, so records added after the apply survive. Drop the

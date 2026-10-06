@@ -201,22 +201,41 @@ func TestCreate_KeepsASymlinkToAMissingTarget(t *testing.T) {
 	}
 }
 
-// TestRestore_RefusesARelativePath: syllago records only absolute paths,
-// so a relative one in a manifest fails the restore before it changes
-// anything.
-func TestRestore_RefusesARelativePath(t *testing.T) {
+// TestRestore_RefusesAnUncleanPath: syllago records only clean absolute
+// paths, so a relative or unclean one in a manifest fails the restore
+// before it changes anything.
+func TestRestore_RefusesAnUncleanPath(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name     string
-		manifest SnapshotManifest
+		manifest func(dir string) SnapshotManifest
 	}{
-		{"destination", SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "x")}}},
-		{"created file", SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}},
+		{"relative destination", func(dir string) SnapshotManifest {
+			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "x")}}
+		}},
+		{"relative created file", func(dir string) SnapshotManifest {
+			return SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}
+		}},
+		{"unclean destination", func(dir string) SnapshotManifest {
+			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": dir + "/sub/../victim.json"}}
+		}},
+		{"unclean created file", func(dir string) SnapshotManifest {
+			return SnapshotManifest{CreatedFiles: []string{dir + "/sub/../victim.json"}}
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Restore(t.TempDir(), &tt.manifest); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
-				t.Errorf("Restore: got %v, want a refusal of the relative path", err)
+			dir := t.TempDir()
+			victim := filepath.Join(dir, "victim.json")
+			if err := os.WriteFile(victim, []byte("theirs"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			m := tt.manifest(dir)
+			if err := Restore(t.TempDir(), &m); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
+				t.Errorf("Restore: got %v, want a refusal of the path", err)
+			}
+			if got, err := os.ReadFile(victim); err != nil || string(got) != "theirs" {
+				t.Errorf("victim.json after refusal: %q, %v", got, err)
 			}
 		})
 	}

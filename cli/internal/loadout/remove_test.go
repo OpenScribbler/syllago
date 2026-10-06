@@ -26,25 +26,12 @@ func TestRemove_RestoresFiles(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
 
-	// Use the real home so that snapshot's filepath.Rel(home, path)
-	// produces valid relative paths. The snapshot package stores files
-	// relative to os.UserHomeDir() and restores them there.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-
-	// Create a temp file under the real home for backup testing
-	testDir := filepath.Join(home, ".syllago-test-remove-"+filepath.Base(projectRoot))
-	os.MkdirAll(testDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(testDir) })
-
 	originalContent := []byte(`{"original": true}`)
-	testFile := filepath.Join(testDir, "test-settings.json")
+	testFile := filepath.Join(t.TempDir(), "test-settings.json")
 	os.WriteFile(testFile, originalContent, 0644)
 
 	// Create a snapshot that backs up the test file
-	_, err = snapshot.Create(projectRoot, "test-loadout", "keep",
+	_, err := snapshot.Create(projectRoot, "test-loadout", "keep",
 		[]string{testFile}, nil, nil)
 	if err != nil {
 		t.Fatalf("creating snapshot: %v", err)
@@ -113,7 +100,7 @@ func TestRemove_SymlinkAlreadyGone(t *testing.T) {
 	// Create snapshot with a symlink that doesn't exist
 	_, err := snapshot.Create(projectRoot, "test-loadout", "keep",
 		nil,
-		[]snapshot.SymlinkRecord{{Path: "/nonexistent/symlink", Target: "/whatever"}},
+		[]snapshot.SymlinkRecord{{Path: filepath.Join(projectRoot, "nonexistent", "symlink"), Target: filepath.Join(projectRoot, "whatever")}},
 		nil)
 	if err != nil {
 		t.Fatalf("creating snapshot: %v", err)
@@ -198,7 +185,8 @@ func TestCheckRemovablePath(t *testing.T) {
 }
 
 // Every unclean path sits inside the test's temp dir, so a broken check can
-// delete nothing outside it, and the placed copy vanishing fails the test.
+// delete nothing outside it. A restore or delete that ran first fails the
+// test: it would revert backedUp, delete created, or delete the placed copy.
 func TestRemove_RefusesUncleanPaths(t *testing.T) {
 	t.Parallel()
 	for name, unclean := range map[string]func(root string) string{
@@ -209,18 +197,26 @@ func TestRemove_RefusesUncleanPaths(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			projectRoot := t.TempDir()
+			backedUp := filepath.Join(projectRoot, "backed-up.json")
 			created := filepath.Join(projectRoot, "created.json")
 			placed := filepath.Join(projectRoot, "placed")
-			if err := os.WriteFile(created, []byte("{}"), 0o644); err != nil {
+			if err := os.WriteFile(backedUp, []byte("before"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.MkdirAll(placed, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			_, err := snapshot.Create(projectRoot, "test-loadout", "keep", []string{created},
+			_, err := snapshot.Create(projectRoot, "test-loadout", "keep", []string{backedUp, created},
 				[]snapshot.SymlinkRecord{{Path: placed, Copied: true}, {Path: unclean(projectRoot), Copied: true}}, nil)
 			if err != nil {
 				t.Fatalf("creating snapshot: %v", err)
+			}
+			// What the apply wrote: a changed backup and a new file.
+			if err := os.WriteFile(backedUp, []byte("after"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(created, []byte("{}"), 0o644); err != nil {
+				t.Fatal(err)
 			}
 
 			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
@@ -230,6 +226,9 @@ func TestRemove_RefusesUncleanPaths(t *testing.T) {
 				if _, err := os.Stat(p); err != nil {
 					t.Errorf("%s should be untouched: %v", p, err)
 				}
+			}
+			if got, err := os.ReadFile(backedUp); err != nil || string(got) != "after" {
+				t.Errorf("backed-up.json was restored: %q, %v", got, err)
 			}
 			if _, _, err := snapshot.Load(projectRoot); err != nil {
 				t.Errorf("snapshot should remain: %v", err)

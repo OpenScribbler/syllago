@@ -162,8 +162,12 @@ func TestRemove_KeepsTheSnapshotWhenInstalledJSONCannotBeSaved(t *testing.T) {
 		t.Skip("needs a directory the test cannot write to")
 	}
 	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
-	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
+	if _, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot}); err != nil {
 		t.Fatalf("Apply: %v", err)
+	}
+	before, _, err := snapshot.Load(projectRoot)
+	if err != nil || len(before.Symlinks) == 0 {
+		t.Fatalf("snapshot after apply: %+v, %v; want a placed copy", before, err)
 	}
 	syllagoDir := filepath.Join(projectRoot, ".syllago")
 	os.Chmod(syllagoDir, 0555)
@@ -172,13 +176,29 @@ func TestRemove_KeepsTheSnapshotWhenInstalledJSONCannotBeSaved(t *testing.T) {
 	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err == nil {
 		t.Fatal("Remove succeeded with installed.json unwritable")
 	}
-	if _, _, err := snapshot.Load(projectRoot); err != nil {
+	after, _, err := snapshot.Load(projectRoot)
+	if err != nil {
 		t.Fatalf("snapshot after the failed remove: %v", err)
+	}
+	// The copies are deleted, so they leave the snapshot, and the retry
+	// cannot delete what someone puts at their paths in between.
+	if len(after.Symlinks) != 0 {
+		t.Errorf("Symlinks after the failed remove: got %+v, want none", after.Symlinks)
+	}
+	theirs := filepath.Join(before.Symlinks[0].Path, "theirs.md")
+	if err := os.MkdirAll(filepath.Dir(theirs), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(theirs, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
 	}
 
 	os.Chmod(syllagoDir, 0755)
 	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
 		t.Fatalf("retry: %v", err)
+	}
+	if _, err := os.Stat(theirs); err != nil {
+		t.Errorf("retry deleted what appeared at a removed path: %v", err)
 	}
 	inst, err := installer.LoadInstalled(projectRoot)
 	if err != nil || len(inst.Hooks) != 0 || len(inst.Symlinks) != 0 {
