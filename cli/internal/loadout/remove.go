@@ -79,14 +79,14 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 	result.RemovedFiles = manifest.CreatedFiles
 
-	// Step 2: Delete symlinks. Restore deleted the created files. A retry
-	// after any later failure must not delete what someone puts at a path
-	// this run deleted, so each one leaves the snapshot, even when a later
-	// delete fails.
-	deleted := slices.Clone(manifest.CreatedFiles)
+	// Step 2: Delete symlinks. Restore deleted the created files and
+	// recorded that. A retry after any later failure must not delete what
+	// someone puts at a path this run deleted, so each placement leaves the
+	// snapshot too, even when a later delete fails.
+	var deleted []string
 	forget := func() error {
 		if err := snapshot.Forget(snapshotDir, deleted); err != nil {
-			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; in its manifest.json, move those under createdFiles to revertedFiles and take those under symlinks out before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
+			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; take those out of symlinks in its manifest.json before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
 		}
 		return nil
 	}

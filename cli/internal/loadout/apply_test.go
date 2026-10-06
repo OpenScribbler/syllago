@@ -830,8 +830,11 @@ func TestUnplace_ReportsFailures(t *testing.T) {
 	if !slices.Equal(removed, []string{gone}) {
 		t.Errorf("removed = %q, want only %q", removed, gone)
 	}
-	if got, want := leftBehind(placed, removed), "; rollback could not delete "+placedCopy+", which the snapshot may not record, so delete those by hand too"; got != want {
-		t.Errorf("leftBehind = %q, want %q", got, want)
+	if got, want := leftBehind(placed, removed, nil), "; rollback could not delete "+placedCopy+", which the snapshot does not record, so delete those by hand"; got != want {
+		t.Errorf("leftBehind unrecorded = %q, want %q", got, want)
+	}
+	if got, want := leftBehind(placed, removed, placed), "; rollback could not delete "+placedCopy; got != want {
+		t.Errorf("leftBehind recorded = %q, want %q", got, want)
 	}
 }
 

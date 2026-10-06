@@ -184,7 +184,11 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		// that will not, so the snapshot stays and records it.
 		removed, unplaceErr := unplace(placed)
 		restoreErr = errors.Join(restoreErr, unplaceErr)
-		left := leftBehind(placed, removed)
+		var recorded []snapshot.SymlinkRecord
+		if readErr == nil {
+			recorded = sm.Symlinks
+		}
+		left := leftBehind(placed, removed, recorded)
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and
 		// a restore that keeps failing leaves the backups to copy by hand and
@@ -197,16 +201,11 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			// A placement this rollback deleted, or a created file that is
 			// gone, is not the apply's to delete if it appears. Until that
 			// is recorded, remove could delete one, so it is not offered.
-			// A config the restore deleted can reappear while the placements
-			// are removed, so it is forgotten by name rather than by absence.
-			gone := removed
-			if restored {
-				gone = slices.Concat(sm.CreatedFiles, removed)
-			}
-			if err := errors.Join(snapshot.Forget(snapshotDir, gone), snapshot.DropUncreated(snapshotDir)); err != nil {
+			// A restore that went through recorded the created files itself.
+			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
 				var excepted []string
-				if len(gone) > 0 {
-					excepted = append(excepted, strings.Join(gone, ", ")+", which rollback already deleted")
+				if len(removed) > 0 {
+					excepted = append(excepted, strings.Join(removed, ", ")+", which rollback already deleted")
 				}
 				// A restore that failed partway names what it deleted.
 				if !restored {
@@ -267,18 +266,28 @@ func unplace(placed []snapshot.SymlinkRecord) ([]string, error) {
 
 // leftBehind names the placements rollback could not delete. A placement
 // whose record failed to save is in no manifest, so every rollback error
-// names them rather than pointing at the snapshot alone.
-func leftBehind(placed []snapshot.SymlinkRecord, removed []string) string {
-	var left []string
+// names it as one to delete by hand; one the snapshot records is left to
+// whatever deletes the rest, so a path a provider writes again after a
+// remove is not deleted a second time.
+func leftBehind(placed []snapshot.SymlinkRecord, removed []string, recorded []snapshot.SymlinkRecord) string {
+	var left, unrecorded []string
 	for _, sr := range placed {
-		if !slices.Contains(removed, sr.Path) {
+		switch {
+		case slices.Contains(removed, sr.Path):
+		case slices.ContainsFunc(recorded, func(r snapshot.SymlinkRecord) bool { return r.Path == sr.Path }):
 			left = append(left, sr.Path)
+		default:
+			unrecorded = append(unrecorded, sr.Path)
 		}
 	}
-	if len(left) == 0 {
-		return ""
+	msg := ""
+	if len(left) > 0 {
+		msg += "; rollback could not delete " + strings.Join(left, ", ")
 	}
-	return "; rollback could not delete " + strings.Join(left, ", ") + ", which the snapshot may not record, so delete those by hand too"
+	if len(unrecorded) > 0 {
+		msg += "; rollback could not delete " + strings.Join(unrecorded, ", ") + ", which the snapshot does not record, so delete those by hand"
+	}
+	return msg
 }
 
 // claim creates dst as an empty file, an empty directory, or the symlink

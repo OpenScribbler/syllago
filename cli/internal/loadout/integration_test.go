@@ -583,9 +583,10 @@ func TestApply_RollbackNamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	}
 }
 
-// A rollback whose restore went through deleted every created file, so its
-// by-hand steps except those too.
-func TestApply_RollbackExceptsTheCreatedFilesItRestoredAway(t *testing.T) {
+// A rollback whose restore went through has already recorded the created
+// files it deleted, so its by-hand steps neither list them nor point at the
+// restore error.
+func TestApply_RollbackRecordsTheCreatedFilesItRestoredAway(t *testing.T) {
 	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
 		t.Skip("needs a directory the test cannot write to")
 	}
@@ -624,8 +625,17 @@ func TestApply_RollbackExceptsTheCreatedFilesItRestoredAway(t *testing.T) {
 	if len(created) == 0 {
 		t.Fatal("the snapshot recorded no created file, so the test checks nothing")
 	}
-	if err == nil || !containsAll(err.Error(), append(created, "which rollback already deleted")...) || strings.Contains(err.Error(), "restore error names") {
-		t.Fatalf("Apply: got %v, want by-hand steps that except the created files %q and nothing the restore named", err, created)
+	if err == nil || !strings.Contains(err.Error(), "copy the backups") || strings.Contains(err.Error(), "restore error names") {
+		t.Fatalf("Apply: got %v, want by-hand steps that point at nothing the restore named", err)
+	}
+	sm, readErr := snapshot.ReadManifest(locked[0])
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	for _, p := range created {
+		if slices.Contains(sm.CreatedFiles, p) || !slices.Contains(sm.RevertedFiles, p) || strings.Contains(err.Error(), p) {
+			t.Errorf("%s: createdFiles %q, revertedFiles %q; want it moved to revertedFiles and left out of the error", p, sm.CreatedFiles, sm.RevertedFiles)
+		}
 	}
 }
 
@@ -673,8 +683,10 @@ func TestApply_RollbackForgetsACreatedFileThatReappears(t *testing.T) {
 	if len(created) == 0 {
 		t.Fatal("the snapshot recorded no created file, so the test checks nothing")
 	}
-	if err == nil || !strings.Contains(err.Error(), "loadout remove") {
-		t.Fatalf("Apply: got %v, want a rollback failure that offers remove", err)
+	// The copy rollback could not delete is recorded, so remove deletes it
+	// and the error does not also ask for it by hand.
+	if err == nil || !strings.Contains(err.Error(), "loadout remove") || strings.Contains(err.Error(), "does not record") {
+		t.Fatalf("Apply: got %v, want a rollback failure that offers remove and no placement to delete by hand", err)
 	}
 	sm, err := snapshot.ReadManifest(snapshotDir)
 	if err != nil {

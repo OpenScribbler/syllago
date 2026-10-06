@@ -132,6 +132,14 @@ func TestRestore_RemovesAFileTheApplyCreated(t *testing.T) {
 	if _, err := os.Stat(cfgPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("created config still there (stat err %v)", err)
 	}
+	// A retry after a later failure must not delete a config written there since.
+	after, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(after.CreatedFiles, cfgPath) || !slices.Contains(after.RevertedFiles, cfgPath) {
+		t.Errorf("createdFiles %q, revertedFiles %q; want %s moved to revertedFiles", after.CreatedFiles, after.RevertedFiles, cfgPath)
+	}
 }
 
 // TestCreate_KeysAFileInHomeApartFromOneOutside: a file in the home
@@ -393,6 +401,36 @@ func TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure(t *testing.T) {
 	}
 	if !slices.Equal(m.CreatedFiles, []string{stuck}) || !slices.Equal(m.RevertedFiles, []string{deleted}) {
 		t.Errorf("after the failed restore: created %q, reverted %q; want created %s, reverted %s", m.CreatedFiles, m.RevertedFiles, stuck, deleted)
+	}
+}
+
+// TestRestore_NamesTheCreatedFilesItCannotRecordDeleting: a restore that
+// goes through but cannot rewrite the snapshot names the created files it
+// deleted, which a retry would otherwise delete again.
+func TestRestore_NamesTheCreatedFilesItCannotRecordDeleting(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := os.Chmod(snapshotDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0755) })
+
+	err = Restore(snapshotDir, manifest)
+	if err == nil || !strings.Contains(err.Error(), "restore deleted "+deleted+" but could not record that") {
+		t.Fatalf("Restore: got %v, want it to name %s as deleted", err, deleted)
 	}
 }
 

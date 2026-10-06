@@ -414,13 +414,13 @@ func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 		t.Skip("needs a directory the test cannot write to")
 	}
 	projectRoot := t.TempDir()
-	created := filepath.Join(projectRoot, "created.json")
-	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", []string{created}, nil, nil)
+	placed := filepath.Join(projectRoot, "placed")
+	if err := os.Symlink(filepath.Join(projectRoot, "src"), placed); err != nil {
+		t.Fatal(err)
+	}
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", nil, []snapshot.SymlinkRecord{{Path: placed, Target: filepath.Join(projectRoot, "src")}}, nil)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
-	}
-	if err := os.WriteFile(created, []byte("apply's"), 0o644); err != nil {
-		t.Fatal(err)
 	}
 	if err := os.Chmod(snapshotDir, 0o555); err != nil {
 		t.Fatal(err)
@@ -428,8 +428,8 @@ func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
 
 	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err == nil || !containsAll(err.Error(), "remove deleted "+created, "move those under createdFiles to revertedFiles") {
-		t.Fatalf("Remove: got %v, want it to name %s and say to fix the manifest before retrying", err, created)
+	if err == nil || !containsAll(err.Error(), "remove deleted "+placed, "take those out of symlinks") {
+		t.Fatalf("Remove: got %v, want it to name %s and say to fix the manifest before retrying", err, placed)
 	}
 }
 

@@ -379,7 +379,8 @@ func backupKeys(home string, absPaths []string) []string {
 
 // Restore reads backed-up files from snapshotDir and writes them back to their
 // original absolute paths, then removes the files that did not exist at
-// Create. Does not remove symlinks (caller does that).
+// Create and moves them from CreatedFiles to RevertedFiles in the manifest
+// on disk. Does not remove symlinks (caller does that).
 //
 // Each destination is lstat'd before it is opened for write: if a path is
 // currently a symlink, Restore refuses to write through it. This blocks the
@@ -440,6 +441,10 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 			}
 			return removeErr
 		}
+	}
+	// So does a retry after a later step fails or the run is killed.
+	if err := Forget(snapshotDir, manifest.CreatedFiles); err != nil {
+		return fmt.Errorf("restore deleted %s but could not record that in %s: %w; move those paths from createdFiles to revertedFiles in its manifest.json before trying again", strings.Join(manifest.CreatedFiles, ", "), snapshotDir, err)
 	}
 
 	return nil
