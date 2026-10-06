@@ -348,3 +348,109 @@ func TestRemove_SkipsInstalledJSONInAManifestFromBeforeDestinations(t *testing.T
 		t.Errorf("installed.json after remove: got %+v (err %v), want only the later install", inst, err)
 	}
 }
+
+// TestRemove_RetryForgetsAnInstallIntoAConfigItAlreadyDeleted: a remove
+// that deletes a created config and then fails leaves installed.json alone.
+// The retry no longer deletes the config, yet still drops the record of a
+// server installed into it after the apply.
+func TestRemove_RetryForgetsAnInstallIntoAConfigItAlreadyDeleted(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	cfgPath := filepath.Join(projectRoot, ".cursor", "mcp.json")
+	stuck := filepath.Join(projectRoot, "placed", "stuck")
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", []string{cfgPath}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(stuck, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := snapshot.AddSymlink(snapshotDir, snapshot.SymlinkRecord{Path: stuck, Target: filepath.Join(projectRoot, "src"), Copied: true}); err != nil {
+		t.Fatalf("AddSymlink: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfgPath, []byte(`{"mcpServers":{"later":{"command":"x"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := installer.SaveInstalled(projectRoot, &installer.Installed{MCP: []installer.InstalledMCP{
+		{Name: "later", ServerKey: "later", Source: "export", Provider: "cursor"},
+	}}); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	if err := os.Chmod(stuck, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(stuck, 0o755) })
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err == nil {
+		t.Fatal("Remove succeeded with a copy it cannot delete")
+	}
+	if _, err := os.Stat(cfgPath); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("config after the failed remove: stat err %v, want deleted", err)
+	}
+
+	os.Chmod(stuck, 0o755)
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	inst, err := installer.LoadInstalled(projectRoot)
+	if err != nil || len(inst.MCP) != 0 {
+		t.Errorf("installed.json after the retry: got %+v (err %v), want the server the first remove took out forgotten", inst, err)
+	}
+}
+
+// TestRemove_NamesWhatItDeletedWhenItCannotRecordIt: a snapshot remove
+// cannot rewrite still lists paths remove deleted, so the message names
+// them and says to fix the manifest rather than to retry.
+func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	created := filepath.Join(projectRoot, "created.json")
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", []string{created}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := os.WriteFile(created, []byte("apply's"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(snapshotDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
+
+	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), "remove deleted "+created, "before running remove again") {
+		t.Fatalf("Remove: got %v, want it to name %s and say to fix the manifest before retrying", err, created)
+	}
+}
+
+// TestRemove_PointsAtACopyRecordedAsASymlink: before snapshots recorded
+// copies, a copy was recorded like a symlink. Remove deletes it no more
+// than any directory, and says to delete it by hand.
+func TestRemove_PointsAtACopyRecordedAsASymlink(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	placed := filepath.Join(projectRoot, "placed")
+	if err := os.MkdirAll(filepath.Join(placed, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := snapshot.Create(projectRoot, "l", "keep", nil, []snapshot.SymlinkRecord{{Path: placed, Target: filepath.Join(projectRoot, "src")}}, nil); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	_, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), placed, "delete it by hand, then run remove again") {
+		t.Fatalf("Remove: got %v, want it to point at the old copy %s", err, placed)
+	}
+	if _, err := os.Stat(filepath.Join(placed, "sub")); err != nil {
+		t.Errorf("remove deleted inside %s: %v", placed, err)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -63,7 +64,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 
 	for _, sr := range manifest.Symlinks {
 		if err := checkRemovablePath(sr.Path); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w; remove cannot use the snapshot in %s, so undo what its manifest.json lists by hand, then delete that directory", err, snapshotDir)
 		}
 	}
 
@@ -83,14 +84,20 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	// this run deleted, so each one leaves the snapshot, even when a later
 	// delete fails.
 	deleted := slices.Clone(manifest.CreatedFiles)
+	forget := func() error {
+		if err := snapshot.Forget(snapshotDir, deleted); err != nil {
+			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; take those paths out of its manifest.json before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
+		}
+		return nil
+	}
 	for _, sr := range manifest.Symlinks {
 		if err := removePlaced(sr); err != nil {
-			return nil, errors.Join(err, snapshot.Forget(snapshotDir, deleted))
+			return nil, errors.Join(err, forget())
 		}
 		deleted = append(deleted, sr.Path)
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
 	}
-	if err := snapshot.Forget(snapshotDir, deleted); err != nil {
+	if err := forget(); err != nil {
 		return nil, err
 	}
 
@@ -103,7 +110,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		return nil, fmt.Errorf("loading installed.json: %w", err)
 	}
 	inst = cleanInstalledEntries(inst, "loadout:"+manifest.LoadoutName)
-	installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles))
+	installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles, manifest.RevertedFiles))
 	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
 		return nil, fmt.Errorf("saving installed.json: %w", err)
 	}
@@ -135,6 +142,11 @@ func removePlaced(sr snapshot.SymlinkRecord) error {
 		return os.RemoveAll(sr.Path)
 	}
 	if err := os.Remove(sr.Path); err != nil && !os.IsNotExist(err) {
+		// Before snapshots recorded copies, a copy was recorded like a
+		// symlink, and remove deletes only what it knows the apply placed.
+		if info, statErr := os.Lstat(sr.Path); statErr == nil && info.IsDir() {
+			return fmt.Errorf("%s is a directory where the loadout recorded a symlink, likely a copy from a syllago version that did not record copies; delete it by hand, then run remove again: %w", sr.Path, err)
+		}
 		return err
 	}
 	return nil

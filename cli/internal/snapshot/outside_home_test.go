@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -360,5 +361,37 @@ func TestCreate_KeysAFileInHomeTheWayEarlierVersionsRead(t *testing.T) {
 	}
 	if len(manifest.BackedUpFiles) != 1 || filepath.Join(home, manifest.BackedUpFiles[0]) != path {
 		t.Errorf("keys: got %q, want the path under home", manifest.BackedUpFiles)
+	}
+}
+
+// TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure: a restore that
+// fails partway records the created files it already deleted, so a retry
+// leaves alone whatever appears at them.
+func TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	stuck := filepath.Join(projectRoot, "stuck")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted, stuck}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	// A directory with something in it cannot be removed as a file.
+	os.MkdirAll(filepath.Join(stuck, "sub"), 0755)
+
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(snapshotDir, manifest); err == nil {
+		t.Fatal("Restore succeeded with a created path it cannot remove")
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if !slices.Equal(m.CreatedFiles, []string{stuck}) || !slices.Equal(m.RevertedFiles, []string{deleted}) {
+		t.Errorf("after the failed restore: created %q, reverted %q; want created %s, reverted %s", m.CreatedFiles, m.RevertedFiles, stuck, deleted)
 	}
 }

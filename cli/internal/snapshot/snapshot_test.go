@@ -678,6 +678,9 @@ func TestForget_DropsWhatWasDeletedWhateverExistsThere(t *testing.T) {
 	if !slices.Equal(m.CreatedFiles, []string{path("created-b")}) {
 		t.Errorf("CreatedFiles = %q, want only created-b", m.CreatedFiles)
 	}
+	if !slices.Equal(m.RevertedFiles, []string{path("created-a")}) {
+		t.Errorf("RevertedFiles = %q, want created-a, so a retried remove still forgets what went into it", m.RevertedFiles)
+	}
 	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != path("link-d") {
 		t.Errorf("Symlinks = %+v, want only link-d", m.Symlinks)
 	}

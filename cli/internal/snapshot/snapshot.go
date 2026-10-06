@@ -48,6 +48,10 @@ type SnapshotManifest struct {
 	// CreatedFiles holds the absolute paths that did not exist at Create.
 	// Restore removes them, so a config the apply created goes with it.
 	CreatedFiles []string `json:"createdFiles,omitempty"`
+	// RevertedFiles holds the created files a remove or rollback already
+	// deleted. Restore leaves whatever is there now alone, but a retried
+	// remove still forgets the installs that went into them.
+	RevertedFiles []string `json:"revertedFiles,omitempty"`
 }
 
 // Destination returns the absolute path the backup at rel restores to.
@@ -211,9 +215,10 @@ func AddSymlink(snapshotDir string, rec SymlinkRecord) error {
 }
 
 // Forget drops the paths a caller has just deleted from the snapshot's
-// CreatedFiles and Symlinks. Whatever appears at one of them afterward is
-// not the apply's, even before anyone looks, so the record goes by the
-// delete rather than by what exists when the snapshot is rewritten.
+// Symlinks, and moves them from CreatedFiles to RevertedFiles. Whatever
+// appears at one of them afterward is not the apply's, even before anyone
+// looks, so the record goes by the delete rather than by what exists when
+// the snapshot is rewritten.
 func Forget(snapshotDir string, deleted []string) error {
 	if len(deleted) == 0 {
 		return nil
@@ -223,7 +228,11 @@ func Forget(snapshotDir string, deleted []string) error {
 		return err
 	}
 	manifest.CreatedFiles = slices.DeleteFunc(manifest.CreatedFiles, func(p string) bool {
-		return slices.Contains(deleted, p)
+		if !slices.Contains(deleted, p) {
+			return false
+		}
+		manifest.RevertedFiles = append(manifest.RevertedFiles, p)
+		return true
 	})
 	manifest.Symlinks = slices.DeleteFunc(manifest.Symlinks, func(sr SymlinkRecord) bool {
 		return slices.Contains(deleted, sr.Path)
@@ -421,9 +430,11 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 			return fmt.Errorf("restoring %s: %w", rel, err)
 		}
 	}
-	for _, path := range manifest.CreatedFiles {
+	for i, path := range manifest.CreatedFiles {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("removing %s: %w", path, err)
+			// A retry must not delete what appears at the paths this one
+			// already deleted.
+			return errors.Join(fmt.Errorf("removing %s: %w", path, err), Forget(snapshotDir, manifest.CreatedFiles[:i]))
 		}
 	}
 

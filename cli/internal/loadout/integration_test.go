@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -544,6 +545,40 @@ func TestApply_RollbackReportsASnapshotItCannotDelete(t *testing.T) {
 	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
 	if err == nil || !containsAll(err.Error(), "rolled back", "deleting the snapshot failed") {
 		t.Fatalf("Apply: got %v, want a rollback that reports the snapshot it could not delete", err)
+	}
+}
+
+// A rollback that cannot record what it deleted lists those paths as
+// exceptions to the files and symlinks its message says to delete by hand.
+func TestApply_RollbackNamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	var snapshotDir string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		snapshotDir = dir
+		if err := os.Chmod(dir, 0o555); err != nil {
+			return err
+		}
+		return errors.New("disk full")
+	}
+	t.Cleanup(func() {
+		if snapshotDir != "" {
+			os.Chmod(snapshotDir, 0o755)
+		}
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), "rolling back failed: disk full", "which rollback already deleted") || strings.Contains(err.Error(), "syllago loadout remove") {
+		t.Fatalf("Apply: got %v, want by-hand steps that except what rollback deleted and do not offer remove", err)
 	}
 }
 

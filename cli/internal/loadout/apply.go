@@ -197,7 +197,11 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			// gone, is not the apply's to delete if it appears. Until that
 			// is recorded, remove could delete one, so it is not offered.
 			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
-				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, left)
+				except := ""
+				if len(removed) > 0 {
+					except = " except " + strings.Join(removed, ", ") + ", which rollback already deleted"
+				}
+				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks%s, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, except, left)
 			}
 			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory%s", applyErr, restoreErr, snapshotDir, left)
 		}

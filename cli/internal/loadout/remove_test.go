@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -206,7 +205,7 @@ func TestRemove_RefusesUncleanPaths(t *testing.T) {
 			if err := os.MkdirAll(placed, 0o755); err != nil {
 				t.Fatal(err)
 			}
-			_, err := snapshot.Create(projectRoot, "test-loadout", "keep", []string{backedUp, created},
+			snapshotDir, err := snapshot.Create(projectRoot, "test-loadout", "keep", []string{backedUp, created},
 				[]snapshot.SymlinkRecord{{Path: placed, Copied: true}, {Path: unclean(projectRoot), Copied: true}}, nil)
 			if err != nil {
 				t.Fatalf("creating snapshot: %v", err)
@@ -219,8 +218,8 @@ func TestRemove_RefusesUncleanPaths(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
-				t.Fatalf("Remove: got %v, want the unclean path refused", err)
+			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !containsAll(err.Error(), "not a clean absolute path", "undo what its manifest.json lists by hand", snapshotDir) {
+				t.Fatalf("Remove: got %v, want the unclean path refused with the steps to undo it by hand", err)
 			}
 			for _, p := range []string{created, placed} {
 				if _, err := os.Stat(p); err != nil {

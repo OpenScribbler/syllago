@@ -160,7 +160,11 @@ func (r *PathResolver) ExpandPaths() error {
 	}
 	// A loadout records where it places content and refuses a relative
 	// path, which would delete from wherever remove later runs.
+	// An empty per-type path means unset, not the working directory.
 	expand := func(p string) (string, error) {
+		if p == "" {
+			return "", nil
+		}
 		expanded, err := ExpandHome(p)
 		if err != nil {
 			return "", err

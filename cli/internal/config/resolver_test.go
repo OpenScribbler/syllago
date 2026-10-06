@@ -192,7 +192,7 @@ func TestResolver_ExpandPathsMakesRelativeAbsolute(t *testing.T) {
 	t.Chdir(wd)
 	cfg := &Config{
 		ProviderPaths: map[string]ProviderPathConfig{
-			"test": {BaseDir: "base", Paths: map[string]string{"skills": "skills"}},
+			"test": {BaseDir: "base", Paths: map[string]string{"skills": "skills", "rules": ""}},
 		},
 	}
 	r := NewResolver(cfg, "cli")
@@ -203,6 +203,8 @@ func TestResolver_ExpandPathsMakesRelativeAbsolute(t *testing.T) {
 		{r.CLIBaseDir, filepath.Join(wd, "cli")},
 		{r.ProviderPaths["test"].BaseDir, filepath.Join(wd, "base")},
 		{r.ProviderPaths["test"].Paths["skills"], filepath.Join(wd, "skills")},
+		// Empty means unset, which falls back to the base directory.
+		{r.ProviderPaths["test"].Paths["rules"], ""},
 	} {
 		if tc.got != tc.want {
 			t.Errorf("got %q, want %q", tc.got, tc.want)
