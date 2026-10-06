@@ -206,6 +206,73 @@ func TestRemove_KeepsTheSnapshotWhenInstalledJSONCannotBeSaved(t *testing.T) {
 	}
 }
 
+// TestRemove_ForgetsWhatItDeletedBeforeADeleteFails: a copy remove cannot
+// delete fails the remove after it has deleted a created file and another
+// copy. Those leave the snapshot, so the retry cannot delete what someone
+// puts at their paths in between.
+func TestRemove_ForgetsWhatItDeletedBeforeADeleteFails(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	created := filepath.Join(projectRoot, "created.json")
+	first := filepath.Join(projectRoot, "placed", "first")
+	stuck := filepath.Join(projectRoot, "placed", "stuck")
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", []string{created}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for _, p := range []string{first, stuck} {
+		if err := os.MkdirAll(filepath.Join(p, "sub"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := snapshot.AddSymlink(snapshotDir, snapshot.SymlinkRecord{Path: p, Target: filepath.Join(projectRoot, "src"), Copied: true}); err != nil {
+			t.Fatalf("AddSymlink: %v", err)
+		}
+	}
+	if err := os.WriteFile(created, []byte("apply's"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(stuck, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(stuck, 0o755) })
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err == nil {
+		t.Fatal("Remove succeeded with a copy it cannot delete")
+	}
+	sm, _, err := snapshot.Load(projectRoot)
+	if err != nil {
+		t.Fatalf("snapshot after the failed remove: %v", err)
+	}
+	if len(sm.CreatedFiles) != 0 || len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != stuck {
+		t.Fatalf("snapshot after the failed remove: created %q, symlinks %+v; want only %s", sm.CreatedFiles, sm.Symlinks, stuck)
+	}
+	theirs := []string{created, filepath.Join(first, "theirs.md")}
+	for _, p := range theirs {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("theirs"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	os.Chmod(stuck, 0o755)
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("retry: %v", err)
+	}
+	for _, p := range theirs {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("retry deleted %s, which appeared after the first remove deleted its path: %v", p, err)
+		}
+	}
+	if _, err := os.Lstat(stuck); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("retry left %s: %v", stuck, err)
+	}
+}
+
 // TestRemove_LeavesInstalledJSONAnEarlierSnapshotBackedUp: snapshots from
 // earlier versions list installed.json among their backups. Remove cleans
 // it rather than restoring it, so a record added after the apply stays.

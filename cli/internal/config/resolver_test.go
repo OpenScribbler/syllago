@@ -1,6 +1,7 @@
 package config
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -181,6 +182,31 @@ func TestResolver_ExpandPaths(t *testing.T) {
 	}
 	if r.ProviderPaths["test"].BaseDir != "/absolute/path" {
 		t.Errorf("BaseDir = %q, want /absolute/path", r.ProviderPaths["test"].BaseDir)
+	}
+}
+
+// A relative path resolves against the working directory, so ExpandPaths
+// records it absolute: a loadout refuses to place at a relative one.
+func TestResolver_ExpandPathsMakesRelativeAbsolute(t *testing.T) {
+	wd := t.TempDir()
+	t.Chdir(wd)
+	cfg := &Config{
+		ProviderPaths: map[string]ProviderPathConfig{
+			"test": {BaseDir: "base", Paths: map[string]string{"skills": "skills"}},
+		},
+	}
+	r := NewResolver(cfg, "cli")
+	if err := r.ExpandPaths(); err != nil {
+		t.Fatalf("ExpandPaths: %v", err)
+	}
+	for _, tc := range []struct{ got, want string }{
+		{r.CLIBaseDir, filepath.Join(wd, "cli")},
+		{r.ProviderPaths["test"].BaseDir, filepath.Join(wd, "base")},
+		{r.ProviderPaths["test"].Paths["skills"], filepath.Join(wd, "skills")},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("got %q, want %q", tc.got, tc.want)
+		}
 	}
 }
 

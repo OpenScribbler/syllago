@@ -65,6 +65,7 @@ func TestCreate_FileOutsideHomeRestoresInPlace(t *testing.T) {
 // were recorded keys each backup by its path relative to the home directory.
 func TestDestination_FallsBackToHome(t *testing.T) {
 	t.Parallel()
+	// path-literal-ok: Destination only joins paths; nothing is read or written.
 	home := filepath.Join(string(filepath.Separator), "home", "u")
 	m := &SnapshotManifest{Destinations: map[string]string{"outside-home/0/mcp.json": "/proj/.cursor/mcp.json"}}
 	if got := m.Destination(home, "outside-home/0/mcp.json"); got != "/proj/.cursor/mcp.json" {
@@ -203,15 +204,16 @@ func TestCreate_KeepsASymlinkToAMissingTarget(t *testing.T) {
 
 // TestRestore_RefusesAnUncleanPath: syllago records only clean absolute
 // paths, so a relative or unclean one in a manifest fails the restore
-// before it changes anything.
+// before it changes anything. Each path names victim.json from inside
+// dir/sub, the working directory, so a restore that took it would
+// overwrite or delete the victim.
 func TestRestore_RefusesAnUncleanPath(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		name     string
 		manifest func(dir string) SnapshotManifest
 	}{
 		{"relative destination", func(dir string) SnapshotManifest {
-			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "x")}}
+			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "victim.json")}}
 		}},
 		{"relative created file", func(dir string) SnapshotManifest {
 			return SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}
@@ -226,12 +228,24 @@ func TestRestore_RefusesAnUncleanPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "sub"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(filepath.Join(dir, "sub"))
 			victim := filepath.Join(dir, "victim.json")
 			if err := os.WriteFile(victim, []byte("theirs"), 0644); err != nil {
 				t.Fatal(err)
 			}
+			snapshotDir := t.TempDir()
+			backup := filepath.Join(snapshotDir, "files", "home", "x")
+			if err := os.MkdirAll(filepath.Dir(backup), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(backup, []byte("backup"), 0644); err != nil {
+				t.Fatal(err)
+			}
 			m := tt.manifest(dir)
-			if err := Restore(t.TempDir(), &m); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
+			if err := Restore(snapshotDir, &m); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
 				t.Errorf("Restore: got %v, want a refusal of the path", err)
 			}
 			if got, err := os.ReadFile(victim); err != nil || string(got) != "theirs" {

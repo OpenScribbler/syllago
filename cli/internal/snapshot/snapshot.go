@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -209,11 +210,31 @@ func AddSymlink(snapshotDir string, rec SymlinkRecord) error {
 	return writeManifest(snapshotDir, manifest)
 }
 
+// Forget drops the paths a caller has just deleted from the snapshot's
+// CreatedFiles and Symlinks. Whatever appears at one of them afterward is
+// not the apply's, even before anyone looks, so the record goes by the
+// delete rather than by what exists when the snapshot is rewritten.
+func Forget(snapshotDir string, deleted []string) error {
+	if len(deleted) == 0 {
+		return nil
+	}
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	manifest.CreatedFiles = slices.DeleteFunc(manifest.CreatedFiles, func(p string) bool {
+		return slices.Contains(deleted, p)
+	})
+	manifest.Symlinks = slices.DeleteFunc(manifest.Symlinks, func(sr SymlinkRecord) bool {
+		return slices.Contains(deleted, sr.Path)
+	})
+	return writeManifest(snapshotDir, manifest)
+}
+
 // DropUncreated drops from the snapshot's CreatedFiles and Symlinks each
 // path that does not exist. An apply calls it once its writes are done, or
-// once a failed apply has undone some of them, and remove once it has
-// deleted the symlinks: a path the apply did not write, or has since
-// removed, belongs to whoever makes it later.
+// once a failed rollback has deleted some of them: a path the apply did not
+// write belongs to whoever makes it later.
 func DropUncreated(snapshotDir string) error {
 	manifest, err := ReadManifest(snapshotDir)
 	if err != nil {

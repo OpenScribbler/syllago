@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -508,6 +509,41 @@ func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
 	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
 	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
 		t.Errorf("copy %s should be gone after rollback; got err=%v", copyPath, err)
+	}
+}
+
+// A rollback that restores everything but cannot delete its snapshot says
+// so: the snapshot left behind lists files the rollback already deleted.
+func TestApply_RollbackReportsASnapshotItCannotDelete(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	var snapshots string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		snapshots = filepath.Dir(dir)
+		if err := os.Chmod(snapshots, 0o555); err != nil {
+			return err
+		}
+		return snapshot.Restore(dir, sm)
+	}
+	t.Cleanup(func() {
+		if snapshots != "" {
+			os.Chmod(snapshots, 0o755)
+		}
+	})
+
+	// Copy mode reads the source, so the missing one fails the apply.
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), "rolled back", "deleting the snapshot failed") {
+		t.Fatalf("Apply: got %v, want a rollback that reports the snapshot it could not delete", err)
 	}
 }
 

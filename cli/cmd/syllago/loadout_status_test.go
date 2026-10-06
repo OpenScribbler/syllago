@@ -103,7 +103,7 @@ func TestRunLoadoutStatus(t *testing.T) {
 					Mode:        "keep",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "/home/user/.claude/rules/my-rule", Target: "/repo/rules/my-rule", Copied: true},
+						{Path: filepath.Join(root, ".claude", "rules", "my-rule"), Target: filepath.Join(root, "rules", "my-rule"), Copied: true},
 					},
 				})
 			},

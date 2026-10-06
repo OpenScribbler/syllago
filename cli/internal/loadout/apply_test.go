@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -799,7 +800,8 @@ func TestClaim(t *testing.T) {
 }
 
 // A placement that will not delete is reported, so rollback keeps the
-// snapshot instead of claiming success.
+// snapshot instead of claiming success. Only the placements it deleted come
+// back, so only those leave the snapshot, and the error names the rest.
 func TestUnplace_ReportsFailures(t *testing.T) {
 	t.Parallel()
 	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
@@ -815,9 +817,21 @@ func TestUnplace_ReportsFailures(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(placedCopy, 0o755) })
 
-	err := unplace([]snapshot.SymlinkRecord{{Path: placedCopy, Copied: true}})
+	gone := filepath.Join(parent, "gone")
+	if err := os.Symlink(placedCopy, gone); err != nil {
+		t.Fatal(err)
+	}
+
+	placed := []snapshot.SymlinkRecord{{Path: gone}, {Path: placedCopy, Copied: true}}
+	removed, err := unplace(placed)
 	if err == nil {
 		t.Fatal("expected an error deleting a copy whose contents cannot be removed")
+	}
+	if !slices.Equal(removed, []string{gone}) {
+		t.Errorf("removed = %q, want only %q", removed, gone)
+	}
+	if got, want := leftBehind(placed, removed), "; rollback could not delete "+placedCopy; got != want {
+		t.Errorf("leftBehind = %q, want %q", got, want)
 	}
 }
 

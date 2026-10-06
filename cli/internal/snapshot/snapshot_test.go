@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -21,7 +22,7 @@ func TestCreate_BacksUpFiles(t *testing.T) {
 	}
 
 	symlinks := []SymlinkRecord{
-		{Path: "/tmp/link1", Target: "/tmp/target1"},
+		{Path: filepath.Join(tmpDir, "link1"), Target: filepath.Join(tmpDir, "target1")},
 	}
 
 	snapshotDir, err := Create(tmpDir, "test-loadout", "keep",
@@ -49,7 +50,7 @@ func TestCreate_SkipsMissingFiles(t *testing.T) {
 
 	// Try to back up a file that doesn't exist
 	_, err := Create(tmpDir, "test-loadout", "keep",
-		[]string{"/nonexistent/file.json"}, nil, nil)
+		[]string{filepath.Join(tmpDir, "nonexistent", "file.json")}, nil, nil)
 	if err != nil {
 		t.Fatalf("Create should not fail for missing files: %v", err)
 	}
@@ -82,7 +83,7 @@ func TestCreate_ManifestContents(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	symlinks := []SymlinkRecord{
-		{Path: "/home/user/.claude/rules/my-rule.md", Target: "/repo/content/rules/my-rule.md"},
+		{Path: filepath.Join(tmpDir, ".claude", "rules", "my-rule.md"), Target: filepath.Join(tmpDir, "content", "rules", "my-rule.md")},
 	}
 
 	snapshotDir, err := Create(tmpDir, "my-loadout", "try",
@@ -114,19 +115,14 @@ func TestCreate_ManifestContents(t *testing.T) {
 }
 
 func TestRestore_RestoresContent(t *testing.T) {
-	t.Parallel()
-
-	// Restore writes files back to os.UserHomeDir()/rel, so we need to
-	// use the real home dir. Create a subdirectory under home for isolation.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	// Restore keys a file under home by its path from there, so the test
+	// sets a home of its own rather than writing under the real one.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	projectRoot := t.TempDir()
 	testDir := filepath.Join(home, ".syllago-test-restore-"+filepath.Base(projectRoot))
 	os.MkdirAll(testDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(testDir) })
 
 	// Write original content
 	testFile := filepath.Join(testDir, "settings.json")
@@ -306,19 +302,16 @@ func TestLoad_BackwardsCompat(t *testing.T) {
 // the happy round-trip — it did not verify Restore fails loudly when the
 // backup is gone.
 func TestRestore_MissingBackupFile_ReturnsError(t *testing.T) {
-	t.Parallel()
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	// Restore keys a file under home by its path from there, so the test
+	// sets a home of its own rather than writing under the real one.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	projectRoot := t.TempDir()
 	testDir := filepath.Join(home, ".syllago-test-missing-"+filepath.Base(projectRoot))
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(testDir) })
 
 	testFile := filepath.Join(testDir, "settings.json")
 	originalContent := []byte(`{"pre-apply": true}`)
@@ -394,19 +387,16 @@ func TestRestore_MissingBackupFile_ReturnsError(t *testing.T) {
 // Restore verifies each digest; mismatches short-circuit with
 // ErrRestoreCorruptBackup before the destination is touched.
 func TestRestore_TruncatedBackupFile_Refuses(t *testing.T) {
-	t.Parallel()
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	// Restore keys a file under home by its path from there, so the test
+	// sets a home of its own rather than writing under the real one.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	projectRoot := t.TempDir()
 	testDir := filepath.Join(home, ".syllago-test-truncated-"+filepath.Base(projectRoot))
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(testDir) })
 
 	testFile := filepath.Join(testDir, "settings.json")
 	originalContent := []byte(`{"many":"bytes","here":"filler"}`)
@@ -524,19 +514,16 @@ func TestLoad_CorruptManifest_ReturnsParseError(t *testing.T) {
 // reverting to a plain copyFile call) would cause the side-file assertion
 // to fire with the restored backup bytes.
 func TestRestore_TargetReplacedWithSymlink_Refuses(t *testing.T) {
-	t.Parallel()
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
+	// Restore keys a file under home by its path from there, so the test
+	// sets a home of its own rather than writing under the real one.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	projectRoot := t.TempDir()
 	testDir := filepath.Join(home, ".syllago-test-symlink-"+filepath.Base(projectRoot))
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(testDir) })
 
 	targetPath := filepath.Join(testDir, "settings.json")
 	originalContent := []byte(`{"legitimate":"content"}`)
@@ -544,7 +531,7 @@ func TestRestore_TargetReplacedWithSymlink_Refuses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = Create(projectRoot, "symlink-swap", "keep",
+	_, err := Create(projectRoot, "symlink-swap", "keep",
 		[]string{targetPath}, nil, nil)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -657,6 +644,42 @@ func TestDropUncreated_DropsWhatDoesNotExist(t *testing.T) {
 	}
 	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != link {
 		t.Errorf("Symlinks: got %+v, want only %s", m.Symlinks, link)
+	}
+}
+
+// Forget drops the paths a caller deleted even when something exists at
+// them again, and keeps every other record.
+func TestForget_DropsWhatWasDeletedWhateverExistsThere(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path := func(name string) string { return filepath.Join(dir, name) }
+	snapshotDir, err := Create(dir, "l", "keep", []string{path("created-a"), path("created-b")}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	for _, name := range []string{"link-c", "link-d"} {
+		if err := AddSymlink(snapshotDir, SymlinkRecord{Path: path(name), Target: path("src")}); err != nil {
+			t.Fatalf("AddSymlink: %v", err)
+		}
+	}
+	for _, name := range []string{"created-a", "created-b", "link-c", "link-d"} {
+		if err := os.WriteFile(path(name), []byte("theirs"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := Forget(snapshotDir, []string{path("created-a"), path("link-c")}); err != nil {
+		t.Fatalf("Forget: %v", err)
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if !slices.Equal(m.CreatedFiles, []string{path("created-b")}) {
+		t.Errorf("CreatedFiles = %q, want only created-b", m.CreatedFiles)
+	}
+	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != path("link-d") {
+		t.Errorf("Symlinks = %+v, want only link-d", m.Symlinks)
 	}
 }
 

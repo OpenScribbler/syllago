@@ -151,15 +151,25 @@ func ValidateProviderPath(path string) error {
 	return nil
 }
 
-// ExpandPaths resolves tilde prefixes in all stored paths.
-// Call this after constructing the resolver to ensure paths are absolute.
+// ExpandPaths resolves tilde prefixes in all stored paths and makes them
+// absolute against the working directory, which is where a relative path
+// would resolve anyway. Call this after constructing the resolver.
 func (r *PathResolver) ExpandPaths() error {
 	if r == nil {
 		return nil
 	}
+	// A loadout records where it places content and refuses a relative
+	// path, which would delete from wherever remove later runs.
+	expand := func(p string) (string, error) {
+		expanded, err := ExpandHome(p)
+		if err != nil {
+			return "", err
+		}
+		return filepath.Abs(expanded)
+	}
 
 	if r.CLIBaseDir != "" {
-		expanded, err := ExpandHome(r.CLIBaseDir)
+		expanded, err := expand(r.CLIBaseDir)
 		if err != nil {
 			return err
 		}
@@ -168,14 +178,14 @@ func (r *PathResolver) ExpandPaths() error {
 
 	for slug, ppc := range r.ProviderPaths {
 		if ppc.BaseDir != "" {
-			expanded, err := ExpandHome(ppc.BaseDir)
+			expanded, err := expand(ppc.BaseDir)
 			if err != nil {
 				return err
 			}
 			ppc.BaseDir = expanded
 		}
 		for ct, path := range ppc.Paths {
-			expanded, err := ExpandHome(path)
+			expanded, err := expand(path)
 			if err != nil {
 				return err
 			}

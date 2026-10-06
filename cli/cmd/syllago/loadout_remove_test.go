@@ -107,7 +107,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 					Mode:        "keep",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: filepath.Join(root, "already-gone-copy"), Target: "/tmp/src", Copied: true},
+						{Path: filepath.Join(root, "already-gone-copy"), Target: filepath.Join(root, "src"), Copied: true},
 					},
 				})
 			},

@@ -128,7 +128,7 @@ func TestRemove_CleansInstalledJSON(t *testing.T) {
 			{Name: "export-hook", Event: "PreToolUse", Source: "export", InstalledAt: time.Now()},
 		},
 		Symlinks: []installer.InstalledSymlink{
-			{Path: "/some/path", Target: "/some/target", Source: "loadout:test-loadout", InstalledAt: time.Now()},
+			{Path: filepath.Join(projectRoot, "some", "path"), Target: filepath.Join(projectRoot, "some", "target"), Source: "loadout:test-loadout", InstalledAt: time.Now()},
 		},
 	}
 	data, _ := json.MarshalIndent(inst, "", "  ")
@@ -172,11 +172,11 @@ func TestCheckRemovablePath(t *testing.T) {
 		ok   bool
 	}{
 		{"relative/copy", false},
-		{"/", false},        // path-literal-ok: checked by a pure function, never deleted
-		{"//", false},       // path-literal-ok: checked by a pure function, never deleted
-		{"/tmp/..", false},  // path-literal-ok: checked by a pure function, never deleted
-		{"/tmp/./x", false}, // path-literal-ok: checked by a pure function, never deleted
-		{"/home/u/.claude/skills/x", true},
+		{"/", false},                       // path-literal-ok: checked by a pure function, never deleted
+		{"//", false},                      // path-literal-ok: checked by a pure function, never deleted
+		{"/tmp/..", false},                 // path-literal-ok: checked by a pure function, never deleted
+		{"/tmp/./x", false},                // path-literal-ok: checked by a pure function, never deleted
+		{"/home/u/.claude/skills/x", true}, // path-literal-ok: checked by a pure function, never deleted
 	} {
 		if err := checkRemovablePath(tc.path); (err == nil) != tc.ok {
 			t.Errorf("checkRemovablePath(%q) = %v, want ok=%v", tc.path, err, tc.ok)

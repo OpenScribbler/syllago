@@ -78,16 +78,19 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 	result.RemovedFiles = manifest.CreatedFiles
 
-	// Step 2: Delete symlinks
+	// Step 2: Delete symlinks. Restore deleted the created files. A retry
+	// after any later failure must not delete what someone puts at a path
+	// this run deleted, so each one leaves the snapshot, even when a later
+	// delete fails.
+	deleted := slices.Clone(manifest.CreatedFiles)
 	for _, sr := range manifest.Symlinks {
 		if err := removePlaced(sr); err != nil {
-			return nil, err
+			return nil, errors.Join(err, snapshot.Forget(snapshotDir, deleted))
 		}
+		deleted = append(deleted, sr.Path)
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
 	}
-	// A retry after a later step fails must not delete what someone puts
-	// at a path this run already deleted.
-	if err := snapshot.DropUncreated(snapshotDir); err != nil {
+	if err := snapshot.Forget(snapshotDir, deleted); err != nil {
 		return nil, err
 	}
 
@@ -119,7 +122,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 // "/home/u/.." would delete /home.
 func checkRemovablePath(p string) error {
 	if !filepath.IsAbs(p) || filepath.Clean(p) != p || filepath.Dir(p) == p {
-		return fmt.Errorf("removing %q: not a clean absolute path below the filesystem root", p)
+		return fmt.Errorf("refusing %q: not a clean absolute path below the filesystem root", p)
 	}
 	return nil
 }

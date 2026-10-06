@@ -3,9 +3,9 @@ package loadout
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -181,25 +181,29 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 		// A placement that will not go fails the rollback like a restore
 		// that will not, so the snapshot stays and records it.
-		restoreErr = errors.Join(restoreErr, unplace(placed))
+		removed, unplaceErr := unplace(placed)
+		restoreErr = errors.Join(restoreErr, unplaceErr)
+		left := leftBehind(placed, removed)
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and
 		// a restore that keeps failing leaves the backups to copy by hand and
 		// the files and symlinks the apply created to delete. The directory blocks the
 		// next apply until it is gone, so each message says to delete it.
 		if readErr != nil {
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; %s cannot be read, so copy its backups back by hand%s, then delete that directory", applyErr, errors.Join(readErr, restoreErr), snapshotDir, leftBehind(placed))
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; %s cannot be read, so copy its backups back by hand, then delete that directory%s", applyErr, errors.Join(readErr, restoreErr), snapshotDir, left)
 		}
 		if restoreErr != nil {
-			// A file or symlink it lists that is gone now is not the apply's
-			// to delete if it appears. Until that is recorded, remove could
-			// delete one, so it is not offered.
-			if err := snapshot.DropUncreated(snapshotDir); err != nil {
-				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, errors.Join(restoreErr, err), snapshotDir)
+			// A placement this rollback deleted, or a created file that is
+			// gone, is not the apply's to delete if it appears. Until that
+			// is recorded, remove could delete one, so it is not offered.
+			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
+				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, left)
 			}
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory%s", applyErr, restoreErr, snapshotDir, left)
 		}
-		_ = snapshot.Delete(snapshotDir)
+		if err := snapshot.Delete(snapshotDir); err != nil {
+			return nil, fmt.Errorf("applying loadout (rolled back): %w; deleting the snapshot failed: %w; delete %s by hand rather than running 'syllago loadout remove'", applyErr, err, snapshotDir)
+		}
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
 	warnings = append(warnings, placeWarnings...)
@@ -227,30 +231,35 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}, nil
 }
 
-// unplace deletes the symlinks and copies a failed apply placed.
-func unplace(placed []snapshot.SymlinkRecord) error {
+// unplace deletes the symlinks and copies a failed apply placed, and
+// returns the paths it deleted.
+func unplace(placed []snapshot.SymlinkRecord) ([]string, error) {
+	var removed []string
 	var errs []error
 	for _, sr := range placed {
 		if err := removePlaced(sr); err != nil {
 			errs = append(errs, err)
+			continue
 		}
+		removed = append(removed, sr.Path)
 	}
-	return errors.Join(errs...)
+	return removed, errors.Join(errs...)
 }
 
-// leftBehind names the placements rollback could not delete, for an error
-// that cannot point at the snapshot's manifest.
-func leftBehind(placed []snapshot.SymlinkRecord) string {
+// leftBehind names the placements rollback could not delete. A placement
+// whose record failed to save is in no manifest, so every rollback error
+// names them rather than pointing at the snapshot alone.
+func leftBehind(placed []snapshot.SymlinkRecord, removed []string) string {
 	var left []string
 	for _, sr := range placed {
-		if _, err := os.Lstat(sr.Path); !errors.Is(err, fs.ErrNotExist) {
+		if !slices.Contains(removed, sr.Path) {
 			left = append(left, sr.Path)
 		}
 	}
 	if len(left) == 0 {
 		return ""
 	}
-	return ", delete " + strings.Join(left, ", ")
+	return "; rollback could not delete " + strings.Join(left, ", ")
 }
 
 // claim creates dst as an empty file, an empty directory, or the symlink
