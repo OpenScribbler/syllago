@@ -584,7 +584,7 @@ func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(trial)
+	defer func() { _ = os.RemoveAll(trial) }()
 	if _, _, err := resolveHookCommandScript(h.Handler.Command, item, trial); err != nil {
 		if inner := errors.Unwrap(err); inner != nil {
 			err = inner // the trial directory's path would only mislead
@@ -695,7 +695,7 @@ func hookScanDir(item catalog.ContentItem, cmd string) (string, func(), error) {
 	if err != nil {
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 	}
-	cleanup := func() { os.RemoveAll(stage) }
+	cleanup := func() { _ = os.RemoveAll(stage) }
 	if err := copyFile(item.Path, filepath.Join(stage, manifest)); err != nil {
 		cleanup()
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
@@ -872,9 +872,10 @@ func shellQuoteFor(goos, p string) string {
 		}
 		return p
 	}
-	if strings.IndexFunc(p, func(r rune) bool {
-		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("/._-+:@%,=", r))
-	}) < 0 {
+	safe := func(r rune) bool {
+		return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("/._-+:@%,=", r)
+	}
+	if strings.IndexFunc(p, func(r rune) bool { return !safe(r) }) < 0 {
 		return p
 	}
 	return "'" + strings.ReplaceAll(p, "'", `'\''`) + "'"

@@ -138,7 +138,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 				t.Helper()
 				links, copies := strings.Index(stdout, "Symlinks to remove:"), strings.Index(stdout, "Copies to delete")
 				link, hook := strings.Index(stdout, "already-gone-symlink"), strings.Index(stdout, "already-gone-hook-scripts")
-				if links < 0 || copies < 0 || !(links < link && link < copies && copies < hook) {
+				if links < 0 || copies < 0 || links >= link || link >= copies || copies >= hook {
 					t.Errorf("want the symlink under symlinks and the hook scripts under copies, got: %s", stdout)
 				}
 			},

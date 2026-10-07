@@ -131,7 +131,7 @@ func TestRunLoadoutStatus(t *testing.T) {
 				t.Helper()
 				links, copies := strings.Index(out, "Installed symlinks"), strings.Index(out, "Installed copies")
 				rule, hook := strings.Index(out, "linked-rule"), strings.Index(out, "hook-scripts")
-				if links < 0 || copies < 0 || !(links < rule && rule < copies && copies < hook) {
+				if links < 0 || copies < 0 || links >= rule || rule >= copies || copies >= hook {
 					t.Errorf("want the rule under symlinks and the hook scripts under copies, got: %s", out)
 				}
 			},
