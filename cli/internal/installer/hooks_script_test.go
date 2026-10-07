@@ -539,6 +539,47 @@ func TestCopyHookItem_CopiesSymlinksInsideTheItem(t *testing.T) {
 	}
 }
 
+// A reinstall over a directory an earlier install left replaces a link it
+// made where the item now has a file, and a symlink that cannot be made is
+// copied as its file.
+func TestCopyHookItem_ReplacesStaleLinksAndCopiesWhereNoLinkCanBeMade(t *testing.T) {
+	itemDir := t.TempDir()
+	os.MkdirAll(filepath.Join(itemDir, "lib"), 0755)
+	os.WriteFile(filepath.Join(itemDir, "lib", "main.js"), []byte("v1"), 0644)
+	if err := os.Symlink(filepath.Join("lib", "main.js"), filepath.Join(itemDir, "main.js")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	destDir := t.TempDir()
+	if err := copyHookItem(itemDir, destDir); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Remove(filepath.Join(itemDir, "main.js"))
+	os.WriteFile(filepath.Join(itemDir, "main.js"), []byte("v2"), 0755)
+	if err := copyHookItem(itemDir, destDir); err != nil {
+		t.Fatalf("reinstall: %v", err)
+	}
+	fi, err := os.Lstat(filepath.Join(destDir, "main.js"))
+	if got, _ := os.ReadFile(filepath.Join(destDir, "main.js")); err != nil || !fi.Mode().IsRegular() || string(got) != "v2" || fi.Mode().Perm() != 0755 {
+		t.Errorf("main.js after reinstall: %v, %q, %v; want the regular file v2 with mode 0755", fi.Mode(), got, err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(destDir, "lib", "main.js")); string(got) != "v1" {
+		t.Errorf("lib/main.js written through the old link: %q", got)
+	}
+
+	orig := createHookSymlink
+	t.Cleanup(func() { createHookSymlink = orig })
+	createHookSymlink = func(string, string) error { return errors.New("symlinks unavailable") }
+	os.Symlink("main.js", filepath.Join(itemDir, "alias.js"))
+	if err := copyHookItem(itemDir, destDir); err != nil {
+		t.Fatal(err)
+	}
+	fi, err = os.Lstat(filepath.Join(destDir, "alias.js"))
+	if got, _ := os.ReadFile(filepath.Join(destDir, "alias.js")); err != nil || !fi.Mode().IsRegular() || string(got) != "v2" || fi.Mode().Perm() != 0755 {
+		t.Errorf("alias.js without symlinks: %v, %q, %v; want a regular copy of main.js with mode 0755", fi.Mode(), got, err)
+	}
+}
+
 // The whole item is copied into the scripts directory, so the same name
 // installed for two providers gets two directories.
 func TestHookScriptsDir_SeparatesProviders(t *testing.T) {

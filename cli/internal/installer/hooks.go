@@ -738,16 +738,13 @@ func hookScriptRef(itemDir, name, cmd string) (ref, scriptPath, rel string, err 
 }
 
 // copyHookItem copies the regular files of a hook item into destDir with
-// their permissions. CopyContent skips symlinks, but the scan followed them
-// and a script may load a file through one, so a symlink to a file inside
-// the item is recreated as a symlink to that file's copy. A copied file
-// would move the script: node and python resolve a script's own symlink
-// to find the files it loads, while $0 keeps the name it ran by. One that
-// leaves the item stays skipped.
+// their permissions. The scan followed symlinks and a script may load a
+// file through one, so a symlink to a file inside the item is recreated as
+// a symlink to that file's copy. A copied file would move the script: node
+// and python resolve a script's own symlink to find the files it loads,
+// while $0 keeps the name it ran by. Where no symlink can be made, the file
+// is copied in its place. One that leaves the item is skipped.
 func copyHookItem(itemDir, destDir string) error {
-	if err := CopyContent(itemDir, destDir); err != nil {
-		return err
-	}
 	return filepath.WalkDir(itemDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -757,7 +754,10 @@ func copyHookItem(itemDir, destDir string) error {
 			return err
 		}
 		dest := filepath.Join(destDir, rel)
-		if d.Type()&fs.ModeSymlink != 0 {
+		switch {
+		case d.IsDir():
+			return os.MkdirAll(dest, 0755)
+		case d.Type()&fs.ModeSymlink != 0:
 			target, err := filepath.EvalSymlinks(path)
 			if err != nil {
 				return nil
@@ -774,17 +774,38 @@ func copyHookItem(itemDir, destDir string) error {
 			if err != nil {
 				return err
 			}
-			return CreateSymlink(link, dest)
+			if createHookSymlink(link, dest) == nil {
+				return nil
+			}
+			return copyHookFile(target, dest, info)
+		case d.Type().IsRegular():
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			return copyHookFile(path, dest, info)
 		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
+		return nil
+	})
+}
+
+// createHookSymlink is replaced in tests to fail as it does where no
+// symlink can be made.
+var createHookSymlink = CreateSymlink
+
+// copyHookFile copies src to dest with info's permissions. The copy will
+// not write through a symlink, and one at dest is a link an earlier install
+// made where the item now has a file, so the link itself is removed first.
+func copyHookFile(src, dest string, info fs.FileInfo) error {
+	if fi, err := os.Lstat(dest); err == nil && fi.Mode()&fs.ModeSymlink != 0 {
+		if err := os.Remove(dest); err != nil {
 			return err
 		}
-		return os.Chmod(dest, info.Mode().Perm())
-	})
+	}
+	if err := copyFile(src, dest); err != nil {
+		return err
+	}
+	return os.Chmod(dest, info.Mode().Perm())
 }
 
 // scriptRefSpan returns the byte span of the first whitespace-separated
