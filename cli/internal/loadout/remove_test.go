@@ -218,7 +218,7 @@ func TestRemove_RefusesUncleanPaths(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !containsAll(err.Error(), "not a clean absolute path", "undo what its manifest.json lists by hand", snapshotDir) {
+			if _, err := Remove(RemoveOptions{Auto: true, ProjectRoot: projectRoot}); err == nil || !containsAll(err.Error(), "not a clean absolute path", "undo what its manifest.json lists by hand, reading any relative path from the directory the loadout was applied in", snapshotDir) {
 				t.Fatalf("Remove: got %v, want the unclean path refused with the steps to undo it by hand", err)
 			}
 			for _, p := range []string{created, placed} {

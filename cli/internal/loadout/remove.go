@@ -63,7 +63,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 
 	for _, sr := range manifest.Symlinks {
 		if err := checkRemovablePath(sr.Path); err != nil {
-			return nil, fmt.Errorf("%w; remove cannot use the snapshot in %s, so undo what its manifest.json lists by hand, then delete that directory", err, snapshotDir)
+			return nil, fmt.Errorf("%w; remove cannot use the snapshot in %s, so undo what its manifest.json lists by hand, reading any relative path from the directory the loadout was applied in, then delete that directory", err, snapshotDir)
 		}
 	}
 
@@ -84,7 +84,7 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	// what someone puts at a path this one deleted.
 	for _, sr := range manifest.Symlinks {
 		if err := removePlaced(sr); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w; the snapshot is %s", err, snapshotDir)
 		}
 		if err := snapshot.Forget(snapshotDir, []string{sr.Path}); err != nil {
 			return nil, fmt.Errorf("remove deleted %s but could not record that in %s: %w; take it out of symlinks in its manifest.json before running remove again", sr.Path, snapshotDir, err)

@@ -998,3 +998,40 @@ func TestApply_FailedCopyRollbackKeepsOnlyWhatItPlaced(t *testing.T) {
 		t.Errorf("unreached path should be untouched: %v", err)
 	}
 }
+
+// A deletion rollback cannot record stops the rest, so a rollback killed
+// afterward leaves at most that one deleted path recorded.
+func TestUnplace_StopsWhenItCannotRecordADeletion(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	parent := t.TempDir()
+	first := filepath.Join(parent, "first")
+	second := filepath.Join(parent, "second")
+	for _, p := range []string{first, second} {
+		if err := os.Symlink(filepath.Join(parent, "src"), p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	placed := []snapshot.SymlinkRecord{{Path: first}, {Path: second}}
+	snapshotDir, err := snapshot.Create(parent, "l", "keep", nil, placed, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := os.Chmod(snapshotDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
+
+	removed, err := unplace(placed, snapshotDir)
+	if err == nil {
+		t.Fatal("expected an error recording the deletion")
+	}
+	if !slices.Equal(removed, []string{first}) {
+		t.Errorf("removed = %q, want only %q", removed, first)
+	}
+	if _, err := os.Lstat(second); err != nil {
+		t.Errorf("unplace went on to delete %s: %v", second, err)
+	}
+}

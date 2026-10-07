@@ -249,8 +249,9 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}, nil
 }
 
-// unplace deletes the symlinks and copies a failed apply placed, and
-// returns the paths it deleted.
+// unplace deletes the symlinks and copies a failed apply placed, records
+// each deletion in the snapshot in snapshotDir, and returns the paths it
+// deleted.
 func unplace(placed []snapshot.SymlinkRecord, snapshotDir string) ([]string, error) {
 	var removed []string
 	var errs []error
@@ -261,9 +262,13 @@ func unplace(placed []snapshot.SymlinkRecord, snapshotDir string) ([]string, err
 		}
 		removed = append(removed, sr.Path)
 		// Recorded at once, so a rollback killed partway leaves no deleted
-		// placement for a later remove. The caller records them all again
-		// and reports any failure.
-		_ = snapshot.Forget(snapshotDir, []string{sr.Path})
+		// placement for a later remove. One that cannot be recorded stops
+		// the deleting, so at most one deleted path stays recorded, and the
+		// caller names it.
+		if err := snapshot.Forget(snapshotDir, []string{sr.Path}); err != nil {
+			errs = append(errs, err)
+			break
+		}
 	}
 	return removed, errors.Join(errs...)
 }

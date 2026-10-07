@@ -454,7 +454,7 @@ func TestRemove_PointsAtACopyRecordedAsASymlink(t *testing.T) {
 	}
 
 	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err == nil || !containsAll(err.Error(), placed, "delete it by hand and take it out of symlinks") {
+	if err == nil || !containsAll(err.Error(), placed, "delete it by hand and take it out of symlinks", "the snapshot is "+snapshotDir) {
 		t.Fatalf("Remove: got %v, want it to point at the old copy %s", err, placed)
 	}
 	if _, err := os.Stat(filepath.Join(placed, "sub")); err != nil {
