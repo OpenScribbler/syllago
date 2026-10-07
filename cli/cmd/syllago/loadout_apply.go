@@ -223,17 +223,26 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog, opts loadout.ApplyOptions, effectiveProviders []string, mode string, skipUnsupported bool) error {
 	totalActions := 0
 	allAutoRevertArmed := true
-	// A refusal for one provider stops the apply before any provider
-	// changes, so a retry with the flag it names starts from a clean state.
+	// Every provider is checked against the state before the apply, and
+	// any refusal stops it before any provider changes. All providers'
+	// refusals are reported together, so one retry with the flags they
+	// name starts from a clean state. A conflict one provider's apply
+	// creates for the next is not caught here.
 	if mode != "preview" {
+		var refused []string
+		var refusals []error
 		for _, slug := range effectiveProviders {
 			if p := findProviderBySlug(slug); p != nil {
 				if err := loadout.Check(manifest, cat, *p, opts); err != nil {
-					return output.NewStructuredErrorDetail(output.ErrInstallConflict,
-						fmt.Sprintf("applying loadout to %s", slug),
-						loadoutApplyHint(err), err.Error())
+					refused = append(refused, slug)
+					refusals = append(refusals, fmt.Errorf("%s: %w", slug, err))
 				}
 			}
+		}
+		if err := errors.Join(refusals...); err != nil {
+			return output.NewStructuredErrorDetail(output.ErrInstallConflict,
+				fmt.Sprintf("applying loadout to %s", strings.Join(refused, ", ")),
+				loadoutApplyHint(err), err.Error())
 		}
 	}
 	for _, slug := range effectiveProviders {

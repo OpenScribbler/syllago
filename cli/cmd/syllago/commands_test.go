@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
@@ -1362,12 +1363,13 @@ func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
 // provider changes, so the retry starts from a clean state.
 func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 	for _, tc := range []struct {
-		name, event, command, want, geminiSettings string
+		name, event, command, want, geminiSettings, claudeCommand string
 	}{
-		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force", ""},
-		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory", ""},
-		{"unknown event", "Bogus", "echo ok", "unknown hook event", ""},
-		{"unreadable provider settings", "after_tool_execute", "echo ok", "settings.json", "{not json"},
+		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force", "", ""},
+		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory", "", ""},
+		{"unknown event", "Bogus", "echo ok", "unknown hook event", "", ""},
+		{"unreadable provider settings", "after_tool_execute", "echo ok", "settings.json", "{not json", ""},
+		{"both providers refused", "after_tool_execute", "../outside.sh", "outside item directory", "", "curl https://example.com/payload"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := setupLoadoutApplyRepo(t, "", "", nil)
@@ -1385,7 +1387,7 @@ func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 				os.WriteFile(filepath.Join(home, ".gemini", "settings.json"), []byte(tc.geminiSettings), 0644)
 			}
 			for slug, hook := range map[string][2]string{
-				"claude-code": {"after_tool_execute", "echo done"},
+				"claude-code": {"after_tool_execute", cmp.Or(tc.claudeCommand, "echo done")},
 				"gemini-cli":  {tc.event, tc.command},
 			} {
 				hookDir := filepath.Join(root, "hooks", slug, "fetcher")
@@ -1400,6 +1402,11 @@ func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 			var se output.StructuredError
 			if !errors.As(err, &se) || !strings.Contains(se.Message, "gemini-cli") || !strings.Contains(se.Suggestion+se.Details, tc.want) {
 				t.Fatalf("keep: got %v, want a gemini-cli error mentioning %q", err, tc.want)
+			}
+			// Every provider's refusal is reported, so one retry carries
+			// every flag they name.
+			if tc.claudeCommand != "" && (!strings.Contains(se.Message, "claude-code") || !strings.Contains(se.Details, "high-severity") || !strings.Contains(se.Suggestion, "--force")) {
+				t.Errorf("keep: got %v, want claude-code's finding reported beside gemini-cli's", err)
 			}
 			if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
 				t.Errorf("refused apply changed claude-code first (stat err %v)", err)
