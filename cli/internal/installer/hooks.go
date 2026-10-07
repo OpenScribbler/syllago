@@ -60,7 +60,7 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if err != nil {
 		return Placement{}, err
 	}
-	scriptsDir, err := hookScriptsDir(item.Name)
+	scriptsDir, err := hookScriptsDir(prov.Slug, item.Name)
 	if err != nil {
 		return Placement{}, fmt.Errorf("getting hook scripts dir: %w", err)
 	}
@@ -413,13 +413,16 @@ func legacyRootWithHookRecord(repoRoot, name, nativeEvent, provSlug string) stri
 	return legacyRoot
 }
 
-// hookScriptsDir returns ~/.syllago/hooks/<name>/ for storing copied scripts.
-func hookScriptsDir(name string) (string, error) {
+// hookScriptsDir returns ~/.syllago/hooks/<provider>/<name>/ for storing
+// copied scripts. The whole item is copied there, so a hook of the same
+// name installed for another provider gets its own directory rather than
+// having its scripts overwritten.
+func hookScriptsDir(provSlug, name string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".syllago", "hooks", name), nil
+	return filepath.Join(home, ".syllago", "hooks", provSlug, name), nil
 }
 
 // homeRelative shows a path under the home directory as ~/<rest>.
@@ -628,7 +631,14 @@ func hookScanDir(item catalog.ContentItem, cmd string) (string, func(), error) {
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 	}
 	cleanup := func() { os.RemoveAll(stage) }
-	if err := copyFile(item.Path, filepath.Join(stage, filepath.Base(item.Path))); err != nil {
+	// The scanner reads hook config only from .json files, so the manifest
+	// is staged under a .json name whatever the item calls it, and under
+	// one the script does not take.
+	manifest := "hook.json"
+	if rel == manifest {
+		manifest = "hook-manifest.json"
+	}
+	if err := copyFile(item.Path, filepath.Join(stage, manifest)); err != nil {
 		cleanup()
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 	}

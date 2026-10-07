@@ -133,6 +133,11 @@ func ParseManifest(data []byte) (Manifest, error) {
 	if m.Spec == "" {
 		return Manifest{}, fmt.Errorf("parsing manifest: missing spec field (expected %q)", SpecVersion)
 	}
+	// The security scanner reads only this version, so a hook under any
+	// other would install unscanned.
+	if m.Spec != SpecVersion {
+		return Manifest{}, fmt.Errorf("parsing manifest: unsupported spec %q (expected %q)", m.Spec, SpecVersion)
+	}
 	if len(m.Hooks) == 0 {
 		return Manifest{}, fmt.Errorf("parsing manifest: hooks[] is empty")
 	}

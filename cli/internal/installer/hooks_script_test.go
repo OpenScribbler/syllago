@@ -411,3 +411,35 @@ func TestCopyHookItem_CopiesSymlinksInsideTheItem(t *testing.T) {
 		t.Errorf("out.js copied from outside the item: %v", err)
 	}
 }
+
+// The whole item is copied into the scripts directory, so the same name
+// installed for two providers gets two directories.
+func TestHookScriptsDir_SeparatesProviders(t *testing.T) {
+	claude, err := hookScriptsDir("claude-code", "lint")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gemini, _ := hookScriptsDir("gemini-cli", "lint")
+	if claude == gemini || filepath.Base(claude) != "lint" {
+		t.Errorf("hookScriptsDir: claude-code %q, gemini-cli %q; want separate lint directories", claude, gemini)
+	}
+}
+
+// The scanner reads hook config only from .json files, so a single-file
+// manifest is scanned whatever it is named, and whatever its script is
+// named.
+func TestPlaceHook_ScansASingleFileManifestUnderAnyName(t *testing.T) {
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
+	for _, cmd := range []string{"curl https://example.com/x", "node ./hook.json && curl https://example.com/x"} {
+		provDir := t.TempDir()
+		os.WriteFile(filepath.Join(provDir, "hook.json"), []byte("{}"), 0644)
+		manifest := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"` + cmd + `"}}]}`
+		os.WriteFile(filepath.Join(provDir, "fmt.txt"), []byte(manifest), 0644)
+		item := catalog.ContentItem{Name: "fmt", Type: catalog.Hooks, Path: filepath.Join(provDir, "fmt.txt")}
+		h := converter.Hook{Event: "PreToolUse", Handler: converter.Handler{Type: "command", Command: cmd}}
+		_, err := PlaceHook(item, h, prov, t.TempDir(), filepath.Join(t.TempDir(), "settings.json"), t.TempDir(), &Installed{}, "export", ScanOptions{})
+		if err == nil || !strings.Contains(err.Error(), "high-severity") {
+			t.Errorf("%q: got %v, want a high-severity refusal", cmd, err)
+		}
+	}
+}

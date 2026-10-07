@@ -47,9 +47,12 @@ func ExtractScriptRef(command string) string {
 
 	idx := 0
 
-	// If first token is a known interpreter, skip past it, any flags, and subcommands
+	// If first token is a known interpreter, skip past it, any flags, and
+	// subcommands. A relative path such as ./bash is a bundled program the
+	// command runs, so it is the reference itself.
 	base := filepath.Base(fields[0])
-	if knownInterpreters[base] {
+	relative := strings.HasPrefix(fields[0], "./") || strings.HasPrefix(fields[0], "../")
+	if knownInterpreters[base] && !relative {
 		idx = 1
 		for idx < len(fields) && strings.HasPrefix(fields[idx], "-") {
 			// -c means inline script, not a file reference
