@@ -216,8 +216,8 @@ func TestApply_WarnsOfAMediumFindingWithoutForce(t *testing.T) {
 	}
 }
 
-// A script reference that leaves the hook's directory fails the apply,
-// which rolls back.
+// A script reference that leaves the hook's directory refuses the apply
+// before it changes anything.
 func TestApply_RefusesAHookScriptOutsideItsItem(t *testing.T) {
 	t.Parallel()
 	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
@@ -228,11 +228,11 @@ func TestApply_RefusesAHookScriptOutsideItsItem(t *testing.T) {
 	writeHookCommand(t, hookDir, "../outside.sh", nil)
 
 	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
-	if err == nil || !strings.Contains(err.Error(), "outside item directory") || !strings.Contains(err.Error(), "rolled back") {
-		t.Fatalf("Apply: got %v, want a rolled-back containment error", err)
+	if err == nil || !strings.Contains(err.Error(), "outside item directory") {
+		t.Fatalf("Apply: got %v, want a containment refusal", err)
 	}
 	if _, err := os.Lstat(filepath.Join(homeDir, ".claude", "settings.json")); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("settings.json the apply created is still there (lstat err %v)", err)
+		t.Errorf("refused apply wrote settings.json (lstat err %v)", err)
 	}
 	assertNoSnapshot(t, projectRoot)
 }

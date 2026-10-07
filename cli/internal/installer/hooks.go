@@ -80,10 +80,8 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 // the scripts the hook runs into scriptsDir, so the scanned copy is the one
 // that runs. The caller loads and saves inst.
 func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath, scriptsDir string, inst *Installed, source string, scan ScanOptions) (Placement, error) {
-	// The name names the scripts directory, and a registry index can give
-	// an item any name, so one that is not a single path element is refused.
-	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
-		return Placement{}, fmt.Errorf("hook name %q is not a valid directory name", item.Name)
+	if err := CheckHook(item, h); err != nil {
+		return Placement{}, err
 	}
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
@@ -118,11 +116,12 @@ func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 
 	// SECURITY (M2): run the pluggable scanner chain against the source hook
 	// directory. High-severity findings block the install unless --force.
-	itemDir := item.Path
-	if fi, statErr := os.Stat(item.Path); statErr == nil && !fi.IsDir() {
-		itemDir = filepath.Dir(item.Path)
+	scanDir, cleanup, err := hookScanDir(item, h.Handler.Command)
+	if err != nil {
+		return Placement{}, err
 	}
-	scanResult, _ := converter.RunScanChain(itemDir, scan.Scanners)
+	scanResult, _ := converter.RunScanChain(scanDir, scan.Scanners)
+	cleanup()
 	var notices []Notice
 	for _, f := range scanResult.Findings {
 		loc := f.File
@@ -495,17 +494,8 @@ func resolveHookCommandScript(cmd string, item catalog.ContentItem, destDir stri
 // break when the registry cache changes. The bool reports whether any script
 // was copied, so the caller can warn that the hook runs bundled scripts.
 func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir string) ([]byte, bool, error) {
-	// Resolve the item directory (hooks can be a file or directory). Its
-	// own symlinks are resolved too, so a content root reached through a
-	// symlink does not make every script look outside it.
-	itemDir := item.Path
-	fi, err := os.Stat(item.Path)
-	if err == nil && !fi.IsDir() {
-		itemDir = filepath.Dir(item.Path)
-	}
-	if resolved, evalErr := filepath.EvalSymlinks(itemDir); evalErr == nil {
-		itemDir = resolved
-	}
+	itemDir := hookItemDir(item)
+	singleFile := isSingleFileHook(item)
 
 	// Find all command fields in hooks array
 	hooksArray := gjson.GetBytes(matcherGroup, "hooks")
@@ -522,33 +512,12 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 			continue
 		}
 
-		// Use ExtractScriptRef to detect script references, including
-		// those behind interpreter prefixes (e.g. "bash ./lint.sh").
-		ref := converter.ExtractScriptRef(cmd)
-		if ref == "" {
-			continue // inline command like "echo lint"
+		ref, scriptPath, rel, err := hookScriptRef(itemDir, item.Name, cmd)
+		if err != nil {
+			return nil, scriptsCopied, err
 		}
-
-		// Only handle relative paths at install time — these are scripts
-		// bundled into the library dir at add-time.
-		var scriptPath, rel string
-		if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
-			scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
-			// Resolve symlinks before containment check to prevent symlink-based
-			// path traversal (e.g., ./scripts -> /etc via a crafted symlink).
-			if resolved, evalErr := filepath.EvalSymlinks(scriptPath); evalErr == nil {
-				scriptPath = resolved
-			}
-			// Verify the resolved path stays within the item directory
-			var relErr error
-			rel, relErr = filepath.Rel(itemDir, scriptPath)
-			if relErr != nil || strings.HasPrefix(rel, "..") {
-				return nil, scriptsCopied, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
-			}
-		}
-
 		if scriptPath == "" {
-			continue // absolute path — not a bundled script
+			continue // inline command, or an absolute path — not a bundled script
 		}
 
 		// Check if the script exists
@@ -558,20 +527,34 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 
 		// The script runs beside the rest of its item, which it may source
 		// or require, so the whole item is copied once, keeping its layout.
-		if !scriptsCopied {
+		// A single-file hook's directory holds its provider's other hooks,
+		// so only the script is copied.
+		destPath := filepath.Join(destDir, rel)
+		if singleFile {
+			if err := copyFile(scriptPath, destPath); err != nil {
+				return nil, true, fmt.Errorf("copying hook script to %s: %w", destPath, err)
+			}
+		} else if !scriptsCopied {
 			if err := copyHookItem(itemDir, destDir); err != nil {
 				return nil, true, fmt.Errorf("copying hook scripts to %s: %w", destDir, err)
 			}
 		}
 		scriptsCopied = true
 
-		destPath := filepath.Join(destDir, rel)
 		if err := os.Chmod(destPath, 0700); err != nil {
 			return nil, scriptsCopied, fmt.Errorf("making %s executable: %w", destPath, err)
 		}
 
-		// Rewrite command: replace the script ref with the stable absolute path
-		newCmd := strings.Replace(cmd, ref, shellQuote(destPath), 1)
+		// Rewrite command: replace the script ref, with any quotes around
+		// it, by the stable absolute path. Quoting inside the command's own
+		// quotes would leave the path's quotes literal.
+		newCmd := cmd
+		for _, q := range []string{`"`, "'", ""} {
+			if tok := q + ref + q; strings.Contains(cmd, tok) {
+				newCmd = strings.Replace(cmd, tok, shellQuote(destPath), 1)
+				break
+			}
+		}
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {
@@ -580,6 +563,100 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 	}
 
 	return result, scriptsCopied, nil
+}
+
+// CheckHook returns why PlaceHook would refuse item's hook h before it
+// changes anything: a name that is not one path element, or a command
+// naming a script outside the item.
+func CheckHook(item catalog.ContentItem, h converter.Hook) error {
+	// The name names the scripts directory, and a registry index can give
+	// an item any name, so one that is not a single path element is refused.
+	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
+		return fmt.Errorf("hook name %q is not a valid directory name", item.Name)
+	}
+	_, _, _, err := hookScriptRef(hookItemDir(item), item.Name, h.Handler.Command)
+	return err
+}
+
+// isSingleFileHook reports whether item is a hook manifest file rather
+// than a hook directory.
+func isSingleFileHook(item catalog.ContentItem) bool {
+	fi, err := os.Stat(item.Path)
+	return err == nil && !fi.IsDir()
+}
+
+// hookScanDir returns the directory the scanners read for item's hook
+// command cmd, and a function that removes it when it was made for the
+// scan. A hook directory is scanned whole, because the whole of it is
+// copied. A single-file hook shares its directory with every other hook of
+// its provider, so its manifest and the script cmd runs are staged in a
+// temporary directory, which keeps the other hooks out of its scan.
+func hookScanDir(item catalog.ContentItem, cmd string) (string, func(), error) {
+	itemDir := hookItemDir(item)
+	if !isSingleFileHook(item) {
+		return itemDir, func() {}, nil
+	}
+	_, scriptPath, rel, err := hookScriptRef(itemDir, item.Name, cmd)
+	if err != nil {
+		return "", nil, err
+	}
+	stage, err := os.MkdirTemp("", "syllago-hook-scan-")
+	if err != nil {
+		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
+	}
+	cleanup := func() { os.RemoveAll(stage) }
+	if err := copyFile(item.Path, filepath.Join(stage, filepath.Base(item.Path))); err != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
+	}
+	if scriptPath != "" {
+		if _, statErr := os.Stat(scriptPath); statErr == nil {
+			if err := copyFile(scriptPath, filepath.Join(stage, rel)); err != nil {
+				cleanup()
+				return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
+			}
+		}
+	}
+	return stage, cleanup, nil
+}
+
+// hookItemDir returns the directory holding a hook item, which can be a
+// file or a directory, with its symlinks resolved so a content root reached
+// through a symlink does not make every script look outside it.
+func hookItemDir(item catalog.ContentItem) string {
+	itemDir := item.Path
+	if fi, err := os.Stat(item.Path); err == nil && !fi.IsDir() {
+		itemDir = filepath.Dir(item.Path)
+	}
+	if resolved, err := filepath.EvalSymlinks(itemDir); err == nil {
+		itemDir = resolved
+	}
+	return itemDir
+}
+
+// hookScriptRef finds the bundled script a hook command runs: its reference
+// in cmd, its path with symlinks resolved, and that path relative to
+// itemDir. Only a relative reference names a bundled script, so scriptPath
+// is "" for an inline command or an absolute path. A reference that
+// resolves outside itemDir is an error.
+func hookScriptRef(itemDir, name, cmd string) (ref, scriptPath, rel string, err error) {
+	// ExtractScriptRef detects script references, including those behind
+	// interpreter prefixes (e.g. "bash ./lint.sh").
+	ref = converter.ExtractScriptRef(cmd)
+	if !strings.HasPrefix(ref, "./") && !strings.HasPrefix(ref, "../") {
+		return ref, "", "", nil
+	}
+	scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
+	// Resolve symlinks before the containment check to prevent symlink-based
+	// path traversal (e.g., ./scripts -> /etc via a crafted symlink).
+	if resolved, evalErr := filepath.EvalSymlinks(scriptPath); evalErr == nil {
+		scriptPath = resolved
+	}
+	rel, relErr := filepath.Rel(itemDir, scriptPath)
+	if relErr != nil || strings.HasPrefix(rel, "..") {
+		return ref, "", "", fmt.Errorf("hook %q command references path outside item directory: %s", name, ref)
+	}
+	return ref, scriptPath, rel, nil
 }
 
 // copyHookItem copies the regular files of a hook item into destDir with

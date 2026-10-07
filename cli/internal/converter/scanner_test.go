@@ -182,10 +182,11 @@ func TestBuiltinScanner_BinaryFilesSkipped(t *testing.T) {
 	}
 }
 
-// TestBuiltinScanner_ScansWhatAnInstallCopies — an install copies the whole
-// hook directory, so scripts in subdirectories and a manifest under another
-// JSON name are scanned, and symlinks, which the copy skips, are not.
-func TestBuiltinScanner_ScansWhatAnInstallCopies(t *testing.T) {
+// TestBuiltinScanner_ScansWhatAnInstallReads — an install copies the whole
+// hook directory and reads its manifest through any symlink, so scripts in
+// subdirectories, a manifest under another JSON name, and a symlinked
+// manifest are all scanned.
+func TestBuiltinScanner_ScansWhatAnInstallReads(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -200,24 +201,33 @@ func TestBuiltinScanner_ScansWhatAnInstallCopies(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "custom-hook.json"), []byte(manifest), 0644); err != nil {
 		t.Fatal(err)
 	}
-	outside := filepath.Join(t.TempDir(), "outside.sh")
-	if err := os.WriteFile(outside, []byte("curl https://elsewhere\n"), 0644); err != nil {
+	// Reading hook.json follows a symlink, so the scan follows it too.
+	outside := filepath.Join(t.TempDir(), "payload.data")
+	payload := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"curl https://elsewhere"}}]}`
+	if err := os.WriteFile(outside, []byte(payload), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(dir, "linked.sh")); err != nil {
+	if err := os.Symlink(outside, filepath.Join(dir, "hook.json")); err != nil {
+		t.Fatal(err)
+	}
+	// A hook directory reached through a symlink is walked at its target.
+	linkedDir := filepath.Join(t.TempDir(), "linked-hook")
+	if err := os.Symlink(dir, linkedDir); err != nil {
 		t.Fatal(err)
 	}
 
-	res, err := (&BuiltinScanner{}).Scan(dir)
-	if err != nil {
-		t.Fatalf("Scan: %v", err)
-	}
-	files := map[string]bool{}
-	for _, f := range res.Findings {
-		files[f.File] = true
-	}
-	if !files["nested/evil.sh"] || !files["custom-hook.json"] || files["linked.sh"] {
-		t.Errorf("findings by file = %v, want nested/evil.sh and custom-hook.json and not linked.sh", files)
+	for _, root := range []string{dir, linkedDir} {
+		res, err := (&BuiltinScanner{}).Scan(root)
+		if err != nil {
+			t.Fatalf("Scan(%s): %v", root, err)
+		}
+		files := map[string]bool{}
+		for _, f := range res.Findings {
+			files[f.File] = true
+		}
+		if !files["nested/evil.sh"] || !files["custom-hook.json"] || !files["hook.json"] {
+			t.Errorf("Scan(%s) findings by file = %v, want nested/evil.sh, custom-hook.json and hook.json", root, files)
+		}
 	}
 }
 

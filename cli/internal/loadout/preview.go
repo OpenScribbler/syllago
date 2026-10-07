@@ -168,15 +168,30 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst 
 	// merge-hook action so applyHook raises the hard injection-guard error,
 	// which fires even under --skip-unsupported. A missing or unparseable hook
 	// file likewise stays merge-hook so applyHook reports the real error.
-	if event, ok := hookEvent(ref.Item.Path); ok &&
-		converter.IsValidHookEvent(event) &&
-		!converter.ProviderSupportsHookEvent(event, prov.Slug) {
+	h, ok := hookManifest(ref.Item.Path)
+	if ok &&
+		converter.IsValidHookEvent(h.Event) &&
+		!converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
 		return PlannedAction{
 			Type:    ref.Type,
 			Name:    ref.Name,
 			Action:  "skip-unsupported",
 			Detail:  fmt.Sprintf("hook %s not applied", ref.Name),
-			Problem: fmt.Sprintf("%s does not support hook event %q", prov.Name, event),
+			Problem: fmt.Sprintf("%s does not support hook event %q", prov.Name, h.Event),
+		}
+	}
+
+	// A hook the merge would refuse, such as one whose command names a
+	// script outside its item, fails the apply before anything changes.
+	if ok {
+		if err := installer.CheckHook(ref.Item, h); err != nil {
+			return PlannedAction{
+				Type:    ref.Type,
+				Name:    ref.Name,
+				Action:  "error-conflict",
+				Detail:  fmt.Sprintf("hook %s not applied", ref.Name),
+				Problem: err.Error(),
+			}
 		}
 	}
 
@@ -210,22 +225,22 @@ func highFindings(itemPath string) string {
 	return fmt.Sprintf("high-severity scanner findings: %s", strings.Join(found, ", "))
 }
 
-// hookEvent reads the event name from a hook item's hook.json. Returns
+// hookManifest reads the single hook in a hook item's hook.json. Returns
 // ok=false when the file is missing or malformed.
-func hookEvent(itemDir string) (string, bool) {
+func hookManifest(itemDir string) (converter.Hook, bool) {
 	hookFile := findHookFile(itemDir)
 	if hookFile == "" {
-		return "", false
+		return converter.Hook{}, false
 	}
 	data, err := os.ReadFile(hookFile)
 	if err != nil {
-		return "", false
+		return converter.Hook{}, false
 	}
 	manifest, err := converter.ParseManifest(data)
 	if err != nil || len(manifest.Hooks) != 1 {
-		return "", false
+		return converter.Hook{}, false
 	}
-	return manifest.Hooks[0].Event, true
+	return manifest.Hooks[0], true
 }
 
 // previewMCP checks installed.json for an existing MCP entry, then whether
