@@ -547,16 +547,34 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 
 // CheckHook returns why PlaceHook would refuse item's hook h for prov
 // before it changes anything: a name that is not one path element, an
-// event the provider cannot take, a hook its adapter cannot represent, or a
-// command naming a script outside the item. Scanner findings are reported
+// event the provider cannot take, a hook its adapter cannot represent, a
+// command naming a script outside the item, or scripts the copy cannot
+// read. Scanner findings are reported
 // apart, because --force overrides them. A non-empty settingsPath is
 // decoded too, so a provider config the merge cannot read refuses here,
 // and a hook inst or the legacy root under repoRoot records as installed
 // returns an error wrapping ErrHookInstalled.
 func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath string, inst *Installed) error {
 	adapter, model, canonHook, err := checkHook(item, h, prov)
-	if err != nil || settingsPath == "" {
+	if err != nil {
 		return err
+	}
+	// A script copy that fails, such as on a file it cannot read, would
+	// stop the apply after an earlier provider had changed, so the copy is
+	// tried here into a directory that is then removed.
+	trial, err := os.MkdirTemp("", "syllago-hook-check-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(trial)
+	if _, _, err := resolveHookCommandScript(h.Handler.Command, item, trial); err != nil {
+		if inner := errors.Unwrap(err); inner != nil {
+			err = inner // the trial directory's path would only mislead
+		}
+		return fmt.Errorf("hook %q: copying its scripts: %w", item.Name, err)
+	}
+	if settingsPath == "" {
+		return nil
 	}
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
@@ -722,7 +740,10 @@ func hookScriptRef(itemDir, name, cmd string) (ref, scriptPath, rel string, err 
 // copyHookItem copies the regular files of a hook item into destDir with
 // their permissions. CopyContent skips symlinks, but the scan followed them
 // and a script may load a file through one, so a symlink to a file inside
-// the item is copied as that file. One that leaves the item stays skipped.
+// the item is recreated as a symlink to that file's copy. A copied file
+// would move the script: node and python resolve a script's own symlink
+// to find the files it loads, while $0 keeps the name it ran by. One that
+// leaves the item stays skipped.
 func copyHookItem(itemDir, destDir string) error {
 	if err := CopyContent(itemDir, destDir); err != nil {
 		return err
@@ -741,17 +762,19 @@ func copyHookItem(itemDir, destDir string) error {
 			if err != nil {
 				return nil
 			}
-			if r, err := filepath.Rel(itemDir, target); err != nil || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+			r, err := filepath.Rel(itemDir, target)
+			if err != nil || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
 				return nil
 			}
 			info, err := os.Stat(target)
 			if err != nil || !info.Mode().IsRegular() {
 				return nil
 			}
-			if err := copyFile(target, dest); err != nil {
+			link, err := filepath.Rel(filepath.Dir(rel), r)
+			if err != nil {
 				return err
 			}
-			return os.Chmod(dest, info.Mode().Perm())
+			return CreateSymlink(link, dest)
 		}
 		if !d.Type().IsRegular() {
 			return nil

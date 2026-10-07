@@ -232,6 +232,38 @@ func TestCheckHook_LegacyRecordMeansInstalledAsPlacementCountsIt(t *testing.T) {
 	}
 }
 
+// A script the copy cannot read is refused before anything changes, and
+// the trial copy leaves nothing behind.
+func TestCheckHook_RefusesAScriptTheCopyCannotRead(t *testing.T) {
+	itemDir := t.TempDir()
+	script := filepath.Join(itemDir, "run.sh")
+	os.WriteFile(script, []byte("echo hi"), 0000)
+	if f, err := os.Open(script); err == nil {
+		f.Close()
+		t.Skip("running as a user who reads mode 0000 files")
+	}
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+	item := catalog.ContentItem{Name: "locked", Type: catalog.Hooks, Path: itemDir}
+	h := converter.Hook{Event: "before_tool_execute", Handler: converter.Handler{Type: "command", Command: "bash ./run.sh"}}
+
+	err := CheckHook(item, h, provider.Provider{Name: "Claude Code", Slug: "claude-code"}, t.TempDir(), "", &Installed{})
+	if err == nil || !strings.Contains(err.Error(), script) || strings.Contains(err.Error(), tmp) {
+		t.Errorf("CheckHook = %v; want a refusal naming %s and not the trial directory", err, script)
+	}
+	if left, _ := os.ReadDir(tmp); len(left) != 0 {
+		t.Errorf("trial copy left %d entries in TMPDIR", len(left))
+	}
+
+	os.Chmod(script, 0755)
+	if err := CheckHook(item, h, provider.Provider{Name: "Claude Code", Slug: "claude-code"}, t.TempDir(), "", &Installed{}); err != nil {
+		t.Errorf("readable script: CheckHook = %v", err)
+	}
+	if left, _ := os.ReadDir(tmp); len(left) != 0 {
+		t.Errorf("trial copy left %d entries in TMPDIR", len(left))
+	}
+}
+
 // A path quoted in the command is replaced with its quotes, so the new
 // quoting is not nested inside them, where it would be literal and a $( in
 // the path would still expand.
@@ -469,23 +501,38 @@ func TestScriptRefSpan(t *testing.T) {
 }
 
 // A script may load a file through a symlink inside its item, which the
-// copy keeps as a file; a symlink out of the item is not copied.
+// copy keeps as a symlink to that file's copy, so a script that resolves
+// its own path finds the files beside its target. A symlink out of the
+// item is not copied.
 func TestCopyHookItem_CopiesSymlinksInsideTheItem(t *testing.T) {
 	itemDir := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "secret.js")
 	os.WriteFile(outside, []byte("secret"), 0644)
+	os.MkdirAll(filepath.Join(itemDir, "lib", "sub"), 0755)
 	os.WriteFile(filepath.Join(itemDir, "helper.js"), []byte("helper"), 0644)
+	os.WriteFile(filepath.Join(itemDir, "lib", "main.js"), []byte("main"), 0644)
 	if err := os.Symlink("helper.js", filepath.Join(itemDir, "alias.js")); err != nil {
 		t.Skip("symlinks unavailable:", err)
 	}
+	os.Symlink(filepath.Join("lib", "main.js"), filepath.Join(itemDir, "main.js"))
+	os.Symlink(filepath.Join("..", "..", "helper.js"), filepath.Join(itemDir, "lib", "sub", "up.js"))
 	os.Symlink(outside, filepath.Join(itemDir, "out.js"))
 	destDir := t.TempDir()
+	// A file an earlier install copied in the link's place is replaced.
+	os.WriteFile(filepath.Join(destDir, "main.js"), []byte("stale"), 0644)
 
 	if err := copyHookItem(itemDir, destDir); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := os.ReadFile(filepath.Join(destDir, "alias.js")); err != nil || string(got) != "helper" {
-		t.Errorf("alias.js = %q, %v; want the helper's content", got, err)
+	for link, target := range map[string]string{
+		"alias.js":                           "helper.js",
+		"main.js":                            filepath.Join("lib", "main.js"),
+		filepath.Join("lib", "sub", "up.js"): "helper.js",
+	} {
+		got, err := filepath.EvalSymlinks(filepath.Join(destDir, link))
+		if want, _ := filepath.EvalSymlinks(filepath.Join(destDir, target)); err != nil || got != want {
+			t.Errorf("%s resolves to %q, %v; want the copy of %s", link, got, err, target)
+		}
 	}
 	if _, err := os.Lstat(filepath.Join(destDir, "out.js")); !os.IsNotExist(err) {
 		t.Errorf("out.js copied from outside the item: %v", err)

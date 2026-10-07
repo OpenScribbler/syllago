@@ -76,6 +76,9 @@ type ApplyResult struct {
 // restoreSnapshot is replaced in tests to fail a rollback.
 var restoreSnapshot = snapshot.Restore
 
+// placeHook is replaced in tests to fail a placement the preview passed.
+var placeHook = installer.PlaceHook
+
 // Apply resolves, validates, and applies a loadout to the provider.
 //
 // The sequence is: Resolve -> Validate -> Preview -> Snapshot -> Apply items -> Record.
@@ -557,7 +560,7 @@ func applyHook(ref ResolvedRef, prov provider.Provider, opts ApplyOptions, scrip
 	if err != nil {
 		return nil, fmt.Errorf("hook %q: %w", ref.Name, err)
 	}
-	placement, err := installer.PlaceHook(ref.Item, h, prov, opts.ProjectRoot, settingsPath, scriptsDir, inst, source, installer.ScanOptions{Force: opts.Force})
+	placement, err := placeHook(ref.Item, h, prov, opts.ProjectRoot, settingsPath, scriptsDir, inst, source, installer.ScanOptions{Force: opts.Force})
 	return placement.Notices, err
 }
 

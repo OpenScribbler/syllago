@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/converter"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -365,14 +366,14 @@ func TestKeepRoundTrip_ApplyStatusRemove(t *testing.T) {
 // contained a hollow `t.Logf` about rollback ("may indicate rollback") with no
 // actual assertion.
 //
-// Scenario: 2 rules (symlinks) + 1 hook whose bundled script cannot be read.
+// Scenario: 2 rules (symlinks) + 1 hook whose placement fails.
 // The rules produce "create-symlink" actions; the hook produces "merge-hook".
-// Hook merge fails copying its script. Because map iteration over
+// Hook merge fails. Because map iteration over
 // RefsByType is non-deterministic, the rules may run before OR after the hook —
 // but the rollback must unconditionally remove all planned symlinks via the
 // symlinkRecords loop, so the post-state is the same regardless.
 func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it replaces placeHook.
 	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
 
 	// Add a second rule so we have two symlinks that must all be rolled back
@@ -384,9 +385,9 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 	})
 	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-b"})
 
-	// Replace the good hook with one that fails only when its script is
-	// copied, after the preview's checks pass.
-	breakHookCopy(t, filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook"))
+	// Replace the good hook with one that fails only when it is placed,
+	// after the preview's checks pass.
+	breakHookPlacement(t, filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook"))
 
 	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
 	originalSettings, err := os.ReadFile(settingsPath)
@@ -406,7 +407,7 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 		t.Fatal("expected Apply to fail on broken hook, got nil")
 	}
 	// The rollback message prefix is part of the contract — callers match on it.
-	if !containsAll(err.Error(), "rolled back", "permission denied") {
+	if !containsAll(err.Error(), "rolled back", "hook placement failed") {
 		t.Errorf("error should mention rollback and the underlying cause; got: %v", err)
 	}
 
@@ -707,13 +708,13 @@ func TestApply_RollbackForgetsACreatedFileThatReappears(t *testing.T) {
 // Two hooks of the same type iterate in slice order (manifest.Hooks preserves
 // order), so we can reliably arrange "good hook succeeds, next hook fails."
 func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it replaces placeHook.
 	homeDir, projectRoot, _, cat, prov := setupIntegrationEnv(t)
 
 	// Keep int-hook (the pre-built good hook). Add a second hook that fails
-	// only when its script is copied, after the preview's checks pass.
+	// only when it is placed, after the preview's checks pass.
 	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook-broken")
-	breakHookCopy(t, brokenHookDir)
+	breakHookPlacement(t, brokenHookDir)
 
 	cat.Items = append(cat.Items, catalog.ContentItem{
 		Name: "int-hook-broken", Type: catalog.Hooks, Provider: "claude-code", Path: brokenHookDir,
@@ -747,7 +748,7 @@ func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
 
 	_, err = Apply(manifest, cat, prov, opts)
 	if err == nil {
-		t.Fatal("expected Apply to fail on hook whose script cannot be copied, got nil")
+		t.Fatal("expected Apply to fail on hook whose placement fails, got nil")
 	}
 	if !containsAll(err.Error(), "rolled back") {
 		t.Errorf("error should mention rollback; got: %v", err)
@@ -793,11 +794,11 @@ func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
 // never applied.
 //
 // Sequence: 3 hooks where hooks[0] and hooks[2] merge a unique matcher string,
-// and hooks[1] fails copying its script. After Apply fails, neither the
+// and hooks[1] fails when placed. After Apply fails, neither the
 // hooks[0] marker nor the hooks[2] marker can be present in settings.json —
 // the former because rollback restored, the latter because it never ran.
 func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
-	t.Parallel()
+	// Not parallel: it replaces placeHook.
 	homeDir, projectRoot, _, cat, prov := setupIntegrationEnv(t)
 
 	writeHook := func(name, contents string) {
@@ -811,9 +812,9 @@ func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
 
 	// hooks[0]: good hook with a marker matcher we can grep for
 	writeHook("int-hook-first", `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":"FIRST_MARKER","handler":{"type":"command","command":"echo first"}}]}`)
-	// hooks[1]: fails copying its script — triggers mid-bundle failure
+	// hooks[1]: fails when placed — triggers mid-bundle failure
 	brokenDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook-broken")
-	breakHookCopy(t, brokenDir)
+	breakHookPlacement(t, brokenDir)
 	cat.Items = append(cat.Items, catalog.ContentItem{
 		Name: "int-hook-broken", Type: catalog.Hooks, Provider: "claude-code", Path: brokenDir,
 	})
@@ -882,19 +883,20 @@ func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
 	}
 }
 
-// breakHookCopy writes a hook into dir whose bundled script cannot be read,
-// so it passes every check the preview makes and fails only when the apply
-// copies its scripts, after the items before it were placed.
-func breakHookCopy(t *testing.T, dir string) {
+// breakHookPlacement writes a hook into dir whose placement fails, after
+// the preview passed it and the items before it were placed.
+func breakHookPlacement(t *testing.T, dir string) {
 	t.Helper()
-	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
-		t.Skip("needs a file the test cannot read")
-	}
 	os.MkdirAll(dir, 0755)
-	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"SHOULD_NEVER_APPEAR","handler":{"type":"command","command":"./run.sh"}}]}`), 0644)
-	script := filepath.Join(dir, "run.sh")
-	os.WriteFile(script, []byte("#!/bin/sh\n"), 0000)
-	t.Cleanup(func() { os.Chmod(script, 0644) })
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"SHOULD_NEVER_APPEAR","handler":{"type":"command","command":"echo hi"}}]}`), 0644)
+	orig := placeHook
+	t.Cleanup(func() { placeHook = orig })
+	placeHook = func(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath, scriptsDir string, inst *installer.Installed, source string, scan installer.ScanOptions) (installer.Placement, error) {
+		if item.Name == filepath.Base(dir) {
+			return installer.Placement{}, errors.New("hook placement failed")
+		}
+		return orig(item, h, prov, repoRoot, settingsPath, scriptsDir, inst, source, scan)
+	}
 }
 
 // containsAll reports whether s contains every substring in subs.
