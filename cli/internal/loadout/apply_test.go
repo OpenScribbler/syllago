@@ -952,6 +952,24 @@ func TestApply_RefusesDestinationsRemoveCannotTakeBack(t *testing.T) {
 			t.Errorf("snapshot after the refusal: %v, want none", err)
 		}
 	})
+	t.Run("an item inside a settings file", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		settings := filepath.Join(homeDir, ".claude", "settings.json")
+		if err := os.Remove(settings); err != nil {
+			t.Fatal(err)
+		}
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"rules": settings}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !containsAll(err.Error(), "inside "+settings, "that the loadout also writes") {
+			t.Fatalf("Apply: got %v, want the placement inside the settings file refused", err)
+		}
+		if _, err := os.Lstat(settings); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("refused apply made %s: %v", settings, err)
+		}
+	})
 	t.Run("one item inside another", func(t *testing.T) {
 		t.Parallel()
 		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
