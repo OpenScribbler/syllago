@@ -8,8 +8,78 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
+	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/librarystate"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
+	"github.com/OpenScribbler/syllago/cli/internal/moat"
 )
+
+// TestNewApp_InstalledColumnFromFirstRender checks that the snapshot NewApp
+// receives reaches the library, so an installed rule shows ✓ at launch
+// rather than "--" until the first rescan.
+func TestNewApp_InstalledColumnFromFirstRender(t *testing.T) {
+	t.Parallel()
+
+	rule := catalog.ContentItem{
+		Name:    "installed-rule",
+		Type:    catalog.Rules,
+		Source:  "library",
+		Library: true,
+		Files:   []string{"rule.md"},
+		Meta:    &metadata.Meta{ID: "lib-installed"},
+	}
+	inst := &installer.Installed{}
+	snap := &librarystate.Snapshot{
+		ScanResult: &moat.ScanResult{Catalog: &catalog.Catalog{Items: []catalog.ContentItem{rule}}},
+		Installed:  inst,
+		Verification: &installcheck.VerificationResult{
+			MatchSet: map[string][]string{"lib-installed": {"/tmp/project/CLAUDE.md"}},
+		},
+	}
+
+	app := NewApp(snap, nil, "0.0.0-test", false, false, "", "")
+	if app.library.installed != inst {
+		t.Error("library installed state is not the snapshot's")
+	}
+	if got := ansi.Strip(app.library.table.rulesInstalledCell(rule)); got != "✓" {
+		t.Errorf("Installed cell at first render: want ✓, got %q", got)
+	}
+}
+
+// TestHandleCatalogReady_AppliesInstalledState checks that a rescan swaps
+// in the snapshot's installed state and verification, the same fields
+// NewApp takes at launch.
+func TestHandleCatalogReady_AppliesInstalledState(t *testing.T) {
+	t.Parallel()
+
+	rule := catalog.ContentItem{
+		Name:    "installed-rule",
+		Type:    catalog.Rules,
+		Source:  "library",
+		Library: true,
+		Files:   []string{"rule.md"},
+		Meta:    &metadata.Meta{ID: "lib-installed"},
+	}
+	inst := &installer.Installed{}
+	verification := &installcheck.VerificationResult{
+		MatchSet: map[string][]string{"lib-installed": {"/tmp/project/CLAUDE.md"}},
+	}
+	snap := &librarystate.Snapshot{
+		ScanResult:   &moat.ScanResult{Catalog: &catalog.Catalog{Items: []catalog.ContentItem{rule}}},
+		Installed:    inst,
+		Verification: verification,
+	}
+
+	app := NewApp(nil, nil, "0.0.0-test", false, false, "", "")
+	m, _ := app.handleCatalogReady(catalogReadyMsg{snap: snap})
+	updated := m.(App)
+	if updated.installed != inst || updated.verification != verification {
+		t.Fatal("rescan did not apply the snapshot's installed state and verification")
+	}
+	if got := ansi.Strip(updated.library.table.rulesInstalledCell(rule)); got != "✓" {
+		t.Errorf("Installed cell after rescan: want ✓, got %q", got)
+	}
+}
 
 // TestLibrary_InstalledColumnBinary verifies the D16 "Installed" column is
 // binary (Installed / Not-Installed) for rules. When MatchSet has a non-empty

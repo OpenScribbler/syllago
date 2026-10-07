@@ -382,7 +382,7 @@ func TestGoldenGallery_80x30(t *testing.T) {
 			{Name: "python-web", DisplayName: "Python-Web", Type: catalog.Loadouts, Source: "project", Files: []string{"loadout.yaml"}},
 		},
 	}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -416,13 +416,13 @@ func TestGoldenGallery_120x40(t *testing.T) {
 			{Name: "beta-rule", Type: catalog.Rules, Source: "my-registry", Registry: "my-registry", Files: []string{"rule.md"}},
 		},
 	}
-	app := NewApp(&moat.ScanResult{
+	app := NewApp(snapOf(&moat.ScanResult{
 		Catalog: cat,
 		RegistrySources: []catalog.RegistrySource{
 			{Name: "my-registry", Path: "/tmp/fake-registry"},
 		},
 		Config: testConfig(),
-	}, nil, "0.0.0-test", false, false, "", "")
+	}), nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 

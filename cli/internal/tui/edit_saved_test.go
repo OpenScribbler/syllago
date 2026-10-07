@@ -30,7 +30,7 @@ func setupEditableSkill(t *testing.T, name string) (App, string) {
 			{Name: name, Type: catalog.Skills, Path: itemDir, Files: []string{"SKILL.md"}},
 		},
 	}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	return m.(App), itemDir
 }

@@ -69,7 +69,7 @@ func testAppWithInstalledRule(t *testing.T) (App, catalog.ContentItem, provider.
 		Library:     true,
 	}
 	cat := &catalog.Catalog{Items: []catalog.ContentItem{item}}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, []provider.Provider{prov}, "0.0.0-test", false, false, "", t.TempDir())
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), []provider.Provider{prov}, "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	return m.(App), item, prov
 }
@@ -115,7 +115,7 @@ func TestHandleInstall_AcceptsUndetectedProviders(t *testing.T) {
 	undetected := testInstallProvider("Cursor", "cursor", false)
 	detected := testInstallProvider("Claude Code", "claude-code", true)
 
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, []provider.Provider{undetected, detected}, "0.0.0-test", false, false, "", t.TempDir())
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), []provider.Provider{undetected, detected}, "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 
@@ -743,10 +743,10 @@ func TestDoRegistryRemoveCmd_RemovesFromGlobalConfig(t *testing.T) {
 		t.Fatalf("setup: config.SaveGlobal: %v", err)
 	}
 
-	app := NewApp(&moat.ScanResult{
+	app := NewApp(snapOf(&moat.ScanResult{
 		Catalog: testCatalog(t),
 		Config:  testConfig(),
-	}, testProviders(), "0.0.0-test", false, false, projectRoot, projectRoot)
+	}), testProviders(), "0.0.0-test", false, false, projectRoot, projectRoot)
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -806,10 +806,10 @@ func TestDoRegistryRemoveCmd_FailsLoudOnMismatch(t *testing.T) {
 		t.Fatalf("setup: config.SaveGlobal: %v", err)
 	}
 
-	app := NewApp(&moat.ScanResult{
+	app := NewApp(snapOf(&moat.ScanResult{
 		Catalog: testCatalog(t),
 		Config:  testConfig(),
-	}, testProviders(), "0.0.0-test", false, false, projectRoot, projectRoot)
+	}), testProviders(), "0.0.0-test", false, false, projectRoot, projectRoot)
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 
@@ -888,7 +888,7 @@ func TestApp_HandleCatalogReady_PendingInstall_OpensWizard(t *testing.T) {
 		},
 	}
 	result := &moat.ScanResult{Catalog: newCatalog, Config: &config.Config{}}
-	m, _ := app.handleCatalogReady(catalogReadyMsg{result: result})
+	m, _ := app.handleCatalogReady(catalogReadyMsg{snap: snapOf(result)})
 	updated := m.(App)
 
 	if updated.installWizard == nil {
@@ -908,7 +908,7 @@ func TestApp_HandleCatalogReady_NoPendingInstall_NoWizard(t *testing.T) {
 	t.Parallel()
 	app := testApp(t)
 	result := &moat.ScanResult{Catalog: &catalog.Catalog{}, Config: &config.Config{}}
-	m, _ := app.handleCatalogReady(catalogReadyMsg{result: result})
+	m, _ := app.handleCatalogReady(catalogReadyMsg{snap: snapOf(result)})
 	updated := m.(App)
 	if updated.installWizard != nil {
 		t.Error("expected no wizard for normal rescan, got non-nil installWizard")

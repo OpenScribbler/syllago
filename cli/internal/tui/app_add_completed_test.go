@@ -20,7 +20,7 @@ func TestApp_HandlesAddCompletedMsgViaRefreshContent(t *testing.T) {
 	// Build an App rooted at a real content directory so rescanCatalog has
 	// something to scan after addCompletedMsg fires.
 	contentRoot := t.TempDir()
-	app := NewApp(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: &config.Config{}}, nil, "0.0.0-test", false, false, contentRoot, "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: &catalog.Catalog{}, Config: &config.Config{}}), nil, "0.0.0-test", false, false, contentRoot, "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 	a := m.(App)
 

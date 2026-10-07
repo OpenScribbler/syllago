@@ -205,12 +205,12 @@ func TestInstallGate_NewAppAppliesScanGate(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			gated, item := gateTestApp(t, fx)
-			app := NewApp(&moat.ScanResult{
+			app := NewApp(snapOf(&moat.ScanResult{
 				Catalog:    testCatalog(t),
 				Config:     testConfig(),
 				GateInputs: gated.moatGate,
 				Lockfile:   gated.moatLockfile,
-			}, testProviders(), "0.0.0-test", false, false, "", "")
+			}), testProviders(), "0.0.0-test", false, false, "", "")
 			m, _ := app.Update(tea.WindowSizeMsg{Width: 80, Height: 30})
 			m, _ = m.(App).Update(gateInstallMsg(item))
 			a := m.(App)

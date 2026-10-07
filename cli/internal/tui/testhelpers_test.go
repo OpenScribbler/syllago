@@ -14,11 +14,18 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
+	"github.com/OpenScribbler/syllago/cli/internal/librarystate"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 )
 
 var updateGolden = flag.Bool("update-golden", false, "update golden files")
+
+// snapOf wraps a scan as the Library snapshot NewApp takes, with no
+// installed state.
+func snapOf(scan *moat.ScanResult) *librarystate.Snapshot {
+	return &librarystate.Snapshot{ScanResult: scan}
+}
 
 // --- Key helpers ---
 
@@ -121,7 +128,7 @@ func testCatalogWithMOATItems(t *testing.T) *catalog.Catalog {
 // the given dimensions. Used by MOAT golden tests.
 func testAppWithMOATItems(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(&moat.ScanResult{Catalog: testCatalogWithMOATItems(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: testCatalogWithMOATItems(t), Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }
@@ -142,7 +149,7 @@ func testAppWithItems(t *testing.T) App {
 // testAppWithItemsSize creates a test app with sample catalog items at custom dimensions.
 func testAppWithItemsSize(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(&moat.ScanResult{Catalog: testCatalogWithItems(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: testCatalogWithItems(t), Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }
@@ -155,7 +162,7 @@ func testApp(t *testing.T) App {
 
 func testAppSize(t *testing.T, w, h int) App {
 	t.Helper()
-	app := NewApp(&moat.ScanResult{Catalog: testCatalog(t), Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: testCatalog(t), Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	return m.(App)
 }

@@ -265,9 +265,9 @@ func (l *libraryModel) setFilter(f libraryFilter) {
 // underlying table so the Installed column can render binary Installed/Not-
 // Installed for rules based on MatchSet lookups by library ID.
 //
-// Passing nil clears the verification state — the table falls back to the
-// pre-D16 provider-abbreviation rendering for rules (e.g. "CC,GC"). The
-// non-rule rows are unaffected regardless of whether verification is set.
+// Passing nil clears the verification state, and every rule's Installed
+// cell renders "--". The non-rule rows are unaffected regardless of whether
+// verification is set.
 func (l *libraryModel) SetVerification(v *installcheck.VerificationResult) {
 	l.table.SetVerification(v)
 	l.verification = v

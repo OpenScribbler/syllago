@@ -15,6 +15,7 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installstore"
 	"github.com/OpenScribbler/syllago/cli/internal/librarymigrate"
+	"github.com/OpenScribbler/syllago/cli/internal/librarystate"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
@@ -347,24 +348,16 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		cancel()
 	}
 
-	// The same load the TUI's rescan runs, so the trust gate and MOAT trust
-	// surfaces hold from the first render.
-	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
-	if err != nil {
-		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "catalog scan failed", "Check that the content directory exists and is readable", err.Error())
+	snap, cleaned, err := loadStartupSnapshot(root, projectRoot)
+	for _, c := range cleaned {
+		fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
 	}
-
-	// Auto-cleanup: remove local items whose ID matches a shared item
-	cleaned, _ := catalog.CleanupPromotedItems(scan.Catalog)
-	if len(cleaned) > 0 {
-		for _, c := range cleaned {
-			fmt.Fprintf(os.Stderr, "Cleaned up promoted item: %s (%s)\n", c.Name, c.Type)
+	if err != nil {
+		msg := "catalog scan failed"
+		if len(cleaned) > 0 {
+			msg = "error rescanning catalog"
 		}
-		// Rescan after cleanup
-		scan, err = moat.LoadAndScan(root, projectRoot, time.Now())
-		if err != nil {
-			return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, "error rescanning catalog", "Check that the content directory exists and is readable", err.Error())
-		}
+		return output.NewStructuredErrorDetail(output.ErrCatalogScanFailed, msg, "Check that the content directory exists and is readable", err.Error())
 	}
 
 	resolver := config.NewResolver(cfg, "")
@@ -377,7 +370,7 @@ func runTUI(cmd *cobra.Command, args []string) error {
 	autoUpdate := cfgErr == nil && cfg.Preferences["autoUpdate"] == "true"
 
 	isReleaseBuild := buildCommit == "" && version != ""
-	app := tui.NewApp(scan, providers, version, autoUpdate, isReleaseBuild, root, projectRoot)
+	app := tui.NewApp(snap, providers, version, autoUpdate, isReleaseBuild, root, projectRoot)
 	zone.NewGlobal()
 	p := tea.NewProgram(app,
 		tea.WithAltScreen(),
@@ -390,6 +383,27 @@ func runTUI(cmd *cobra.Command, args []string) error {
 		"success": true,
 	})
 	return nil
+}
+
+// loadStartupSnapshot loads the library state the TUI opens with: the same
+// state its rescan loads, so the trust gate, MOAT trust surfaces and the
+// Installed column hold from the first render. First it removes Library
+// items that were promoted to shared content, and rescans if any were.
+// Verification runs once, after that cleanup, because its cache would keep
+// reporting a removed library rule as installed.
+func loadStartupSnapshot(root, projectRoot string) (*librarystate.Snapshot, []catalog.CleanupResult, error) {
+	scan, err := moat.LoadAndScan(root, projectRoot, time.Now())
+	if err != nil {
+		return nil, nil, err
+	}
+	cleaned, _ := catalog.CleanupPromotedItems(scan.Catalog)
+	if len(cleaned) > 0 {
+		scan, err = moat.LoadAndScan(root, projectRoot, time.Now())
+		if err != nil {
+			return nil, cleaned, err
+		}
+	}
+	return librarystate.FromScan(scan, projectRoot), cleaned, nil
 }
 
 // findContentRepoRoot returns the path syllago uses as its content root. It tries:

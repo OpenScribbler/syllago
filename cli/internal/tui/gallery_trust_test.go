@@ -181,7 +181,7 @@ func testAppWithMOATRegistry(t *testing.T, w, h int) App {
 		},
 	}
 	regs := []catalog.RegistrySource{{Name: "moat-registry", Path: "/tmp/fake"}}
-	app := NewApp(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}), nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	a := m.(App)
 	// Navigate to Collections > Registries (single Tab — Library is [1], Registries next).
@@ -226,7 +226,7 @@ func TestGalleryKeys_TrustIsNoopForNonMOAT(t *testing.T) {
 		// No RegistryTrusts entry.
 	}
 	regs := []catalog.RegistrySource{{Name: "git-registry", Path: "/tmp/fake"}}
-	app := NewApp(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}), nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 	m, cmd := a.Update(keyTab)
@@ -292,7 +292,7 @@ func TestGolden_MOAT_RegistriesGallery_Revoked_120x40(t *testing.T) {
 		},
 	}
 	regs := []catalog.RegistrySource{{Name: "moat-registry", Path: "/tmp/fake"}}
-	app := NewApp(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}, nil, "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, RegistrySources: regs, Config: testConfig()}), nil, "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	a := m.(App)
 	m, cmd := a.Update(keyTab)
