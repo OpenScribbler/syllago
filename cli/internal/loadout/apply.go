@@ -325,12 +325,14 @@ func refuse(actions []PlannedAction, prov provider.Provider, opts ApplyOptions) 
 			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
 		}
 	}
+	var refusals []error
 	if len(unsupported) > 0 && !opts.SkipUnsupported {
-		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
+		refusals = append(refusals, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported})
 	}
 
 	// A hook with high-severity scanner findings fails the apply before
-	// anything changes, unless the caller forced it.
+	// anything changes, unless the caller forced it. Both refusals are
+	// reported together, so one re-run can carry both flags.
 	var flagged []string
 	for _, a := range actions {
 		if a.Action == "merge-hook" && a.Problem != "" {
@@ -338,7 +340,10 @@ func refuse(actions []PlannedAction, prov provider.Provider, opts ApplyOptions) 
 		}
 	}
 	if len(flagged) > 0 && !opts.Force {
-		return nil, &ScannerFindingsError{Problems: flagged}
+		refusals = append(refusals, &ScannerFindingsError{Problems: flagged})
+	}
+	if err := errors.Join(refusals...); err != nil {
+		return nil, err
 	}
 
 	// Remove deletes what an apply placed, so each path must be one remove

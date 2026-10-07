@@ -351,11 +351,14 @@ func printTryModeFooter(autoRevertArmed bool, subject string) {
 // hooks have a dedicated escape hatch, everything else is a conflict.
 func loadoutApplyHint(err error) string {
 	var uhErr *loadout.UnsupportedHooksError
-	if errors.As(err, &uhErr) {
-		return "Re-run with --skip-unsupported to apply the compatible items"
-	}
 	var sfErr *loadout.ScannerFindingsError
-	if errors.As(err, &sfErr) {
+	unsupported, flagged := errors.As(err, &uhErr), errors.As(err, &sfErr)
+	switch {
+	case unsupported && flagged:
+		return "Review the findings, then re-run with --skip-unsupported --force to apply the compatible items anyway"
+	case unsupported:
+		return "Re-run with --skip-unsupported to apply the compatible items"
+	case flagged:
 		return "Review the findings, then re-run with --force to apply anyway"
 	}
 	return "Check error details and resolve conflicts"

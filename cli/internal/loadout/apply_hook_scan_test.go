@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/tidwall/gjson"
 )
 
@@ -311,5 +312,25 @@ func TestApply_PlacesAHookAProviderlessLegacyRecordDoesNotHold(t *testing.T) {
 	}
 	if len(preview.Actions) != 1 || preview.Actions[0].Action != "merge-hook" {
 		t.Fatalf("preview actions = %+v, want one merge-hook", preview.Actions)
+	}
+}
+
+// A loadout with both an unsupported hook and a flagged one names both
+// refusals at once, so the user re-runs once with both flags rather than
+// learning of the second only after fixing the first.
+func TestRefuse_ReportsUnsupportedAndFlaggedHooksTogether(t *testing.T) {
+	t.Parallel()
+	actions := []PlannedAction{
+		{Name: "old-hook", Action: "skip-unsupported", Problem: "no settings key"},
+		{Name: "net-hook", Action: "merge-hook", Problem: "high-severity findings"},
+	}
+	_, err := refuse(actions, provider.Provider{Name: "Claude Code"}, ApplyOptions{})
+	var uhErr *UnsupportedHooksError
+	var sfErr *ScannerFindingsError
+	if !errors.As(err, &uhErr) || !errors.As(err, &sfErr) {
+		t.Fatalf("got %v, want both an UnsupportedHooksError and a ScannerFindingsError", err)
+	}
+	if _, err := refuse(actions, provider.Provider{Name: "Claude Code"}, ApplyOptions{SkipUnsupported: true, Force: true}); err != nil {
+		t.Fatalf("with both flags: %v", err)
 	}
 }
