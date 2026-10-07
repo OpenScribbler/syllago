@@ -22,7 +22,7 @@ func TestApp_HandleLibraryAddMsg_ShowsToast(t *testing.T) {
 			},
 		},
 	}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	item := &cat.Items[0]
 	_, cmd := app.Update(libraryAddMsg{item: item})
 	if cmd == nil {

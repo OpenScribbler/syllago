@@ -61,9 +61,8 @@ type tableModel struct {
 	// When set, rules rows consult MatchSet by library ID to render a ✓
 	// (installed cleanly into at least one target file) or a blank / "--"
 	// (no InstalledRuleAppend record, or every record is Modified).
-	// Nil means "no rescan has attached verification state yet" — rows fall
-	// back to the provider-abbreviation rendering used by every other content
-	// type.
+	// Nil means no verification state was attached, and every rule row
+	// renders "--".
 	verification *installcheck.VerificationResult
 }
 
@@ -124,8 +123,8 @@ func (t *tableModel) SetItems(items []catalog.ContentItem) {
 
 // SetVerification stores the D16 rule-append verification result and
 // recomputes row display strings so the Installed column reflects the latest
-// MatchSet. The rescan hook in app.rescanCatalog() calls this every time the
-// catalog is rebuilt (per D16 "column is binary" — each rescan re-resolves
+// MatchSet. NewApp and every rescan call this with the Library snapshot's
+// verification (per D16 "column is binary" — each load re-resolves
 // Installed/Not-Installed directly from MatchSet, not cached state).
 func (t *tableModel) SetVerification(v *installcheck.VerificationResult) {
 	t.verification = v
@@ -779,7 +778,7 @@ func computeLoadoutDetail(item catalog.ContentItem) string {
 // installedTools returns the Installed column value for an item.
 //
 // For rules, the column is D16-binary: when verification state is attached
-// (set by the rescan hook) and MatchSet has at least one clean target file
+// (from the Library snapshot) and MatchSet has at least one clean target file
 // for this rule's library ID, the cell renders a ✓ glyph in successColor;
 // otherwise it renders "--". Rules intentionally do not surface provider
 // abbreviations because a rule-append install doesn't target a specific

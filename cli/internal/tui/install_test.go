@@ -1416,7 +1416,7 @@ func testAppWithLibraryItem(t *testing.T) App {
 	provs := []provider.Provider{
 		testInstallProvider("Claude Code", "claude-code", true),
 	}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, provs, "0.0.0-test", false, false, "", t.TempDir())
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), provs, "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	return m.(App)
 }
@@ -1451,7 +1451,7 @@ func TestApp_InstallKeyRegistryOnly(t *testing.T) {
 		},
 	}
 	provs := []provider.Provider{testInstallProvider("Claude Code", "claude-code", true)}
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, provs, "0.0.0-test", false, false, "", t.TempDir())
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), provs, "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	app = m.(App)
 
@@ -1487,7 +1487,7 @@ func TestApp_InstallKeyNoProviders(t *testing.T) {
 		},
 	}
 	// No detected providers.
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, nil, "0.0.0-test", false, false, "", t.TempDir())
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), nil, "0.0.0-test", false, false, "", t.TempDir())
 	m, _ := app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	app = m.(App)
 

@@ -56,7 +56,7 @@ func testAppWithVerifiedRulesSize(t *testing.T, w, h int) App {
 		},
 	}
 
-	app := NewApp(&moat.ScanResult{Catalog: cat, Config: testConfig()}, testProviders(), "0.0.0-test", false, false, "", "")
+	app := NewApp(snapOf(&moat.ScanResult{Catalog: cat, Config: testConfig()}), testProviders(), "0.0.0-test", false, false, "", "")
 	m, _ := app.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	a := m.(App)
 	a.verification = verification

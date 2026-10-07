@@ -12,47 +12,13 @@ import (
 	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installcheck"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
+	"github.com/OpenScribbler/syllago/cli/internal/librarystate"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/moat"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
 	"github.com/OpenScribbler/syllago/cli/internal/rollback"
-	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 	"github.com/OpenScribbler/syllago/cli/internal/telemetry"
 )
-
-// computeVerification runs the D16 scan over installed.json + library rules
-// discovered via catalog items. Rule items' Path fields point at the on-disk
-// rule directory (D11 layout: rule.md + .syllago.yaml + .history/). Any rule
-// that fails to load is skipped — Scan returns a Modified "edited" state for
-// records whose LibraryID isn't in the library map, and the Warnings slice
-// captures the detail.
-//
-// Returns a non-nil *VerificationResult even on I/O errors — callers surface
-// failures via the empty MatchSet (column renders Not-Installed) rather than
-// blocking UI refresh. A nil return means no projectRoot supplied.
-func computeVerification(projectRoot string, items []catalog.ContentItem) *installcheck.VerificationResult {
-	if projectRoot == "" {
-		return nil
-	}
-	inst, err := installer.LoadInstalled(projectRoot)
-	if err != nil {
-		// Missing/malformed installed.json → empty inst; Scan handles nil safely.
-		inst = &installer.Installed{}
-	}
-	library := map[string]*rulestore.Loaded{}
-	for i := range items {
-		it := items[i]
-		if it.Type != catalog.Rules || !it.Library || it.Path == "" {
-			continue
-		}
-		loaded, lerr := rulestore.LoadRule(it.Path)
-		if lerr != nil {
-			continue
-		}
-		library[loaded.Meta.ID] = loaded
-	}
-	return installcheck.Scan(inst, library)
-}
 
 // wizardKind identifies the active full-screen wizard (if any).
 type wizardKind int
@@ -154,22 +120,28 @@ type App struct {
 	galleryDrillCard     string // name of the card we drilled into (for breadcrumbs)
 	registryOpInProgress bool   // true during async registry operation (add/sync/remove)
 
-	// D16 rule-append verification state — populated by rescanCatalog and
+	// D16 rule-append verification state — populated from the Library snapshot and
 	// consumed by library (Installed column is binary from MatchSet) and
-	// metapanel (per-target breakdown from PerRecord). Nil on first render
-	// before the initial rescan completes; set once and reused until the
-	// next rescan replaces it.
+	// metapanel (per-target breakdown from PerRecord). Set from the
+	// snapshot NewApp receives and replaced by each rescan.
 	verification *installcheck.VerificationResult
 	installed    *installer.Installed
 }
 
-// NewApp creates a new TUI app from a moat.LoadAndScan result, the same
-// result a rescan applies, so the trust gate holds from the first render.
-func NewApp(scan *moat.ScanResult, providers []provider.Provider, version string, autoUpdate bool, isReleaseBuild bool, contentRoot, projectRoot string) App {
-	if scan == nil {
-		scan = &moat.ScanResult{}
+// NewApp creates a new TUI app from a librarystate snapshot, the same state a
+// rescan applies, so the trust gate and the Installed column hold from the
+// first render.
+func NewApp(snap *librarystate.Snapshot, providers []provider.Provider, version string, autoUpdate bool, isReleaseBuild bool, contentRoot, projectRoot string) App {
+	// Fill gaps on a copy, so the caller's snapshot is left as it was.
+	var s librarystate.Snapshot
+	if snap != nil {
+		s = *snap
 	}
-	cat, cfg, registrySources := scan.Catalog, scan.Config, scan.RegistrySources
+	if s.ScanResult == nil {
+		s.ScanResult = &moat.ScanResult{}
+	}
+	snap = &s
+	cat, cfg, registrySources := snap.Catalog, snap.Config, snap.RegistrySources
 	if cfg == nil {
 		cfg = &config.Config{}
 	}
@@ -211,11 +183,16 @@ func NewApp(scan *moat.ScanResult, providers []provider.Provider, version string
 		hint:             newHintModal(),
 
 		moatSession:     moat.NewSession(),
-		moatGate:        scan.GateInputs,
-		moatLockfile:    scan.Lockfile,
-		moatLockfileErr: scan.LockfileErr,
+		moatGate:        snap.GateInputs,
+		moatLockfile:    snap.Lockfile,
+		moatLockfileErr: snap.LockfileErr,
 		moatMinTier:     moat.TrustTierUnsigned,
+
+		verification: snap.Verification,
+		installed:    snap.Installed,
 	}
+	a.library.SetVerification(snap.Verification)
+	a.library.SetInstalled(snap.Installed)
 
 	// Extract registry names for settings display
 	regNames := make([]string, 0, len(registrySources))
@@ -311,15 +288,13 @@ func saveMetaForPath(path string, meta *metadata.Meta) error {
 // catalogReadyMsg carries the result of an async catalog rescan. Produced by
 // rescanCatalog's returned command; consumed by handleCatalogReady.
 type catalogReadyMsg struct {
-	result       *moat.ScanResult
-	verification *installcheck.VerificationResult
-	installed    *installer.Installed
-	err          error
+	snap *librarystate.Snapshot
+	err  error
 }
 
-// rescanCatalog kicks off an async re-scan of disk content + MOAT enrichment.
-// All I/O (config load, registry enumeration, lockfile read, scan, sigstore
-// verification) runs inside the returned tea.Cmd closure so the TUI event
+// rescanCatalog kicks off an async librarystate.Load. All I/O (config load,
+// registry enumeration, lockfile read, scan, sigstore verification,
+// installed.json) runs inside the returned tea.Cmd closure so the TUI event
 // loop stays responsive — see .claude/rules/tui-elm.md rule #2.
 //
 // State mutation happens later in handleCatalogReady, which App.Update()
@@ -335,23 +310,8 @@ func (a *App) rescanCatalog() tea.Cmd {
 		projectRoot = root
 	}
 	return func() tea.Msg {
-		result, err := moat.LoadAndScan(root, projectRoot, time.Now())
-		if err != nil {
-			return catalogReadyMsg{err: err}
-		}
-		// D16 verification: after the catalog is rebuilt, scan installed.json
-		// against the library rules so library + metapanel can render the
-		// fresh MatchSet/PerRecord state on the next render pass.
-		inst, _ := installer.LoadInstalled(projectRoot)
-		if inst == nil {
-			inst = &installer.Installed{}
-		}
-		verification := computeVerification(projectRoot, result.Catalog.Items)
-		return catalogReadyMsg{
-			result:       result,
-			verification: verification,
-			installed:    inst,
-		}
+		snap, err := librarystate.Load(root, projectRoot, time.Now())
+		return catalogReadyMsg{snap: snap, err: err}
 	}
 }
 
@@ -363,14 +323,15 @@ func (a App) handleCatalogReady(msg catalogReadyMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
 		return a, a.toast.Push("Refresh failed: "+msg.err.Error(), toastError)
 	}
-	a.catalog = msg.result.Catalog
-	a.moatLockfile = msg.result.Lockfile
-	a.moatLockfileErr = msg.result.LockfileErr
-	a.moatGate = msg.result.GateInputs
-	a.registrySources = msg.result.RegistrySources
-	a.cfg = msg.result.Config
-	a.verification = msg.verification
-	a.installed = msg.installed
+	snap := msg.snap
+	a.catalog = snap.Catalog
+	a.moatLockfile = snap.Lockfile
+	a.moatLockfileErr = snap.LockfileErr
+	a.moatGate = snap.GateInputs
+	a.registrySources = snap.RegistrySources
+	a.cfg = snap.Config
+	a.verification = snap.Verification
+	a.installed = snap.Installed
 	a.galleryDrillIn = false
 	a.refreshContent()
 	a.updateNavState()
