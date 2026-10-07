@@ -244,10 +244,11 @@ func TestReadSingleManifestHook_Valid(t *testing.T) {
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	h, err := readSingleManifestHook(hookFile)
+	m, err := readSingleManifest(hookFile)
 	if err != nil {
-		t.Fatalf("readSingleManifestHook: %v", err)
+		t.Fatalf("readSingleManifest: %v", err)
 	}
+	h := m.Hooks[0]
 	if h.Event != "PostToolUse" {
 		t.Errorf("event: got %q, want PostToolUse", h.Event)
 	}
@@ -266,10 +267,11 @@ func TestReadSingleManifestHook_DirectoryFormat(t *testing.T) {
 	hookJSON := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"Bash","handler":{"type":"command","command":"echo hi"}}]}`
 	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(hookJSON), 0644)
 
-	h, err := readSingleManifestHook(dir)
+	m, err := readSingleManifest(dir)
 	if err != nil {
-		t.Fatalf("readSingleManifestHook with directory: %v", err)
+		t.Fatalf("readSingleManifest with directory: %v", err)
 	}
+	h := m.Hooks[0]
 	if h.Event != "PreToolUse" {
 		t.Errorf("event: got %q, want PreToolUse", h.Event)
 	}
@@ -287,7 +289,7 @@ func TestReadSingleManifestHook_MissingSpec(t *testing.T) {
 	hookFile := filepath.Join(tmpDir, "hook.json")
 	os.WriteFile(hookFile, []byte(hookJSON), 0644)
 
-	if _, err := readSingleManifestHook(hookFile); err == nil {
+	if _, err := readSingleManifest(hookFile); err == nil {
 		t.Fatal("expected error for manifest missing spec field")
 	}
 }
@@ -701,6 +703,32 @@ func setupScannerTestProvider(t *testing.T, tag string) (projectRoot string, pro
 // TestInstallHook_HighSeverityBlocks asserts the scanner chain's highest
 // severity (high) blocks the install when --force is absent. Matches the
 // plan matrix: "High — Print findings, abort with exit code 1".
+// A spec the scanner cannot read refuses an install, while status and
+// uninstall still read it, so a hook installed before that check can be
+// removed.
+func TestInstallHook_RefusesASpecTheScannerCannotRead(t *testing.T) {
+	// Not parallel — overrideHookSettingsPath mutates a package global.
+	projectRoot := t.TempDir()
+	hookDir := filepath.Join(projectRoot, "hooks", "future")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.2","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"echo hi"}}]}`), 0644)
+	item := catalog.ContentItem{Name: "future", Type: catalog.Hooks, Path: hookDir}
+	settingsPath := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(settingsPath, []byte("{}"), 0644)
+	overrideHookSettingsPath(t, settingsPath)
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code", ConfigDir: ".claude"}
+
+	if _, err := installHook(item, prov, projectRoot, ScanOptions{}); err == nil || !strings.Contains(err.Error(), "unsupported spec") {
+		t.Errorf("installHook = %v, want an unsupported-spec refusal", err)
+	}
+	if _, err := hookStatusAtRoot(item, prov, projectRoot); err != nil {
+		t.Errorf("hookStatusAtRoot = %v, want the manifest read", err)
+	}
+	if _, err := uninstallHook(item, prov, projectRoot); err != nil && strings.Contains(err.Error(), "parsing hook file") {
+		t.Errorf("uninstallHook = %v, want the manifest read", err)
+	}
+}
+
 func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 	projectRoot, prov, cleanup := setupScannerTestProvider(t, "high")
 	defer cleanup()

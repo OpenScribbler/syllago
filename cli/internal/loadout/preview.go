@@ -244,6 +244,9 @@ func hookManifest(itemDir string) (converter.Hook, error) {
 	// Loadouts only emit syllago-written hook.json, which always has
 	// exactly one handler per file.
 	manifest, err := converter.ParseManifest(data)
+	if err == nil {
+		err = converter.CheckInstallSpec(manifest)
+	}
 	if err != nil {
 		return converter.Hook{}, fmt.Errorf("parsing hook manifest: %w", err)
 	}

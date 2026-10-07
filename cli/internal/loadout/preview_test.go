@@ -456,3 +456,14 @@ func TestPreview_RefusesAHookThatCannotMerge(t *testing.T) {
 		}
 	}
 }
+
+// A loadout hook under a spec the scanner cannot read is refused rather
+// than applied unscanned.
+func TestHookManifest_RefusesASpecTheScannerCannotRead(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.2","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"echo hi"}}]}`), 0644)
+	if _, err := hookManifest(dir); err == nil || !strings.Contains(err.Error(), "unsupported spec") {
+		t.Errorf("hookManifest = %v, want an unsupported-spec refusal", err)
+	}
+}

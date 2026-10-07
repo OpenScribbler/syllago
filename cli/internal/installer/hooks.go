@@ -52,10 +52,14 @@ func hookSourceProvider(item catalog.ContentItem) string {
 
 func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot string, scan ScanOptions) (Placement, error) {
 	// item.Path is already absolute (set by scanner).
-	h, err := readSingleManifestHook(item.Path)
+	m, err := readSingleManifest(item.Path)
+	if err == nil {
+		err = converter.CheckInstallSpec(m)
+	}
 	if err != nil {
 		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
 	}
+	h := m.Hooks[0]
 	settingsPath, err := hookSettingsPath(prov)
 	if err != nil {
 		return Placement{}, err
@@ -196,10 +200,11 @@ func uninstallHook(item catalog.ContentItem, prov provider.Provider, repoRoot st
 }
 
 func uninstallHookAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string, allowLegacyFallback bool) (Placement, error) {
-	h, err := readSingleManifestHook(item.Path)
+	m, err := readSingleManifest(item.Path)
 	if err != nil {
 		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
 	}
+	h := m.Hooks[0]
 
 	adapter := converter.AdapterFor(prov.Slug)
 	if adapter == nil {
@@ -307,10 +312,11 @@ func checkHookStatus(item catalog.ContentItem, prov provider.Provider, repoRoot 
 }
 
 func hookStatusAtRoot(item catalog.ContentItem, prov provider.Provider, repoRoot string) (Status, error) {
-	h, err := readSingleManifestHook(item.Path)
+	m, err := readSingleManifest(item.Path)
 	if err != nil {
 		return StatusNotAvailable, err
 	}
+	h := m.Hooks[0]
 
 	adapter := converter.AdapterFor(prov.Slug)
 	if adapter == nil {
