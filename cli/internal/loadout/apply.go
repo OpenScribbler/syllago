@@ -534,28 +534,10 @@ func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.Pa
 // installer.PlaceHook, which scans the item and copies the scripts it runs
 // into scriptsDir, recording the result under the loadout's source tag.
 func applyHook(ref ResolvedRef, prov provider.Provider, opts ApplyOptions, scriptsDir string, inst *installer.Installed, source string) ([]installer.Notice, error) {
-	// Find the hook JSON file in the item directory
-	hookFile := findHookFile(ref.Item.Path)
-	if hookFile == "" {
-		return nil, fmt.Errorf("no hook JSON file found in %s", ref.Item.Path)
-	}
-
-	data, err := os.ReadFile(hookFile)
+	h, err := hookManifest(ref.Item.Path)
 	if err != nil {
-		return nil, fmt.Errorf("reading hook file: %w", err)
+		return nil, err
 	}
-
-	// Parse the canonical hooks/0.1 Manifest and pull out the single hook it
-	// contains. Loadouts only emit syllago-written hook.json, which always has
-	// exactly one handler per file.
-	manifest, err := converter.ParseManifest(data)
-	if err != nil {
-		return nil, fmt.Errorf("parsing hook manifest: %w", err)
-	}
-	if len(manifest.Hooks) != 1 {
-		return nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
-	}
-	h := manifest.Hooks[0]
 
 	// Reject events the provider has no settings key for (syllago-xqlc1).
 	// Apply already gates these via the skip-unsupported preview action;

@@ -160,18 +160,26 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst 
 		}
 	}
 
+	// A hook the merge would refuse, such as an unreadable manifest, an
+	// unknown event, or a script outside its item, fails the apply before
+	// anything changes, under --skip-unsupported too.
+	h, err := hookManifest(ref.Item.Path)
+	if err != nil {
+		return PlannedAction{
+			Type:    ref.Type,
+			Name:    ref.Name,
+			Action:  "error-conflict",
+			Detail:  fmt.Sprintf("hook %s not applied", ref.Name),
+			Problem: err.Error(),
+		}
+	}
+
 	// A hook whose event is a real event the provider simply has no settings
 	// key for would merge as dead config the provider never reads
 	// (syllago-xqlc1). Plan it as skip-unsupported so Apply can gate on it and
-	// --skip-unsupported can pass it over. The IsValidHookEvent guard is
-	// deliberate: an unknown/malformed event is NOT skippable — it stays a
-	// merge-hook action so applyHook raises the hard injection-guard error,
-	// which fires even under --skip-unsupported. A missing or unparseable hook
-	// file likewise stays merge-hook so applyHook reports the real error.
-	h, ok := hookManifest(ref.Item.Path)
-	if ok &&
-		converter.IsValidHookEvent(h.Event) &&
-		!converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
+	// --skip-unsupported can pass it over. An unknown or malformed event is
+	// not skippable: CheckHook below refuses it.
+	if converter.IsValidHookEvent(h.Event) && !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
 		return PlannedAction{
 			Type:    ref.Type,
 			Name:    ref.Name,
@@ -180,18 +188,13 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst 
 			Problem: fmt.Sprintf("%s does not support hook event %q", prov.Name, h.Event),
 		}
 	}
-
-	// A hook the merge would refuse, such as one whose command names a
-	// script outside its item, fails the apply before anything changes.
-	if ok {
-		if err := installer.CheckHook(ref.Item, h); err != nil {
-			return PlannedAction{
-				Type:    ref.Type,
-				Name:    ref.Name,
-				Action:  "error-conflict",
-				Detail:  fmt.Sprintf("hook %s not applied", ref.Name),
-				Problem: err.Error(),
-			}
+	if err := installer.CheckHook(ref.Item, h, prov); err != nil {
+		return PlannedAction{
+			Type:    ref.Type,
+			Name:    ref.Name,
+			Action:  "error-conflict",
+			Detail:  fmt.Sprintf("hook %s not applied", ref.Name),
+			Problem: err.Error(),
 		}
 	}
 
@@ -225,22 +228,27 @@ func highFindings(itemPath string) string {
 	return fmt.Sprintf("high-severity scanner findings: %s", strings.Join(found, ", "))
 }
 
-// hookManifest reads the single hook in a hook item's hook.json. Returns
-// ok=false when the file is missing or malformed.
-func hookManifest(itemDir string) (converter.Hook, bool) {
+// hookManifest reads the single hook in a hook item's hook.json, and
+// errors when the file is missing, malformed, or holds more than one hook.
+func hookManifest(itemDir string) (converter.Hook, error) {
 	hookFile := findHookFile(itemDir)
 	if hookFile == "" {
-		return converter.Hook{}, false
+		return converter.Hook{}, fmt.Errorf("no hook JSON file found in %s", itemDir)
 	}
 	data, err := os.ReadFile(hookFile)
 	if err != nil {
-		return converter.Hook{}, false
+		return converter.Hook{}, fmt.Errorf("reading hook file: %w", err)
 	}
+	// Loadouts only emit syllago-written hook.json, which always has
+	// exactly one handler per file.
 	manifest, err := converter.ParseManifest(data)
-	if err != nil || len(manifest.Hooks) != 1 {
-		return converter.Hook{}, false
+	if err != nil {
+		return converter.Hook{}, fmt.Errorf("parsing hook manifest: %w", err)
 	}
-	return manifest.Hooks[0], true
+	if len(manifest.Hooks) != 1 {
+		return converter.Hook{}, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
+	}
+	return manifest.Hooks[0], nil
 }
 
 // previewMCP checks installed.json for an existing MCP entry, then whether

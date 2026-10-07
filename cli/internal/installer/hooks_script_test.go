@@ -132,13 +132,21 @@ func TestResolveHookScripts_QuotesAPathWithASpace(t *testing.T) {
 
 func TestShellQuote(t *testing.T) {
 	for in, want := range map[string]string{
+		`C:\Users\u\.syllago\hooks\x\run.ps1`: `C:\Users\u\.syllago\hooks\x\run.ps1`,
+		`C:\Users\Jo Smith\run.ps1`:           `"C:\Users\Jo Smith\run.ps1"`,
+	} {
+		if got := shellQuoteFor("windows", in); got != want {
+			t.Errorf("windows: shellQuoteFor(%q) = %q, want %q", in, got, want)
+		}
+	}
+	for in, want := range map[string]string{
 		"/home/u/.syllago/hooks/a-b_c.sh": "/home/u/.syllago/hooks/a-b_c.sh",
 		"/home/my home/lint.sh":           "'/home/my home/lint.sh'",
 		"/tmp/it's/lint.sh":               `'/tmp/it'\''s/lint.sh'`,
 		"/tmp/$(id)/lint.sh":              "'/tmp/$(id)/lint.sh'",
 	} {
-		if got := shellQuote(in); got != want {
-			t.Errorf("shellQuote(%q) = %q, want %q", in, got, want)
+		if got := shellQuoteFor("linux", in); got != want {
+			t.Errorf("shellQuoteFor(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
@@ -257,5 +265,51 @@ func TestPlaceHook_SingleFileHookScansAndCopiesOnlyItsOwnFiles(t *testing.T) {
 		if strings.Join(names, ",") != "mine.sh" {
 			t.Errorf("copied %v, want only mine.sh", names)
 		}
+	}
+}
+
+// The command runs the first reference to its script; a later one is an
+// argument and stays as written, so the copy is what runs.
+func TestResolveHookScripts_RewritesTheScriptTheCommandRuns(t *testing.T) {
+	itemDir := t.TempDir()
+	os.WriteFile(filepath.Join(itemDir, "lint.sh"), []byte("#!/bin/bash"), 0755)
+	destDir := t.TempDir()
+
+	matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", `bash ./lint.sh --label "./lint.sh"`)
+	result, _, err := resolveHookScripts(matcherGroup, catalog.ContentItem{Name: "argtwice", Path: itemDir}, destDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "bash " + shellQuote(filepath.Join(destDir, "lint.sh")) + ` --label "./lint.sh"`
+	if got := gjson.GetBytes(result, "hooks.0.command").String(); got != want {
+		t.Errorf("command = %q, want %q", got, want)
+	}
+}
+
+// A second item under an installed hook's name is refused before its
+// scripts are copied, so the installed hook keeps running its own script.
+func TestPlaceHook_RefusedDuplicateLeavesInstalledScripts(t *testing.T) {
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
+	h := converter.Hook{Event: "PreToolUse", Handler: converter.Handler{Type: "command", Command: "./run.sh"}}
+	scriptsDir := filepath.Join(t.TempDir(), "scripts")
+	settings := filepath.Join(t.TempDir(), "settings.json")
+	repoRoot := t.TempDir()
+	inst := &Installed{}
+
+	for i, body := range []string{"#!/bin/sh\necho first\n", "#!/bin/sh\necho second\n"} {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, "run.sh"), []byte(body), 0755)
+		item := catalog.ContentItem{Name: "fmt", Type: catalog.Hooks, Path: dir}
+		_, err := PlaceHook(item, h, prov, repoRoot, settings, scriptsDir, inst, "export", ScanOptions{})
+		if i == 0 && err != nil {
+			t.Fatalf("first PlaceHook: %v", err)
+		}
+		if i == 1 && (err == nil || !strings.Contains(err.Error(), "already installed")) {
+			t.Fatalf("second PlaceHook: got %v, want an already-installed refusal", err)
+		}
+	}
+	got, _ := os.ReadFile(filepath.Join(scriptsDir, "run.sh"))
+	if string(got) != "#!/bin/sh\necho first\n" {
+		t.Errorf("installed script = %q, want the first item's", got)
 	}
 }

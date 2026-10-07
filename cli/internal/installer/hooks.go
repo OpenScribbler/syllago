@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -80,39 +81,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 // the scripts the hook runs into scriptsDir, so the scanned copy is the one
 // that runs. The caller loads and saves inst.
 func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath, scriptsDir string, inst *Installed, source string, scan ScanOptions) (Placement, error) {
-	if err := CheckHook(item, h); err != nil {
-		return Placement{}, err
-	}
-	// M3: validate the event name (rejects garbage and prevents key injection).
-	if !converter.IsValidHookEvent(h.Event) {
-		return Placement{}, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
-	}
-
-	// Install through the provider's HookAdapter. No adapter (amp,
-	// codex) means the hook cannot be serialized — reject rather than write
-	// config the provider never reads.
-	adapter := converter.AdapterFor(prov.Slug)
-	if adapter == nil {
-		return Placement{}, fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
-	}
-
-	model, err := hookStorageModelFor(prov.Slug)
+	adapter, model, canonHook, err := checkHook(item, h, prov)
 	if err != nil {
 		return Placement{}, err
 	}
-
-	canonHook, err := converter.CanonicalHookFromManifest(h)
-	if err != nil {
-		return Placement{}, fmt.Errorf("building canonical hook: %w", err)
-	}
-	canonEvent := converter.CanonicalHookEvent(h.Event, hookSourceProvider(item), prov.Slug)
-	canonHook.Event = canonEvent
-
-	// Event-support gate: reject events the adapter cannot represent. Adapter
-	// capabilities are the source of truth.
-	if !adapterSupportsEvent(adapter, canonEvent) {
-		return Placement{}, fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
-	}
+	canonEvent := canonHook.Event
 
 	// SECURITY (M2): run the pluggable scanner chain against the source hook
 	// directory. High-severity findings block the install unless --force.
@@ -147,6 +120,22 @@ func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 		return Placement{Notices: notices}, fmt.Errorf("hook %q has high-severity security findings (%s); re-run with --force to install anyway", item.Name, strings.Join(high, ", "))
 	}
 
+	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
+
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
+	if err != nil {
+		return Placement{Notices: notices}, err
+	}
+
+	// Dedup against installed.json (name + event + provider), before the
+	// script copy below can overwrite the installed hook's scripts.
+	if hookTracked(inst, item.Name, nativeEvent, prov.Slug, existing) {
+		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+	}
+	if hookTrackedAtLegacyRoot(repoRoot, item.Name, nativeEvent, prov.Slug, existing) {
+		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+	}
+
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
 	// command path (operates on the hook before encode).
 	resolvedCmd, copied, err := resolveHookCommandScript(canonHook.Handler.Command, item, scriptsDir)
@@ -169,21 +158,6 @@ func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 		return Placement{Notices: notices}, fmt.Errorf("hook %q: %w", item.Name, err)
 	}
 	notices = append(notices, conversionNotices(item, converter.HookWarnings(encodeWarnings, hookSourceProvider(item), prov.Slug))...)
-
-	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
-
-	existing, err := decodeExistingHooks(model, adapter, settingsPath)
-	if err != nil {
-		return Placement{Notices: notices}, err
-	}
-
-	// Dedup against installed.json (name + event + provider).
-	if hookTracked(inst, item.Name, nativeEvent, prov.Slug, existing) {
-		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
-	}
-	if hookTrackedAtLegacyRoot(repoRoot, item.Name, nativeEvent, prov.Slug, existing) {
-		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
-	}
 
 	all := make([]converter.CanonicalHook, 0, len(existing)+1)
 	all = append(all, existing...)
@@ -546,15 +520,19 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		}
 
 		// Rewrite command: replace the script ref, with any quotes around
-		// it, by the stable absolute path. Quoting inside the command's own
+		// it, by the stable absolute path. The first occurrence is the one
+		// the command runs, since ExtractScriptRef reads it from the front;
+		// a later one is an argument. Quoting inside the command's own
 		// quotes would leave the path's quotes literal.
-		newCmd := cmd
-		for _, q := range []string{`"`, "'", ""} {
-			if tok := q + ref + q; strings.Contains(cmd, tok) {
-				newCmd = strings.Replace(cmd, tok, shellQuote(destPath), 1)
-				break
-			}
+		start := strings.Index(cmd, ref)
+		if start < 0 {
+			continue
 		}
+		end := start + len(ref)
+		if start > 0 && end < len(cmd) && (cmd[start-1] == '"' || cmd[start-1] == '\'') && cmd[end] == cmd[start-1] {
+			start, end = start-1, end+1
+		}
+		newCmd := cmd[:start] + shellQuote(destPath) + cmd[end:]
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {
@@ -565,17 +543,66 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 	return result, scriptsCopied, nil
 }
 
-// CheckHook returns why PlaceHook would refuse item's hook h before it
-// changes anything: a name that is not one path element, or a command
-// naming a script outside the item.
-func CheckHook(item catalog.ContentItem, h converter.Hook) error {
+// CheckHook returns why PlaceHook would refuse item's hook h for prov
+// before it changes anything: a name that is not one path element, an
+// event the provider cannot take, a hook its adapter cannot represent, or a
+// command naming a script outside the item. Scanner findings are reported
+// apart, because --force overrides them.
+func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider) error {
+	_, _, _, err := checkHook(item, h, prov)
+	return err
+}
+
+// checkHook runs CheckHook's checks and returns what PlaceHook builds on:
+// the provider's adapter and storage model, and h as a canonical hook with
+// the provider's event.
+func checkHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider) (converter.HookAdapter, hookStorageModel, converter.CanonicalHook, error) {
+	var none converter.CanonicalHook
 	// The name names the scripts directory, and a registry index can give
 	// an item any name, so one that is not a single path element is refused.
 	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
-		return fmt.Errorf("hook name %q is not a valid directory name", item.Name)
+		return nil, 0, none, fmt.Errorf("hook name %q is not a valid directory name", item.Name)
 	}
-	_, _, _, err := hookScriptRef(hookItemDir(item), item.Name, h.Handler.Command)
-	return err
+	// M3: validate the event name (rejects garbage and prevents key injection).
+	if !converter.IsValidHookEvent(h.Event) {
+		return nil, 0, none, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
+	}
+
+	// Install through the provider's HookAdapter. No adapter (amp,
+	// codex) means the hook cannot be serialized — reject rather than write
+	// config the provider never reads.
+	adapter := converter.AdapterFor(prov.Slug)
+	if adapter == nil {
+		return nil, 0, none, fmt.Errorf("hook install not supported for %s (no encoder)", prov.Name)
+	}
+
+	model, err := hookStorageModelFor(prov.Slug)
+	if err != nil {
+		return nil, 0, none, err
+	}
+
+	canonHook, err := converter.CanonicalHookFromManifest(h)
+	if err != nil {
+		return nil, 0, none, fmt.Errorf("building canonical hook: %w", err)
+	}
+	canonEvent := converter.CanonicalHookEvent(h.Event, hookSourceProvider(item), prov.Slug)
+	canonHook.Event = canonEvent
+
+	// Event-support gate: reject events the adapter cannot represent. Adapter
+	// capabilities are the source of truth.
+	if !adapterSupportsEvent(adapter, canonEvent) {
+		return nil, 0, none, fmt.Errorf("hook %q: %s does not support hook event %q", item.Name, prov.Name, h.Event)
+	}
+	if _, _, _, err := hookScriptRef(hookItemDir(item), item.Name, h.Handler.Command); err != nil {
+		return nil, 0, none, err
+	}
+	// A hook the adapter drops (e.g. a non-command handler on crush) is
+	// refused here; PlaceHook repeats the round trip on the rewritten
+	// command for the hook's identity.
+	if _, _, err := roundTripIdentity(adapter, canonHook); err != nil {
+		return nil, 0, none, fmt.Errorf("hook %q: %w", item.Name, err)
+	}
+	return adapter, model, canonHook, nil
 }
 
 // isSingleFileHook reports whether item is a hook manifest file rather
@@ -681,9 +708,22 @@ func copyHookItem(itemDir, destDir string) error {
 	})
 }
 
-// shellQuote single-quotes p for a POSIX shell when it holds anything but
-// characters a shell reads literally, so a path with a space stays one word.
+// shellQuote quotes p so the shell running the hook reads it as one word.
 func shellQuote(p string) string {
+	return shellQuoteFor(runtime.GOOS, p)
+}
+
+// shellQuoteFor single-quotes p for a POSIX shell when it holds anything but
+// characters a shell reads literally. On Windows a hook may run under
+// cmd.exe, which reads single quotes literally, so the path stays bare as it
+// always has and takes double quotes only to keep a space inside one word.
+func shellQuoteFor(goos, p string) string {
+	if goos == "windows" {
+		if strings.ContainsRune(p, ' ') {
+			return `"` + p + `"`
+		}
+		return p
+	}
 	if strings.IndexFunc(p, func(r rune) bool {
 		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("/._-+:@%,=", r))
 	}) < 0 {

@@ -365,9 +365,9 @@ func TestKeepRoundTrip_ApplyStatusRemove(t *testing.T) {
 // contained a hollow `t.Logf` about rollback ("may indicate rollback") with no
 // actual assertion.
 //
-// Scenario: 2 rules (symlinks) + 1 hook with an empty "event" field. The rules
-// produce "create-symlink" actions; the hook produces "merge-hook". Hook merge
-// fails in applyHook (event == "" check). Because map iteration over
+// Scenario: 2 rules (symlinks) + 1 hook whose bundled script cannot be read.
+// The rules produce "create-symlink" actions; the hook produces "merge-hook".
+// Hook merge fails copying its script. Because map iteration over
 // RefsByType is non-deterministic, the rules may run before OR after the hook —
 // but the rollback must unconditionally remove all planned symlinks via the
 // symlinkRecords loop, so the post-state is the same regardless.
@@ -384,10 +384,9 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 	})
 	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-b"})
 
-	// Replace the good hook with a broken one — valid manifest shape but an
-	// empty event, which trips HookDataFromManifest with an "event" error.
-	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook")
-	os.WriteFile(filepath.Join(brokenHookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"matcher":".*","handler":{"type":"command","command":"echo oops"}}]}`), 0644)
+	// Replace the good hook with one that fails only when its script is
+	// copied, after the preview's checks pass.
+	breakHookCopy(t, filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook"))
 
 	settingsPath := filepath.Join(homeDir, ".claude", "settings.json")
 	originalSettings, err := os.ReadFile(settingsPath)
@@ -407,7 +406,7 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 		t.Fatal("expected Apply to fail on broken hook, got nil")
 	}
 	// The rollback message prefix is part of the contract — callers match on it.
-	if !containsAll(err.Error(), "rolled back", "event") {
+	if !containsAll(err.Error(), "rolled back", "permission denied") {
 		t.Errorf("error should mention rollback and the underlying cause; got: %v", err)
 	}
 
@@ -711,14 +710,10 @@ func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
 	t.Parallel()
 	homeDir, projectRoot, _, cat, prov := setupIntegrationEnv(t)
 
-	// Keep int-hook (the pre-built good hook). Add a second hook whose
-	// directory has NO json files — findHookFile returns "" and applyHook
-	// fails with "no hook JSON file found in ...".
+	// Keep int-hook (the pre-built good hook). Add a second hook that fails
+	// only when its script is copied, after the preview's checks pass.
 	brokenHookDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook-broken")
-	os.MkdirAll(brokenHookDir, 0755)
-	// Intentionally write a non-json file so the dir exists but findHookFile
-	// cannot locate a hook source.
-	os.WriteFile(filepath.Join(brokenHookDir, "README.md"), []byte("no hook here"), 0644)
+	breakHookCopy(t, brokenHookDir)
 
 	cat.Items = append(cat.Items, catalog.ContentItem{
 		Name: "int-hook-broken", Type: catalog.Hooks, Provider: "claude-code", Path: brokenHookDir,
@@ -752,7 +747,7 @@ func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
 
 	_, err = Apply(manifest, cat, prov, opts)
 	if err == nil {
-		t.Fatal("expected Apply to fail on hook with no JSON file, got nil")
+		t.Fatal("expected Apply to fail on hook whose script cannot be copied, got nil")
 	}
 	if !containsAll(err.Error(), "rolled back") {
 		t.Errorf("error should mention rollback; got: %v", err)
@@ -798,7 +793,7 @@ func TestApply_PartialHookMergeRollback_RestoresSettingsJson(t *testing.T) {
 // never applied.
 //
 // Sequence: 3 hooks where hooks[0] and hooks[2] merge a unique matcher string,
-// and hooks[1] fails (missing event field). After Apply fails, neither the
+// and hooks[1] fails copying its script. After Apply fails, neither the
 // hooks[0] marker nor the hooks[2] marker can be present in settings.json —
 // the former because rollback restored, the latter because it never ran.
 func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
@@ -815,23 +810,16 @@ func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
 	}
 
 	// hooks[0]: good hook with a marker matcher we can grep for
-	writeHook("int-hook-first", `{
-  "event": "PostToolUse",
-  "matcher": "FIRST_MARKER",
-  "hooks": [{"type": "command", "command": "echo first"}]
-}`)
-	// hooks[1]: broken hook, missing event field — triggers mid-bundle failure
-	writeHook("int-hook-broken", `{
-  "matcher": "SHOULD_NEVER_APPEAR",
-  "hooks": [{"type": "command", "command": "echo broken"}]
-}`)
+	writeHook("int-hook-first", `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","matcher":"FIRST_MARKER","handler":{"type":"command","command":"echo first"}}]}`)
+	// hooks[1]: fails copying its script — triggers mid-bundle failure
+	brokenDir := filepath.Join(projectRoot, "content", "hooks", "claude-code", "int-hook-broken")
+	breakHookCopy(t, brokenDir)
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-hook-broken", Type: catalog.Hooks, Provider: "claude-code", Path: brokenDir,
+	})
 	// hooks[2]: good hook that MUST never be applied because hooks[1] aborts
 	// the loop first. Distinct marker so we can assert its absence.
-	writeHook("int-hook-third", `{
-  "event": "PreToolUse",
-  "matcher": "THIRD_MARKER",
-  "hooks": [{"type": "command", "command": "echo third"}]
-}`)
+	writeHook("int-hook-third", `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"THIRD_MARKER","handler":{"type":"command","command":"echo third"}}]}`)
 
 	manifest := &Manifest{
 		Kind:     "loadout",
@@ -892,6 +880,21 @@ func TestApply_MidBundleFailure_LaterItemsNeverApplied(t *testing.T) {
 	if _, _, loadErr := snapshot.Load(projectRoot); !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
 		t.Errorf("snapshot should be gone after rollback; got: %v", loadErr)
 	}
+}
+
+// breakHookCopy writes a hook into dir whose bundled script cannot be read,
+// so it passes every check the preview makes and fails only when the apply
+// copies its scripts, after the items before it were placed.
+func breakHookCopy(t *testing.T, dir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a file the test cannot read")
+	}
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","matcher":"SHOULD_NEVER_APPEAR","handler":{"type":"command","command":"./run.sh"}}]}`), 0644)
+	script := filepath.Join(dir, "run.sh")
+	os.WriteFile(script, []byte("#!/bin/sh\n"), 0000)
+	t.Cleanup(func() { os.Chmod(script, 0644) })
 }
 
 // containsAll reports whether s contains every substring in subs.
