@@ -162,6 +162,15 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	// Step 4: Collect files to back up and create snapshot. Each placement
 	// is recorded as it is made, so the snapshot starts with none.
 	filesToBackup := collectBackupFiles(actions, prov, opts)
+	// A settings file the apply may create is the snapshot's to delete, so
+	// no item may install over it or around it either.
+	for _, f := range filesToBackup {
+		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
+			}
+		}
+	}
 	var hookScripts []string
 	for _, a := range actions {
 		if a.Action == "merge-hook" {

@@ -927,6 +927,31 @@ func TestApply_RefusesDestinationsRemoveCannotTakeBack(t *testing.T) {
 			t.Errorf("rule placed despite the refusal: %v", err)
 		}
 	})
+	t.Run("an item over a settings file", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		rule := filepath.Join(projectRoot, "content", "rules", "claude-code", "settings.json")
+		if err := os.MkdirAll(rule, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		manifest.Rules = append(manifest.Rules, ItemRef{Name: "settings.json"})
+		cat.Items = append(cat.Items, catalog.ContentItem{Name: "settings.json", Type: catalog.Rules, Provider: "claude-code", Path: rule})
+		claudeDir := filepath.Join(homeDir, ".claude")
+		// Absent, the settings file is one the snapshot records as created.
+		if err := os.Remove(filepath.Join(claudeDir, "settings.json")); err != nil {
+			t.Fatal(err)
+		}
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"rules": claudeDir}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !strings.Contains(err.Error(), "that the loadout also writes") {
+			t.Fatalf("Apply: got %v, want the placement over the settings file refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+	})
 	t.Run("one item inside another", func(t *testing.T) {
 		t.Parallel()
 		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
