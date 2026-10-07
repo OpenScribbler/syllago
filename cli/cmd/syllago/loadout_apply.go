@@ -54,6 +54,7 @@ func init() {
 	loadoutApplyCmd.Flags().String("to", "", "Target provider (overrides manifest provider; defaults to claude-code if unset)")
 	loadoutApplyCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
 	loadoutApplyCmd.Flags().Bool("skip-unsupported", false, "Skip hooks whose events the target provider does not support instead of failing")
+	loadoutApplyCmd.Flags().Bool("force", false, "Apply hooks past high-severity scanner findings")
 	loadoutCmd.AddCommand(loadoutApplyCmd)
 }
 
@@ -195,6 +196,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		method = installer.MethodCopy
 	}
 	skipUnsupported, _ := cmd.Flags().GetBool("skip-unsupported")
+	force, _ := cmd.Flags().GetBool("force")
 
 	opts := loadout.ApplyOptions{
 		Mode:            mode,
@@ -203,6 +205,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		RepoRoot:        root,
 		Resolver:        resolver,
 		SkipUnsupported: skipUnsupported,
+		Force:           force,
 	}
 
 	// Multi-provider path: manifest declares providers[] and --to is not set.
@@ -335,6 +338,10 @@ func loadoutApplyHint(err error) string {
 	var uhErr *loadout.UnsupportedHooksError
 	if errors.As(err, &uhErr) {
 		return "Re-run with --skip-unsupported to apply the compatible items"
+	}
+	var sfErr *loadout.ScannerFindingsError
+	if errors.As(err, &sfErr) {
+		return "Review the findings, then re-run with --force to apply anyway"
 	}
 	return "Check error details and resolve conflicts"
 }

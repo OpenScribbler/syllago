@@ -51,7 +51,34 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 	if err != nil {
 		return Placement{}, fmt.Errorf("parsing hook file: %w", err)
 	}
+	settingsPath, err := hookSettingsPath(prov)
+	if err != nil {
+		return Placement{}, err
+	}
+	scriptsDir, err := hookScriptsDir(item.Name)
+	if err != nil {
+		return Placement{}, fmt.Errorf("getting hook scripts dir: %w", err)
+	}
+	inst, err := LoadInstalled(repoRoot)
+	if err != nil {
+		return Placement{}, fmt.Errorf("loading installed.json: %w", err)
+	}
+	placement, err := PlaceHook(item, h, prov, repoRoot, settingsPath, scriptsDir, inst, "export", scan)
+	if err != nil {
+		return placement, err
+	}
+	if err := SaveInstalled(repoRoot, inst); err != nil {
+		return Placement{Notices: placement.Notices}, fmt.Errorf("saving installed.json: %w", err)
+	}
+	return placement, nil
+}
 
+// PlaceHook merges hook h, read from item, into the provider's hook file at
+// settingsPath and appends its record to inst under source. It refuses an
+// item with high-severity scanner findings unless scan.Force, and copies
+// the scripts the hook runs into scriptsDir, so the scanned copy is the one
+// that runs. The caller loads and saves inst.
+func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath, scriptsDir string, inst *Installed, source string, scan ScanOptions) (Placement, error) {
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
 		return Placement{}, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
@@ -111,11 +138,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
 	// command path (operates on the hook before encode).
-	resolvedCmd, copied, err := resolveHookCommandScript(canonHook.Handler.Command, item, repoRoot)
+	resolvedCmd, copied, err := resolveHookCommandScript(canonHook.Handler.Command, item, scriptsDir)
 	if copied {
 		notices = append(notices, Notice{
 			Kind:    NoticeScriptSecurity,
-			Message: fmt.Sprintf("Hook %q references executable script files.\nScripts will be copied to ~/.syllago/hooks/%s/", item.Name, item.Name),
+			Message: fmt.Sprintf("Hook %q references executable script files.\nScripts will be copied to %s/", item.Name, homeRelative(scriptsDir)),
 		})
 	}
 	if err != nil {
@@ -134,20 +161,12 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 
 	nativeEvent := nativeEventFor(canonEvent, prov.Slug)
 
-	settingsPath, err := hookSettingsPath(prov)
-	if err != nil {
-		return Placement{Notices: notices}, err
-	}
 	existing, err := decodeExistingHooks(model, adapter, settingsPath)
 	if err != nil {
 		return Placement{Notices: notices}, err
 	}
 
 	// Dedup against installed.json (name + event + provider).
-	inst, err := LoadInstalled(repoRoot)
-	if err != nil {
-		return Placement{Notices: notices}, fmt.Errorf("loading installed.json: %w", err)
-	}
 	if hookTracked(inst, item.Name, nativeEvent, prov.Slug, existing) {
 		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
 	}
@@ -172,15 +191,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 		Event:       nativeEvent,
 		GroupHash:   groupHash,
 		Command:     canonHook.Handler.Command,
-		Source:      "export",
+		Source:      source,
 		Scope:       "global",
 		Provider:    prov.Slug,
 		InstalledAt: time.Now(),
 	})
-	if err := SaveInstalled(repoRoot, inst); err != nil {
-		return Placement{Notices: notices}, fmt.Errorf("saving installed.json: %w", err)
-	}
-
 	desc := fmt.Sprintf("hooks.%s in %s", nativeEvent, settingsPath)
 	return Placement{
 		Mechanism: MechanismHookMerge,
@@ -409,12 +424,24 @@ func hookScriptsDir(name string) (string, error) {
 	return filepath.Join(home, ".syllago", "hooks", name), nil
 }
 
+// homeRelative shows a path under the home directory as ~/<rest>.
+func homeRelative(p string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	if rel, err := filepath.Rel(home, p); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.Join("~", rel)
+	}
+	return p
+}
+
 // resolveHookCommandScript resolves a single hook command through the
 // script-copying security logic (resolveHookScripts operates on a matcher
 // group, so we wrap the command in a minimal group and read the rewritten
 // command back). An empty command (e.g. a non-command handler) is a no-op.
 // copied reports whether a script was copied, also when a later step failed.
-func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot string) (resolved string, copied bool, err error) {
+func resolveHookCommandScript(cmd string, item catalog.ContentItem, destDir string) (resolved string, copied bool, err error) {
 	if cmd == "" {
 		return "", false, nil
 	}
@@ -422,7 +449,7 @@ func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot str
 	if err != nil {
 		return "", false, err
 	}
-	mg, copied, err = resolveHookScripts(mg, item, repoRoot)
+	mg, copied, err = resolveHookScripts(mg, item, destDir)
 	if err != nil {
 		return "", copied, err
 	}
@@ -430,11 +457,11 @@ func resolveHookCommandScript(cmd string, item catalog.ContentItem, repoRoot str
 }
 
 // resolveHookScripts finds script file references in a hook's matcher group,
-// copies them to a stable location (~/.syllago/hooks/<name>/), and rewrites
+// copies them to destDir, and rewrites
 // the command paths in the JSON. This ensures hooks from registries don't
 // break when the registry cache changes. The bool reports whether any script
 // was copied, so the caller can warn that the hook runs bundled scripts.
-func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot string) ([]byte, bool, error) {
+func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir string) ([]byte, bool, error) {
 	// Resolve the item directory (hooks can be a file or directory)
 	itemDir := item.Path
 	fi, err := os.Stat(item.Path)
@@ -493,10 +520,6 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, repoRoot 
 		scriptsCopied = true
 
 		// Copy script to stable location
-		destDir, err := hookScriptsDir(item.Name)
-		if err != nil {
-			return nil, scriptsCopied, fmt.Errorf("getting hook scripts dir: %w", err)
-		}
 		if err := os.MkdirAll(destDir, 0755); err != nil {
 			return nil, scriptsCopied, fmt.Errorf("creating hook scripts dir: %w", err)
 		}

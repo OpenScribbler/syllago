@@ -34,13 +34,14 @@ func TestResolveHookScripts_RelativeScript(t *testing.T) {
 	matcherGroup := []byte(`{"hooks": [{"type": "command", "command": "./lint.sh"}]}`)
 	item := catalog.ContentItem{Name: "test-relative", Path: itemDir}
 
-	result, _, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	destDir := t.TempDir()
+	result, _, err := resolveHookScripts(matcherGroup, item, destDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	cmd := gjson.GetBytes(result, "hooks.0.command").String()
-	if !strings.Contains(cmd, ".syllago/hooks/test-relative/lint.sh") {
+	if cmd != filepath.Join(destDir, "lint.sh") {
 		t.Errorf("expected rewritten path, got %q", cmd)
 	}
 

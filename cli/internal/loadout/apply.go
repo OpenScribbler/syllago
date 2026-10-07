@@ -30,6 +30,22 @@ type ApplyOptions struct {
 	// target provider has no settings key for, instead of failing. Skipped
 	// hooks are reported in ApplyResult.Warnings.
 	SkipUnsupported bool
+
+	// Force applies hooks with high-severity scanner findings, which the
+	// apply otherwise refuses before changing anything.
+	Force bool
+}
+
+// ScannerFindingsError rejects an apply because the loadout contains hooks
+// with high-severity scanner findings. Callers can detect it with
+// errors.As to suggest --force.
+type ScannerFindingsError struct {
+	Problems []string // one "name — problem" line per refused hook
+}
+
+func (e *ScannerFindingsError) Error() string {
+	return fmt.Sprintf("%d hook(s) have high-severity scanner findings:\n  %s",
+		len(e.Problems), strings.Join(e.Problems, "\n  "))
 }
 
 // UnsupportedHooksError rejects an apply because the loadout contains hooks
@@ -129,6 +145,18 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}
 	if len(unsupported) > 0 && !opts.SkipUnsupported {
 		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
+	}
+
+	// A hook with high-severity scanner findings fails the apply before
+	// anything changes, unless the caller forced it.
+	var flagged []string
+	for _, a := range actions {
+		if a.Action == "merge-hook" && a.Problem != "" {
+			flagged = append(flagged, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	if len(flagged) > 0 && !opts.Force {
+		return nil, &ScannerFindingsError{Problems: flagged}
 	}
 
 	// Remove deletes what an apply placed, so each path must be one remove
@@ -408,7 +436,14 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 			})
 
 		case "merge-hook":
-			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
+			// The scripts live in the snapshot, which only this apply
+			// writes and which remove and rollback delete whole.
+			scriptsDir := filepath.Join(snapshotDir, "hook-scripts", a.Name)
+			notices, err := applyHook(*ref, prov, opts, scriptsDir, inst, source)
+			for _, n := range notices {
+				warnings = append(warnings, n.Message)
+			}
+			if err != nil {
 				return nil, placed, fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
@@ -445,21 +480,19 @@ func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.Pa
 	return installer.HookConfigPath(prov, base)
 }
 
-// applyHook reads a hook JSON file and merges it into the provider's hook
-// config via the provider's converter.HookAdapter. It
-// resolves relative command paths first, then delegates the
-// encode/merge/identity work to installer.ApplyCanonicalHook, recording the
-// result under the loadout's source tag.
-func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver *config.PathResolver, inst *installer.Installed, source string) error {
+// applyHook reads a hook item's hook file and places it through
+// installer.PlaceHook, which scans the item and copies the scripts it runs
+// into scriptsDir, recording the result under the loadout's source tag.
+func applyHook(ref ResolvedRef, prov provider.Provider, opts ApplyOptions, scriptsDir string, inst *installer.Installed, source string) ([]installer.Notice, error) {
 	// Find the hook JSON file in the item directory
 	hookFile := findHookFile(ref.Item.Path)
 	if hookFile == "" {
-		return fmt.Errorf("no hook JSON file found in %s", ref.Item.Path)
+		return nil, fmt.Errorf("no hook JSON file found in %s", ref.Item.Path)
 	}
 
 	data, err := os.ReadFile(hookFile)
 	if err != nil {
-		return fmt.Errorf("reading hook file: %w", err)
+		return nil, fmt.Errorf("reading hook file: %w", err)
 	}
 
 	// Parse the canonical hooks/0.1 Manifest and pull out the single hook it
@@ -467,51 +500,28 @@ func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver
 	// exactly one handler per file.
 	manifest, err := converter.ParseManifest(data)
 	if err != nil {
-		return fmt.Errorf("parsing hook manifest: %w", err)
+		return nil, fmt.Errorf("parsing hook manifest: %w", err)
 	}
 	if len(manifest.Hooks) != 1 {
-		return fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
+		return nil, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
 	}
 	h := manifest.Hooks[0]
 
-	// Validate before using the event downstream (mirrors installHook M3:
-	// prevents key injection via dots in crafted event names).
-	if !converter.IsValidHookEvent(h.Event) {
-		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
+	// Reject events the provider has no settings key for (syllago-xqlc1).
+	// Apply already gates these via the skip-unsupported preview action;
+	// this is the backstop at the merge point so dead config can never slip
+	// through if the two diverge. PlaceHook validates the event first, so a
+	// malformed one gets the injection-guard error.
+	if converter.IsValidHookEvent(h.Event) && !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
+		return nil, fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, h.Event)
 	}
 
-	// Reject events the provider has no settings key for (mirrors installHook,
-	// syllago-xqlc1). Apply already gates these via the skip-unsupported
-	// preview action; this is the defense-in-depth backstop at the actual
-	// merge point so dead config can never slip through if the two diverge.
-	if !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
-		return fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, h.Event)
-	}
-
-	// Resolve relative command paths to absolute before encoding.
-	resolvedCmd := ResolveHookCommand(ref.Item.Path, h.Handler.Command)
-
-	// Merge into the provider's hook file through its adapter.
-	settingsPath, err := settingsPathFor(prov, homeDir, resolver)
+	settingsPath, err := settingsPathFor(prov, opts.HomeDir, opts.Resolver)
 	if err != nil {
-		return fmt.Errorf("hook %q: %w", ref.Name, err)
+		return nil, fmt.Errorf("hook %q: %w", ref.Name, err)
 	}
-	res, err := installer.ApplyCanonicalHook(prov, h, settingsPath, resolvedCmd)
-	if err != nil {
-		return fmt.Errorf("hook %q: %w", ref.Name, err)
-	}
-
-	inst.Hooks = append(inst.Hooks, installer.InstalledHook{
-		Name:        ref.Name,
-		Event:       res.NativeEvent,
-		GroupHash:   res.GroupHash,
-		Command:     res.Command,
-		Source:      source,
-		Provider:    prov.Slug,
-		InstalledAt: time.Now(),
-	})
-
-	return nil
+	placement, err := installer.PlaceHook(ref.Item, h, prov, opts.ProjectRoot, settingsPath, scriptsDir, inst, source, installer.ScanOptions{Force: opts.Force})
+	return placement.Notices, err
 }
 
 // injectSessionEndHook appends a session-end hook that runs

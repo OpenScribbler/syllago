@@ -567,7 +567,8 @@ func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
 		Path: itemDir,
 	}
 
-	result, copied, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	destDir := filepath.Join(t.TempDir(), "good-hook")
+	result, copied, err := resolveHookScripts(matcherGroup, item, destDir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -581,9 +582,7 @@ func TestResolveHookScripts_ValidRelativePath(t *testing.T) {
 	}
 
 	// Verify the destination script has 0700 permissions
-	home, _ := os.UserHomeDir()
-	destScript := filepath.Join(home, ".syllago", "hooks", "good-hook", "lint.sh")
-	t.Cleanup(func() { os.RemoveAll(filepath.Join(home, ".syllago", "hooks", "good-hook")) })
+	destScript := filepath.Join(destDir, "lint.sh")
 
 	info, statErr := os.Stat(destScript)
 	if statErr != nil {
@@ -640,7 +639,8 @@ func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 		Path: itemDir,
 	}
 
-	result, copied, err := resolveHookScripts(matcherGroup, item, t.TempDir())
+	destDir := filepath.Join(t.TempDir(), "interp-hook")
+	result, copied, err := resolveHookScripts(matcherGroup, item, destDir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -652,10 +652,6 @@ func TestResolveHookScripts_InterpreterPrefix(t *testing.T) {
 	if string(result) == string(matcherGroup) {
 		t.Error("expected command to be rewritten, but it was unchanged")
 	}
-
-	home, _ := os.UserHomeDir()
-	destDir := filepath.Join(home, ".syllago", "hooks", "interp-hook")
-	t.Cleanup(func() { os.RemoveAll(destDir) })
 
 	destScript := filepath.Join(destDir, "check.sh")
 	if _, statErr := os.Stat(destScript); statErr != nil {

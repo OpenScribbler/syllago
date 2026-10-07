@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/config"
@@ -19,7 +20,7 @@ type PlannedAction struct {
 	Name    string
 	Action  string // "create-symlink", "merge-hook", "merge-mcp", "skip-exists", "skip-unsupported", "error-conflict"
 	Detail  string // human-readable path or description
-	Problem string // non-empty if Action == "error-conflict" or "skip-unsupported"
+	Problem string // non-empty if Action == "error-conflict" or "skip-unsupported", or for a "merge-hook" with high-severity scanner findings
 }
 
 // Preview computes all actions without modifying any files.
@@ -171,11 +172,33 @@ func previewHook(ref ResolvedRef, prov provider.Provider, inst *installer.Instal
 	}
 
 	return PlannedAction{
-		Type:   ref.Type,
-		Name:   ref.Name,
-		Action: "merge-hook",
-		Detail: fmt.Sprintf("merge hook %s into settings.json", ref.Name),
+		Type:    ref.Type,
+		Name:    ref.Name,
+		Action:  "merge-hook",
+		Detail:  fmt.Sprintf("merge hook %s into settings.json", ref.Name),
+		Problem: highFindings(ref.Item.Path),
 	}
+}
+
+// highFindings describes the high-severity findings the built-in scanner
+// reports for a hook item, which the apply refuses unless forced. It
+// returns "" when there are none.
+func highFindings(itemPath string) string {
+	itemDir := itemPath
+	if fi, err := os.Stat(itemPath); err == nil && !fi.IsDir() {
+		itemDir = filepath.Dir(itemPath)
+	}
+	result, _ := converter.RunScanChain(itemDir, nil)
+	var found []string
+	for _, f := range result.Findings {
+		if strings.EqualFold(f.Severity, "high") {
+			found = append(found, fmt.Sprintf("%s in %s", f.Description, f.File))
+		}
+	}
+	if len(found) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("high-severity scanner findings: %s; apply with --force to place it anyway", strings.Join(found, ", "))
 }
 
 // hookEvent reads the event name from a hook item's hook.json. Returns
