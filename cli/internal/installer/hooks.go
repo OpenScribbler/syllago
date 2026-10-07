@@ -759,6 +759,13 @@ func copyHookItem(itemDir, destDir string) error {
 			return err
 		}
 		dest := filepath.Join(destDir, rel)
+		// An earlier install can leave a file where this version has a
+		// directory, or the reverse, which would block the copy.
+		if fi, err := os.Lstat(dest); err == nil && fi.IsDir() != d.IsDir() {
+			if err := os.RemoveAll(dest); err != nil {
+				return err
+			}
+		}
 		switch {
 		case d.IsDir():
 			return os.MkdirAll(dest, 0755)

@@ -272,6 +272,42 @@ func TestCheckHook_RefusesAScriptTheCopyCannotRead(t *testing.T) {
 	}
 }
 
+// Reinstalling into a scripts directory an earlier version left replaces
+// entries whose kind changed: a file or link that became a directory, and
+// a directory that became a file.
+func TestCopyHookItem_ReplacesEntriesWhoseKindChanged(t *testing.T) {
+	v1 := t.TempDir()
+	os.WriteFile(filepath.Join(v1, "helpers"), []byte("v1"), 0644)
+	os.WriteFile(filepath.Join(v1, "a.sh"), []byte("v1"), 0644)
+	os.MkdirAll(filepath.Join(v1, "lib"), 0755)
+	os.WriteFile(filepath.Join(v1, "lib", "x.sh"), []byte("v1"), 0644)
+	if err := os.Symlink("a.sh", filepath.Join(v1, "ln")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	v2 := t.TempDir()
+	os.MkdirAll(filepath.Join(v2, "helpers"), 0755)
+	os.WriteFile(filepath.Join(v2, "helpers", "h.sh"), []byte("v2"), 0644)
+	os.WriteFile(filepath.Join(v2, "lib"), []byte("v2"), 0644)
+	os.MkdirAll(filepath.Join(v2, "ln"), 0755)
+	os.WriteFile(filepath.Join(v2, "ln", "y.sh"), []byte("v2"), 0644)
+
+	destDir := t.TempDir()
+	if err := copyHookItem(v1, destDir); err != nil {
+		t.Fatalf("v1 copy: %v", err)
+	}
+	if err := copyHookItem(v2, destDir); err != nil {
+		t.Fatalf("v2 copy: %v", err)
+	}
+	for _, rel := range []string{"helpers/h.sh", "lib", "ln/y.sh"} {
+		if got, _ := os.ReadFile(filepath.Join(destDir, rel)); string(got) != "v2" {
+			t.Errorf("%s = %q, want v2", rel, got)
+		}
+	}
+	if got, _ := os.ReadFile(filepath.Join(destDir, "a.sh")); string(got) != "v1" {
+		t.Errorf("a.sh, the old link's target, = %q, want it left as v1", got)
+	}
+}
+
 // A single-file hook's script replaces a symlink an earlier install of
 // the same name left in its scripts directory, without writing through it.
 func TestResolveHookScripts_SingleFileReplacesAStaleLink(t *testing.T) {
