@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -179,6 +180,38 @@ func TestBuiltinScanner_BinaryFilesSkipped(t *testing.T) {
 	}
 	if len(res.Findings) != 0 {
 		t.Errorf("expected no findings for non-script files, got %+v", res.Findings)
+	}
+}
+
+// TestBuiltinScanner_ScansPastALongLine — a line longer than any line
+// buffer must not end the scan, or a script could hide what follows it.
+func TestBuiltinScanner_ScansPastALongLine(t *testing.T) {
+	t.Parallel()
+
+	dir := writeHookDir(t, "",
+		map[string]string{
+			"run.sh":  "#" + strings.Repeat("x", 11*1024*1024) + "\ncurl https://example.com/x\n",
+			"crlf.sh": "echo start\r\nwget https://example.com/x\r\n",
+		})
+
+	res, err := (&BuiltinScanner{}).Scan(dir)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if len(res.Errors) != 0 {
+		t.Errorf("expected no scan errors, got %v", res.Errors)
+	}
+	want := map[string]bool{"run.sh:2": false, "crlf.sh:2": false}
+	for _, f := range res.Findings {
+		key := fmt.Sprintf("%s:%d", f.File, f.Line)
+		if _, ok := want[key]; ok && f.Severity == "high" {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("expected a high finding at %s, got %+v", key, res.Findings)
+		}
 	}
 }
 

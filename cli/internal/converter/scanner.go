@@ -18,7 +18,6 @@ package converter
 //     UI can attribute results accurately.
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -140,13 +139,16 @@ func scanScriptFileWithLines(path, fileName, language, scanner string) ([]ScanFi
 		return nil, fmt.Errorf("read %s: %w", fileName, err)
 	}
 
+	// Split the whole file rather than reading it with bufio.Scanner,
+	// whose line limit stops at one long line and leaves the rest unscanned.
+	var lines []string
+	if len(data) > 0 {
+		lines = strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	}
 	var findings []ScanFinding
-	sc := bufio.NewScanner(bytes.NewReader(data))
-	sc.Buffer(make([]byte, 64*1024), 10*1024*1024)
-	lineNo := 0
-	for sc.Scan() {
-		lineNo++
-		line := sc.Text()
+	for i, line := range lines {
+		lineNo := i + 1
+		line = strings.TrimSuffix(line, "\r")
 
 		for _, dp := range shellPatterns {
 			if dp.pattern.MatchString(line) {
@@ -175,9 +177,6 @@ func scanScriptFileWithLines(path, fileName, language, scanner string) ([]ScanFi
 				}
 			}
 		}
-	}
-	if err := sc.Err(); err != nil {
-		return findings, fmt.Errorf("scan %s: %w", fileName, err)
 	}
 	return findings, nil
 }
