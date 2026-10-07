@@ -387,6 +387,9 @@ func TestResolveHookScripts_RunsAnInItemSymlinkByItsOwnName(t *testing.T) {
 		"bash ./bin/run.sh": filepath.Join("lib", "run.sh"),
 	} {
 		destDir := t.TempDir()
+		// A file an earlier install left at the uncopied name is not run.
+		os.MkdirAll(filepath.Join(destDir, "bin"), 0755)
+		os.WriteFile(filepath.Join(destDir, "bin", "run.sh"), []byte("stale"), 0755)
 		got, _, err := resolveHookCommandScript(cmd, catalog.ContentItem{Name: "linked", Path: itemDir}, destDir)
 		if err != nil {
 			t.Fatal(err)
@@ -424,6 +427,25 @@ func TestHookScriptRef_AcceptsADotDotPrefixedDirectory(t *testing.T) {
 	os.WriteFile(filepath.Join(itemDir, "..cache", "run.sh"), []byte("echo hi"), 0755)
 	if _, _, rel, err := hookScriptRef(itemDir, "cached", "bash ./..cache/run.sh"); err != nil || rel != filepath.Join("..cache", "run.sh") {
 		t.Fatalf("hookScriptRef = %q, %v; want ..cache/run.sh inside the item", rel, err)
+	}
+}
+
+// A script reached through a symlink is scanned under the name the
+// command runs it by, since the scanner picks its language by that name.
+func TestPlaceHook_ScansASymlinkedScriptUnderTheNameItRunsBy(t *testing.T) {
+	provDir := t.TempDir()
+	os.WriteFile(filepath.Join(provDir, "payload.sh"), []byte(`fetch("https://example.com/x")`), 0644)
+	if err := os.Symlink("payload.sh", filepath.Join(provDir, "run.js")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	cmd := "node ./run.js"
+	os.WriteFile(filepath.Join(provDir, "fmt.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"`+cmd+`"}}]}`), 0644)
+	item := catalog.ContentItem{Name: "fmt", Type: catalog.Hooks, Path: filepath.Join(provDir, "fmt.json")}
+	h := converter.Hook{Event: "PreToolUse", Handler: converter.Handler{Type: "command", Command: cmd}}
+	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
+	_, err := PlaceHook(item, h, prov, t.TempDir(), filepath.Join(t.TempDir(), "settings.json"), t.TempDir(), &Installed{}, "export", ScanOptions{})
+	if err == nil || !strings.Contains(err.Error(), "high-severity") {
+		t.Errorf("got %v, want a high-severity refusal", err)
 	}
 }
 
@@ -488,9 +510,14 @@ func TestHookScriptsDir_SeparatesProviders(t *testing.T) {
 // named.
 func TestPlaceHook_ScansASingleFileManifestUnderAnyName(t *testing.T) {
 	prov := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
-	for _, cmd := range []string{"curl https://example.com/x", "node ./hook.json && curl https://example.com/x"} {
+	for _, cmd := range []string{"curl https://example.com/x", "node ./hook.json && curl https://example.com/x", "bash ./hook.json/run.sh && curl https://example.com/x"} {
 		provDir := t.TempDir()
 		os.WriteFile(filepath.Join(provDir, "hook.json"), []byte("{}"), 0644)
+		if strings.Contains(cmd, "hook.json/") {
+			os.Remove(filepath.Join(provDir, "hook.json"))
+			os.MkdirAll(filepath.Join(provDir, "hook.json"), 0755)
+			os.WriteFile(filepath.Join(provDir, "hook.json", "run.sh"), []byte("echo hi"), 0755)
+		}
 		manifest := `{"spec":"hooks/0.1","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"` + cmd + `"}}]}`
 		os.WriteFile(filepath.Join(provDir, "fmt.txt"), []byte(manifest), 0644)
 		item := catalog.ContentItem{Name: "fmt", Type: catalog.Hooks, Path: filepath.Join(provDir, "fmt.txt")}

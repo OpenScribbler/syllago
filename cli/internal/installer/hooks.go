@@ -514,9 +514,11 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		// reached through an in-item symlink finds the files beside that
 		// name. The resolved path stands in when that name was not copied:
 		// one through a directory symlink, or one that leaves the item and
-		// comes back.
+		// comes back. The test reads the item, not destDir, which can hold
+		// files an earlier install left.
 		if entry, err := filepath.Rel(itemDir, filepath.Join(itemDir, ref)); err == nil && !singleFile && entry != ".." && !strings.HasPrefix(entry, ".."+string(filepath.Separator)) {
-			if fi, err := os.Lstat(filepath.Join(destDir, entry)); err == nil && fi.Mode().IsRegular() {
+			parent := filepath.Join(itemDir, filepath.Dir(entry))
+			if resolved, err := filepath.EvalSymlinks(parent); err == nil && resolved == parent {
 				destPath = filepath.Join(destDir, entry)
 			}
 		}
@@ -633,32 +635,46 @@ func hookScanDir(item catalog.ContentItem, cmd string) (string, func(), error) {
 	if !isSingleFileHook(item) {
 		return itemDir, func() {}, nil
 	}
-	_, scriptPath, rel, err := hookScriptRef(itemDir, item.Name, cmd)
+	ref, scriptPath, rel, err := hookScriptRef(itemDir, item.Name, cmd)
 	if err != nil {
 		return "", nil, err
+	}
+	// The scanner picks a script's language by its file name, so a script
+	// reached through a symlink is staged under the name the command gave
+	// it as well as under its target's, as a directory scan would see it.
+	var scripts []string
+	if scriptPath != "" {
+		if _, statErr := os.Stat(scriptPath); statErr == nil {
+			scripts = append(scripts, rel)
+			if entry, err := filepath.Rel(itemDir, filepath.Join(itemDir, ref)); err == nil && entry != rel && entry != ".." && !strings.HasPrefix(entry, ".."+string(filepath.Separator)) {
+				scripts = append(scripts, entry)
+			}
+		}
+	}
+	// The scanner reads hook config only from .json files, so the manifest
+	// is staged under a .json name whatever the item calls it, and under
+	// one no staged script path starts with.
+	taken := make(map[string]bool)
+	for _, p := range scripts {
+		taken[strings.SplitN(filepath.ToSlash(p), "/", 2)[0]] = true
+	}
+	manifest := "hook.json"
+	for i := 1; taken[manifest]; i++ {
+		manifest = fmt.Sprintf("hook-%d.json", i)
 	}
 	stage, err := os.MkdirTemp("", "syllago-hook-scan-")
 	if err != nil {
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 	}
 	cleanup := func() { os.RemoveAll(stage) }
-	// The scanner reads hook config only from .json files, so the manifest
-	// is staged under a .json name whatever the item calls it, and under
-	// one the script does not take.
-	manifest := "hook.json"
-	if rel == manifest {
-		manifest = "hook-manifest.json"
-	}
 	if err := copyFile(item.Path, filepath.Join(stage, manifest)); err != nil {
 		cleanup()
 		return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 	}
-	if scriptPath != "" {
-		if _, statErr := os.Stat(scriptPath); statErr == nil {
-			if err := copyFile(scriptPath, filepath.Join(stage, rel)); err != nil {
-				cleanup()
-				return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
-			}
+	for _, p := range scripts {
+		if err := copyFile(scriptPath, filepath.Join(stage, p)); err != nil {
+			cleanup()
+			return "", nil, fmt.Errorf("staging hook %q for its scan: %w", item.Name, err)
 		}
 	}
 	return stage, cleanup, nil
