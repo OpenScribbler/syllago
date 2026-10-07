@@ -34,6 +34,9 @@ func TestExtractScriptRef(t *testing.T) {
 		{"bash tilde", "bash ~/.claude/hooks/lint.sh", "~/.claude/hooks/lint.sh"},
 		{"sh absolute", "sh /opt/hooks/check.sh", "/opt/hooks/check.sh"},
 		{"node relative", "node ./checker.js", "./checker.js"},
+		{"bundled interpreter", "./bash ./x.sh", "./bash"},
+		{"bundled interpreter dotdot", "../bin/node ./x.js", "../bin/node"},
+		{"absolute interpreter", "/usr/bin/bash ./x.sh", "./x.sh"},
 		{"python tilde", "python ~/scripts/analyze.py", "~/scripts/analyze.py"},
 		{"bash with args", "bash ~/.claude/hooks/lint.sh --mode strict", "~/.claude/hooks/lint.sh"},
 

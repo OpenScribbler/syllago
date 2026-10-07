@@ -193,21 +193,11 @@ func TestPreview_NewHook(t *testing.T) {
 	repoRoot := t.TempDir()
 	os.MkdirAll(filepath.Join(repoRoot, ".syllago"), 0755)
 
-	prov := provider.Provider{
-		Name: "test-provider",
-		Slug: "test",
-		InstallDir: func(home string, ct catalog.ContentType) string {
-			return ""
-		},
-	}
-
 	refs := []ResolvedRef{
-		{Type: catalog.Hooks, Name: "new-hook", Item: catalog.ContentItem{
-			Name: "new-hook", Type: catalog.Hooks,
-		}},
+		{Type: catalog.Hooks, Name: "new-hook", Item: previewHookItem(t, "new-hook", "after_tool_execute")},
 	}
 
-	actions, err := Preview(refs, prov, repoRoot, t.TempDir(), nil)
+	actions, err := Preview(refs, provider.ClaudeCode, repoRoot, t.TempDir(), nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -293,7 +283,7 @@ func TestPreview_OtherProviderRecordIsNew(t *testing.T) {
 	}
 
 	refs := []ResolvedRef{
-		{Type: catalog.Hooks, Name: "my-hook", Item: catalog.ContentItem{Name: "my-hook", Type: catalog.Hooks}},
+		{Type: catalog.Hooks, Name: "my-hook", Item: previewHookItem(t, "my-hook", "after_tool_execute")},
 		{Type: catalog.MCP, Name: "srv", Item: cat.Items[0]},
 	}
 
@@ -395,10 +385,9 @@ func TestPreview_HookUnsupportedEvent(t *testing.T) {
 }
 
 // TestPreview_HookInvalidEvent: a hook with an unknown/malformed event name is
-// NOT plannable as skip-unsupported — it must stay a merge-hook action so
-// applyHook raises the hard injection-guard error, which fires even under
-// --skip-unsupported. Only real-but-unmapped events are skippable
-// (syllago-xqlc1, codex review finding).
+// NOT plannable as skip-unsupported — it is a conflict, which refuses the
+// apply before it changes anything, even under --skip-unsupported. Only
+// real-but-unmapped events are skippable (syllago-xqlc1, codex review finding).
 func TestPreview_HookInvalidEvent(t *testing.T) {
 	t.Parallel()
 	repoRoot := t.TempDir()
@@ -427,7 +416,54 @@ func TestPreview_HookInvalidEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if actions[0].Action != "merge-hook" {
-		t.Errorf("invalid event should stay merge-hook (so applyHook errors), got %s", actions[0].Action)
+	if actions[0].Action != "error-conflict" || !strings.Contains(actions[0].Problem, "unknown hook event") {
+		t.Errorf("invalid event should refuse the apply before it changes anything, got %s: %s", actions[0].Action, actions[0].Problem)
+	}
+}
+
+// previewHookItem writes a hook item whose manifest runs echo on event.
+func previewHookItem(t *testing.T, name, event string) catalog.ContentItem {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), name)
+	os.MkdirAll(dir, 0755)
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"`+event+`","handler":{"type":"command","command":"echo test"}}]}`), 0644)
+	return catalog.ContentItem{Name: name, Type: catalog.Hooks, Path: dir}
+}
+
+// A hook the provider cannot hold, or a manifest syllago cannot read, is
+// refused in preview, so a multi-provider apply stops before any provider
+// changes.
+func TestPreview_RefusesAHookThatCannotMerge(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, hookJSON, want string
+		prov                 provider.Provider
+	}{
+		{"prompt handler on crush", `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"prompt","prompt":"Is this safe?"}}]}`, "prompt-hook", provider.Crush},
+		{"two hooks in one manifest", `{"spec":"hooks/0.1","hooks":[{"event":"before_tool_execute","handler":{"type":"command","command":"echo a"}},{"event":"before_tool_execute","handler":{"type":"command","command":"echo b"}}]}`, "must contain exactly 1", provider.ClaudeCode},
+	} {
+		dir := filepath.Join(t.TempDir(), "prompt-hook")
+		os.MkdirAll(dir, 0755)
+		os.WriteFile(filepath.Join(dir, "hook.json"), []byte(tc.hookJSON), 0644)
+		refs := []ResolvedRef{{Type: catalog.Hooks, Name: "prompt-hook", Item: catalog.ContentItem{Name: "prompt-hook", Type: catalog.Hooks, Path: dir}}}
+
+		actions, err := Preview(refs, tc.prov, t.TempDir(), t.TempDir(), nil)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.name, err)
+		}
+		if actions[0].Action != "error-conflict" || !strings.Contains(actions[0].Problem, tc.want) {
+			t.Errorf("%s: got %s: %s, want an error-conflict naming %q", tc.name, actions[0].Action, actions[0].Problem, tc.want)
+		}
+	}
+}
+
+// A loadout hook under a spec the scanner cannot read is refused rather
+// than applied unscanned.
+func TestHookManifest_RefusesASpecTheScannerCannotRead(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "hook.json"), []byte(`{"spec":"hooks/0.2","hooks":[{"event":"PreToolUse","handler":{"type":"command","command":"echo hi"}}]}`), 0644)
+	if _, err := hookManifest(dir); err == nil || !strings.Contains(err.Error(), "unsupported spec") {
+		t.Errorf("hookManifest = %v, want an unsupported-spec refusal", err)
 	}
 }

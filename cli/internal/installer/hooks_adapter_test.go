@@ -406,8 +406,8 @@ func TestInstall_HooksAlwaysEncodeThroughTheAdapter(t *testing.T) {
 		t.Errorf("pi status after install: got %v, want Installed", status)
 	}
 
-	if _, err := Install(item, provider.Codex, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil || !strings.Contains(err.Error(), "no encoder") {
-		t.Errorf("Install to codex: want a no-encoder error, got %v", err)
+	if _, err := Install(item, provider.Codex, projectRoot, MethodSymlink, "", ScanOptions{}); err == nil || !strings.Contains(err.Error(), "hook install not supported for codex") {
+		t.Errorf("Install to codex: want a not-supported error, got %v", err)
 	}
 	if entries, _ := os.ReadDir(filepath.Join(home, ".codex")); len(entries) != 0 {
 		t.Errorf("codex install should place nothing, found %d entries", len(entries))

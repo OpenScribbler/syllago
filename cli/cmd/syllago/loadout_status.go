@@ -59,14 +59,25 @@ func runLoadoutStatus(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(output.Writer, "Active loadout: %s (%s)\n", manifest.LoadoutName, manifest.Mode)
 	fmt.Fprintf(output.Writer, "Applied: %s\n", manifest.CreatedAt.Format("2006-01-02 15:04:05"))
 
-	if len(manifest.Symlinks) > 0 {
-		if manifest.Symlinks[0].Copied {
+	// A symlink apply still copies hook scripts, so one manifest can hold
+	// both kinds.
+	for _, copied := range []bool{false, true} {
+		var lines []string
+		for _, s := range manifest.Symlinks {
+			if s.Copied == copied {
+				lines = append(lines, fmt.Sprintf("  %s -> %s\n", s.Path, s.Target))
+			}
+		}
+		if len(lines) == 0 {
+			continue
+		}
+		if copied {
 			fmt.Fprintf(output.Writer, "\nInstalled copies:\n")
 		} else {
 			fmt.Fprintf(output.Writer, "\nInstalled symlinks:\n")
 		}
-		for _, s := range manifest.Symlinks {
-			fmt.Fprintf(output.Writer, "  %s -> %s\n", s.Path, s.Target)
+		for _, l := range lines {
+			fmt.Fprint(output.Writer, l)
 		}
 	}
 

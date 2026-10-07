@@ -54,6 +54,7 @@ func init() {
 	loadoutApplyCmd.Flags().String("to", "", "Target provider (overrides manifest provider; defaults to claude-code if unset)")
 	loadoutApplyCmd.Flags().String("method", "symlink", "Install method: symlink (default) or copy")
 	loadoutApplyCmd.Flags().Bool("skip-unsupported", false, "Skip hooks whose events the target provider does not support instead of failing")
+	loadoutApplyCmd.Flags().Bool("force", false, "Apply hooks past high-severity scanner findings")
 	loadoutCmd.AddCommand(loadoutApplyCmd)
 }
 
@@ -195,6 +196,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		method = installer.MethodCopy
 	}
 	skipUnsupported, _ := cmd.Flags().GetBool("skip-unsupported")
+	force, _ := cmd.Flags().GetBool("force")
 
 	opts := loadout.ApplyOptions{
 		Mode:            mode,
@@ -203,6 +205,7 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 		RepoRoot:        root,
 		Resolver:        resolver,
 		SkipUnsupported: skipUnsupported,
+		Force:           force,
 	}
 
 	// Multi-provider path: manifest declares providers[] and --to is not set.
@@ -220,6 +223,28 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog, opts loadout.ApplyOptions, effectiveProviders []string, mode string, skipUnsupported bool) error {
 	totalActions := 0
 	allAutoRevertArmed := true
+	// Every provider is checked against the state before the apply, and
+	// any refusal stops it before any provider changes. All providers'
+	// refusals are reported together, so one retry with the flags they
+	// name starts from a clean state. A conflict one provider's apply
+	// creates for the next is not caught here.
+	if mode != "preview" {
+		var refused []string
+		var refusals []error
+		for _, slug := range effectiveProviders {
+			if p := findProviderBySlug(slug); p != nil {
+				if err := loadout.Check(manifest, cat, *p, opts); err != nil {
+					refused = append(refused, slug)
+					refusals = append(refusals, fmt.Errorf("%s: %w", slug, err))
+				}
+			}
+		}
+		if err := errors.Join(refusals...); err != nil {
+			return output.NewStructuredErrorDetail(output.ErrInstallConflict,
+				fmt.Sprintf("applying loadout to %s", strings.Join(refused, ", ")),
+				loadoutApplyHint(err), err.Error())
+		}
+	}
 	for _, slug := range effectiveProviders {
 		p := findProviderBySlug(slug)
 		if p == nil {
@@ -258,6 +283,7 @@ func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog,
 	telemetry.Enrich("mode", mode)
 	telemetry.Enrich("action_count", totalActions)
 	telemetry.Enrich("skip_unsupported", skipUnsupported)
+	telemetry.Enrich("force", opts.Force)
 	return nil
 }
 
@@ -313,6 +339,7 @@ func applyLoadoutSingleProvider(manifest *loadout.Manifest, cat *catalog.Catalog
 	telemetry.Enrich("mode", mode)
 	telemetry.Enrich("action_count", len(result.Actions))
 	telemetry.Enrich("skip_unsupported", skipUnsupported)
+	telemetry.Enrich("force", opts.Force)
 	return nil
 }
 
@@ -333,8 +360,15 @@ func printTryModeFooter(autoRevertArmed bool, subject string) {
 // hooks have a dedicated escape hatch, everything else is a conflict.
 func loadoutApplyHint(err error) string {
 	var uhErr *loadout.UnsupportedHooksError
-	if errors.As(err, &uhErr) {
+	var sfErr *loadout.ScannerFindingsError
+	unsupported, flagged := errors.As(err, &uhErr), errors.As(err, &sfErr)
+	switch {
+	case unsupported && flagged:
+		return "Review the findings, then re-run with --skip-unsupported --force to apply the compatible items anyway"
+	case unsupported:
 		return "Re-run with --skip-unsupported to apply the compatible items"
+	case flagged:
+		return "Review the findings, then re-run with --force to apply anyway"
 	}
 	return "Check error details and resolve conflicts"
 }

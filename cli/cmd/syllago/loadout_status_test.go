@@ -115,6 +115,28 @@ func TestRunLoadoutStatus(t *testing.T) {
 			},
 		},
 		{
+			name: "symlink apply with a hook lists its symlinks and its copy apart",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: filepath.Join(root, "linked-rule"), Target: filepath.Join(root, "src")},
+						{Path: filepath.Join(root, "hook-scripts"), Target: filepath.Join(root, "hook"), Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, out string) {
+				t.Helper()
+				links, copies := strings.Index(out, "Installed symlinks"), strings.Index(out, "Installed copies")
+				rule, hook := strings.Index(out, "linked-rule"), strings.Index(out, "hook-scripts")
+				if links < 0 || copies < 0 || links >= rule || rule >= copies || copies >= hook {
+					t.Errorf("want the rule under symlinks and the hook scripts under copies, got: %s", out)
+				}
+			},
+		},
+		{
 			name: "active snapshot JSON output",
 			setup: func(t *testing.T, root string) {
 				writeSnapshot(t, root, &snapshot.SnapshotManifest{

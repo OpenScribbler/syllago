@@ -280,27 +280,28 @@ func ApplyCanonicalHook(prov provider.Provider, h converter.Hook, path, resolved
 	}, nil
 }
 
-// readSingleManifestHook reads a canonical hook.json (hooks/0.1 Manifest) and
-// returns its single hook. If path is a directory, hook.json inside it is used.
+// readSingleManifest reads a canonical hook.json and returns its manifest,
+// which holds a single hook. If path is a directory, hook.json inside it
+// is used.
 // Syllago-written hook.json always contains exactly one hook.
-func readSingleManifestHook(path string) (converter.Hook, error) {
+func readSingleManifest(path string) (converter.Manifest, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return converter.Hook{}, err
+		return converter.Manifest{}, err
 	}
 	if fi.IsDir() {
 		path = filepath.Join(path, "hook.json")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return converter.Hook{}, err
+		return converter.Manifest{}, err
 	}
 	m, err := converter.ParseManifest(data)
 	if err != nil {
-		return converter.Hook{}, err
+		return converter.Manifest{}, err
 	}
 	if len(m.Hooks) != 1 {
-		return converter.Hook{}, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(m.Hooks))
+		return converter.Manifest{}, fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(m.Hooks))
 	}
-	return m.Hooks[0], nil
+	return m, nil
 }

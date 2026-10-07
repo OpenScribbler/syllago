@@ -426,6 +426,8 @@ func TestDetectHookFormat(t *testing.T) {
 		{"nested", `{"hooks":{"PreToolUse":[]}}`, "nested"},
 		{"flat with matcher", `{"event":"PostToolUse","matcher":"Bash","hooks":[]}`, "flat"},
 		{"invalid json", `not json`, "nested"},
+		{"manifest", `{"spec":"hooks/0.1","hooks":[]}`, "manifest"},
+		{"manifest with a capitalized key", `{"Spec":"hooks/0.1","hooks":[]}`, "manifest"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

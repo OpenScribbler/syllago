@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -182,10 +183,43 @@ func TestBuiltinScanner_BinaryFilesSkipped(t *testing.T) {
 	}
 }
 
-// TestBuiltinScanner_NestedDirsIgnored — subdirectories in the hook dir are
-// not walked. Supporting nested scripts is out of scope (the hook layout is
-// flat), and recursing risks surprising users who stash unrelated files.
-func TestBuiltinScanner_NestedDirsIgnored(t *testing.T) {
+// TestBuiltinScanner_ScansPastALongLine — a line longer than any line
+// buffer must not end the scan, or a script could hide what follows it.
+func TestBuiltinScanner_ScansPastALongLine(t *testing.T) {
+	t.Parallel()
+
+	dir := writeHookDir(t, "",
+		map[string]string{
+			"run.sh":  "#" + strings.Repeat("x", 11*1024*1024) + "\ncurl https://example.com/x\n",
+			"crlf.sh": "echo start\r\nwget https://example.com/x\r\n",
+		})
+
+	res, err := (&BuiltinScanner{}).Scan(dir)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if len(res.Errors) != 0 {
+		t.Errorf("expected no scan errors, got %v", res.Errors)
+	}
+	want := map[string]bool{"run.sh:2": false, "crlf.sh:2": false}
+	for _, f := range res.Findings {
+		key := fmt.Sprintf("%s:%d", f.File, f.Line)
+		if _, ok := want[key]; ok && f.Severity == "high" {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("expected a high finding at %s, got %+v", key, res.Findings)
+		}
+	}
+}
+
+// TestBuiltinScanner_ScansWhatAnInstallReads — an install copies the whole
+// hook directory and reads its manifest through any symlink, so scripts in
+// subdirectories, a manifest under another JSON name, and a symlinked
+// manifest are all scanned.
+func TestBuiltinScanner_ScansWhatAnInstallReads(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -196,13 +230,37 @@ func TestBuiltinScanner_NestedDirsIgnored(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(nested, "evil.sh"), []byte("curl https://evil\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-
-	res, err := (&BuiltinScanner{}).Scan(dir)
-	if err != nil {
-		t.Fatalf("Scan: %v", err)
+	manifest := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"wget https://evil"}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "custom-hook.json"), []byte(manifest), 0644); err != nil {
+		t.Fatal(err)
 	}
-	if len(res.Findings) != 0 {
-		t.Errorf("expected no findings for nested dirs; got %+v", res.Findings)
+	// Reading hook.json follows a symlink, so the scan follows it too.
+	outside := filepath.Join(t.TempDir(), "payload.data")
+	payload := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"curl https://elsewhere"}}]}`
+	if err := os.WriteFile(outside, []byte(payload), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "hook.json")); err != nil {
+		t.Fatal(err)
+	}
+	// A hook directory reached through a symlink is walked at its target.
+	linkedDir := filepath.Join(t.TempDir(), "linked-hook")
+	if err := os.Symlink(dir, linkedDir); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, root := range []string{dir, linkedDir} {
+		res, err := (&BuiltinScanner{}).Scan(root)
+		if err != nil {
+			t.Fatalf("Scan(%s): %v", root, err)
+		}
+		files := map[string]bool{}
+		for _, f := range res.Findings {
+			files[f.File] = true
+		}
+		if !files["nested/evil.sh"] || !files["custom-hook.json"] || !files["hook.json"] {
+			t.Errorf("Scan(%s) findings by file = %v, want nested/evil.sh, custom-hook.json and hook.json", root, files)
+		}
 	}
 }
 

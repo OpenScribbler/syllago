@@ -122,6 +122,18 @@ func HookDataFromManifest(m Manifest) ([]HookData, error) {
 	return out, nil
 }
 
+// CheckInstallSpec refuses a manifest whose spec the security scanner
+// cannot read: the scanner reads only SpecVersion, so a hook under any
+// other spec would install unscanned. ParseManifest itself accepts any
+// spec, so uninstall and status still read a hook installed before this
+// check.
+func CheckInstallSpec(m Manifest) error {
+	if m.Spec != SpecVersion {
+		return fmt.Errorf("unsupported spec %q (expected %q)", m.Spec, SpecVersion)
+	}
+	return nil
+}
+
 // ParseManifest parses a hook.json payload that conforms to the spec shape.
 // Legacy flat HookData files are rejected — callers that need legacy support
 // must dispatch on DetectHookFormat first.

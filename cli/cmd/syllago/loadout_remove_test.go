@@ -122,6 +122,28 @@ func TestRunLoadoutRemove(t *testing.T) {
 			},
 		},
 		{
+			name: "symlink apply with a hook lists its symlinks and its copy apart",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: filepath.Join(root, "already-gone-symlink"), Target: filepath.Join(root, "src")},
+						{Path: filepath.Join(root, "already-gone-hook-scripts"), Target: filepath.Join(root, "hook"), Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, stdout, stderr string) {
+				t.Helper()
+				links, copies := strings.Index(stdout, "Symlinks to remove:"), strings.Index(stdout, "Copies to delete")
+				link, hook := strings.Index(stdout, "already-gone-symlink"), strings.Index(stdout, "already-gone-hook-scripts")
+				if links < 0 || copies < 0 || links >= link || link >= copies || copies >= hook {
+					t.Errorf("want the symlink under symlinks and the hook scripts under copies, got: %s", stdout)
+				}
+			},
+		},
+		{
 			name: "non-auto non-interactive JSON happy path prints result as JSON",
 			setup: func(t *testing.T, root string) {
 				writeSnapshot(t, root, &snapshot.SnapshotManifest{

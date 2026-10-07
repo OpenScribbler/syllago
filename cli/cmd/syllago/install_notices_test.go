@@ -95,10 +95,10 @@ func TestInstallToProvider_NoticeOutputUnchanged(t *testing.T) {
 
 	want := "\n  SECURITY WARNING\n" +
 		"  Hook \"scripted\" references executable script files.\n" +
-		"  Scripts will be copied to ~/.syllago/hooks/scripted/\n\n" +
+		"  Scripts will be copied to ~/.syllago/hooks/claude-code/scripted/\n\n" +
 		"  MEDIUM [hook.json] permission change (chmod) (scanner=builtin)\n" +
 		"  HIGH [hook.json] network request (curl) (scanner=builtin)\n" +
-		"  skip dangerous: hook \"dangerous\" has high-severity security findings; re-run with --force to install anyway\n"
+		"  skip dangerous: hook \"dangerous\" has high-severity security findings (network request (curl) in hook.json); re-run with --force to install anyway\n"
 	if got := stderr.String(); got != want {
 		t.Errorf("stderr changed:\ngot:\n%s\nwant:\n%s", got, want)
 	}

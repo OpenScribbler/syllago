@@ -30,6 +30,22 @@ type ApplyOptions struct {
 	// target provider has no settings key for, instead of failing. Skipped
 	// hooks are reported in ApplyResult.Warnings.
 	SkipUnsupported bool
+
+	// Force applies hooks with high-severity scanner findings, which the
+	// apply otherwise refuses before changing anything.
+	Force bool
+}
+
+// ScannerFindingsError rejects an apply because the loadout contains hooks
+// with high-severity scanner findings. Callers can detect it with
+// errors.As to suggest --force.
+type ScannerFindingsError struct {
+	Problems []string // one "name — problem" line per refused hook
+}
+
+func (e *ScannerFindingsError) Error() string {
+	return fmt.Sprintf("%d hook(s) have high-severity scanner findings:\n  %s",
+		len(e.Problems), strings.Join(e.Problems, "\n  "))
 }
 
 // UnsupportedHooksError rejects an apply because the loadout contains hooks
@@ -60,6 +76,9 @@ type ApplyResult struct {
 // restoreSnapshot is replaced in tests to fail a rollback.
 var restoreSnapshot = snapshot.Restore
 
+// placeHook is replaced in tests to fail a placement the preview passed.
+var placeHook = installer.PlaceHook
+
 // Apply resolves, validates, and applies a loadout to the provider.
 //
 // The sequence is: Resolve -> Validate -> Preview -> Snapshot -> Apply items -> Record.
@@ -75,36 +94,9 @@ var restoreSnapshot = snapshot.Restore
 //   - The SessionEnd hook injected for "try" mode is NOT recorded in installed.json --
 //     it lives only in the backed-up settings.json and gets reverted with the snapshot.
 func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) (*ApplyResult, error) {
-	// Callers that change state hold the install lock across their
-	// active-loadout check and every Apply, so the check stays true.
-	if opts.HomeDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("getting home dir: %w", err)
-		}
-		opts.HomeDir = home
-	}
-
-	// Step 1: Resolve all manifest references to catalog items
-	refs, err := Resolve(manifest, cat, prov.Slug)
+	refs, actions, opts, err := plan(manifest, cat, prov, opts)
 	if err != nil {
-		return nil, fmt.Errorf("resolving references: %w", err)
-	}
-
-	// Step 2: Validate resolved refs
-	issues := Validate(refs, prov)
-	if len(issues) > 0 {
-		msg := "validation failed:"
-		for _, issue := range issues {
-			msg += fmt.Sprintf("\n  %s: %s", issue.Ref.Name, issue.Problem)
-		}
-		return nil, fmt.Errorf("%s", msg)
-	}
-
-	// Step 3: Preview what would happen
-	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir, opts.Resolver)
-	if err != nil {
-		return nil, fmt.Errorf("previewing: %w", err)
+		return nil, err
 	}
 
 	// For preview mode, return immediately
@@ -112,77 +104,13 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		return &ApplyResult{Actions: actions}, nil
 	}
 
-	// Check for conflicts before doing anything
-	for _, a := range actions {
-		if a.Action == "error-conflict" {
-			return nil, fmt.Errorf("conflict: %s %s: %s", a.Type.Label(), a.Name, a.Problem)
-		}
+	filesToBackup, err := refuse(actions, prov, opts)
+	if err != nil {
+		return nil, err
 	}
 
-	// Hooks the provider can't read fail the whole apply unless the caller
-	// opted into a partial one — no silent partial coverage (syllago-xqlc1).
-	var unsupported []string
-	for _, a := range actions {
-		if a.Action == "skip-unsupported" {
-			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
-		}
-	}
-	if len(unsupported) > 0 && !opts.SkipUnsupported {
-		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
-	}
-
-	// Remove deletes what an apply placed, so each path must be one remove
-	// accepts, and no two items may claim the same one.
-	dests := make(map[string]string)
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		if err := checkRemovablePath(a.Detail); err != nil {
-			return nil, fmt.Errorf("placing %s: %w", a.Name, err)
-		}
-		if other, ok := dests[a.Detail]; ok {
-			return nil, fmt.Errorf("conflict: %s and %s in this loadout both install to %s", other, a.Name, a.Detail)
-		}
-		dests[a.Detail] = a.Name
-	}
-	// Nor may one sit inside another: deleting the outer one would take
-	// the inner one with it while the snapshot still recorded it.
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if other, ok := dests[dir]; ok {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
-			}
-		}
-	}
-
-	// Step 4: Collect files to back up and create snapshot. Each placement
-	// is recorded as it is made, so the snapshot starts with none.
-	filesToBackup := collectBackupFiles(actions, prov, opts)
-	// A settings file the apply may create is the snapshot's to delete, so
-	// no item may install over it, around it, or inside it either.
-	writes := make(map[string]bool)
-	for _, f := range filesToBackup {
-		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if other, ok := dests[dir]; ok {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
-			}
-		}
-		writes[filepath.Clean(f)] = true
-	}
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if writes[dir] {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s that the loadout also writes", a.Name, a.Detail, dir)
-			}
-		}
-	}
+	// Step 4: Create the snapshot. Each placement is recorded as it is
+	// made, so the snapshot starts with none.
 	var hookScripts []string
 	for _, a := range actions {
 		if a.Action == "merge-hook" {
@@ -332,6 +260,149 @@ func leftBehind(placed []snapshot.SymlinkRecord, removed []string, recorded []sn
 	return msg
 }
 
+// plan resolves, validates, and previews a loadout, filling opts.HomeDir.
+func plan(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) ([]ResolvedRef, []PlannedAction, ApplyOptions, error) {
+	// Callers that change state hold the install lock across their
+	// active-loadout check and every Apply, so the check stays true.
+	if opts.HomeDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, nil, opts, fmt.Errorf("getting home dir: %w", err)
+		}
+		opts.HomeDir = home
+	}
+
+	// Step 1: Resolve all manifest references to catalog items
+	refs, err := Resolve(manifest, cat, prov.Slug)
+	if err != nil {
+		return nil, nil, opts, fmt.Errorf("resolving references: %w", err)
+	}
+
+	// Step 2: Validate resolved refs
+	issues := Validate(refs, prov)
+	if len(issues) > 0 {
+		msg := "validation failed:"
+		for _, issue := range issues {
+			msg += fmt.Sprintf("\n  %s: %s", issue.Ref.Name, issue.Problem)
+		}
+		return nil, nil, opts, fmt.Errorf("%s", msg)
+	}
+
+	// Step 3: Preview what would happen
+	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir, opts.Resolver)
+	if err != nil {
+		return nil, nil, opts, fmt.Errorf("previewing: %w", err)
+	}
+
+	return refs, actions, opts, nil
+}
+
+// Check runs every refusal Apply makes before it changes anything, without
+// changing anything, whatever opts.Mode says. A caller applying to several
+// providers checks them all first, so a refusal for one leaves the others
+// unapplied too.
+func Check(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) error {
+	_, actions, opts, err := plan(manifest, cat, prov, opts)
+	if err != nil {
+		return err
+	}
+	_, err = refuse(actions, prov, opts)
+	return err
+}
+
+// refuse returns the error that stops an apply of actions before it
+// changes anything, or the files the apply would back up.
+func refuse(actions []PlannedAction, prov provider.Provider, opts ApplyOptions) ([]string, error) {
+	// Check for conflicts before doing anything
+	for _, a := range actions {
+		if a.Action == "error-conflict" {
+			return nil, fmt.Errorf("conflict: %s %s: %s", a.Type.Label(), a.Name, a.Problem)
+		}
+	}
+
+	// Hooks the provider can't read fail the whole apply unless the caller
+	// opted into a partial one — no silent partial coverage (syllago-xqlc1).
+	var unsupported []string
+	for _, a := range actions {
+		if a.Action == "skip-unsupported" {
+			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	var refusals []error
+	if len(unsupported) > 0 && !opts.SkipUnsupported {
+		refusals = append(refusals, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported})
+	}
+
+	// A hook with high-severity scanner findings fails the apply before
+	// anything changes, unless the caller forced it. Both refusals are
+	// reported together, so one re-run can carry both flags.
+	var flagged []string
+	for _, a := range actions {
+		if a.Action == "merge-hook" && a.Problem != "" {
+			flagged = append(flagged, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	if len(flagged) > 0 && !opts.Force {
+		refusals = append(refusals, &ScannerFindingsError{Problems: flagged})
+	}
+	if err := errors.Join(refusals...); err != nil {
+		return nil, err
+	}
+
+	// Remove deletes what an apply placed, so each path must be one remove
+	// accepts, and no two items may claim the same one.
+	dests := make(map[string]string)
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		if err := checkRemovablePath(a.Detail); err != nil {
+			return nil, fmt.Errorf("placing %s: %w", a.Name, err)
+		}
+		if other, ok := dests[a.Detail]; ok {
+			return nil, fmt.Errorf("conflict: %s and %s in this loadout both install to %s", other, a.Name, a.Detail)
+		}
+		dests[a.Detail] = a.Name
+	}
+	// Nor may one sit inside another: deleting the outer one would take
+	// the inner one with it while the snapshot still recorded it.
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
+			}
+		}
+	}
+
+	// Collect the files the snapshot backs up.
+	filesToBackup := collectBackupFiles(actions, prov, opts)
+	// A settings file the apply may create is the snapshot's to delete, so
+	// no item may install over it, around it, or inside it either.
+	writes := make(map[string]bool)
+	for _, f := range filesToBackup {
+		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
+			}
+		}
+		writes[filepath.Clean(f)] = true
+	}
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if writes[dir] {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s that the loadout also writes", a.Name, a.Detail, dir)
+			}
+		}
+	}
+	return filesToBackup, nil
+}
+
 // claim creates dst as an empty file, an empty directory, or the symlink
 // itself, failing if anything is already there, so a placement never
 // writes into something the apply did not make.
@@ -408,7 +479,29 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 			})
 
 		case "merge-hook":
-			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
+			// The hook goes into the user's settings and fires in every
+			// project, so its scripts live under the home directory rather
+			// than in this project, where anything that can write to the
+			// project could change what the hook runs. The directory is
+			// recorded as a placed copy, so remove and rollback delete it.
+			scriptsRoot := filepath.Join(opts.HomeDir, ".syllago", "loadout-hooks")
+			if err := os.MkdirAll(scriptsRoot, 0755); err != nil {
+				return nil, placed, fmt.Errorf("creating %s: %w", scriptsRoot, err)
+			}
+			scriptsDir, err := os.MkdirTemp(scriptsRoot, a.Name+"-")
+			if err != nil {
+				return nil, placed, fmt.Errorf("creating scripts directory for hook %s: %w", a.Name, err)
+			}
+			rec := snapshot.SymlinkRecord{Path: scriptsDir, Target: ref.Item.Path, Copied: true}
+			placed = append(placed, rec)
+			if err := snapshot.AddSymlink(snapshotDir, rec); err != nil {
+				return nil, placed, fmt.Errorf("recording %s: %w", a.Name, err)
+			}
+			notices, err := applyHook(*ref, prov, opts, scriptsDir, inst, source)
+			for _, n := range notices {
+				warnings = append(warnings, n.Message)
+			}
+			if err != nil {
 				return nil, placed, fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
@@ -445,73 +538,30 @@ func settingsPathFor(prov provider.Provider, homeDir string, resolver *config.Pa
 	return installer.HookConfigPath(prov, base)
 }
 
-// applyHook reads a hook JSON file and merges it into the provider's hook
-// config via the provider's converter.HookAdapter. It
-// resolves relative command paths first, then delegates the
-// encode/merge/identity work to installer.ApplyCanonicalHook, recording the
-// result under the loadout's source tag.
-func applyHook(ref ResolvedRef, prov provider.Provider, homeDir string, resolver *config.PathResolver, inst *installer.Installed, source string) error {
-	// Find the hook JSON file in the item directory
-	hookFile := findHookFile(ref.Item.Path)
-	if hookFile == "" {
-		return fmt.Errorf("no hook JSON file found in %s", ref.Item.Path)
-	}
-
-	data, err := os.ReadFile(hookFile)
+// applyHook reads a hook item's hook file and places it through
+// installer.PlaceHook, which scans the item and copies the scripts it runs
+// into scriptsDir, recording the result under the loadout's source tag.
+func applyHook(ref ResolvedRef, prov provider.Provider, opts ApplyOptions, scriptsDir string, inst *installer.Installed, source string) ([]installer.Notice, error) {
+	h, err := hookManifest(ref.Item.Path)
 	if err != nil {
-		return fmt.Errorf("reading hook file: %w", err)
+		return nil, err
 	}
 
-	// Parse the canonical hooks/0.1 Manifest and pull out the single hook it
-	// contains. Loadouts only emit syllago-written hook.json, which always has
-	// exactly one handler per file.
-	manifest, err := converter.ParseManifest(data)
+	// Reject events the provider has no settings key for (syllago-xqlc1).
+	// Apply already gates these via the skip-unsupported preview action;
+	// this is the backstop at the merge point so dead config can never slip
+	// through if the two diverge. PlaceHook validates the event first, so a
+	// malformed one gets the injection-guard error.
+	if converter.IsValidHookEvent(h.Event) && !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
+		return nil, fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, h.Event)
+	}
+
+	settingsPath, err := settingsPathFor(prov, opts.HomeDir, opts.Resolver)
 	if err != nil {
-		return fmt.Errorf("parsing hook manifest: %w", err)
+		return nil, fmt.Errorf("hook %q: %w", ref.Name, err)
 	}
-	if len(manifest.Hooks) != 1 {
-		return fmt.Errorf("hook file has %d hooks; syllago hook.json must contain exactly 1", len(manifest.Hooks))
-	}
-	h := manifest.Hooks[0]
-
-	// Validate before using the event downstream (mirrors installHook M3:
-	// prevents key injection via dots in crafted event names).
-	if !converter.IsValidHookEvent(h.Event) {
-		return fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
-	}
-
-	// Reject events the provider has no settings key for (mirrors installHook,
-	// syllago-xqlc1). Apply already gates these via the skip-unsupported
-	// preview action; this is the defense-in-depth backstop at the actual
-	// merge point so dead config can never slip through if the two diverge.
-	if !converter.ProviderSupportsHookEvent(h.Event, prov.Slug) {
-		return fmt.Errorf("hook %q: %s does not support hook event %q", ref.Name, prov.Name, h.Event)
-	}
-
-	// Resolve relative command paths to absolute before encoding.
-	resolvedCmd := ResolveHookCommand(ref.Item.Path, h.Handler.Command)
-
-	// Merge into the provider's hook file through its adapter.
-	settingsPath, err := settingsPathFor(prov, homeDir, resolver)
-	if err != nil {
-		return fmt.Errorf("hook %q: %w", ref.Name, err)
-	}
-	res, err := installer.ApplyCanonicalHook(prov, h, settingsPath, resolvedCmd)
-	if err != nil {
-		return fmt.Errorf("hook %q: %w", ref.Name, err)
-	}
-
-	inst.Hooks = append(inst.Hooks, installer.InstalledHook{
-		Name:        ref.Name,
-		Event:       res.NativeEvent,
-		GroupHash:   res.GroupHash,
-		Command:     res.Command,
-		Source:      source,
-		Provider:    prov.Slug,
-		InstalledAt: time.Now(),
-	})
-
-	return nil
+	placement, err := placeHook(ref.Item, h, prov, opts.ProjectRoot, settingsPath, scriptsDir, inst, source, installer.ScanOptions{Force: opts.Force})
+	return placement.Notices, err
 }
 
 // injectSessionEndHook appends a session-end hook that runs

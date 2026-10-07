@@ -67,11 +67,14 @@ func DetectHookFormat(content []byte) string {
 	if err := json.Unmarshal(content, &raw); err != nil {
 		return "nested" // default
 	}
-	if spec, ok := raw["spec"]; ok {
-		var specStr string
-		if err := json.Unmarshal(spec, &specStr); err == nil && strings.HasPrefix(specStr, "hooks/") {
-			return "manifest"
-		}
+	// encoding/json matches keys case-insensitively, so probing through a
+	// struct classifies "Spec" the way ParseManifest reads it. A map lookup
+	// would not, and the scanner would then read a manifest as another shape.
+	var probe struct {
+		Spec string `json:"spec"`
+	}
+	if json.Unmarshal(content, &probe) == nil && strings.HasPrefix(probe.Spec, "hooks/") {
+		return "manifest"
 	}
 	if _, ok := raw["event"]; ok {
 		return "flat"

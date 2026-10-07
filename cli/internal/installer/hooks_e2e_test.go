@@ -99,7 +99,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 	t.Cleanup(func() {
 		os.RemoveAll(configDir)
 		// Also clean up the copied scripts
-		scriptsDir, _ := hookScriptsDir("script-hook")
+		scriptsDir, _ := hookScriptsDir("claude-code", "script-hook")
 		os.RemoveAll(scriptsDir)
 	})
 	os.WriteFile(filepath.Join(configDir, "settings.json"), []byte("{}"), 0644)
@@ -117,7 +117,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 	}
 
 	// Verify script was copied to stable location
-	scriptsDir, _ := hookScriptsDir("script-hook")
+	scriptsDir, _ := hookScriptsDir("claude-code", "script-hook")
 	copiedScript := filepath.Join(scriptsDir, "lint.sh")
 	if _, statErr := os.Stat(copiedScript); statErr != nil {
 		t.Fatalf("script not copied to %s: %v", copiedScript, statErr)
@@ -134,7 +134,7 @@ func TestInstallHook_E2E_WithScript(t *testing.T) {
 	cmd := gjson.GetBytes(data, "hooks.PostToolUse.0.hooks.0.command").String()
 
 	// Command should point to the stable copy, not the original
-	if !strings.Contains(cmd, ".syllago/hooks/script-hook/lint.sh") {
+	if !strings.Contains(cmd, ".syllago/hooks/claude-code/script-hook/lint.sh") {
 		t.Errorf("command should point to stable copy, got %q", cmd)
 	}
 	// Arguments should be preserved

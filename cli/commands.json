@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "generatedAt": "2026-10-05T17:26:26Z",
+  "generatedAt": "2026-10-07T01:08:35Z",
   "syllagoVersion": "0.15.0",
   "commands": [
     {
@@ -1846,6 +1846,14 @@
           "default": null,
           "required": false,
           "description": "Override base directory for content installation"
+        },
+        {
+          "name": "--force",
+          "shorthand": null,
+          "type": "bool",
+          "default": null,
+          "required": false,
+          "description": "Apply hooks past high-severity scanner findings"
         },
         {
           "name": "--keep",
