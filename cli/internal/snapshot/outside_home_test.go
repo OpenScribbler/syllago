@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -65,6 +66,7 @@ func TestCreate_FileOutsideHomeRestoresInPlace(t *testing.T) {
 // were recorded keys each backup by its path relative to the home directory.
 func TestDestination_FallsBackToHome(t *testing.T) {
 	t.Parallel()
+	// path-literal-ok: Destination only joins paths; nothing is read or written.
 	home := filepath.Join(string(filepath.Separator), "home", "u")
 	m := &SnapshotManifest{Destinations: map[string]string{"outside-home/0/mcp.json": "/proj/.cursor/mcp.json"}}
 	if got := m.Destination(home, "outside-home/0/mcp.json"); got != "/proj/.cursor/mcp.json" {
@@ -129,6 +131,14 @@ func TestRestore_RemovesAFileTheApplyCreated(t *testing.T) {
 	}
 	if _, err := os.Stat(cfgPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("created config still there (stat err %v)", err)
+	}
+	// A retry after a later failure must not delete a config written there since.
+	after, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(after.CreatedFiles, cfgPath) || !slices.Contains(after.RevertedFiles, cfgPath) {
+		t.Errorf("createdFiles %q, revertedFiles %q; want %s moved to revertedFiles", after.CreatedFiles, after.RevertedFiles, cfgPath)
 	}
 }
 
@@ -201,22 +211,54 @@ func TestCreate_KeepsASymlinkToAMissingTarget(t *testing.T) {
 	}
 }
 
-// TestRestore_RefusesARelativePath: syllago records only absolute paths,
-// so a relative one in a manifest fails the restore before it changes
-// anything.
-func TestRestore_RefusesARelativePath(t *testing.T) {
-	t.Parallel()
+// TestRestore_RefusesAnUncleanPath: syllago records only clean absolute
+// paths, so a relative or unclean one in a manifest fails the restore
+// before it changes anything. Each path names victim.json from inside
+// dir/sub, the working directory, so a restore that took it would
+// overwrite or delete the victim.
+func TestRestore_RefusesAnUncleanPath(t *testing.T) {
 	tests := []struct {
 		name     string
-		manifest SnapshotManifest
+		manifest func(dir string) SnapshotManifest
 	}{
-		{"destination", SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "x")}}},
-		{"created file", SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}},
+		{"relative destination", func(dir string) SnapshotManifest {
+			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": filepath.Join("..", "victim.json")}}
+		}},
+		{"relative created file", func(dir string) SnapshotManifest {
+			return SnapshotManifest{CreatedFiles: []string{filepath.Join("..", "victim.json")}}
+		}},
+		{"unclean destination", func(dir string) SnapshotManifest {
+			return SnapshotManifest{BackedUpFiles: []string{"home/x"}, Destinations: map[string]string{"home/x": dir + "/sub/../victim.json"}}
+		}},
+		{"unclean created file", func(dir string) SnapshotManifest {
+			return SnapshotManifest{CreatedFiles: []string{dir + "/sub/../victim.json"}}
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Restore(t.TempDir(), &tt.manifest); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
-				t.Errorf("Restore: got %v, want a refusal of the relative path", err)
+			dir := t.TempDir()
+			if err := os.Mkdir(filepath.Join(dir, "sub"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			t.Chdir(filepath.Join(dir, "sub"))
+			victim := filepath.Join(dir, "victim.json")
+			if err := os.WriteFile(victim, []byte("theirs"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			snapshotDir := t.TempDir()
+			backup := filepath.Join(snapshotDir, "files", "home", "x")
+			if err := os.MkdirAll(filepath.Dir(backup), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(backup, []byte("backup"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			m := tt.manifest(dir)
+			if err := Restore(snapshotDir, &m); err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
+				t.Errorf("Restore: got %v, want a refusal of the path", err)
+			}
+			if got, err := os.ReadFile(victim); err != nil || string(got) != "theirs" {
+				t.Errorf("victim.json after refusal: %q, %v", got, err)
 			}
 		})
 	}
@@ -327,5 +369,98 @@ func TestCreate_KeysAFileInHomeTheWayEarlierVersionsRead(t *testing.T) {
 	}
 	if len(manifest.BackedUpFiles) != 1 || filepath.Join(home, manifest.BackedUpFiles[0]) != path {
 		t.Errorf("keys: got %q, want the path under home", manifest.BackedUpFiles)
+	}
+}
+
+// TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure: a restore that
+// fails partway records the created files it already deleted, so a retry
+// leaves alone whatever appears at them.
+func TestRestore_ForgetsTheCreatedFilesItDeletedBeforeAFailure(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	stuck := filepath.Join(projectRoot, "stuck")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted, stuck}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	// A directory with something in it cannot be removed as a file.
+	os.MkdirAll(filepath.Join(stuck, "sub"), 0755)
+
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := Restore(snapshotDir, manifest); err == nil {
+		t.Fatal("Restore succeeded with a created path it cannot remove")
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if !slices.Equal(m.CreatedFiles, []string{stuck}) || !slices.Equal(m.RevertedFiles, []string{deleted}) {
+		t.Errorf("after the failed restore: created %q, reverted %q; want created %s, reverted %s", m.CreatedFiles, m.RevertedFiles, stuck, deleted)
+	}
+}
+
+// TestRestore_NamesTheCreatedFilesItCannotRecordDeleting: a restore that
+// goes through but cannot rewrite the snapshot names the created files it
+// deleted, which a retry would otherwise delete again.
+func TestRestore_NamesTheCreatedFilesItCannotRecordDeleting(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := os.Chmod(snapshotDir, 0555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0755) })
+
+	err = Restore(snapshotDir, manifest)
+	if err == nil || !strings.Contains(err.Error(), "restore deleted "+deleted+" but could not record that") {
+		t.Fatalf("Restore: got %v, want it to name %s as deleted", err, deleted)
+	}
+}
+
+// TestRestore_RecordsEachDeletionBeforeTheNext: a restore that fails partway
+// has already recorded the created files it deleted, so a retry does not
+// delete what appears at those paths in the meantime.
+func TestRestore_RecordsEachDeletionBeforeTheNext(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	deleted := filepath.Join(projectRoot, "deleted.json")
+	stuck := filepath.Join(projectRoot, "stuck")
+	snapshotDir, err := Create(projectRoot, "dev", "keep", []string{deleted, stuck}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	os.WriteFile(deleted, []byte("apply's"), 0644)
+	os.MkdirAll(filepath.Join(stuck, "sub"), 0755)
+	manifest, _, err := Load(projectRoot)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if err := Restore(snapshotDir, manifest); err == nil || !strings.Contains(err.Error(), "removing "+stuck) {
+		t.Fatalf("Restore: got %v, want it to fail removing %s", err, stuck)
+	}
+	got, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if !slices.Equal(got.RevertedFiles, []string{deleted}) || !slices.Equal(got.CreatedFiles, []string{stuck}) {
+		t.Errorf("created = %q, reverted = %q; want %q still created and %q reverted", got.CreatedFiles, got.RevertedFiles, stuck, deleted)
 	}
 }

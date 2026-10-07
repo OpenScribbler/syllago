@@ -61,6 +61,12 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		LoadoutName: manifest.LoadoutName,
 	}
 
+	for _, sr := range manifest.Symlinks {
+		if err := checkRemovablePath(sr.Path); err != nil {
+			return nil, fmt.Errorf("%w; remove cannot use the snapshot in %s, so undo what its manifest.json lists by hand, reading any relative path from the directory the loadout was applied in, then delete that directory", err, snapshotDir)
+		}
+	}
+
 	// Step 1: Restore backed-up files
 	home, _ := os.UserHomeDir()
 	SkipInstalledBackup(manifest, opts.ProjectRoot)
@@ -72,11 +78,21 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	}
 	result.RemovedFiles = manifest.CreatedFiles
 
-	// Step 2: Delete symlinks
+	// Step 2: Delete symlinks. Restore deleted the created files and
+	// recorded that. Each placement leaves the snapshot as soon as it is
+	// deleted, so a retry after a failure or a killed run does not delete
+	// what someone puts at a path this one deleted.
 	for _, sr := range manifest.Symlinks {
-		err := os.Remove(sr.Path)
-		if err != nil && !os.IsNotExist(err) {
-			return nil, err
+		// Earlier versions could record one path twice. The second record
+		// is skipped, or it would delete whatever appeared there since.
+		if slices.Contains(result.RemovedSymlinks, sr.Path) {
+			continue
+		}
+		if err := removePlaced(sr); err != nil {
+			return nil, fmt.Errorf("%w; the snapshot is %s", err, snapshotDir)
+		}
+		if err := snapshot.Forget(snapshotDir, []string{sr.Path}); err != nil {
+			return nil, fmt.Errorf("remove deleted %s but could not record that in %s: %w; take it out of symlinks in its manifest.json before running remove again", sr.Path, snapshotDir, err)
 		}
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
 	}
@@ -90,17 +106,47 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 		return nil, fmt.Errorf("loading installed.json: %w", err)
 	}
 	inst = cleanInstalledEntries(inst, "loadout:"+manifest.LoadoutName)
-	installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles))
+	installer.ForgetReverted(inst, opts.ProjectRoot, slices.Concat(result.RestoredFiles, result.RemovedFiles, manifest.RevertedFiles))
 	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
 		return nil, fmt.Errorf("saving installed.json: %w", err)
 	}
 
 	// Step 4: Delete snapshot
+	// A retry would restore the backups again, over any edit made since.
 	if err := snapshot.Delete(snapshotDir); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("remove finished but could not delete %s: %w; delete it by hand rather than running remove again", snapshotDir, err)
 	}
 
 	return result, nil
+}
+
+// checkRemovablePath refuses a path removePlaced must not delete. A copy
+// is deleted with everything under it, so a path from a hand edit is
+// refused before anything changes. An apply records clean paths, and
+// "/home/u/.." would delete /home.
+func checkRemovablePath(p string) error {
+	if !filepath.IsAbs(p) || filepath.Clean(p) != p || filepath.Dir(p) == p {
+		return fmt.Errorf("refusing %q: not a clean absolute path below the filesystem root", p)
+	}
+	return nil
+}
+
+// removePlaced deletes what an apply placed at sr.Path: the symlink, or
+// the copy when the apply ran in copy mode. A copied skill is a directory,
+// which os.Remove cannot delete. A path already gone is not an error.
+func removePlaced(sr snapshot.SymlinkRecord) error {
+	if sr.Copied {
+		return os.RemoveAll(sr.Path)
+	}
+	if err := os.Remove(sr.Path); err != nil && !os.IsNotExist(err) {
+		// Before snapshots recorded copies, a copy was recorded like a
+		// symlink, and remove deletes only what it knows the apply placed.
+		if info, statErr := os.Lstat(sr.Path); statErr == nil && info.IsDir() {
+			return fmt.Errorf("%s is a directory where the loadout recorded a symlink, likely a copy from a syllago version that did not record copies; delete it by hand and take it out of symlinks in the snapshot's manifest.json, then run remove again: %w", sr.Path, err)
+		}
+		return err
+	}
+	return nil
 }
 
 // SkipInstalledBackup drops installed.json from the files manifest restores.

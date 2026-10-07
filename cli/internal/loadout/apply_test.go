@@ -2,16 +2,20 @@ package loadout
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
+	"github.com/OpenScribbler/syllago/cli/internal/config"
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
+	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
 	"github.com/tidwall/gjson"
 )
 
@@ -731,5 +735,372 @@ func TestApply_RollbackReadsItsOwnSnapshot(t *testing.T) {
 	}
 	if entries, _ := os.ReadDir(filepath.Join(homeDir, ".claude", "rules")); len(entries) != 0 {
 		t.Errorf("rule symlink still there: %v", entries)
+	}
+}
+
+// A claim makes the path the placement fills and fails on anything already
+// there, leaving it as it was.
+func TestClaim(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name    string
+		method  installer.InstallMethod
+		srcDir  bool
+		wantDir bool
+	}{
+		{"symlink", installer.MethodSymlink, true, false},
+		{"copy of a directory", installer.MethodCopy, true, true},
+		{"copy of a file", installer.MethodCopy, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			src := filepath.Join(dir, "src")
+			if tc.srcDir {
+				if err := os.Mkdir(src, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			dst := filepath.Join(dir, "new", "dst")
+			if err := claim(src, dst, tc.method); err != nil {
+				t.Fatalf("claim on an empty path: %v", err)
+			}
+			info, err := os.Lstat(dst)
+			if err != nil {
+				t.Fatalf("claimed path: %v", err)
+			}
+			if isLink := info.Mode()&os.ModeSymlink != 0; isLink != (tc.method == installer.MethodSymlink) || info.IsDir() != tc.wantDir {
+				t.Errorf("claimed path has mode %v", info.Mode())
+			}
+
+			for _, theirs := range []bool{false, true} {
+				taken := filepath.Join(dir, fmt.Sprintf("taken-%v", theirs))
+				if theirs {
+					if err := os.MkdirAll(filepath.Join(taken, "mine"), 0o755); err != nil {
+						t.Fatal(err)
+					}
+				} else if err := os.WriteFile(taken, []byte("mine"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := claim(src, taken, tc.method); !errors.Is(err, fs.ErrExist) {
+					t.Errorf("claim on a taken path: got %v, want fs.ErrExist", err)
+				}
+			}
+			if got, err := os.ReadFile(filepath.Join(dir, "taken-false")); err != nil || string(got) != "mine" {
+				t.Errorf("taken file after a refused claim: %q, %v", got, err)
+			}
+			if _, err := os.Stat(filepath.Join(dir, "taken-true", "mine")); err != nil {
+				t.Errorf("taken directory after a refused claim: %v", err)
+			}
+		})
+	}
+}
+
+// A placement that will not delete is reported, so rollback keeps the
+// snapshot instead of claiming success. Only the placements it deleted come
+// back, so only those leave the snapshot, and the error names the rest.
+func TestUnplace_ReportsFailures(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	parent := t.TempDir()
+	placedCopy := filepath.Join(parent, "placed")
+	if err := os.MkdirAll(filepath.Join(placedCopy, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(placedCopy, 0o555); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { os.Chmod(placedCopy, 0o755) })
+
+	gone := filepath.Join(parent, "gone")
+	if err := os.Symlink(placedCopy, gone); err != nil {
+		t.Fatal(err)
+	}
+
+	placed := []snapshot.SymlinkRecord{{Path: gone}, {Path: placedCopy, Copied: true}}
+	snapshotDir, err := snapshot.Create(t.TempDir(), "l", "keep", nil, placed, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	removed, err := unplace(placed, snapshotDir)
+	if err == nil {
+		t.Fatal("expected an error deleting a copy whose contents cannot be removed")
+	}
+	if !slices.Equal(removed, []string{gone}) {
+		t.Errorf("removed = %q, want only %q", removed, gone)
+	}
+	if sm, err := snapshot.ReadManifest(snapshotDir); err != nil || len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != placedCopy {
+		t.Errorf("recorded symlinks = %v (%v), want only %s", sm, err, placedCopy)
+	}
+	if got, want := leftBehind(placed, removed, nil), "; rollback could not delete "+placedCopy+", which the snapshot does not record, so delete those by hand"; got != want {
+		t.Errorf("leftBehind unrecorded = %q, want %q", got, want)
+	}
+	if got, want := leftBehind(placed, removed, placed), "; rollback could not delete "+placedCopy; got != want {
+		t.Errorf("leftBehind recorded = %q, want %q", got, want)
+	}
+}
+
+// Each placement is recorded in the snapshot once it is claimed. Something
+// that appears at a planned path after the preview is not the apply's: it
+// is refused, left alone, and never recorded as placed.
+func TestApplyActions_RecordsOnlyWhatItClaimed(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	first := filepath.Join(dir, "first")
+	taken := filepath.Join(dir, "taken")
+	for _, d := range []string{src, filepath.Join(taken, "mine")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snapshotDir, err := snapshot.Create(dir, "l", "keep", nil, nil, nil)
+	if err != nil {
+		t.Fatalf("creating snapshot: %v", err)
+	}
+	actions := []PlannedAction{
+		{Type: catalog.Rules, Name: "a", Action: "create-symlink", Detail: first},
+		{Type: catalog.Rules, Name: "b", Action: "create-symlink", Detail: taken},
+	}
+	refs := []ResolvedRef{
+		{Type: catalog.Rules, Name: "a", Item: catalog.ContentItem{Path: src}},
+		{Type: catalog.Rules, Name: "b", Item: catalog.ContentItem{Path: src}},
+	}
+
+	_, placed, err := applyActions(actions, refs, provider.Provider{}, ApplyOptions{Method: installer.MethodCopy, ProjectRoot: dir}, "l", snapshotDir)
+	if !errors.Is(err, fs.ErrExist) {
+		t.Fatalf("applyActions: got %v, want fs.ErrExist", err)
+	}
+	if len(placed) != 1 || placed[0].Path != first {
+		t.Errorf("placed: got %+v, want only %s", placed, first)
+	}
+	m, err := snapshot.ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("reading manifest: %v", err)
+	}
+	if len(m.Symlinks) != 1 || m.Symlinks[0].Path != first || !m.Symlinks[0].Copied {
+		t.Errorf("recorded: got %+v, want only the copy at %s", m.Symlinks, first)
+	}
+	if _, err := os.Stat(filepath.Join(taken, "mine")); err != nil {
+		t.Errorf("what appeared at %s should be untouched: %v", taken, err)
+	}
+}
+
+// Remove deletes what an apply placed, so an apply refuses a destination
+// remove would refuse, and two items that would claim one path, before
+// it changes anything.
+func TestApply_RefusesDestinationsRemoveCannotTakeBack(t *testing.T) {
+	t.Run("relative base dir", func(t *testing.T) {
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		// The relative path resolves under a temp dir if the check fails.
+		t.Chdir(t.TempDir())
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: config.NewResolver(nil, "rel-base")})
+		if err == nil || !strings.Contains(err.Error(), "not a clean absolute path") {
+			t.Fatalf("Apply: got %v, want the relative destination refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+	})
+	t.Run("two items, one path", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		other := filepath.Join(projectRoot, "content", "other", "int-rule")
+		if err := os.MkdirAll(other, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-2"})
+		cat.Items = append(cat.Items, catalog.ContentItem{Name: "int-rule-2", Type: catalog.Rules, Provider: "claude-code", Path: other})
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+		if err == nil || !strings.Contains(err.Error(), "both install to") {
+			t.Fatalf("Apply: got %v, want the shared destination refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+		if _, err := os.Lstat(filepath.Join(homeDir, ".claude", "rules", "int-rule")); !os.IsNotExist(err) {
+			t.Errorf("rule placed despite the refusal: %v", err)
+		}
+	})
+	t.Run("an item over a settings file", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		rule := filepath.Join(projectRoot, "content", "rules", "claude-code", "settings.json")
+		if err := os.MkdirAll(rule, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		manifest.Rules = append(manifest.Rules, ItemRef{Name: "settings.json"})
+		cat.Items = append(cat.Items, catalog.ContentItem{Name: "settings.json", Type: catalog.Rules, Provider: "claude-code", Path: rule})
+		claudeDir := filepath.Join(homeDir, ".claude")
+		// Absent, the settings file is one the snapshot records as created.
+		if err := os.Remove(filepath.Join(claudeDir, "settings.json")); err != nil {
+			t.Fatal(err)
+		}
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"rules": claudeDir}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !strings.Contains(err.Error(), "that the loadout also writes") {
+			t.Fatalf("Apply: got %v, want the placement over the settings file refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+	})
+	t.Run("an item inside a settings file", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		settings := filepath.Join(homeDir, ".claude", "settings.json")
+		if err := os.Remove(settings); err != nil {
+			t.Fatal(err)
+		}
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"rules": settings}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !containsAll(err.Error(), "inside "+settings, "that the loadout also writes") {
+			t.Fatalf("Apply: got %v, want the placement inside the settings file refused", err)
+		}
+		if _, err := os.Lstat(settings); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("refused apply made %s: %v", settings, err)
+		}
+	})
+	t.Run("one item inside another", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		skill := filepath.Join(projectRoot, "content", "skills", "int-skill")
+		if err := os.MkdirAll(skill, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("# skill\n"), 0o644)
+		prov.SupportsType = func(ct catalog.ContentType) bool { return ct != catalog.MCP }
+		manifest.Skills = []ItemRef{{Name: "int-skill"}}
+		cat.Items = append(cat.Items, catalog.ContentItem{Name: "int-skill", Type: catalog.Skills, Provider: "claude-code", Path: skill})
+		ruleDest := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"skills": ruleDest}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !strings.Contains(err.Error(), "inside "+ruleDest) {
+			t.Fatalf("Apply: got %v, want the nested destination refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+		if _, err := os.Lstat(ruleDest); !os.IsNotExist(err) {
+			t.Errorf("rule placed despite the refusal: %v", err)
+		}
+	})
+}
+
+// A copy that fails partway leaves a partial directory, which rollback
+// deletes with everything the copy wrote into it.
+func TestApply_CopyModeRollbackDeletesPartialCopy(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a file the test cannot read")
+	}
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	// rule.md copies first, then the unreadable file fails the copy.
+	unreadable := filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule", "z.md")
+	if err := os.WriteFile(unreadable, []byte("x"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolled back") {
+		t.Fatalf("Apply: got %v, want the copy to fail and roll back", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("partial copy %s should be gone after rollback; got err=%v", copyPath, err)
+	}
+}
+
+// A copy rollback cannot delete fails the rollback, so the snapshot stays,
+// and it lists only what the apply placed: a planned path the apply never
+// reached is not remove's to delete when something appears there.
+func TestApply_FailedCopyRollbackKeepsOnlyWhatItPlaced(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	rulesDir := filepath.Join(homeDir, ".claude", "rules")
+	copyPath := filepath.Join(rulesDir, "int-rule")
+	unreached := filepath.Join(rulesDir, "int-rule-gone")
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		if err := os.MkdirAll(filepath.Join(unreached, "mine"), 0o755); err != nil {
+			return err
+		}
+		if err := os.Chmod(copyPath, 0o555); err != nil {
+			return err
+		}
+		return snapshot.Restore(dir, sm)
+	}
+	t.Cleanup(func() { os.Chmod(copyPath, 0o755) })
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !strings.Contains(err.Error(), "rolling back failed") {
+		t.Fatalf("Apply: got %v, want a failed rollback", err)
+	}
+	sm, _, err := snapshot.Load(projectRoot)
+	if err != nil {
+		t.Fatalf("snapshot.Load after the failed rollback: %v", err)
+	}
+	if len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != copyPath {
+		t.Errorf("Symlinks: got %+v, want only %s", sm.Symlinks, copyPath)
+	}
+	if _, err := os.Stat(filepath.Join(unreached, "mine")); err != nil {
+		t.Errorf("unreached path should be untouched: %v", err)
+	}
+}
+
+// A deletion rollback cannot record stops the rest, so a rollback killed
+// afterward leaves at most that one deleted path recorded.
+func TestUnplace_StopsWhenItCannotRecordADeletion(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	parent := t.TempDir()
+	first := filepath.Join(parent, "first")
+	second := filepath.Join(parent, "second")
+	for _, p := range []string{first, second} {
+		if err := os.Symlink(filepath.Join(parent, "src"), p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	placed := []snapshot.SymlinkRecord{{Path: first}, {Path: second}}
+	snapshotDir, err := snapshot.Create(parent, "l", "keep", nil, placed, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := os.Chmod(snapshotDir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
+
+	removed, err := unplace(placed, snapshotDir)
+	if err == nil {
+		t.Fatal("expected an error recording the deletion")
+	}
+	if !slices.Equal(removed, []string{first}) {
+		t.Errorf("removed = %q, want only %q", removed, first)
+	}
+	if _, err := os.Lstat(second); err != nil {
+		t.Errorf("unplace went on to delete %s: %v", second, err)
 	}
 }

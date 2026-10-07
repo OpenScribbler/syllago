@@ -1,9 +1,11 @@
 package loadout
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -129,26 +131,67 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
 	}
 
-	// Step 4: Collect files to back up and create snapshot
-	filesToBackup := collectBackupFiles(actions, prov, opts)
-	var symlinkRecords []snapshot.SymlinkRecord
-	var hookScripts []string
-
+	// Remove deletes what an apply placed, so each path must be one remove
+	// accepts, and no two items may claim the same one.
+	dests := make(map[string]string)
 	for _, a := range actions {
-		if a.Action == "create-symlink" {
-			ref := findRefByName(refs, a.Type, a.Name)
-			symlinkRecords = append(symlinkRecords, snapshot.SymlinkRecord{
-				Path:   a.Detail,
-				Target: symlinkSource(*ref),
-			})
+		if a.Action != "create-symlink" {
+			continue
 		}
+		if err := checkRemovablePath(a.Detail); err != nil {
+			return nil, fmt.Errorf("placing %s: %w", a.Name, err)
+		}
+		if other, ok := dests[a.Detail]; ok {
+			return nil, fmt.Errorf("conflict: %s and %s in this loadout both install to %s", other, a.Name, a.Detail)
+		}
+		dests[a.Detail] = a.Name
+	}
+	// Nor may one sit inside another: deleting the outer one would take
+	// the inner one with it while the snapshot still recorded it.
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
+			}
+		}
+	}
+
+	// Step 4: Collect files to back up and create snapshot. Each placement
+	// is recorded as it is made, so the snapshot starts with none.
+	filesToBackup := collectBackupFiles(actions, prov, opts)
+	// A settings file the apply may create is the snapshot's to delete, so
+	// no item may install over it, around it, or inside it either.
+	writes := make(map[string]bool)
+	for _, f := range filesToBackup {
+		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
+			}
+		}
+		writes[filepath.Clean(f)] = true
+	}
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if writes[dir] {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s that the loadout also writes", a.Name, a.Detail, dir)
+			}
+		}
+	}
+	var hookScripts []string
+	for _, a := range actions {
 		if a.Action == "merge-hook" {
 			hookScripts = append(hookScripts, a.Name)
 		}
 	}
 
 	snapshotDir, err := snapshot.Create(opts.ProjectRoot, manifest.Name, opts.Mode,
-		filesToBackup, symlinkRecords, hookScripts)
+		filesToBackup, nil, hookScripts)
 	if err != nil {
 		return nil, fmt.Errorf("creating snapshot: %w", err)
 	}
@@ -160,7 +203,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 			warnings = append(warnings, fmt.Sprintf("skipped %s: %s", a.Name, a.Problem))
 		}
 	}
-	placeWarnings, applyErr := applyActions(actions, refs, prov, opts, manifest.Name)
+	placeWarnings, placed, applyErr := applyActions(actions, refs, prov, opts, manifest.Name, snapshotDir)
 	if applyErr != nil {
 		// Rollback: restore snapshot and clean up. Read this apply's own
 		// snapshot, so another one in the directory cannot stop the restore.
@@ -169,28 +212,49 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		if readErr == nil {
 			restoreErr = restoreSnapshot(snapshotDir, sm)
 		}
-		// Remove any symlinks we may have partially created
-		for _, sr := range symlinkRecords {
-			_ = os.Remove(sr.Path)
+		restored := readErr == nil && restoreErr == nil
+		// A placement that will not go fails the rollback like a restore
+		// that will not, so the snapshot stays and records it.
+		removed, unplaceErr := unplace(placed, snapshotDir)
+		restoreErr = errors.Join(restoreErr, unplaceErr)
+		var recorded []snapshot.SymlinkRecord
+		if readErr == nil {
+			recorded = sm.Symlinks
 		}
+		left := leftBehind(placed, removed, recorded)
 		// A snapshot that did not restore is the only copy of the files the
 		// apply changed, so it stays: loadout remove retries the restore, and
 		// a restore that keeps failing leaves the backups to copy by hand and
 		// the files and symlinks the apply created to delete. The directory blocks the
 		// next apply until it is gone, so each message says to delete it.
 		if readErr != nil {
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, readErr, snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; %s cannot be read, so copy its backups back by hand, then delete that directory%s", applyErr, errors.Join(readErr, restoreErr), snapshotDir, left)
 		}
 		if restoreErr != nil {
-			// A file or symlink it lists that is gone now is not the apply's
-			// to delete if it appears again. Until that is recorded, remove
-			// could delete one, so it is not offered.
-			if err := snapshot.DropUncreated(snapshotDir); err != nil {
-				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
+			// A placement this rollback deleted, or a created file that is
+			// gone, is not the apply's to delete if it appears. Until that
+			// is recorded, remove could delete one, so it is not offered.
+			// A restore that went through recorded the created files itself.
+			if err := errors.Join(snapshot.Forget(snapshotDir, removed), snapshot.DropUncreated(snapshotDir)); err != nil {
+				var excepted []string
+				if len(removed) > 0 {
+					excepted = append(excepted, strings.Join(removed, ", ")+", which rollback already deleted")
+				}
+				// A restore that failed partway names what it deleted.
+				if !restored {
+					excepted = append(excepted, "any path the restore error names as deleted")
+				}
+				except := ""
+				if len(excepted) > 0 {
+					except = " except " + strings.Join(excepted, ", and ")
+				}
+				return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks%s, then delete that directory%s", applyErr, errors.Join(restoreErr, err), snapshotDir, except, left)
 			}
-			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory", applyErr, restoreErr, snapshotDir)
+			return nil, fmt.Errorf("applying loadout: %w; rolling back failed: %w; run 'syllago loadout remove' to retry it, or copy the backups in %s back by hand, delete the files and symlinks its manifest.json lists under createdFiles and symlinks, then delete that directory%s", applyErr, restoreErr, snapshotDir, left)
 		}
-		_ = snapshot.Delete(snapshotDir)
+		if err := snapshot.Delete(snapshotDir); err != nil {
+			return nil, fmt.Errorf("applying loadout (rolled back): %w; deleting the snapshot failed: %w; delete %s by hand rather than running 'syllago loadout remove'", applyErr, err, snapshotDir)
+		}
 		return nil, fmt.Errorf("applying loadout (rolled back): %w", applyErr)
 	}
 	warnings = append(warnings, placeWarnings...)
@@ -218,14 +282,92 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 	}, nil
 }
 
+// unplace deletes the symlinks and copies a failed apply placed, records
+// each deletion in the snapshot in snapshotDir, and returns the paths it
+// deleted.
+func unplace(placed []snapshot.SymlinkRecord, snapshotDir string) ([]string, error) {
+	var removed []string
+	var errs []error
+	for _, sr := range placed {
+		if err := removePlaced(sr); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		removed = append(removed, sr.Path)
+		// Recorded at once, so a rollback killed partway leaves no deleted
+		// placement for a later remove. One that cannot be recorded stops
+		// the deleting, so at most one deleted path stays recorded, and the
+		// caller names it.
+		if err := snapshot.Forget(snapshotDir, []string{sr.Path}); err != nil {
+			errs = append(errs, err)
+			break
+		}
+	}
+	return removed, errors.Join(errs...)
+}
+
+// leftBehind names the placements rollback could not delete. A placement
+// whose record failed to save is in no manifest, so every rollback error
+// names it as one to delete by hand; one the snapshot records is left to
+// whatever deletes the rest, so a path a provider writes again after a
+// remove is not deleted a second time.
+func leftBehind(placed []snapshot.SymlinkRecord, removed []string, recorded []snapshot.SymlinkRecord) string {
+	var left, unrecorded []string
+	for _, sr := range placed {
+		switch {
+		case slices.Contains(removed, sr.Path):
+		case slices.ContainsFunc(recorded, func(r snapshot.SymlinkRecord) bool { return r.Path == sr.Path }):
+			left = append(left, sr.Path)
+		default:
+			unrecorded = append(unrecorded, sr.Path)
+		}
+	}
+	msg := ""
+	if len(left) > 0 {
+		msg += "; rollback could not delete " + strings.Join(left, ", ")
+	}
+	if len(unrecorded) > 0 {
+		msg += "; rollback could not delete " + strings.Join(unrecorded, ", ") + ", which the snapshot does not record, so delete those by hand"
+	}
+	return msg
+}
+
+// claim creates dst as an empty file, an empty directory, or the symlink
+// itself, failing if anything is already there, so a placement never
+// writes into something the apply did not make.
+func claim(srcPath, dst string, method installer.InstallMethod) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	if method != installer.MethodCopy {
+		return os.Symlink(srcPath, dst)
+	}
+	info, err := os.Stat(srcPath)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return os.Mkdir(dst, 0755)
+	}
+	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(dst)
+		return err
+	}
+	return nil
+}
+
 // applyActions executes each planned action against the filesystem and
-// returns what the placements warn about.
-func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName string) ([]string, error) {
+// returns what the placements warn about and what it placed, recording
+// each placement in the snapshot as it is made.
+func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Provider, opts ApplyOptions, loadoutName, snapshotDir string) (warnings []string, placed []snapshot.SymlinkRecord, err error) {
 	inst, err := installer.LoadInstalled(opts.ProjectRoot)
 	if err != nil {
-		return nil, fmt.Errorf("loading installed.json: %w", err)
+		return nil, nil, fmt.Errorf("loading installed.json: %w", err)
 	}
-	var warnings []string
 
 	source := "loadout:" + loadoutName
 
@@ -236,19 +378,26 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		ref := findRefByName(refs, a.Type, a.Name)
 		if ref == nil {
-			return nil, fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
+			return nil, placed, fmt.Errorf("internal error: no ref found for %s %s", a.Type, a.Name)
 		}
 
 		switch a.Action {
 		case "create-symlink":
 			srcPath := symlinkSource(*ref)
+			// The preview found nothing here. Something that has appeared
+			// since is not the apply's, so the claim fails and it is never
+			// recorded as placed.
+			if err := claim(srcPath, a.Detail, opts.Method); err != nil {
+				return nil, placed, fmt.Errorf("placing %s at %s: %w", a.Name, a.Detail, err)
+			}
+			rec := snapshot.SymlinkRecord{Path: a.Detail, Target: srcPath, Copied: opts.Method == installer.MethodCopy}
+			placed = append(placed, rec)
+			if err := snapshot.AddSymlink(snapshotDir, rec); err != nil {
+				return nil, placed, fmt.Errorf("recording %s: %w", a.Name, err)
+			}
 			if opts.Method == installer.MethodCopy {
 				if err := installer.CopyContent(srcPath, a.Detail); err != nil {
-					return nil, fmt.Errorf("copying %s: %w", a.Name, err)
-				}
-			} else {
-				if err := installer.CreateSymlink(srcPath, a.Detail); err != nil {
-					return nil, fmt.Errorf("creating symlink for %s: %w", a.Name, err)
+					return nil, placed, fmt.Errorf("copying %s: %w", a.Name, err)
 				}
 			}
 			inst.Symlinks = append(inst.Symlinks, installer.InstalledSymlink{
@@ -260,13 +409,13 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 		case "merge-hook":
 			if err := applyHook(*ref, prov, opts.HomeDir, opts.Resolver, inst, source); err != nil {
-				return nil, fmt.Errorf("merging hook %s: %w", a.Name, err)
+				return nil, placed, fmt.Errorf("merging hook %s: %w", a.Name, err)
 			}
 
 		case "merge-mcp":
 			placement, err := installer.PlaceMCP(ref.Item, prov, opts.ProjectRoot, inst, source)
 			if err != nil {
-				return nil, fmt.Errorf("merging MCP %s: %w", a.Name, err)
+				return nil, placed, fmt.Errorf("merging MCP %s: %w", a.Name, err)
 			}
 			for _, n := range placement.Notices {
 				warnings = append(warnings, n.Message)
@@ -276,10 +425,10 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 
 	// Save all tracking in one write
 	if err := installer.SaveInstalled(opts.ProjectRoot, inst); err != nil {
-		return nil, fmt.Errorf("saving installed.json: %w", err)
+		return nil, placed, fmt.Errorf("saving installed.json: %w", err)
 	}
 
-	return warnings, nil
+	return warnings, placed, nil
 }
 
 // settingsPathFor computes a provider's hook config path via the shared

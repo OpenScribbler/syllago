@@ -110,7 +110,7 @@ func TestResolveItemID_UniversalType(t *testing.T) {
 
 func TestResolveItemID_NonexistentDir(t *testing.T) {
 	t.Parallel()
-	id := resolveItemID("/nonexistent", catalog.Rules, "claude-code", "missing")
+	id := resolveItemID(filepath.Join(t.TempDir(), "nonexistent"), catalog.Rules, "claude-code", "missing")
 	if id != "" {
 		t.Errorf("resolveItemID() = %q, want empty string", id)
 	}
@@ -166,7 +166,7 @@ func TestFindHookFile_EmptyDir(t *testing.T) {
 
 func TestFindHookFile_NonexistentDir(t *testing.T) {
 	t.Parallel()
-	got := findHookFile("/nonexistent/dir/for/test")
+	got := findHookFile(filepath.Join(t.TempDir(), "nonexistent"))
 	if got != "" {
 		t.Errorf("findHookFile() = %q, want empty string", got)
 	}

@@ -79,7 +79,7 @@ func TestRunLoadoutRemove(t *testing.T) {
 					Mode:        "try",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "/tmp/already-gone-symlink", Target: "/tmp/src"},
+						{Path: filepath.Join(root, "already-gone-symlink"), Target: filepath.Join(root, "src")},
 					},
 				})
 			},
@@ -91,11 +91,33 @@ func TestRunLoadoutRemove(t *testing.T) {
 				if !strings.Contains(stdout, "Symlinks to remove:") {
 					t.Errorf("expected symlinks section, got: %s", stdout)
 				}
-				if !strings.Contains(stdout, "/tmp/already-gone-symlink") {
+				if !strings.Contains(stdout, "already-gone-symlink") {
 					t.Errorf("expected symlink path in output, got: %s", stdout)
 				}
 				if !strings.Contains(stdout, `Loadout "my-loadout" removed`) {
 					t.Errorf("expected success message, got: %s", stdout)
+				}
+			},
+		},
+		{
+			name: "copy-mode apply lists copies to delete rather than symlinks",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: filepath.Join(root, "already-gone-copy"), Target: filepath.Join(root, "src"), Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, stdout, stderr string) {
+				t.Helper()
+				if !strings.Contains(stdout, "Copies to delete, with any files added to them:") {
+					t.Errorf("expected copies section, got: %s", stdout)
+				}
+				if strings.Contains(stdout, "Symlinks to remove:") {
+					t.Errorf("copies should not be listed as symlinks, got: %s", stdout)
 				}
 			},
 		},

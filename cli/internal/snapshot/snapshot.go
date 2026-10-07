@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -47,6 +48,10 @@ type SnapshotManifest struct {
 	// CreatedFiles holds the absolute paths that did not exist at Create.
 	// Restore removes them, so a config the apply created goes with it.
 	CreatedFiles []string `json:"createdFiles,omitempty"`
+	// RevertedFiles holds the created files a remove or rollback already
+	// deleted. Restore leaves whatever is there now alone, but a retried
+	// remove still forgets the installs that went into them.
+	RevertedFiles []string `json:"revertedFiles,omitempty"`
 }
 
 // Destination returns the absolute path the backup at rel restores to.
@@ -57,10 +62,12 @@ func (m *SnapshotManifest) Destination(home, rel string) string {
 	return filepath.Join(home, rel)
 }
 
-// SymlinkRecord tracks a symlink created during apply.
+// SymlinkRecord tracks a symlink created during apply, or the copy placed
+// instead when the apply ran in copy mode.
 type SymlinkRecord struct {
-	Path   string `json:"path"`   // absolute path of the symlink
-	Target string `json:"target"` // absolute path it points to
+	Path   string `json:"path"`             // absolute path of the symlink or copy
+	Target string `json:"target"`           // absolute path it points to, or was copied from
+	Copied bool   `json:"copied,omitempty"` // a copy, which may be a directory
 }
 
 // snapshotsDir returns the path to .syllago/snapshots/.
@@ -94,10 +101,17 @@ func Create(projectRoot string, loadoutName string, mode string,
 	hashes := make(map[string]string)
 	destinations := make(map[string]string)
 	var created []string
-	absPaths := make([]string, len(filesToBackup))
-	for i, path := range filesToBackup {
-		if absPaths[i], err = filepath.Abs(path); err != nil {
+	// One file can serve two purposes, such as a settings file that holds
+	// both hooks and MCP servers. Listed twice, a restore would delete a
+	// created one twice, the second time after a provider wrote it again.
+	var absPaths []string
+	for _, path := range filesToBackup {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
 			return "", fmt.Errorf("backing up %s: %w", path, err)
+		}
+		if !slices.Contains(absPaths, absPath) {
+			absPaths = append(absPaths, absPath)
 		}
 	}
 	keys := backupKeys(home, absPaths)
@@ -195,10 +209,48 @@ func writeManifest(snapshotDir string, manifest *SnapshotManifest) error {
 	return nil
 }
 
+// AddSymlink records a path the apply has just claimed. An apply records
+// each one only once it exists, so a crash leaves an unrecorded copy
+// rather than a recorded path that remove would delete from someone else.
+func AddSymlink(snapshotDir string, rec SymlinkRecord) error {
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	manifest.Symlinks = append(manifest.Symlinks, rec)
+	return writeManifest(snapshotDir, manifest)
+}
+
+// Forget drops the paths a caller has just deleted from the snapshot's
+// Symlinks, and moves them from CreatedFiles to RevertedFiles. Whatever
+// appears at one of them afterward is not the apply's, even before anyone
+// looks, so the record goes by the delete rather than by what exists when
+// the snapshot is rewritten.
+func Forget(snapshotDir string, deleted []string) error {
+	if len(deleted) == 0 {
+		return nil
+	}
+	manifest, err := ReadManifest(snapshotDir)
+	if err != nil {
+		return err
+	}
+	manifest.CreatedFiles = slices.DeleteFunc(manifest.CreatedFiles, func(p string) bool {
+		if !slices.Contains(deleted, p) {
+			return false
+		}
+		manifest.RevertedFiles = append(manifest.RevertedFiles, p)
+		return true
+	})
+	manifest.Symlinks = slices.DeleteFunc(manifest.Symlinks, func(sr SymlinkRecord) bool {
+		return slices.Contains(deleted, sr.Path)
+	})
+	return writeManifest(snapshotDir, manifest)
+}
+
 // DropUncreated drops from the snapshot's CreatedFiles and Symlinks each
 // path that does not exist. An apply calls it once its writes are done, or
-// once a failed apply has undone some of them: a path the apply did not
-// write, or has since removed, belongs to whoever makes it later.
+// once a failed rollback has deleted some of them: a path the apply did not
+// write belongs to whoever makes it later.
 func DropUncreated(snapshotDir string) error {
 	manifest, err := ReadManifest(snapshotDir)
 	if err != nil {
@@ -334,7 +386,8 @@ func backupKeys(home string, absPaths []string) []string {
 
 // Restore reads backed-up files from snapshotDir and writes them back to their
 // original absolute paths, then removes the files that did not exist at
-// Create. Does not remove symlinks (caller does that).
+// Create and moves them from CreatedFiles to RevertedFiles in the manifest
+// on disk. Does not remove symlinks (caller does that).
 //
 // Each destination is lstat'd before it is opened for write: if a path is
 // currently a symlink, Restore refuses to write through it. This blocks the
@@ -348,16 +401,17 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 		return fmt.Errorf("getting home dir: %w", err)
 	}
 
-	// Every path syllago records is absolute, so a relative one came from a
-	// hand edit and would resolve against wherever syllago runs.
+	// Every path syllago records is clean and absolute, so any other came
+	// from a hand edit: a relative one would resolve against wherever
+	// syllago runs, and "/home/u/../x" names a file other than it appears to.
 	for rel, dest := range manifest.Destinations {
-		if !filepath.IsAbs(dest) {
-			return fmt.Errorf("restoring %s: destination %q is not an absolute path", rel, dest)
+		if !filepath.IsAbs(dest) || filepath.Clean(dest) != dest {
+			return fmt.Errorf("restoring %s: destination %q is not a clean absolute path", rel, dest)
 		}
 	}
 	for _, path := range manifest.CreatedFiles {
-		if !filepath.IsAbs(path) {
-			return fmt.Errorf("removing %q: not an absolute path", path)
+		if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+			return fmt.Errorf("removing %q: not a clean absolute path", path)
 		}
 	}
 
@@ -387,6 +441,11 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 	for _, path := range manifest.CreatedFiles {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("removing %s: %w", path, err)
+		}
+		// Recorded one at a time, so a retry after a failure or a killed
+		// run does not delete what appears at a path this one deleted.
+		if err := Forget(snapshotDir, []string{path}); err != nil {
+			return fmt.Errorf("restore deleted %s but could not record that in %s: %w; move it from createdFiles to revertedFiles in its manifest.json before trying again", path, snapshotDir, err)
 		}
 	}
 

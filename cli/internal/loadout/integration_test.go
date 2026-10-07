@@ -4,6 +4,9 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
@@ -16,29 +19,10 @@ import (
 // setupIntegrationEnv creates a fully wired test environment with a catalog
 // containing a rule (symlink type) and a hook (merge type), plus a settings.json
 // with pre-existing content to verify non-destructive merge and restore.
-//
-// Key gotcha: the snapshot package stores backed-up files relative to
-// os.UserHomeDir(). If we put settings.json under a random temp dir,
-// filepath.Rel(home, path) produces "../../tmp/..." which escapes the
-// snapshot directory and corrupts the snapshots folder. So we create
-// a test directory under the real home dir for provider config files.
 func setupIntegrationEnv(t *testing.T) (homeDir, projectRoot string, manifest *Manifest, cat *catalog.Catalog, prov provider.Provider) {
 	t.Helper()
 	projectRoot = t.TempDir()
-
-	// Use a subdirectory under real home dir for provider config.
-	// This ensures snapshot backup paths stay clean (see comment above).
-	// We use t.Name() for uniqueness since filepath.Base(t.TempDir()) is
-	// always "001", "002" etc. and would collide across parallel tests.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("getting home dir: %v", err)
-	}
-	// Replace slashes in test name (subtests use "/")
-	safeName := filepath.Base(projectRoot) + "-" + filepath.Base(t.Name())
-	homeDir = filepath.Join(home, ".syllago-inttest-"+safeName)
-	os.MkdirAll(homeDir, 0755)
-	t.Cleanup(func() { os.RemoveAll(homeDir) })
+	homeDir = t.TempDir()
 
 	// Create .syllago dir
 	os.MkdirAll(filepath.Join(projectRoot, ".syllago"), 0755)
@@ -462,6 +446,256 @@ func TestApply_MultiItemRollback_HookFailureRevertsSymlinks(t *testing.T) {
 	// The snapshot created pre-apply must have been deleted by the rollback.
 	if _, _, loadErr := snapshot.Load(projectRoot); !errors.Is(loadErr, snapshot.ErrNoSnapshot) {
 		t.Errorf("snapshot should be gone after rollback; got: %v", loadErr)
+	}
+}
+
+// Regression: a copy-mode apply places each rule as a directory, and remove
+// deleted it with os.Remove, which fails on a non-empty directory. Remove
+// stopped after restoring the files and kept the snapshot, so the loadout
+// could never be removed.
+func TestKeepRoundTrip_CopyModeRemoveDeletesCopies(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		Method:      installer.MethodCopy,
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+	if _, err := Apply(manifest, cat, prov, opts); err != nil {
+		t.Fatalf("Apply (copy): %v", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	info, err := os.Lstat(copyPath)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("expected a copied directory at %s; info=%v err=%v", copyPath, info, err)
+	}
+
+	if _, err := Remove(RemoveOptions{ProjectRoot: projectRoot}); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("copy %s should be gone after remove; got err=%v", copyPath, err)
+	}
+	if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+		t.Errorf("snapshot should be gone after remove; got: %v", err)
+	}
+}
+
+// Regression: rollback deleted copies with os.Remove too, so a failed
+// copy-mode apply left every copied directory behind. Rules place in
+// manifest order, so int-rule is copied before int-rule-gone fails.
+func TestApply_CopyModeRollbackDeletesCopies(t *testing.T) {
+	t.Parallel()
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+
+	opts := ApplyOptions{
+		Mode:        "keep",
+		Method:      installer.MethodCopy,
+		ProjectRoot: projectRoot,
+		HomeDir:     homeDir,
+		RepoRoot:    projectRoot,
+	}
+	_, err := Apply(manifest, cat, prov, opts)
+	if err == nil || !containsAll(err.Error(), "rolled back", "placing int-rule-gone") {
+		t.Fatalf("expected the second copy to fail and roll back, got %v", err)
+	}
+	copyPath := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+	if _, err := os.Lstat(copyPath); !os.IsNotExist(err) {
+		t.Errorf("copy %s should be gone after rollback; got err=%v", copyPath, err)
+	}
+}
+
+// A rollback that restores everything but cannot delete its snapshot says
+// so: the snapshot left behind lists files the rollback already deleted.
+func TestApply_RollbackReportsASnapshotItCannotDelete(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	var snapshots string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		snapshots = filepath.Dir(dir)
+		if err := os.Chmod(snapshots, 0o555); err != nil {
+			return err
+		}
+		return snapshot.Restore(dir, sm)
+	}
+	t.Cleanup(func() {
+		if snapshots != "" {
+			os.Chmod(snapshots, 0o755)
+		}
+	})
+
+	// Copy mode reads the source, so the missing one fails the apply.
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), "rolled back", "deleting the snapshot failed") {
+		t.Fatalf("Apply: got %v, want a rollback that reports the snapshot it could not delete", err)
+	}
+}
+
+// A rollback that cannot record what it deleted lists those paths as
+// exceptions to the files and symlinks its message says to delete by hand.
+func TestApply_RollbackNamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Hooks = nil
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	var snapshotDir string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		snapshotDir = dir
+		if err := os.Chmod(dir, 0o555); err != nil {
+			return err
+		}
+		return errors.New("disk full")
+	}
+	t.Cleanup(func() {
+		if snapshotDir != "" {
+			os.Chmod(snapshotDir, 0o755)
+		}
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), "rolling back failed: disk full", "which rollback already deleted", "any path the restore error names as deleted") || strings.Contains(err.Error(), "syllago loadout remove") {
+		t.Fatalf("Apply: got %v, want by-hand steps that except what rollback deleted and do not offer remove", err)
+	}
+}
+
+// A rollback whose restore went through has already recorded the created
+// files it deleted, so its by-hand steps neither list them nor point at the
+// restore error.
+func TestApply_RollbackRecordsTheCreatedFilesItRestoredAway(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	// With no settings.json, the hook merge's file is one the apply creates.
+	if err := os.Remove(filepath.Join(homeDir, ".claude", "settings.json")); err != nil {
+		t.Fatal(err)
+	}
+	var locked []string
+	var created []string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		err := snapshot.Restore(dir, sm)
+		created = sm.CreatedFiles
+		// The snapshot cannot be rewritten, and the first copy cannot be deleted.
+		locked = []string{dir, filepath.Dir(sm.Symlinks[0].Path)}
+		for _, d := range locked {
+			if err := os.Chmod(d, 0o555); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+	t.Cleanup(func() {
+		for _, d := range locked {
+			os.Chmod(d, 0o755)
+		}
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if len(created) == 0 {
+		t.Fatal("the snapshot recorded no created file, so the test checks nothing")
+	}
+	if err == nil || !strings.Contains(err.Error(), "copy the backups") || strings.Contains(err.Error(), "restore error names") {
+		t.Fatalf("Apply: got %v, want by-hand steps that point at nothing the restore named", err)
+	}
+	sm, readErr := snapshot.ReadManifest(locked[0])
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	for _, p := range created {
+		if slices.Contains(sm.CreatedFiles, p) || !slices.Contains(sm.RevertedFiles, p) || strings.Contains(err.Error(), p) {
+			t.Errorf("%s: createdFiles %q, revertedFiles %q; want it moved to revertedFiles and left out of the error", p, sm.CreatedFiles, sm.RevertedFiles)
+		}
+	}
+}
+
+// A config the restore deleted and a provider then wrote again is the
+// provider's, so the rollback forgets it and a remove retry leaves it.
+func TestApply_RollbackForgetsACreatedFileThatReappears(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("needs a directory the test cannot write to")
+	}
+	t.Cleanup(func() { restoreSnapshot = snapshot.Restore })
+	homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+	manifest.Rules = append(manifest.Rules, ItemRef{Name: "int-rule-gone"})
+	cat.Items = append(cat.Items, catalog.ContentItem{
+		Name: "int-rule-gone", Type: catalog.Rules, Provider: "claude-code",
+		Path: filepath.Join(projectRoot, "content", "rules", "claude-code", "int-rule-gone"),
+	})
+	// With no settings.json, the hook merge's file is one the apply creates.
+	if err := os.Remove(filepath.Join(homeDir, ".claude", "settings.json")); err != nil {
+		t.Fatal(err)
+	}
+	var locked, created []string
+	var snapshotDir string
+	restoreSnapshot = func(dir string, sm *snapshot.SnapshotManifest) error {
+		err := snapshot.Restore(dir, sm)
+		snapshotDir, created = dir, sm.CreatedFiles
+		// A provider writes its config again, and the first copy cannot be deleted.
+		for _, p := range created {
+			if err := os.WriteFile(p, []byte("{}"), 0o644); err != nil {
+				return err
+			}
+		}
+		locked = []string{filepath.Dir(sm.Symlinks[0].Path)}
+		if err := os.Chmod(locked[0], 0o555); err != nil {
+			return err
+		}
+		return err
+	}
+	t.Cleanup(func() {
+		for _, d := range locked {
+			os.Chmod(d, 0o755)
+		}
+	})
+
+	_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", Method: installer.MethodCopy, ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if len(created) == 0 {
+		t.Fatal("the snapshot recorded no created file, so the test checks nothing")
+	}
+	// The copy rollback could not delete is recorded, so remove deletes it
+	// and the error does not also ask for it by hand.
+	if err == nil || !strings.Contains(err.Error(), "loadout remove") || strings.Contains(err.Error(), "does not record") {
+		t.Fatalf("Apply: got %v, want a rollback failure that offers remove and no placement to delete by hand", err)
+	}
+	sm, err := snapshot.ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range created {
+		if slices.Contains(sm.CreatedFiles, p) || !slices.Contains(sm.RevertedFiles, p) {
+			t.Errorf("%s: createdFiles %q, revertedFiles %q; want it moved to revertedFiles", p, sm.CreatedFiles, sm.RevertedFiles)
+		}
 	}
 }
 

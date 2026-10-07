@@ -72,7 +72,7 @@ func TestRunLoadoutStatus(t *testing.T) {
 					Mode:        "keep",
 					CreatedAt:   fixedTime,
 					Symlinks: []snapshot.SymlinkRecord{
-						{Path: "/home/user/.claude/rules/my-rule", Target: "/repo/rules/my-rule"},
+						{Path: filepath.Join(root, "home", ".claude", "rules", "my-rule"), Target: filepath.Join(root, "repo", "rules", "my-rule")},
 					},
 				})
 			},
@@ -92,6 +92,25 @@ func TestRunLoadoutStatus(t *testing.T) {
 				}
 				if !strings.Contains(out, "my-rule") {
 					t.Error("expected symlink path in output")
+				}
+			},
+		},
+		{
+			name: "copy-mode snapshot lists installed copies",
+			setup: func(t *testing.T, root string) {
+				writeSnapshot(t, root, &snapshot.SnapshotManifest{
+					LoadoutName: "my-loadout",
+					Mode:        "keep",
+					CreatedAt:   fixedTime,
+					Symlinks: []snapshot.SymlinkRecord{
+						{Path: filepath.Join(root, ".claude", "rules", "my-rule"), Target: filepath.Join(root, "rules", "my-rule"), Copied: true},
+					},
+				})
+			},
+			check: func(t *testing.T, out string) {
+				t.Helper()
+				if !strings.Contains(out, "Installed copies") || strings.Contains(out, "Installed symlinks") {
+					t.Errorf("expected copies listed as copies, got: %s", out)
 				}
 			},
 		},
