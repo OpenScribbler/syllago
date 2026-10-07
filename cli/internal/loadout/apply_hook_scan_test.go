@@ -291,3 +291,25 @@ func TestApply_SkipsAHookInstalledUnderTheLegacyRoot(t *testing.T) {
 		t.Fatalf("Apply: %v", err)
 	}
 }
+
+// A legacy record with no provider predates provider tracking, so it means
+// the hook is installed only where the provider's settings hold it.
+func TestApply_PlacesAHookAProviderlessLegacyRecordDoesNotHold(t *testing.T) {
+	legacyRoot := catalog.GlobalContentDirOverride
+	legacy := &installer.Installed{Hooks: []installer.InstalledHook{{Name: "my-hook", Event: "PostToolUse", Source: "export", GroupHash: "elsewhere"}}}
+	if err := installer.SaveInstalled(legacyRoot, legacy); err != nil {
+		t.Fatalf("SaveInstalled: %v", err)
+	}
+	t.Cleanup(func() { installer.SaveInstalled(legacyRoot, &installer.Installed{}) })
+	homeDir, projectRoot, manifest, cat, prov := setupTestEnv(t)
+	manifest.Rules = nil
+	cat.Items = cat.Items[1:]
+
+	preview, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "preview", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot})
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(preview.Actions) != 1 || preview.Actions[0].Action != "merge-hook" {
+		t.Fatalf("preview actions = %+v, want one merge-hook", preview.Actions)
+	}
+}

@@ -3,6 +3,7 @@ package installer
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter"
@@ -129,11 +132,8 @@ func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 
 	// Dedup against installed.json (name + event + provider), before the
 	// script copy below can overwrite the installed hook's scripts.
-	if hookTracked(inst, item.Name, nativeEvent, prov.Slug, existing) {
-		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
-	}
-	if hookTrackedAtLegacyRoot(repoRoot, item.Name, nativeEvent, prov.Slug, existing) {
-		return Placement{Notices: notices}, fmt.Errorf("hook %s already installed for %s event", item.Name, nativeEvent)
+	if err := hookInstalled(inst, repoRoot, item.Name, nativeEvent, prov.Slug, existing); err != nil {
+		return Placement{Notices: notices}, err
 	}
 
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
@@ -385,26 +385,17 @@ func hookTrackedAtLegacyRoot(repoRoot, name, event, provSlug string, existing []
 	return hookTracked(inst, name, event, provSlug, existing)
 }
 
-// HookAtLegacyRoot reports the event of a hook named name that the legacy
-// root's installed.json records for provSlug, which PlaceHook refuses to
-// install again, so a preview can skip it. A record with no provider
-// predates provider tracking and counts for every provider, as it does in
-// the current root.
-func HookAtLegacyRoot(repoRoot, name, provSlug string) (string, bool) {
-	legacyRoot := legacyInstalledRoot(repoRoot)
-	if legacyRoot == "" {
-		return "", false
+// ErrHookInstalled is wrapped by the error for a hook PlaceHook refuses
+// because installed.json, in the current or the legacy root, records it.
+var ErrHookInstalled = errors.New("already installed")
+
+// hookInstalled returns an error wrapping ErrHookInstalled when the hook
+// named name is installed for event on provSlug.
+func hookInstalled(inst *Installed, repoRoot, name, event, provSlug string, existing []converter.CanonicalHook) error {
+	if hookTracked(inst, name, event, provSlug, existing) || hookTrackedAtLegacyRoot(repoRoot, name, event, provSlug, existing) {
+		return fmt.Errorf("hook %s %w for %s event", name, ErrHookInstalled, event)
 	}
-	inst, err := LoadInstalled(legacyRoot)
-	if err != nil {
-		return "", false
-	}
-	for _, h := range inst.Hooks {
-		if h.Name == name && (h.Provider == provSlug || h.Provider == "") {
-			return h.Event, true
-		}
-	}
-	return "", false
+	return nil
 }
 
 func legacyRootWithHookRecord(repoRoot, name, nativeEvent, provSlug string) string {
@@ -521,19 +512,11 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		}
 
 		// Rewrite command: replace the script ref, with any quotes around
-		// it, by the stable absolute path. The first occurrence that is a
-		// whole word is the one the command runs, since ExtractScriptRef
-		// reads it from the front; a later one is an argument, and one
-		// inside a flag such as --require=./x.js is not the script.
-		// Quoting inside the command's own quotes would leave the path's
-		// quotes literal.
-		start := wordIndex(cmd, ref)
+		// it, by the stable absolute path. Quoting inside the command's own
+		// quotes would leave the path's quotes literal.
+		start, end := scriptRefSpan(cmd, ref)
 		if start < 0 {
 			continue
-		}
-		end := start + len(ref)
-		if start > 0 && end < len(cmd) && (cmd[start-1] == '"' || cmd[start-1] == '\'') && cmd[end] == cmd[start-1] {
-			start, end = start-1, end+1
 		}
 		newCmd := cmd[:start] + shellQuote(destPath) + cmd[end:]
 		key := fmt.Sprintf("hooks.%d.command", i)
@@ -551,14 +534,19 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 // event the provider cannot take, a hook its adapter cannot represent, or a
 // command naming a script outside the item. Scanner findings are reported
 // apart, because --force overrides them. A non-empty settingsPath is
-// decoded too, so a provider config the merge cannot read refuses here.
-func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, settingsPath string) error {
-	adapter, model, _, err := checkHook(item, h, prov)
+// decoded too, so a provider config the merge cannot read refuses here,
+// and a hook inst or the legacy root under repoRoot records as installed
+// returns an error wrapping ErrHookInstalled.
+func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath string, inst *Installed) error {
+	adapter, model, canonHook, err := checkHook(item, h, prov)
 	if err != nil || settingsPath == "" {
 		return err
 	}
-	_, err = decodeExistingHooks(model, adapter, settingsPath)
-	return err
+	existing, err := decodeExistingHooks(model, adapter, settingsPath)
+	if err != nil {
+		return err
+	}
+	return hookInstalled(inst, repoRoot, item.Name, nativeEventFor(canonHook.Event, prov.Slug), prov.Slug, existing)
 }
 
 // checkHook runs CheckHook's checks and returns what PlaceHook builds on:
@@ -570,12 +558,6 @@ func checkHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 	// an item any name, so one that is not a single path element is refused.
 	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
 		return nil, 0, none, fmt.Errorf("hook name %q is not a valid directory name", item.Name)
-	}
-	// The name becomes part of the script path in the command, which a
-	// Windows provider may run through cmd.exe, so cmd's metacharacters
-	// are refused.
-	if strings.ContainsAny(item.Name, "&|<>^%\"!()") {
-		return nil, 0, none, fmt.Errorf("hook name %q contains a shell metacharacter", item.Name)
 	}
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
@@ -701,16 +683,14 @@ func hookScriptRef(itemDir, name, cmd string) (ref, scriptPath, rel string, err 
 }
 
 // copyHookItem copies the regular files of a hook item into destDir with
-// their permissions, skipping symlinks as CopyContent does.
+// their permissions. CopyContent skips symlinks, but the scan followed them
+// and a script may load a file through one, so a symlink to a file inside
+// the item is copied as that file. One that leaves the item stays skipped.
 func copyHookItem(itemDir, destDir string) error {
 	if err := CopyContent(itemDir, destDir); err != nil {
 		return err
 	}
 	return filepath.WalkDir(itemDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || !d.Type().IsRegular() {
-			return err
-		}
-		info, err := d.Info()
 		if err != nil {
 			return err
 		}
@@ -718,25 +698,62 @@ func copyHookItem(itemDir, destDir string) error {
 		if err != nil {
 			return err
 		}
-		return os.Chmod(filepath.Join(destDir, rel), info.Mode().Perm())
+		dest := filepath.Join(destDir, rel)
+		if d.Type()&fs.ModeSymlink != 0 {
+			target, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				return nil
+			}
+			if r, err := filepath.Rel(itemDir, target); err != nil || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
+				return nil
+			}
+			info, err := os.Stat(target)
+			if err != nil || !info.Mode().IsRegular() {
+				return nil
+			}
+			if err := copyFile(target, dest); err != nil {
+				return err
+			}
+			return os.Chmod(dest, info.Mode().Perm())
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		return os.Chmod(dest, info.Mode().Perm())
 	})
 }
 
-// wordIndex returns the index of the first occurrence of word in cmd that
-// is bounded by whitespace, quotes, or the ends of cmd, or -1.
-func wordIndex(cmd, word string) int {
-	bound := func(i int) bool { return i < 0 || i >= len(cmd) || strings.IndexByte(" \t\"'", cmd[i]) >= 0 }
-	for from := 0; ; {
-		i := strings.Index(cmd[from:], word)
-		if i < 0 {
-			return -1
+// scriptRefSpan returns the byte span of the first whitespace-separated
+// field of cmd that is ref, bare or in one pair of matching quotes, or -1,
+// -1. That is the field ExtractScriptRef read ref from: the fields before it
+// are an interpreter, its flags, and a subcommand, none of which is a
+// relative path, and a later one is an argument.
+func scriptRefSpan(cmd, ref string) (int, int) {
+	for start := 0; start < len(cmd); {
+		r, size := utf8.DecodeRuneInString(cmd[start:])
+		if unicode.IsSpace(r) {
+			start += size
+			continue
 		}
-		i += from
-		if bound(i-1) && bound(i+len(word)) {
-			return i
+		end := start
+		for end < len(cmd) {
+			r, size := utf8.DecodeRuneInString(cmd[end:])
+			if unicode.IsSpace(r) {
+				break
+			}
+			end += size
 		}
-		from = i + 1
+		f := cmd[start:end]
+		if f == ref || len(f) == len(ref)+2 && (f[0] == '"' || f[0] == '\'') && f[len(f)-1] == f[0] && f[1:len(f)-1] == ref {
+			return start, end
+		}
+		start = end
 	}
+	return -1, -1
 }
 
 // shellQuote quotes p so the shell running the hook reads it as one word.
@@ -747,10 +764,11 @@ func shellQuote(p string) string {
 // shellQuoteFor single-quotes p for a POSIX shell when it holds anything but
 // characters a shell reads literally. On Windows a hook may run under
 // cmd.exe, which reads single quotes literally, so the path stays bare as it
-// always has and takes double quotes only to keep a space inside one word.
+// always has and takes double quotes only to keep a space inside one word
+// or a cmd.exe metacharacter out of the command line.
 func shellQuoteFor(goos, p string) string {
 	if goos == "windows" {
-		if strings.ContainsRune(p, ' ') {
+		if strings.ContainsAny(p, " &|<>^()") {
 			return `"` + p + `"`
 		}
 		return p

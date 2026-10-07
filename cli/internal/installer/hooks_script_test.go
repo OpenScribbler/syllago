@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,6 +135,8 @@ func TestShellQuote(t *testing.T) {
 	for in, want := range map[string]string{
 		`C:\Users\u\.syllago\hooks\x\run.ps1`: `C:\Users\u\.syllago\hooks\x\run.ps1`,
 		`C:\Users\Jo Smith\run.ps1`:           `"C:\Users\Jo Smith\run.ps1"`,
+		`C:\hooks\safe&whoami&.js`:            `"C:\hooks\safe&whoami&.js"`,
+		`C:\hooks\a(1)^b.js`:                  `"C:\hooks\a(1)^b.js"`,
 	} {
 		if got := shellQuoteFor("windows", in); got != want {
 			t.Errorf("windows: shellQuoteFor(%q) = %q, want %q", in, got, want)
@@ -160,13 +163,6 @@ func TestPlaceHook_RefusesANameThatIsNotOnePathElement(t *testing.T) {
 			t.Errorf("name %q: got %v, want a refusal", name, err)
 		}
 	}
-	// cmd.exe would run what follows & in a name placed into the command.
-	for _, name := range []string{"x&calc", "a|b", "100%", `q"t`} {
-		_, err := PlaceHook(catalog.ContentItem{Name: name}, converter.Hook{}, provider.Provider{}, "", "", "", nil, "", ScanOptions{})
-		if err == nil || !strings.Contains(err.Error(), "shell metacharacter") {
-			t.Errorf("name %q: got %v, want a metacharacter refusal", name, err)
-		}
-	}
 }
 
 // A content root reached through a symlink resolves to the same place as
@@ -189,27 +185,50 @@ func TestResolveHookScripts_ItemReachedThroughASymlink(t *testing.T) {
 	}
 }
 
-// Only a legacy record for the same provider means the hook is installed:
-// the same name installed for another provider leaves this one to place.
-func TestHookAtLegacyRoot_MatchesTheProvider(t *testing.T) {
+// A legacy record means the hook is installed only as placement counts it:
+// for its own provider, or, with no provider, when the provider's settings
+// hold the hook.
+func TestCheckHook_LegacyRecordMeansInstalledAsPlacementCountsIt(t *testing.T) {
 	legacyRoot := t.TempDir()
 	origGlobal := catalog.GlobalContentDirOverride
 	catalog.GlobalContentDirOverride = legacyRoot
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
-	if err := SaveInstalled(legacyRoot, &Installed{Hooks: []InstalledHook{{Name: "lint", Event: "BeforeTool", Provider: "gemini-cli"}, {Name: "old", Event: "PreToolUse"}}}); err != nil {
+	claude := provider.Provider{Name: "Claude Code", Slug: "claude-code"}
+	gemini := provider.Provider{Name: "Gemini CLI", Slug: "gemini-cli"}
+	h := converter.Hook{Event: "before_tool_execute", Handler: converter.Handler{Type: "command", Command: "echo hi"}}
+	item := func(name string) catalog.ContentItem {
+		return catalog.ContentItem{Name: name, Type: catalog.Hooks, Path: t.TempDir()}
+	}
+	projectRoot := t.TempDir()
+	emptySettings := filepath.Join(t.TempDir(), "settings.json")
+	heldSettings := filepath.Join(t.TempDir(), "settings.json")
+	placed := &Installed{}
+	if _, err := PlaceHook(item("old"), h, claude, projectRoot, heldSettings, t.TempDir(), placed, "export", ScanOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveInstalled(legacyRoot, &Installed{Hooks: []InstalledHook{
+		{Name: "lint", Event: "BeforeTool", Provider: "gemini-cli"},
+		{Name: "old", Event: "PreToolUse", GroupHash: placed.Hooks[0].GroupHash},
+	}}); err != nil {
 		t.Fatal(err)
 	}
 
-	projectRoot := t.TempDir()
-	if event, ok := HookAtLegacyRoot(projectRoot, "lint", "gemini-cli"); !ok || event != "BeforeTool" {
-		t.Errorf("gemini-cli: got %q, %v; want BeforeTool, true", event, ok)
-	}
-	if _, ok := HookAtLegacyRoot(projectRoot, "lint", "claude-code"); ok {
-		t.Error("claude-code matched a gemini-cli record")
-	}
-	// A record from before provider tracking counts for every provider.
-	if event, ok := HookAtLegacyRoot(projectRoot, "old", "claude-code"); !ok || event != "PreToolUse" {
-		t.Errorf("provider-less record: got %q, %v; want PreToolUse, true", event, ok)
+	for _, tc := range []struct {
+		desc      string
+		name      string
+		prov      provider.Provider
+		settings  string
+		installed bool
+	}{
+		{"own provider", "lint", gemini, emptySettings, true},
+		{"another provider", "lint", claude, emptySettings, false},
+		{"provider-less, settings lack it", "old", claude, emptySettings, false},
+		{"provider-less, settings hold it", "old", claude, heldSettings, true},
+	} {
+		err := CheckHook(item(tc.name), h, tc.prov, projectRoot, tc.settings, &Installed{})
+		if got := errors.Is(err, ErrHookInstalled); got != tc.installed {
+			t.Errorf("%s: CheckHook = %v, want installed %v", tc.desc, err, tc.installed)
+		}
 	}
 }
 
@@ -325,36 +344,70 @@ func TestPlaceHook_RefusedDuplicateLeavesInstalledScripts(t *testing.T) {
 	}
 }
 
-// A flag that holds the script name is not the script the command runs.
-func TestResolveHookScripts_SkipsAReferenceInsideAFlag(t *testing.T) {
+// The command runs its script from the field ExtractScriptRef read, so a
+// flag that holds the script name stays as written, quoted or not, and any
+// whitespace separates fields.
+func TestResolveHookScripts_RewritesOnlyTheScriptField(t *testing.T) {
 	itemDir := t.TempDir()
 	os.WriteFile(filepath.Join(itemDir, "hook.js"), []byte("1"), 0644)
 	destDir := t.TempDir()
+	dest := shellQuote(filepath.Join(destDir, "hook.js"))
 
-	matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", "node --require=./hook.js ./hook.js")
-	result, _, err := resolveHookScripts(matcherGroup, catalog.ContentItem{Name: "flag", Path: itemDir}, destDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := "node --require=./hook.js " + shellQuote(filepath.Join(destDir, "hook.js"))
-	if got := gjson.GetBytes(result, "hooks.0.command").String(); got != want {
-		t.Errorf("command = %q, want %q", got, want)
+	for cmd, want := range map[string]string{
+		"node --require=./hook.js ./hook.js":   "node --require=./hook.js " + dest,
+		`node --require="./hook.js" ./hook.js`: `node --require="./hook.js" ` + dest,
+		"node\n./hook.js":                      "node\n" + dest,
+	} {
+		matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", cmd)
+		result, _, err := resolveHookScripts(matcherGroup, catalog.ContentItem{Name: "flag", Path: itemDir}, destDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := gjson.GetBytes(result, "hooks.0.command").String(); got != want {
+			t.Errorf("%q: command = %q, want %q", cmd, got, want)
+		}
 	}
 }
 
-func TestWordIndex(t *testing.T) {
+func TestScriptRefSpan(t *testing.T) {
 	for _, tc := range []struct {
-		cmd  string
-		want int
+		cmd        string
+		start, end int
 	}{
-		{"./run.sh", 0},
-		{"./run.shx ./run.sh", 10},
-		{"x./run.sh ./run.sh", 10},
-		{`bash "./run.sh"`, 6},
-		{"./run.shx", -1},
+		{"./run.sh", 0, 8},
+		{"./run.shx ./run.sh", 10, 18},
+		{"x./run.sh ./run.sh", 10, 18},
+		{`bash "./run.sh"`, 5, 15},
+		{`bash './run.sh' x`, 5, 15},
+		{`bash "./run.sh'`, -1, -1},
+		{"./run.shx", -1, -1},
 	} {
-		if got := wordIndex(tc.cmd, "./run.sh"); got != tc.want {
-			t.Errorf("wordIndex(%q) = %d, want %d", tc.cmd, got, tc.want)
+		if start, end := scriptRefSpan(tc.cmd, "./run.sh"); start != tc.start || end != tc.end {
+			t.Errorf("scriptRefSpan(%q) = %d, %d, want %d, %d", tc.cmd, start, end, tc.start, tc.end)
 		}
+	}
+}
+
+// A script may load a file through a symlink inside its item, which the
+// copy keeps as a file; a symlink out of the item is not copied.
+func TestCopyHookItem_CopiesSymlinksInsideTheItem(t *testing.T) {
+	itemDir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "secret.js")
+	os.WriteFile(outside, []byte("secret"), 0644)
+	os.WriteFile(filepath.Join(itemDir, "helper.js"), []byte("helper"), 0644)
+	if err := os.Symlink("helper.js", filepath.Join(itemDir, "alias.js")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	os.Symlink(outside, filepath.Join(itemDir, "out.js"))
+	destDir := t.TempDir()
+
+	if err := copyHookItem(itemDir, destDir); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(filepath.Join(destDir, "alias.js")); err != nil || string(got) != "helper" {
+		t.Errorf("alias.js = %q, %v; want the helper's content", got, err)
+	}
+	if _, err := os.Lstat(filepath.Join(destDir, "out.js")); !os.IsNotExist(err) {
+		t.Errorf("out.js copied from outside the item: %v", err)
 	}
 }

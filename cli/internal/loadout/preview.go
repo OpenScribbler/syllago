@@ -139,8 +139,7 @@ func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, res
 func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir string, inst *installer.Installed, resolver *config.PathResolver) PlannedAction {
 	// Check if a hook with this name is already installed on this provider
 	// (any event). An entry with no provider predates provider tracking and
-	// counts for every provider. One installed under the legacy root is
-	// skipped too, since the merge would refuse it.
+	// counts for every provider.
 	for _, h := range inst.Hooks {
 		if h.Name == ref.Name && (h.Provider == prov.Slug || h.Provider == "") {
 			return PlannedAction{
@@ -151,15 +150,6 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir stri
 			}
 		}
 	}
-	if event, ok := installer.HookAtLegacyRoot(repoRoot, ref.Name, prov.Slug); ok {
-		return PlannedAction{
-			Type:   ref.Type,
-			Name:   ref.Name,
-			Action: "skip-exists",
-			Detail: fmt.Sprintf("hook %s already installed for %s event", ref.Name, event),
-		}
-	}
-
 	// A hook the merge would refuse, such as an unreadable manifest, an
 	// unknown event, a script outside its item, or a provider config the
 	// merge cannot read, fails the apply before anything changes, under
@@ -191,7 +181,16 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir stri
 	}
 	// settingsPathFor fails only for providers CheckHook refuses itself.
 	settingsPath, _ := settingsPathFor(prov, homeDir, resolver)
-	if err := installer.CheckHook(ref.Item, h, prov, settingsPath); err != nil {
+	// CheckHook also finds a hook the merge would refuse as installed
+	// under the legacy root, which is skipped as the loop above skips one.
+	if err := installer.CheckHook(ref.Item, h, prov, repoRoot, settingsPath, inst); errors.Is(err, installer.ErrHookInstalled) {
+		return PlannedAction{
+			Type:   ref.Type,
+			Name:   ref.Name,
+			Action: "skip-exists",
+			Detail: err.Error(),
+		}
+	} else if err != nil {
 		return PlannedAction{
 			Type:    ref.Type,
 			Name:    ref.Name,
