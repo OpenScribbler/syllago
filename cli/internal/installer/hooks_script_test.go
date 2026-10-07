@@ -369,6 +369,64 @@ func TestResolveHookScripts_RewritesOnlyTheScriptField(t *testing.T) {
 	}
 }
 
+// A script reached through an in-item symlink runs under the name the
+// command gave it, so it finds the files beside that name. Through a
+// directory symlink, which the copy does not keep, it runs its target.
+func TestResolveHookScripts_RunsAnInItemSymlinkByItsOwnName(t *testing.T) {
+	itemDir := t.TempDir()
+	os.MkdirAll(filepath.Join(itemDir, "lib"), 0755)
+	os.WriteFile(filepath.Join(itemDir, "lib", "run.sh"), []byte("cat data.txt"), 0755)
+	os.WriteFile(filepath.Join(itemDir, "data.txt"), []byte("data"), 0644)
+	if err := os.Symlink(filepath.Join("lib", "run.sh"), filepath.Join(itemDir, "run.sh")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+	os.Symlink("lib", filepath.Join(itemDir, "bin"))
+
+	for cmd, want := range map[string]string{
+		"bash ./run.sh":     "run.sh",
+		"bash ./bin/run.sh": filepath.Join("lib", "run.sh"),
+	} {
+		destDir := t.TempDir()
+		got, _, err := resolveHookCommandScript(cmd, catalog.ContentItem{Name: "linked", Path: itemDir}, destDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := "bash " + shellQuote(filepath.Join(destDir, want)); got != want {
+			t.Errorf("%q: command = %q, want %q", cmd, got, want)
+		}
+	}
+}
+
+// A command that leaves the item and comes back through a symlink still
+// runs the copy, never the file at the path it named.
+func TestResolveHookScripts_RunsTheCopyOfAPathThatLeavesTheItem(t *testing.T) {
+	base := t.TempDir()
+	itemDir, destDir := filepath.Join(base, "item"), filepath.Join(base, "dest")
+	os.MkdirAll(itemDir, 0755)
+	os.WriteFile(filepath.Join(itemDir, "run.sh"), []byte("echo hi"), 0755)
+	if err := os.Symlink("item", filepath.Join(base, "other")); err != nil {
+		t.Skip("symlinks unavailable:", err)
+	}
+
+	got, _, err := resolveHookCommandScript("bash ../other/run.sh", catalog.ContentItem{Name: "back", Path: itemDir}, destDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "bash " + shellQuote(filepath.Join(destDir, "run.sh")); got != want {
+		t.Errorf("command = %q, want %q", got, want)
+	}
+}
+
+// A directory whose name starts with ".." is inside the item.
+func TestHookScriptRef_AcceptsADotDotPrefixedDirectory(t *testing.T) {
+	itemDir := t.TempDir()
+	os.MkdirAll(filepath.Join(itemDir, "..cache"), 0755)
+	os.WriteFile(filepath.Join(itemDir, "..cache", "run.sh"), []byte("echo hi"), 0755)
+	if _, _, rel, err := hookScriptRef(itemDir, "cached", "bash ./..cache/run.sh"); err != nil || rel != filepath.Join("..cache", "run.sh") {
+		t.Fatalf("hookScriptRef = %q, %v; want ..cache/run.sh inside the item", rel, err)
+	}
+}
+
 func TestScriptRefSpan(t *testing.T) {
 	for _, tc := range []struct {
 		cmd        string

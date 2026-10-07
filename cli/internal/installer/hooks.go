@@ -510,6 +510,17 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		}
 		scriptsCopied = true
 
+		// Run the script by the name the command gave it, so a script
+		// reached through an in-item symlink finds the files beside that
+		// name. The resolved path stands in when that name was not copied:
+		// one through a directory symlink, or one that leaves the item and
+		// comes back.
+		if entry, err := filepath.Rel(itemDir, filepath.Join(itemDir, ref)); err == nil && !singleFile && entry != ".." && !strings.HasPrefix(entry, ".."+string(filepath.Separator)) {
+			if fi, err := os.Lstat(filepath.Join(destDir, entry)); err == nil && fi.Mode().IsRegular() {
+				destPath = filepath.Join(destDir, entry)
+			}
+		}
+
 		if err := os.Chmod(destPath, 0700); err != nil {
 			return nil, scriptsCopied, fmt.Errorf("making %s executable: %w", destPath, err)
 		}
@@ -686,7 +697,7 @@ func hookScriptRef(itemDir, name, cmd string) (ref, scriptPath, rel string, err 
 		scriptPath = resolved
 	}
 	rel, relErr := filepath.Rel(itemDir, scriptPath)
-	if relErr != nil || strings.HasPrefix(rel, "..") {
+	if relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return ref, "", "", fmt.Errorf("hook %q command references path outside item directory: %s", name, ref)
 	}
 	return ref, scriptPath, rel, nil
