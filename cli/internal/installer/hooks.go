@@ -490,7 +490,8 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		}
 
 		// Check if the script exists
-		if _, statErr := os.Stat(scriptPath); statErr != nil {
+		scriptInfo, statErr := os.Stat(scriptPath)
+		if statErr != nil {
 			continue // script doesn't exist, leave command as-is
 		}
 
@@ -500,7 +501,7 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		// so only the script is copied.
 		destPath := filepath.Join(destDir, rel)
 		if singleFile {
-			if err := copyFile(scriptPath, destPath); err != nil {
+			if err := copyHookFile(scriptPath, destPath, scriptInfo); err != nil {
 				return nil, true, fmt.Errorf("copying hook script to %s: %w", destPath, err)
 			}
 		} else if !scriptsCopied {
@@ -559,6 +560,17 @@ func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 	if err != nil {
 		return err
 	}
+	// An installed hook is skipped before its scripts are copied, as
+	// PlaceHook does, so a script it cannot read does not refuse the apply.
+	if settingsPath != "" {
+		existing, err := decodeExistingHooks(model, adapter, settingsPath)
+		if err != nil {
+			return err
+		}
+		if err := hookInstalled(inst, repoRoot, item.Name, nativeEventFor(canonHook.Event, prov.Slug), prov.Slug, existing); err != nil {
+			return err
+		}
+	}
 	// A script copy that fails, such as on a file it cannot read, would
 	// stop the apply after an earlier provider had changed, so the copy is
 	// tried here into a directory that is then removed.
@@ -573,14 +585,7 @@ func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 		}
 		return fmt.Errorf("hook %q: copying its scripts: %w", item.Name, err)
 	}
-	if settingsPath == "" {
-		return nil
-	}
-	existing, err := decodeExistingHooks(model, adapter, settingsPath)
-	if err != nil {
-		return err
-	}
-	return hookInstalled(inst, repoRoot, item.Name, nativeEventFor(canonHook.Event, prov.Slug), prov.Slug, existing)
+	return nil
 }
 
 // checkHook runs CheckHook's checks and returns what PlaceHook builds on:

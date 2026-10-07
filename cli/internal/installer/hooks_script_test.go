@@ -255,12 +255,50 @@ func TestCheckHook_RefusesAScriptTheCopyCannotRead(t *testing.T) {
 		t.Errorf("trial copy left %d entries in TMPDIR", len(left))
 	}
 
+	// An installed hook is skipped, as PlaceHook skips it, rather than
+	// refused for a script it would never copy.
+	installed := &Installed{Hooks: []InstalledHook{{Name: "locked", Event: "PreToolUse", Provider: "claude-code"}}}
+	settings := filepath.Join(t.TempDir(), "settings.json")
+	if err := CheckHook(item, h, provider.Provider{Name: "Claude Code", Slug: "claude-code"}, t.TempDir(), settings, installed); !errors.Is(err, ErrHookInstalled) {
+		t.Errorf("installed hook: CheckHook = %v; want ErrHookInstalled", err)
+	}
+
 	os.Chmod(script, 0755)
 	if err := CheckHook(item, h, provider.Provider{Name: "Claude Code", Slug: "claude-code"}, t.TempDir(), "", &Installed{}); err != nil {
 		t.Errorf("readable script: CheckHook = %v", err)
 	}
 	if left, _ := os.ReadDir(tmp); len(left) != 0 {
 		t.Errorf("trial copy left %d entries in TMPDIR", len(left))
+	}
+}
+
+// A single-file hook's script replaces a symlink an earlier install of
+// the same name left in its scripts directory, without writing through it.
+func TestResolveHookScripts_SingleFileReplacesAStaleLink(t *testing.T) {
+	provDir := t.TempDir()
+	os.WriteFile(filepath.Join(provDir, "mine.json"), []byte(`{}`), 0644)
+	os.WriteFile(filepath.Join(provDir, "mine.sh"), []byte("echo v2"), 0644)
+	destDir := t.TempDir()
+	elsewhere := filepath.Join(t.TempDir(), "old.sh")
+	os.WriteFile(elsewhere, []byte("echo v1"), 0644)
+	if err := os.Symlink(elsewhere, filepath.Join(destDir, "mine.sh")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", "./mine.sh")
+	item := catalog.ContentItem{Name: "mine", Path: filepath.Join(provDir, "mine.json")}
+	if _, _, err := resolveHookScripts(matcherGroup, item, destDir); err != nil {
+		t.Fatalf("resolveHookScripts: %v", err)
+	}
+	fi, err := os.Lstat(filepath.Join(destDir, "mine.sh"))
+	if err != nil || !fi.Mode().IsRegular() {
+		t.Fatalf("mine.sh = %v, %v; want a regular file", fi, err)
+	}
+	if got, _ := os.ReadFile(filepath.Join(destDir, "mine.sh")); string(got) != "echo v2" {
+		t.Errorf("mine.sh = %q, want the new script", got)
+	}
+	if got, _ := os.ReadFile(elsewhere); string(got) != "echo v1" {
+		t.Errorf("the old link's target was written: %q", got)
 	}
 }
 
