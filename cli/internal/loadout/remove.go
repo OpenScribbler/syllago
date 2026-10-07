@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/OpenScribbler/syllago/cli/internal/installer"
 	"github.com/OpenScribbler/syllago/cli/internal/snapshot"
@@ -80,25 +79,17 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	result.RemovedFiles = manifest.CreatedFiles
 
 	// Step 2: Delete symlinks. Restore deleted the created files and
-	// recorded that. A retry after any later failure must not delete what
-	// someone puts at a path this run deleted, so each placement leaves the
-	// snapshot too, even when a later delete fails.
-	var deleted []string
-	forget := func() error {
-		if err := snapshot.Forget(snapshotDir, deleted); err != nil {
-			return fmt.Errorf("remove deleted %s but could not record that in %s: %w; take those out of symlinks in its manifest.json before running remove again", strings.Join(deleted, ", "), snapshotDir, err)
-		}
-		return nil
-	}
+	// recorded that. Each placement leaves the snapshot as soon as it is
+	// deleted, so a retry after a failure or a killed run does not delete
+	// what someone puts at a path this one deleted.
 	for _, sr := range manifest.Symlinks {
 		if err := removePlaced(sr); err != nil {
-			return nil, errors.Join(err, forget())
+			return nil, err
 		}
-		deleted = append(deleted, sr.Path)
+		if err := snapshot.Forget(snapshotDir, []string{sr.Path}); err != nil {
+			return nil, fmt.Errorf("remove deleted %s but could not record that in %s: %w; take it out of symlinks in its manifest.json before running remove again", sr.Path, snapshotDir, err)
+		}
 		result.RemovedSymlinks = append(result.RemovedSymlinks, sr.Path)
-	}
-	if err := forget(); err != nil {
-		return nil, err
 	}
 
 	// Step 3: Clean installed.json entries for this loadout. Apply does not
@@ -146,7 +137,7 @@ func removePlaced(sr snapshot.SymlinkRecord) error {
 		// Before snapshots recorded copies, a copy was recorded like a
 		// symlink, and remove deletes only what it knows the apply placed.
 		if info, statErr := os.Lstat(sr.Path); statErr == nil && info.IsDir() {
-			return fmt.Errorf("%s is a directory where the loadout recorded a symlink, likely a copy from a syllago version that did not record copies; delete it by hand, then run remove again: %w", sr.Path, err)
+			return fmt.Errorf("%s is a directory where the loadout recorded a symlink, likely a copy from a syllago version that did not record copies; delete it by hand and take it out of symlinks in the snapshot's manifest.json, then run remove again: %w", sr.Path, err)
 		}
 		return err
 	}

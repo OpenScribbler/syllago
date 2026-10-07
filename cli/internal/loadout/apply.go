@@ -182,7 +182,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		restored := readErr == nil && restoreErr == nil
 		// A placement that will not go fails the rollback like a restore
 		// that will not, so the snapshot stays and records it.
-		removed, unplaceErr := unplace(placed)
+		removed, unplaceErr := unplace(placed, snapshotDir)
 		restoreErr = errors.Join(restoreErr, unplaceErr)
 		var recorded []snapshot.SymlinkRecord
 		if readErr == nil {
@@ -251,7 +251,7 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 
 // unplace deletes the symlinks and copies a failed apply placed, and
 // returns the paths it deleted.
-func unplace(placed []snapshot.SymlinkRecord) ([]string, error) {
+func unplace(placed []snapshot.SymlinkRecord, snapshotDir string) ([]string, error) {
 	var removed []string
 	var errs []error
 	for _, sr := range placed {
@@ -260,6 +260,10 @@ func unplace(placed []snapshot.SymlinkRecord) ([]string, error) {
 			continue
 		}
 		removed = append(removed, sr.Path)
+		// Recorded at once, so a rollback killed partway leaves no deleted
+		// placement for a later remove. The caller records them all again
+		// and reports any failure.
+		_ = snapshot.Forget(snapshotDir, []string{sr.Path})
 	}
 	return removed, errors.Join(errs...)
 }

@@ -431,20 +431,15 @@ func Restore(snapshotDir string, manifest *SnapshotManifest) error {
 			return fmt.Errorf("restoring %s: %w", rel, err)
 		}
 	}
-	for i, path := range manifest.CreatedFiles {
+	for _, path := range manifest.CreatedFiles {
 		if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			// A retry must not delete what appears at the paths this one
-			// already deleted.
-			removeErr := fmt.Errorf("removing %s: %w", path, err)
-			if err := Forget(snapshotDir, manifest.CreatedFiles[:i]); err != nil {
-				return fmt.Errorf("%w; restore deleted %s but could not record that in %s: %w; move those paths from createdFiles to revertedFiles in its manifest.json before trying again", removeErr, strings.Join(manifest.CreatedFiles[:i], ", "), snapshotDir, err)
-			}
-			return removeErr
+			return fmt.Errorf("removing %s: %w", path, err)
 		}
-	}
-	// So does a retry after a later step fails or the run is killed.
-	if err := Forget(snapshotDir, manifest.CreatedFiles); err != nil {
-		return fmt.Errorf("restore deleted %s but could not record that in %s: %w; move those paths from createdFiles to revertedFiles in its manifest.json before trying again", strings.Join(manifest.CreatedFiles, ", "), snapshotDir, err)
+		// Recorded one at a time, so a retry after a failure or a killed
+		// run does not delete what appears at a path this one deleted.
+		if err := Forget(snapshotDir, []string{path}); err != nil {
+			return fmt.Errorf("restore deleted %s but could not record that in %s: %w; move it from createdFiles to revertedFiles in its manifest.json before trying again", path, snapshotDir, err)
+		}
 	}
 
 	return nil

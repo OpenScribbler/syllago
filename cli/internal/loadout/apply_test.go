@@ -823,12 +823,19 @@ func TestUnplace_ReportsFailures(t *testing.T) {
 	}
 
 	placed := []snapshot.SymlinkRecord{{Path: gone}, {Path: placedCopy, Copied: true}}
-	removed, err := unplace(placed)
+	snapshotDir, err := snapshot.Create(t.TempDir(), "l", "keep", nil, placed, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	removed, err := unplace(placed, snapshotDir)
 	if err == nil {
 		t.Fatal("expected an error deleting a copy whose contents cannot be removed")
 	}
 	if !slices.Equal(removed, []string{gone}) {
 		t.Errorf("removed = %q, want only %q", removed, gone)
+	}
+	if sm, err := snapshot.ReadManifest(snapshotDir); err != nil || len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != placedCopy {
+		t.Errorf("recorded symlinks = %v (%v), want only %s", sm, err, placedCopy)
 	}
 	if got, want := leftBehind(placed, removed, nil), "; rollback could not delete "+placedCopy+", which the snapshot does not record, so delete those by hand"; got != want {
 		t.Errorf("leftBehind unrecorded = %q, want %q", got, want)

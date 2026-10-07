@@ -428,7 +428,7 @@ func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(snapshotDir, 0o755) })
 
 	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err == nil || !containsAll(err.Error(), "remove deleted "+placed, "take those out of symlinks") {
+	if err == nil || !containsAll(err.Error(), "remove deleted "+placed, "take it out of symlinks") {
 		t.Fatalf("Remove: got %v, want it to name %s and say to fix the manifest before retrying", err, placed)
 	}
 }
@@ -439,20 +439,35 @@ func TestRemove_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 func TestRemove_PointsAtACopyRecordedAsASymlink(t *testing.T) {
 	t.Parallel()
 	projectRoot := t.TempDir()
+	src := filepath.Join(projectRoot, "src")
+	first := filepath.Join(projectRoot, "first")
+	if err := os.Symlink(src, first); err != nil {
+		t.Fatal(err)
+	}
 	placed := filepath.Join(projectRoot, "placed")
 	if err := os.MkdirAll(filepath.Join(placed, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := snapshot.Create(projectRoot, "l", "keep", nil, []snapshot.SymlinkRecord{{Path: placed, Target: filepath.Join(projectRoot, "src")}}, nil); err != nil {
+	snapshotDir, err := snapshot.Create(projectRoot, "l", "keep", nil, []snapshot.SymlinkRecord{{Path: first, Target: src}, {Path: placed, Target: src}}, nil)
+	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 
-	_, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
-	if err == nil || !containsAll(err.Error(), placed, "delete it by hand, then run remove again") {
+	_, err = Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err == nil || !containsAll(err.Error(), placed, "delete it by hand and take it out of symlinks") {
 		t.Fatalf("Remove: got %v, want it to point at the old copy %s", err, placed)
 	}
 	if _, err := os.Stat(filepath.Join(placed, "sub")); err != nil {
 		t.Errorf("remove deleted inside %s: %v", placed, err)
+	}
+	// The symlink it deleted first is recorded as gone, so the retry the
+	// message asks for does not delete what appears there.
+	sm, err := snapshot.ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if len(sm.Symlinks) != 1 || sm.Symlinks[0].Path != placed {
+		t.Errorf("symlinks = %v, want only %s", sm.Symlinks, placed)
 	}
 }
 

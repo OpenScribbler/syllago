@@ -434,14 +434,11 @@ func TestRestore_NamesTheCreatedFilesItCannotRecordDeleting(t *testing.T) {
 	}
 }
 
-// TestRestore_NamesWhatItDeletedWhenItCannotRecordIt: a restore that fails
-// partway and cannot rewrite the snapshot names the created files it
-// already deleted, which a retry would otherwise delete again.
-func TestRestore_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
+// TestRestore_RecordsEachDeletionBeforeTheNext: a restore that fails partway
+// has already recorded the created files it deleted, so a retry does not
+// delete what appears at those paths in the meantime.
+func TestRestore_RecordsEachDeletionBeforeTheNext(t *testing.T) {
 	t.Parallel()
-	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
-		t.Skip("needs a directory the test cannot write to")
-	}
 	projectRoot := t.TempDir()
 	deleted := filepath.Join(projectRoot, "deleted.json")
 	stuck := filepath.Join(projectRoot, "stuck")
@@ -455,13 +452,15 @@ func TestRestore_NamesWhatItDeletedWhenItCannotRecordIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if err := os.Chmod(snapshotDir, 0555); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(snapshotDir, 0755) })
 
-	err = Restore(snapshotDir, manifest)
-	if err == nil || !strings.Contains(err.Error(), "restore deleted "+deleted+" but could not record that") {
-		t.Fatalf("Restore: got %v, want it to name %s as already deleted", err, deleted)
+	if err := Restore(snapshotDir, manifest); err == nil || !strings.Contains(err.Error(), "removing "+stuck) {
+		t.Fatalf("Restore: got %v, want it to fail removing %s", err, stuck)
+	}
+	got, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if !slices.Equal(got.RevertedFiles, []string{deleted}) || !slices.Equal(got.CreatedFiles, []string{stuck}) {
+		t.Errorf("created = %q, reverted = %q; want %q still created and %q reverted", got.CreatedFiles, got.RevertedFiles, stuck, deleted)
 	}
 }
