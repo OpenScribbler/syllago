@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,54 +66,60 @@ type BuiltinScanner struct{}
 // Name returns the scanner identifier.
 func (s *BuiltinScanner) Name() string { return "builtin" }
 
-// Scan reads hook.json from the directory, scans it with the existing regex
-// patterns, and also scans any recognized script files (.sh, .bash, .zsh,
-// .py, .js, .mjs, .cjs, .ts, .rb, .ps1) in the directory. Each finding is
-// tagged with its source file and, for scripts, the line number.
+// Scan walks the hook directory and its subdirectories. It scans every
+// JSON file with the hook-config patterns, since a hook's manifest need not
+// be named hook.json, and every recognized script file (.sh, .bash, .zsh,
+// .py, .js, .mjs, .cjs, .ts, .rb, .ps1), since an install copies the whole
+// directory. Symlinks are skipped, as the copy skips them. Each finding is
+// tagged with its path relative to hookDir and, for scripts, the line
+// number.
 func (s *BuiltinScanner) Scan(hookDir string) (ScanResult, error) {
 	var result ScanResult
 
-	hookPath := filepath.Join(hookDir, "hook.json")
-	if data, err := os.ReadFile(hookPath); err == nil {
-		for _, w := range ScanHookSecurity(data) {
-			result.Findings = append(result.Findings, ScanFinding{
-				Severity:    w.Severity,
-				File:        "hook.json",
-				Line:        0,
-				Description: w.Description,
-				Scanner:     s.Name(),
-			})
+	walkErr := filepath.WalkDir(hookDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			result.Errors = append(result.Errors, fmt.Sprintf("read %s: %v", path, err))
+			if d != nil && d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
 		}
-	} else if !errors.Is(err, os.ErrNotExist) {
-		// Missing hook.json is expected for some directory layouts; surface
-		// anything else (permission errors, IO failures) as a scanner error
-		// rather than a hard failure so other scanners can still run.
-		result.Errors = append(result.Errors, fmt.Sprintf("read hook.json: %v", err))
-	}
-
-	entries, err := os.ReadDir(hookDir)
-	if err != nil {
-		result.Errors = append(result.Errors, fmt.Sprintf("read hook dir: %v", err))
-		return result, nil
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+		if !d.Type().IsRegular() {
+			return nil
 		}
-		lang := DetectLanguage(entry.Name())
+		name, _ := filepath.Rel(hookDir, path)
+		name = filepath.ToSlash(name)
+		if strings.EqualFold(filepath.Ext(path), ".json") {
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				result.Errors = append(result.Errors, fmt.Sprintf("read %s: %v", name, readErr))
+				return nil
+			}
+			for _, w := range ScanHookSecurity(data) {
+				result.Findings = append(result.Findings, ScanFinding{
+					Severity:    w.Severity,
+					File:        name,
+					Description: w.Description,
+					Scanner:     s.Name(),
+				})
+			}
+			return nil
+		}
+		lang := DetectLanguage(d.Name())
 		if lang == LangUnknown {
-			continue
+			return nil
 		}
-		path := filepath.Join(hookDir, entry.Name())
-		findings, scanErr := scanScriptFileWithLines(path, entry.Name(), lang, s.Name())
+		findings, scanErr := scanScriptFileWithLines(path, name, lang, s.Name())
 		if scanErr != nil {
-			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", entry.Name(), scanErr))
-			continue
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", name, scanErr))
+			return nil
 		}
 		result.Findings = append(result.Findings, findings...)
+		return nil
+	})
+	if walkErr != nil {
+		result.Errors = append(result.Errors, fmt.Sprintf("read hook dir: %v", walkErr))
 	}
-
 	return result, nil
 }
 

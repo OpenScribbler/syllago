@@ -91,36 +91,9 @@ var restoreSnapshot = snapshot.Restore
 //   - The SessionEnd hook injected for "try" mode is NOT recorded in installed.json --
 //     it lives only in the backed-up settings.json and gets reverted with the snapshot.
 func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) (*ApplyResult, error) {
-	// Callers that change state hold the install lock across their
-	// active-loadout check and every Apply, so the check stays true.
-	if opts.HomeDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("getting home dir: %w", err)
-		}
-		opts.HomeDir = home
-	}
-
-	// Step 1: Resolve all manifest references to catalog items
-	refs, err := Resolve(manifest, cat, prov.Slug)
+	refs, actions, opts, err := plan(manifest, cat, prov, opts)
 	if err != nil {
-		return nil, fmt.Errorf("resolving references: %w", err)
-	}
-
-	// Step 2: Validate resolved refs
-	issues := Validate(refs, prov)
-	if len(issues) > 0 {
-		msg := "validation failed:"
-		for _, issue := range issues {
-			msg += fmt.Sprintf("\n  %s: %s", issue.Ref.Name, issue.Problem)
-		}
-		return nil, fmt.Errorf("%s", msg)
-	}
-
-	// Step 3: Preview what would happen
-	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir, opts.Resolver)
-	if err != nil {
-		return nil, fmt.Errorf("previewing: %w", err)
+		return nil, err
 	}
 
 	// For preview mode, return immediately
@@ -128,89 +101,13 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		return &ApplyResult{Actions: actions}, nil
 	}
 
-	// Check for conflicts before doing anything
-	for _, a := range actions {
-		if a.Action == "error-conflict" {
-			return nil, fmt.Errorf("conflict: %s %s: %s", a.Type.Label(), a.Name, a.Problem)
-		}
+	filesToBackup, err := refuse(actions, prov, opts)
+	if err != nil {
+		return nil, err
 	}
 
-	// Hooks the provider can't read fail the whole apply unless the caller
-	// opted into a partial one — no silent partial coverage (syllago-xqlc1).
-	var unsupported []string
-	for _, a := range actions {
-		if a.Action == "skip-unsupported" {
-			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
-		}
-	}
-	if len(unsupported) > 0 && !opts.SkipUnsupported {
-		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
-	}
-
-	// A hook with high-severity scanner findings fails the apply before
-	// anything changes, unless the caller forced it.
-	var flagged []string
-	for _, a := range actions {
-		if a.Action == "merge-hook" && a.Problem != "" {
-			flagged = append(flagged, fmt.Sprintf("%s — %s", a.Name, a.Problem))
-		}
-	}
-	if len(flagged) > 0 && !opts.Force {
-		return nil, &ScannerFindingsError{Problems: flagged}
-	}
-
-	// Remove deletes what an apply placed, so each path must be one remove
-	// accepts, and no two items may claim the same one.
-	dests := make(map[string]string)
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		if err := checkRemovablePath(a.Detail); err != nil {
-			return nil, fmt.Errorf("placing %s: %w", a.Name, err)
-		}
-		if other, ok := dests[a.Detail]; ok {
-			return nil, fmt.Errorf("conflict: %s and %s in this loadout both install to %s", other, a.Name, a.Detail)
-		}
-		dests[a.Detail] = a.Name
-	}
-	// Nor may one sit inside another: deleting the outer one would take
-	// the inner one with it while the snapshot still recorded it.
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if other, ok := dests[dir]; ok {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
-			}
-		}
-	}
-
-	// Step 4: Collect files to back up and create snapshot. Each placement
-	// is recorded as it is made, so the snapshot starts with none.
-	filesToBackup := collectBackupFiles(actions, prov, opts)
-	// A settings file the apply may create is the snapshot's to delete, so
-	// no item may install over it, around it, or inside it either.
-	writes := make(map[string]bool)
-	for _, f := range filesToBackup {
-		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if other, ok := dests[dir]; ok {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
-			}
-		}
-		writes[filepath.Clean(f)] = true
-	}
-	for _, a := range actions {
-		if a.Action != "create-symlink" {
-			continue
-		}
-		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
-			if writes[dir] {
-				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s that the loadout also writes", a.Name, a.Detail, dir)
-			}
-		}
-	}
+	// Step 4: Create the snapshot. Each placement is recorded as it is
+	// made, so the snapshot starts with none.
 	var hookScripts []string
 	for _, a := range actions {
 		if a.Action == "merge-hook" {
@@ -360,6 +257,144 @@ func leftBehind(placed []snapshot.SymlinkRecord, removed []string, recorded []sn
 	return msg
 }
 
+// plan resolves, validates, and previews a loadout, filling opts.HomeDir.
+func plan(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) ([]ResolvedRef, []PlannedAction, ApplyOptions, error) {
+	// Callers that change state hold the install lock across their
+	// active-loadout check and every Apply, so the check stays true.
+	if opts.HomeDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, nil, opts, fmt.Errorf("getting home dir: %w", err)
+		}
+		opts.HomeDir = home
+	}
+
+	// Step 1: Resolve all manifest references to catalog items
+	refs, err := Resolve(manifest, cat, prov.Slug)
+	if err != nil {
+		return nil, nil, opts, fmt.Errorf("resolving references: %w", err)
+	}
+
+	// Step 2: Validate resolved refs
+	issues := Validate(refs, prov)
+	if len(issues) > 0 {
+		msg := "validation failed:"
+		for _, issue := range issues {
+			msg += fmt.Sprintf("\n  %s: %s", issue.Ref.Name, issue.Problem)
+		}
+		return nil, nil, opts, fmt.Errorf("%s", msg)
+	}
+
+	// Step 3: Preview what would happen
+	actions, err := Preview(refs, prov, opts.ProjectRoot, opts.HomeDir, opts.Resolver)
+	if err != nil {
+		return nil, nil, opts, fmt.Errorf("previewing: %w", err)
+	}
+
+	return refs, actions, opts, nil
+}
+
+// Check runs every refusal Apply makes before it changes anything, without
+// changing anything, whatever opts.Mode says. A caller applying to several
+// providers checks them all first, so a refusal for one leaves the others
+// unapplied too.
+func Check(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opts ApplyOptions) error {
+	_, actions, opts, err := plan(manifest, cat, prov, opts)
+	if err != nil {
+		return err
+	}
+	_, err = refuse(actions, prov, opts)
+	return err
+}
+
+// refuse returns the error that stops an apply of actions before it
+// changes anything, or the files the apply would back up.
+func refuse(actions []PlannedAction, prov provider.Provider, opts ApplyOptions) ([]string, error) {
+	// Check for conflicts before doing anything
+	for _, a := range actions {
+		if a.Action == "error-conflict" {
+			return nil, fmt.Errorf("conflict: %s %s: %s", a.Type.Label(), a.Name, a.Problem)
+		}
+	}
+
+	// Hooks the provider can't read fail the whole apply unless the caller
+	// opted into a partial one — no silent partial coverage (syllago-xqlc1).
+	var unsupported []string
+	for _, a := range actions {
+		if a.Action == "skip-unsupported" {
+			unsupported = append(unsupported, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	if len(unsupported) > 0 && !opts.SkipUnsupported {
+		return nil, &UnsupportedHooksError{Provider: prov.Name, Problems: unsupported}
+	}
+
+	// A hook with high-severity scanner findings fails the apply before
+	// anything changes, unless the caller forced it.
+	var flagged []string
+	for _, a := range actions {
+		if a.Action == "merge-hook" && a.Problem != "" {
+			flagged = append(flagged, fmt.Sprintf("%s — %s", a.Name, a.Problem))
+		}
+	}
+	if len(flagged) > 0 && !opts.Force {
+		return nil, &ScannerFindingsError{Problems: flagged}
+	}
+
+	// Remove deletes what an apply placed, so each path must be one remove
+	// accepts, and no two items may claim the same one.
+	dests := make(map[string]string)
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		if err := checkRemovablePath(a.Detail); err != nil {
+			return nil, fmt.Errorf("placing %s: %w", a.Name, err)
+		}
+		if other, ok := dests[a.Detail]; ok {
+			return nil, fmt.Errorf("conflict: %s and %s in this loadout both install to %s", other, a.Name, a.Detail)
+		}
+		dests[a.Detail] = a.Name
+	}
+	// Nor may one sit inside another: deleting the outer one would take
+	// the inner one with it while the snapshot still recorded it.
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
+			}
+		}
+	}
+
+	// Collect the files the snapshot backs up.
+	filesToBackup := collectBackupFiles(actions, prov, opts)
+	// A settings file the apply may create is the snapshot's to delete, so
+	// no item may install over it, around it, or inside it either.
+	writes := make(map[string]bool)
+	for _, f := range filesToBackup {
+		for dir := filepath.Clean(f); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, which holds %s that the loadout also writes", other, dir, f)
+			}
+		}
+		writes[filepath.Clean(f)] = true
+	}
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if writes[dir] {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s that the loadout also writes", a.Name, a.Detail, dir)
+			}
+		}
+	}
+	return filesToBackup, nil
+}
+
 // claim creates dst as an empty file, an empty directory, or the symlink
 // itself, failing if anything is already there, so a placement never
 // writes into something the apply did not make.
@@ -436,9 +471,24 @@ func applyActions(actions []PlannedAction, refs []ResolvedRef, prov provider.Pro
 			})
 
 		case "merge-hook":
-			// The scripts live in the snapshot, which only this apply
-			// writes and which remove and rollback delete whole.
-			scriptsDir := filepath.Join(snapshotDir, "hook-scripts", a.Name)
+			// The hook goes into the user's settings and fires in every
+			// project, so its scripts live under the home directory rather
+			// than in this project, where anything that can write to the
+			// project could change what the hook runs. The directory is
+			// recorded as a placed copy, so remove and rollback delete it.
+			scriptsRoot := filepath.Join(opts.HomeDir, ".syllago", "loadout-hooks")
+			if err := os.MkdirAll(scriptsRoot, 0755); err != nil {
+				return nil, placed, fmt.Errorf("creating %s: %w", scriptsRoot, err)
+			}
+			scriptsDir, err := os.MkdirTemp(scriptsRoot, a.Name+"-")
+			if err != nil {
+				return nil, placed, fmt.Errorf("creating scripts directory for hook %s: %w", a.Name, err)
+			}
+			rec := snapshot.SymlinkRecord{Path: scriptsDir, Target: ref.Item.Path, Copied: true}
+			placed = append(placed, rec)
+			if err := snapshot.AddSymlink(snapshotDir, rec); err != nil {
+				return nil, placed, fmt.Errorf("recording %s: %w", a.Name, err)
+			}
 			notices, err := applyHook(*ref, prov, opts, scriptsDir, inst, source)
 			for _, n := range notices {
 				warnings = append(warnings, n.Message)

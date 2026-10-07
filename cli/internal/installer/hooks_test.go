@@ -721,8 +721,8 @@ func TestInstallHook_HighSeverityBlocks(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected high-severity scan to block install")
 	}
-	if !strings.Contains(err.Error(), "high-severity") {
-		t.Errorf("error should mention high-severity; got %v", err)
+	if !strings.Contains(err.Error(), "high-severity") || !strings.Contains(err.Error(), "in hook.json") {
+		t.Errorf("error should name the high-severity finding and its file; got %v", err)
 	}
 	// The findings come back with the error, so the user can see why.
 	if !hasNotice(placement.Notices, NoticeScannerFinding, "high") {

@@ -145,6 +145,13 @@ func EventCatalog() []EventDef {
 					Commands:    []string{"loadout_apply"},
 				},
 				{
+					Name:        "force",
+					Type:        "bool",
+					Description: "Whether --force was used to apply hooks past high-severity scanner findings",
+					Example:     false,
+					Commands:    []string{"loadout_apply"},
+				},
+				{
 					Name:        "discovery_candidate_count",
 					Type:        "int",
 					Description: "Number of monolithic rule files considered by add (D18)",

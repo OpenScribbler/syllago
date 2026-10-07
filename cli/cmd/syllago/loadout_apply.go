@@ -223,6 +223,19 @@ func runLoadoutApply(cmd *cobra.Command, args []string) error {
 func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog, opts loadout.ApplyOptions, effectiveProviders []string, mode string, skipUnsupported bool) error {
 	totalActions := 0
 	allAutoRevertArmed := true
+	// A refusal for one provider stops the apply before any provider
+	// changes, so a retry with the flag it names starts from a clean state.
+	if mode != "preview" {
+		for _, slug := range effectiveProviders {
+			if p := findProviderBySlug(slug); p != nil {
+				if err := loadout.Check(manifest, cat, *p, opts); err != nil {
+					return output.NewStructuredErrorDetail(output.ErrInstallConflict,
+						fmt.Sprintf("applying loadout to %s", slug),
+						loadoutApplyHint(err), err.Error())
+				}
+			}
+		}
+	}
 	for _, slug := range effectiveProviders {
 		p := findProviderBySlug(slug)
 		if p == nil {
@@ -261,6 +274,7 @@ func applyLoadoutMultiProvider(manifest *loadout.Manifest, cat *catalog.Catalog,
 	telemetry.Enrich("mode", mode)
 	telemetry.Enrich("action_count", totalActions)
 	telemetry.Enrich("skip_unsupported", skipUnsupported)
+	telemetry.Enrich("force", opts.Force)
 	return nil
 }
 
@@ -316,6 +330,7 @@ func applyLoadoutSingleProvider(manifest *loadout.Manifest, cat *catalog.Catalog
 	telemetry.Enrich("mode", mode)
 	telemetry.Enrich("action_count", len(result.Actions))
 	telemetry.Enrich("skip_unsupported", skipUnsupported)
+	telemetry.Enrich("force", opts.Force)
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,6 +80,11 @@ func installHook(item catalog.ContentItem, prov provider.Provider, repoRoot stri
 // the scripts the hook runs into scriptsDir, so the scanned copy is the one
 // that runs. The caller loads and saves inst.
 func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, repoRoot, settingsPath, scriptsDir string, inst *Installed, source string, scan ScanOptions) (Placement, error) {
+	// The name names the scripts directory, and a registry index can give
+	// an item any name, so one that is not a single path element is refused.
+	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
+		return Placement{}, fmt.Errorf("hook name %q is not a valid directory name", item.Name)
+	}
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
 		return Placement{}, fmt.Errorf("unknown hook event %q: must be a known canonical or provider event name", h.Event)
@@ -133,7 +139,13 @@ func PlaceHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 		notices = append(notices, Notice{Kind: NoticeScannerError, Message: e})
 	}
 	if !scan.Force && converter.HighestSeverity(scanResult.Findings) == "high" {
-		return Placement{Notices: notices}, fmt.Errorf("hook %q has high-severity security findings; re-run with --force to install anyway", item.Name)
+		var high []string
+		for _, f := range scanResult.Findings {
+			if strings.EqualFold(f.Severity, "high") {
+				high = append(high, fmt.Sprintf("%s in %s", f.Description, f.File))
+			}
+		}
+		return Placement{Notices: notices}, fmt.Errorf("hook %q has high-severity security findings (%s); re-run with --force to install anyway", item.Name, strings.Join(high, ", "))
 	}
 
 	// SECURITY: copy referenced scripts to a stable location and rewrite the
@@ -400,6 +412,27 @@ func hookTrackedAtLegacyRoot(repoRoot, name, event, provSlug string, existing []
 	return hookTracked(inst, name, event, provSlug, existing)
 }
 
+// HookAtLegacyRoot reports the event of a hook named name that the legacy
+// root's installed.json records for provSlug, which PlaceHook refuses to
+// install again, so a preview can skip it. A record with no provider is
+// left to PlaceHook, which counts it only when the settings hold the hook.
+func HookAtLegacyRoot(repoRoot, name, provSlug string) (string, bool) {
+	legacyRoot := legacyInstalledRoot(repoRoot)
+	if legacyRoot == "" {
+		return "", false
+	}
+	inst, err := LoadInstalled(legacyRoot)
+	if err != nil {
+		return "", false
+	}
+	for _, h := range inst.Hooks {
+		if h.Name == name && h.Provider == provSlug {
+			return h.Event, true
+		}
+	}
+	return "", false
+}
+
 func legacyRootWithHookRecord(repoRoot, name, nativeEvent, provSlug string) string {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
@@ -462,11 +495,16 @@ func resolveHookCommandScript(cmd string, item catalog.ContentItem, destDir stri
 // break when the registry cache changes. The bool reports whether any script
 // was copied, so the caller can warn that the hook runs bundled scripts.
 func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir string) ([]byte, bool, error) {
-	// Resolve the item directory (hooks can be a file or directory)
+	// Resolve the item directory (hooks can be a file or directory). Its
+	// own symlinks are resolved too, so a content root reached through a
+	// symlink does not make every script look outside it.
 	itemDir := item.Path
 	fi, err := os.Stat(item.Path)
 	if err == nil && !fi.IsDir() {
 		itemDir = filepath.Dir(item.Path)
+	}
+	if resolved, evalErr := filepath.EvalSymlinks(itemDir); evalErr == nil {
+		itemDir = resolved
 	}
 
 	// Find all command fields in hooks array
@@ -493,7 +531,7 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 
 		// Only handle relative paths at install time — these are scripts
 		// bundled into the library dir at add-time.
-		var scriptPath string
+		var scriptPath, rel string
 		if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") {
 			scriptPath = filepath.Clean(filepath.Join(itemDir, ref))
 			// Resolve symlinks before containment check to prevent symlink-based
@@ -502,7 +540,8 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 				scriptPath = resolved
 			}
 			// Verify the resolved path stays within the item directory
-			rel, relErr := filepath.Rel(itemDir, scriptPath)
+			var relErr error
+			rel, relErr = filepath.Rel(itemDir, scriptPath)
 			if relErr != nil || strings.HasPrefix(rel, "..") {
 				return nil, scriptsCopied, fmt.Errorf("hook %q command references path outside item directory: %s", item.Name, ref)
 			}
@@ -517,26 +556,22 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 			continue // script doesn't exist, leave command as-is
 		}
 
+		// The script runs beside the rest of its item, which it may source
+		// or require, so the whole item is copied once, keeping its layout.
+		if !scriptsCopied {
+			if err := copyHookItem(itemDir, destDir); err != nil {
+				return nil, true, fmt.Errorf("copying hook scripts to %s: %w", destDir, err)
+			}
+		}
 		scriptsCopied = true
 
-		// Copy script to stable location
-		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return nil, scriptsCopied, fmt.Errorf("creating hook scripts dir: %w", err)
-		}
-
-		scriptName := filepath.Base(scriptPath)
-		destPath := filepath.Join(destDir, scriptName)
-
-		scriptData, readErr := os.ReadFile(scriptPath)
-		if readErr != nil {
-			return nil, scriptsCopied, fmt.Errorf("reading script %s: %w", scriptPath, readErr)
-		}
-		if writeErr := os.WriteFile(destPath, scriptData, 0700); writeErr != nil {
-			return nil, scriptsCopied, fmt.Errorf("copying script to %s: %w", destPath, writeErr)
+		destPath := filepath.Join(destDir, rel)
+		if err := os.Chmod(destPath, 0700); err != nil {
+			return nil, scriptsCopied, fmt.Errorf("making %s executable: %w", destPath, err)
 		}
 
 		// Rewrite command: replace the script ref with the stable absolute path
-		newCmd := strings.Replace(cmd, ref, destPath, 1)
+		newCmd := strings.Replace(cmd, ref, shellQuote(destPath), 1)
 		key := fmt.Sprintf("hooks.%d.command", i)
 		result, err = sjson.SetBytes(result, key, newCmd)
 		if err != nil {
@@ -545,4 +580,37 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 	}
 
 	return result, scriptsCopied, nil
+}
+
+// copyHookItem copies the regular files of a hook item into destDir with
+// their permissions, skipping symlinks as CopyContent does.
+func copyHookItem(itemDir, destDir string) error {
+	if err := CopyContent(itemDir, destDir); err != nil {
+		return err
+	}
+	return filepath.WalkDir(itemDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || !d.Type().IsRegular() {
+			return err
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(itemDir, path)
+		if err != nil {
+			return err
+		}
+		return os.Chmod(filepath.Join(destDir, rel), info.Mode().Perm())
+	})
+}
+
+// shellQuote single-quotes p for a POSIX shell when it holds anything but
+// characters a shell reads literally, so a path with a space stays one word.
+func shellQuote(p string) string {
+	if strings.IndexFunc(p, func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("/._-+:@%,=", r))
+	}) < 0 {
+		return p
+	}
+	return "'" + strings.ReplaceAll(p, "'", `'\''`) + "'"
 }

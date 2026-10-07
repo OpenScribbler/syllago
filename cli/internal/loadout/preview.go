@@ -55,7 +55,7 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 func previewOne(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir string, inst *installer.Installed, resolver *config.PathResolver) (PlannedAction, error) {
 	switch ref.Type {
 	case catalog.Hooks:
-		return previewHook(ref, prov, inst), nil
+		return previewHook(ref, prov, repoRoot, inst), nil
 	case catalog.MCP:
 		return previewMCP(ref, prov, repoRoot, inst), nil
 	default:
@@ -136,10 +136,11 @@ func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, res
 
 // previewHook checks installed.json for an existing hook entry and whether
 // the target provider can read the hook's event at all.
-func previewHook(ref ResolvedRef, prov provider.Provider, inst *installer.Installed) PlannedAction {
+func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst *installer.Installed) PlannedAction {
 	// Check if a hook with this name is already installed on this provider
 	// (any event). An entry with no provider predates provider tracking and
-	// counts for every provider.
+	// counts for every provider. One installed under the legacy root is
+	// skipped too, since the merge would refuse it.
 	for _, h := range inst.Hooks {
 		if h.Name == ref.Name && (h.Provider == prov.Slug || h.Provider == "") {
 			return PlannedAction{
@@ -148,6 +149,14 @@ func previewHook(ref ResolvedRef, prov provider.Provider, inst *installer.Instal
 				Action: "skip-exists",
 				Detail: fmt.Sprintf("hook %s already installed for %s event", ref.Name, h.Event),
 			}
+		}
+	}
+	if event, ok := installer.HookAtLegacyRoot(repoRoot, ref.Name, prov.Slug); ok {
+		return PlannedAction{
+			Type:   ref.Type,
+			Name:   ref.Name,
+			Action: "skip-exists",
+			Detail: fmt.Sprintf("hook %s already installed for %s event", ref.Name, event),
 		}
 	}
 
@@ -198,7 +207,7 @@ func highFindings(itemPath string) string {
 	if len(found) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("high-severity scanner findings: %s; apply with --force to place it anyway", strings.Join(found, ", "))
+	return fmt.Sprintf("high-severity scanner findings: %s", strings.Join(found, ", "))
 }
 
 // hookEvent reads the event name from a hook item's hook.json. Returns
