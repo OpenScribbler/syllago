@@ -471,6 +471,34 @@ func TestRemove_PointsAtACopyRecordedAsASymlink(t *testing.T) {
 	}
 }
 
+// TestRemove_DeletesAPathRecordedTwiceOnce: earlier versions could record
+// two items at one path. Remove deletes it once, so the second record does
+// not delete what appeared there after the first.
+func TestRemove_DeletesAPathRecordedTwiceOnce(t *testing.T) {
+	t.Parallel()
+	projectRoot := t.TempDir()
+	src := filepath.Join(projectRoot, "src")
+	placed := filepath.Join(projectRoot, "placed")
+	if err := os.Symlink(src, placed); err != nil {
+		t.Fatal(err)
+	}
+	rec := snapshot.SymlinkRecord{Path: placed, Target: src}
+	if _, err := snapshot.Create(projectRoot, "l", "keep", nil, []snapshot.SymlinkRecord{rec, rec}, nil); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	result, err := Remove(RemoveOptions{ProjectRoot: projectRoot})
+	if err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if !slices.Equal(result.RemovedSymlinks, []string{placed}) {
+		t.Errorf("RemovedSymlinks = %q, want %s deleted once", result.RemovedSymlinks, placed)
+	}
+	if _, err := os.Lstat(placed); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("remove left %s: %v", placed, err)
+	}
+}
+
 // TestRemove_SaysToDeleteASnapshotItCannotDelete: a retry would restore the
 // backups again over any edit made since, so the message says to delete the
 // snapshot by hand rather than retry.

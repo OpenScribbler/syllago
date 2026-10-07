@@ -83,6 +83,11 @@ func Remove(opts RemoveOptions) (*RemoveResult, error) {
 	// deleted, so a retry after a failure or a killed run does not delete
 	// what someone puts at a path this one deleted.
 	for _, sr := range manifest.Symlinks {
+		// Earlier versions could record one path twice. The second record
+		// is skipped, or it would delete whatever appeared there since.
+		if slices.Contains(result.RemovedSymlinks, sr.Path) {
+			continue
+		}
 		if err := removePlaced(sr); err != nil {
 			return nil, fmt.Errorf("%w; the snapshot is %s", err, snapshotDir)
 		}
