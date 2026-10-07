@@ -101,10 +101,17 @@ func Create(projectRoot string, loadoutName string, mode string,
 	hashes := make(map[string]string)
 	destinations := make(map[string]string)
 	var created []string
-	absPaths := make([]string, len(filesToBackup))
-	for i, path := range filesToBackup {
-		if absPaths[i], err = filepath.Abs(path); err != nil {
+	// One file can serve two purposes, such as a settings file that holds
+	// both hooks and MCP servers. Listed twice, a restore would delete a
+	// created one twice, the second time after a provider wrote it again.
+	var absPaths []string
+	for _, path := range filesToBackup {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
 			return "", fmt.Errorf("backing up %s: %w", path, err)
+		}
+		if !slices.Contains(absPaths, absPath) {
+			absPaths = append(absPaths, absPath)
 		}
 	}
 	keys := backupKeys(home, absPaths)

@@ -56,6 +56,26 @@ func TestCreate_SkipsMissingFiles(t *testing.T) {
 	}
 }
 
+// A file listed twice, such as one settings file holding both hooks and
+// MCP servers, is recorded once, so a restore deletes a created one once.
+func TestCreate_RecordsAFileListedTwiceOnce(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	settings := filepath.Join(tmpDir, "settings.json")
+
+	snapshotDir, err := Create(tmpDir, "test-loadout", "keep", []string{settings, settings}, nil, nil)
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	m, err := ReadManifest(snapshotDir)
+	if err != nil {
+		t.Fatalf("ReadManifest: %v", err)
+	}
+	if len(m.CreatedFiles) != 1 || m.CreatedFiles[0] != settings {
+		t.Errorf("created = %q, want only %q", m.CreatedFiles, settings)
+	}
+}
+
 func TestLoad_NoSnapshot(t *testing.T) {
 	t.Parallel()
 	tmpDir := t.TempDir()
