@@ -146,6 +146,18 @@ func Apply(manifest *Manifest, cat *catalog.Catalog, prov provider.Provider, opt
 		}
 		dests[a.Detail] = a.Name
 	}
+	// Nor may one sit inside another: deleting the outer one would take
+	// the inner one with it while the snapshot still recorded it.
+	for _, a := range actions {
+		if a.Action != "create-symlink" {
+			continue
+		}
+		for dir := filepath.Dir(a.Detail); dir != filepath.Dir(dir); dir = filepath.Dir(dir) {
+			if other, ok := dests[dir]; ok {
+				return nil, fmt.Errorf("conflict: %s in this loadout installs to %s, inside %s where %s installs", a.Name, a.Detail, dir, other)
+			}
+		}
+	}
 
 	// Step 4: Collect files to back up and create snapshot. Each placement
 	// is recorded as it is made, so the snapshot starts with none.

@@ -927,6 +927,32 @@ func TestApply_RefusesDestinationsRemoveCannotTakeBack(t *testing.T) {
 			t.Errorf("rule placed despite the refusal: %v", err)
 		}
 	})
+	t.Run("one item inside another", func(t *testing.T) {
+		t.Parallel()
+		homeDir, projectRoot, manifest, cat, prov := setupIntegrationEnv(t)
+		skill := filepath.Join(projectRoot, "content", "skills", "int-skill")
+		if err := os.MkdirAll(skill, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		os.WriteFile(filepath.Join(skill, "SKILL.md"), []byte("# skill\n"), 0o644)
+		prov.SupportsType = func(ct catalog.ContentType) bool { return ct != catalog.MCP }
+		manifest.Skills = []ItemRef{{Name: "int-skill"}}
+		cat.Items = append(cat.Items, catalog.ContentItem{Name: "int-skill", Type: catalog.Skills, Provider: "claude-code", Path: skill})
+		ruleDest := filepath.Join(homeDir, ".claude", "rules", "int-rule")
+		resolver := config.NewResolver(&config.Config{ProviderPaths: map[string]config.ProviderPathConfig{
+			"claude-code": {Paths: map[string]string{"skills": ruleDest}},
+		}}, "")
+		_, err := Apply(manifest, cat, prov, ApplyOptions{Mode: "keep", ProjectRoot: projectRoot, HomeDir: homeDir, RepoRoot: projectRoot, Resolver: resolver})
+		if err == nil || !strings.Contains(err.Error(), "inside "+ruleDest) {
+			t.Fatalf("Apply: got %v, want the nested destination refused", err)
+		}
+		if _, _, err := snapshot.Load(projectRoot); !errors.Is(err, snapshot.ErrNoSnapshot) {
+			t.Errorf("snapshot after the refusal: %v, want none", err)
+		}
+		if _, err := os.Lstat(ruleDest); !os.IsNotExist(err) {
+			t.Errorf("rule placed despite the refusal: %v", err)
+		}
+	})
 }
 
 // A copy that fails partway leaves a partial directory, which rollback
