@@ -160,6 +160,13 @@ func TestPlaceHook_RefusesANameThatIsNotOnePathElement(t *testing.T) {
 			t.Errorf("name %q: got %v, want a refusal", name, err)
 		}
 	}
+	// cmd.exe would run what follows & in a name placed into the command.
+	for _, name := range []string{"x&calc", "a|b", "100%", `q"t`} {
+		_, err := PlaceHook(catalog.ContentItem{Name: name}, converter.Hook{}, provider.Provider{}, "", "", "", nil, "", ScanOptions{})
+		if err == nil || !strings.Contains(err.Error(), "shell metacharacter") {
+			t.Errorf("name %q: got %v, want a metacharacter refusal", name, err)
+		}
+	}
 }
 
 // A content root reached through a symlink resolves to the same place as
@@ -189,7 +196,7 @@ func TestHookAtLegacyRoot_MatchesTheProvider(t *testing.T) {
 	origGlobal := catalog.GlobalContentDirOverride
 	catalog.GlobalContentDirOverride = legacyRoot
 	t.Cleanup(func() { catalog.GlobalContentDirOverride = origGlobal })
-	if err := SaveInstalled(legacyRoot, &Installed{Hooks: []InstalledHook{{Name: "lint", Event: "BeforeTool", Provider: "gemini-cli"}}}); err != nil {
+	if err := SaveInstalled(legacyRoot, &Installed{Hooks: []InstalledHook{{Name: "lint", Event: "BeforeTool", Provider: "gemini-cli"}, {Name: "old", Event: "PreToolUse"}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,6 +206,10 @@ func TestHookAtLegacyRoot_MatchesTheProvider(t *testing.T) {
 	}
 	if _, ok := HookAtLegacyRoot(projectRoot, "lint", "claude-code"); ok {
 		t.Error("claude-code matched a gemini-cli record")
+	}
+	// A record from before provider tracking counts for every provider.
+	if event, ok := HookAtLegacyRoot(projectRoot, "old", "claude-code"); !ok || event != "PreToolUse" {
+		t.Errorf("provider-less record: got %q, %v; want PreToolUse, true", event, ok)
 	}
 }
 
@@ -311,5 +322,39 @@ func TestPlaceHook_RefusedDuplicateLeavesInstalledScripts(t *testing.T) {
 	got, _ := os.ReadFile(filepath.Join(scriptsDir, "run.sh"))
 	if string(got) != "#!/bin/sh\necho first\n" {
 		t.Errorf("installed script = %q, want the first item's", got)
+	}
+}
+
+// A flag that holds the script name is not the script the command runs.
+func TestResolveHookScripts_SkipsAReferenceInsideAFlag(t *testing.T) {
+	itemDir := t.TempDir()
+	os.WriteFile(filepath.Join(itemDir, "hook.js"), []byte("1"), 0644)
+	destDir := t.TempDir()
+
+	matcherGroup, _ := sjson.SetBytes([]byte(`{}`), "hooks.0.command", "node --require=./hook.js ./hook.js")
+	result, _, err := resolveHookScripts(matcherGroup, catalog.ContentItem{Name: "flag", Path: itemDir}, destDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "node --require=./hook.js " + shellQuote(filepath.Join(destDir, "hook.js"))
+	if got := gjson.GetBytes(result, "hooks.0.command").String(); got != want {
+		t.Errorf("command = %q, want %q", got, want)
+	}
+}
+
+func TestWordIndex(t *testing.T) {
+	for _, tc := range []struct {
+		cmd  string
+		want int
+	}{
+		{"./run.sh", 0},
+		{"./run.shx ./run.sh", 10},
+		{"x./run.sh ./run.sh", 10},
+		{`bash "./run.sh"`, 6},
+		{"./run.shx", -1},
+	} {
+		if got := wordIndex(tc.cmd, "./run.sh"); got != tc.want {
+			t.Errorf("wordIndex(%q) = %d, want %d", tc.cmd, got, tc.want)
+		}
 	}
 }

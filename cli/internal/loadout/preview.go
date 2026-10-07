@@ -55,7 +55,7 @@ func Preview(refs []ResolvedRef, prov provider.Provider, repoRoot string, homeDi
 func previewOne(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir string, inst *installer.Installed, resolver *config.PathResolver) (PlannedAction, error) {
 	switch ref.Type {
 	case catalog.Hooks:
-		return previewHook(ref, prov, repoRoot, inst), nil
+		return previewHook(ref, prov, repoRoot, homeDir, inst, resolver), nil
 	case catalog.MCP:
 		return previewMCP(ref, prov, repoRoot, inst), nil
 	default:
@@ -136,7 +136,7 @@ func previewSymlink(ref ResolvedRef, prov provider.Provider, homeDir string, res
 
 // previewHook checks installed.json for an existing hook entry and whether
 // the target provider can read the hook's event at all.
-func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst *installer.Installed) PlannedAction {
+func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot, homeDir string, inst *installer.Installed, resolver *config.PathResolver) PlannedAction {
 	// Check if a hook with this name is already installed on this provider
 	// (any event). An entry with no provider predates provider tracking and
 	// counts for every provider. One installed under the legacy root is
@@ -161,8 +161,9 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst 
 	}
 
 	// A hook the merge would refuse, such as an unreadable manifest, an
-	// unknown event, or a script outside its item, fails the apply before
-	// anything changes, under --skip-unsupported too.
+	// unknown event, a script outside its item, or a provider config the
+	// merge cannot read, fails the apply before anything changes, under
+	// --skip-unsupported too.
 	h, err := hookManifest(ref.Item.Path)
 	if err != nil {
 		return PlannedAction{
@@ -188,7 +189,9 @@ func previewHook(ref ResolvedRef, prov provider.Provider, repoRoot string, inst 
 			Problem: fmt.Sprintf("%s does not support hook event %q", prov.Name, h.Event),
 		}
 	}
-	if err := installer.CheckHook(ref.Item, h, prov); err != nil {
+	// settingsPathFor fails only for providers CheckHook refuses itself.
+	settingsPath, _ := settingsPathFor(prov, homeDir, resolver)
+	if err := installer.CheckHook(ref.Item, h, prov, settingsPath); err != nil {
 		return PlannedAction{
 			Type:    ref.Type,
 			Name:    ref.Name,

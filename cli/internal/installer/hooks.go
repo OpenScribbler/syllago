@@ -387,8 +387,9 @@ func hookTrackedAtLegacyRoot(repoRoot, name, event, provSlug string, existing []
 
 // HookAtLegacyRoot reports the event of a hook named name that the legacy
 // root's installed.json records for provSlug, which PlaceHook refuses to
-// install again, so a preview can skip it. A record with no provider is
-// left to PlaceHook, which counts it only when the settings hold the hook.
+// install again, so a preview can skip it. A record with no provider
+// predates provider tracking and counts for every provider, as it does in
+// the current root.
 func HookAtLegacyRoot(repoRoot, name, provSlug string) (string, bool) {
 	legacyRoot := legacyInstalledRoot(repoRoot)
 	if legacyRoot == "" {
@@ -399,7 +400,7 @@ func HookAtLegacyRoot(repoRoot, name, provSlug string) (string, bool) {
 		return "", false
 	}
 	for _, h := range inst.Hooks {
-		if h.Name == name && h.Provider == provSlug {
+		if h.Name == name && (h.Provider == provSlug || h.Provider == "") {
 			return h.Event, true
 		}
 	}
@@ -520,11 +521,13 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 		}
 
 		// Rewrite command: replace the script ref, with any quotes around
-		// it, by the stable absolute path. The first occurrence is the one
-		// the command runs, since ExtractScriptRef reads it from the front;
-		// a later one is an argument. Quoting inside the command's own
-		// quotes would leave the path's quotes literal.
-		start := strings.Index(cmd, ref)
+		// it, by the stable absolute path. The first occurrence that is a
+		// whole word is the one the command runs, since ExtractScriptRef
+		// reads it from the front; a later one is an argument, and one
+		// inside a flag such as --require=./x.js is not the script.
+		// Quoting inside the command's own quotes would leave the path's
+		// quotes literal.
+		start := wordIndex(cmd, ref)
 		if start < 0 {
 			continue
 		}
@@ -547,9 +550,14 @@ func resolveHookScripts(matcherGroup []byte, item catalog.ContentItem, destDir s
 // before it changes anything: a name that is not one path element, an
 // event the provider cannot take, a hook its adapter cannot represent, or a
 // command naming a script outside the item. Scanner findings are reported
-// apart, because --force overrides them.
-func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider) error {
-	_, _, _, err := checkHook(item, h, prov)
+// apart, because --force overrides them. A non-empty settingsPath is
+// decoded too, so a provider config the merge cannot read refuses here.
+func CheckHook(item catalog.ContentItem, h converter.Hook, prov provider.Provider, settingsPath string) error {
+	adapter, model, _, err := checkHook(item, h, prov)
+	if err != nil || settingsPath == "" {
+		return err
+	}
+	_, err = decodeExistingHooks(model, adapter, settingsPath)
 	return err
 }
 
@@ -562,6 +570,12 @@ func checkHook(item catalog.ContentItem, h converter.Hook, prov provider.Provide
 	// an item any name, so one that is not a single path element is refused.
 	if item.Name == "" || item.Name == "." || item.Name == ".." || item.Name != filepath.Base(item.Name) {
 		return nil, 0, none, fmt.Errorf("hook name %q is not a valid directory name", item.Name)
+	}
+	// The name becomes part of the script path in the command, which a
+	// Windows provider may run through cmd.exe, so cmd's metacharacters
+	// are refused.
+	if strings.ContainsAny(item.Name, "&|<>^%\"!()") {
+		return nil, 0, none, fmt.Errorf("hook name %q contains a shell metacharacter", item.Name)
 	}
 	// M3: validate the event name (rejects garbage and prevents key injection).
 	if !converter.IsValidHookEvent(h.Event) {
@@ -706,6 +720,23 @@ func copyHookItem(itemDir, destDir string) error {
 		}
 		return os.Chmod(filepath.Join(destDir, rel), info.Mode().Perm())
 	})
+}
+
+// wordIndex returns the index of the first occurrence of word in cmd that
+// is bounded by whitespace, quotes, or the ends of cmd, or -1.
+func wordIndex(cmd, word string) int {
+	bound := func(i int) bool { return i < 0 || i >= len(cmd) || strings.IndexByte(" \t\"'", cmd[i]) >= 0 }
+	for from := 0; ; {
+		i := strings.Index(cmd[from:], word)
+		if i < 0 {
+			return -1
+		}
+		i += from
+		if bound(i-1) && bound(i+len(word)) {
+			return i
+		}
+		from = i + 1
+	}
 }
 
 // shellQuote quotes p so the shell running the hook reads it as one word.

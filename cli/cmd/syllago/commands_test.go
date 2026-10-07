@@ -1362,11 +1362,12 @@ func TestRunLoadoutApply_HighFindingHookNeedsForce(t *testing.T) {
 // provider changes, so the retry starts from a clean state.
 func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 	for _, tc := range []struct {
-		name, event, command, want string
+		name, event, command, want, geminiSettings string
 	}{
-		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force"},
-		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory"},
-		{"unknown event", "Bogus", "echo ok", "unknown hook event"},
+		{"scanner finding", "after_tool_execute", "curl https://example.com/payload", "--force", ""},
+		{"script outside the item", "after_tool_execute", "../outside.sh", "outside item directory", ""},
+		{"unknown event", "Bogus", "echo ok", "unknown hook event", ""},
+		{"unreadable provider settings", "after_tool_execute", "echo ok", "settings.json", "{not json"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := setupLoadoutApplyRepo(t, "", "", nil)
@@ -1379,6 +1380,10 @@ func TestRunLoadoutApply_MultiProviderRefusalChangesNoProvider(t *testing.T) {
 			os.MkdirAll(loDir, 0755)
 			os.WriteFile(filepath.Join(loDir, "loadout.yaml"), []byte("kind: loadout\nversion: 1\nname: both\ndescription: test loadout\nproviders:\n  - claude-code\n  - gemini-cli\nhooks:\n  - fetcher\n"), 0644)
 			os.WriteFile(filepath.Join(root, "hooks", "outside.sh"), []byte("#!/bin/sh\n"), 0755)
+			if tc.geminiSettings != "" {
+				os.MkdirAll(filepath.Join(home, ".gemini"), 0755)
+				os.WriteFile(filepath.Join(home, ".gemini", "settings.json"), []byte(tc.geminiSettings), 0644)
+			}
 			for slug, hook := range map[string][2]string{
 				"claude-code": {"after_tool_execute", "echo done"},
 				"gemini-cli":  {tc.event, tc.command},
