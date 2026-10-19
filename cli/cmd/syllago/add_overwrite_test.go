@@ -250,6 +250,30 @@ func TestAddWritersOverwritePreviewAndNoForceLeavePins(t *testing.T) {
 	}
 }
 
+func TestAddWritersNoForceSkipAllIgnoresInstallLock(t *testing.T) {
+	for _, writer := range []string{"hooks", "mcp", "shared"} {
+		t.Run(writer, func(t *testing.T) {
+			f := newAddOverwriteFixture(t, writer)
+			output.SetForTest(t)
+			for _, dest := range f.dests {
+				seedAddOverwriteRecord(t, f, dest, false)
+			}
+			release, err := syllagolock.Acquire(time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer release()
+			original := syllagolock.DefaultTimeout
+			syllagolock.DefaultTimeout = time.Millisecond
+			defer func() { syllagolock.DefaultTimeout = original }()
+
+			if err := f.run(false, false); err != nil {
+				t.Errorf("add with every item already in the Library: %v, want it to skip them without the lock", err)
+			}
+		})
+	}
+}
+
 func TestAddMonolithicOverwriteSameDestinationRotatesOnce(t *testing.T) {
 	configDir := withInstallRecordConfigDir(t)
 	globalDir := t.TempDir()

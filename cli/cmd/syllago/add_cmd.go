@@ -741,7 +741,9 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 			// even if the Library changed since planning the placements.
 			for i, r := range add.AddPlacedSettings(write, plan, root, globalDir) {
 				if r.Dest != write[i].Dest {
-					return nil, fmt.Errorf("the Library changed while %s was being added; add it again", write[i].Name)
+					return nil, output.NewStructuredError(output.ErrInstallConflict,
+						fmt.Sprintf("the Library changed while %s was being added", write[i].Name),
+						"Run the add again")
 				}
 			}
 			var written []lifecycle.Written

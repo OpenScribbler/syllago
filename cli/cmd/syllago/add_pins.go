@@ -52,6 +52,10 @@ func addRespectingPins(items []add.DiscoveryItem, opts add.AddOptions, globalDir
 // each one, and fails when they are all pinned. Every write and record
 // rotation runs under Overwrite's install lock.
 func overwriteRespectingPins(req lifecycle.OverwriteRequest) error {
+	// An add that only skips writes nothing, so it must not wait on the lock.
+	if len(req.Destinations) == 0 {
+		return nil
+	}
 	m := lifecycle.New()
 	out, err := m.Overwrite(req)
 	var decision *lifecycle.DecisionRequired
@@ -75,6 +79,9 @@ func overwriteRespectingPins(req lifecycle.OverwriteRequest) error {
 		}
 		out, err = m.Overwrite(req)
 	}
+	// A write that fails partway still rotates the records of what it
+	// replaced, so a record failure is reported alongside the write error.
+	printLifecycleWarnings(output.ErrWriter, out)
 	var structured output.StructuredError
 	if errors.As(err, &structured) {
 		return err
@@ -82,6 +89,5 @@ func overwriteRespectingPins(req lifecycle.OverwriteRequest) error {
 	if err != nil {
 		return output.NewStructuredErrorDetail(output.ErrInstallNotWritable, "adding to the library", "Check permissions on ~/.syllago and that installs.json is valid JSON", err.Error())
 	}
-	printLifecycleWarnings(output.ErrWriter, out)
 	return nil
 }
