@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter/canonical"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/rulestore"
 	"github.com/OpenScribbler/syllago/cli/internal/splitter"
@@ -22,9 +24,10 @@ import (
 // item.splittable && item.splitChosen are both true.
 //
 // The returned addExecResult summarizes the whole operation: status "added"
-// with name "<base> (N sections)" on success; "error" with the first error
-// otherwise. Sections that fail to write are counted in the error text; no
-// rollback is performed (partial installs surface naturally in the library).
+// with name "<base> (N sections)" on success; "pinned" when every section is
+// pinned; "error" with the first write error otherwise. Pinned sections are
+// left as they are. Sections that fail to write are counted in the error
+// text; no rollback is performed.
 func addSplitRuleItem(item addDiscoveryItem, contentRoot, provSlug string) addExecResult {
 	if item.path == "" {
 		return addExecResult{name: item.name, status: "error", err: fmt.Errorf("split rule has empty path")}
@@ -50,51 +53,98 @@ func addSplitRuleItem(item addDiscoveryItem, contentRoot, provSlug string) addEx
 	}
 	format := filenameToFormat(filename)
 
-	written := 0
-	var firstErr error
-	for _, c := range candidates {
+	destination := func(c splitter.SplitCandidate) lifecycle.Destination {
 		slug := c.Name
 		if slug == "" {
 			slug = fallbackSlugFromFilename(filename)
 		}
-		meta := metadata.RuleMetadata{
-			FormatVersion: metadata.CurrentFormatVersion,
-			Name:          slug,
-			Description:   c.Description,
-			Type:          "rule",
-			Source: metadata.RuleSource{
-				Provider:         sourceProvider,
-				Scope:            "project",
-				Path:             item.path,
-				Format:           format,
-				Filename:         filename,
-				Hash:             hash,
-				SplitMethod:      "h2",
-				SplitFromSection: c.Description,
-			},
+		return lifecycle.Destination{
+			Type: catalog.Rules, Name: slug, Path: filepath.Join(contentRoot, string(catalog.Rules), sourceProvider, slug),
 		}
-		if werr := rulestore.WriteRuleWithSource(
-			filepath.Join(contentRoot, string(catalog.Rules)),
-			sourceProvider,
-			slug,
-			meta,
-			[]byte(c.Body),
-			filename,
-			canonBody,
-		); werr != nil {
-			if firstErr == nil {
-				firstErr = fmt.Errorf("writing %s: %w", slug, werr)
+	}
+	dests := make([]lifecycle.Destination, 0, len(candidates))
+	seen := make(map[string]bool)
+	for _, c := range candidates {
+		d := destination(c)
+		if !seen[d.Path] {
+			dests = append(dests, d)
+			seen[d.Path] = true
+		}
+	}
+	written := 0
+	req := lifecycle.OverwriteRequest{
+		Destinations: dests,
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			ok := make(map[string]bool, len(approved))
+			for _, d := range approved {
+				ok[d.Path] = true
 			}
-			continue
+			var attempted []lifecycle.Written
+			var firstErr error
+			for _, c := range candidates {
+				d := destination(c)
+				if !ok[d.Path] {
+					continue
+				}
+				meta := metadata.RuleMetadata{
+					FormatVersion: metadata.CurrentFormatVersion,
+					Name:          d.Name,
+					Description:   c.Description,
+					Type:          "rule",
+					Source: metadata.RuleSource{
+						Provider:         sourceProvider,
+						Scope:            "project",
+						Path:             item.path,
+						Format:           format,
+						Filename:         filename,
+						Hash:             hash,
+						SplitMethod:      "h2",
+						SplitFromSection: c.Description,
+					},
+				}
+				attempted = append(attempted, lifecycle.Written{Path: d.Path})
+				if werr := rulestore.WriteRuleWithSource(
+					filepath.Join(contentRoot, string(catalog.Rules)),
+					sourceProvider,
+					d.Name,
+					meta,
+					[]byte(c.Body),
+					filename,
+					canonBody,
+				); werr != nil {
+					if firstErr == nil {
+						firstErr = fmt.Errorf("writing %s: %w", d.Name, werr)
+					}
+					continue
+				}
+				written++
+			}
+			return attempted, firstErr
+		},
+	}
+	m := lifecycle.New()
+	out, err := m.Overwrite(req)
+	var decision *lifecycle.DecisionRequired
+	if errors.As(err, &decision) {
+		pinned, _ := decision.Context.([]lifecycle.PinnedDestination)
+		if len(pinned) == len(dests) {
+			return addExecResult{name: item.name, status: "pinned"}
 		}
-		written++
+		req.Decisions.Overwrite = make(map[string]bool, len(pinned))
+		for _, p := range pinned {
+			req.Decisions.Overwrite[p.Path] = false
+		}
+		out, err = m.Overwrite(req)
+	}
+	for _, f := range out.Failed {
+		err = errors.Join(err, f.Err)
 	}
 
-	if firstErr != nil {
+	if err != nil {
 		return addExecResult{
 			name:   fmt.Sprintf("%s (%d/%d sections)", filename, written, len(candidates)),
 			status: "error",
-			err:    firstErr,
+			err:    err,
 		}
 	}
 	return addExecResult{

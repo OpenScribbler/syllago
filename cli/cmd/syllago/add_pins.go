@@ -42,6 +42,16 @@ func addRespectingPins(items []add.DiscoveryItem, opts add.AddOptions, globalDir
 			return written, nil
 		},
 	}
+	if err := overwriteRespectingPins(req); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+// overwriteRespectingPins leaves pinned destinations out of an add, reports
+// each one, and fails when they are all pinned. Every write and record
+// rotation runs under Overwrite's install lock.
+func overwriteRespectingPins(req lifecycle.OverwriteRequest) error {
 	m := lifecycle.New()
 	out, err := m.Overwrite(req)
 	var decision *lifecycle.DecisionRequired
@@ -56,8 +66,8 @@ func addRespectingPins(items []add.DiscoveryItem, opts add.AddOptions, globalDir
 				fmt.Fprintf(output.ErrWriter, "  pinned %s/%s; unpin to update: syllago unpin %s\n", p.Type, p.Name, p.Name)
 			}
 		}
-		if len(pinned) == len(dests) {
-			return nil, output.NewStructuredError(
+		if len(pinned) == len(req.Destinations) {
+			return output.NewStructuredError(
 				output.ErrInstallConflict,
 				"all requested items are pinned",
 				"Run 'syllago unpin <name>' first to unpin the items you want to update",
@@ -67,11 +77,11 @@ func addRespectingPins(items []add.DiscoveryItem, opts add.AddOptions, globalDir
 	}
 	var structured output.StructuredError
 	if errors.As(err, &structured) {
-		return nil, err
+		return err
 	}
 	if err != nil {
-		return nil, output.NewStructuredErrorDetail(output.ErrInstallNotWritable, "adding to the library", "Check permissions on ~/.syllago and that installs.json is valid JSON", err.Error())
+		return output.NewStructuredErrorDetail(output.ErrInstallNotWritable, "adding to the library", "Check permissions on ~/.syllago and that installs.json is valid JSON", err.Error())
 	}
 	printLifecycleWarnings(output.ErrWriter, out)
-	return results, nil
+	return nil
 }

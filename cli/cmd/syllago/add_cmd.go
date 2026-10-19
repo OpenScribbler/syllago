@@ -703,8 +703,63 @@ func runAddSettings(ct catalog.ContentType, root, fromSlug string, previewOnly b
 		SourceRegistry:   srcRegistry,
 		SourceVisibility: srcVisibility,
 	}
+	plan := opts
+	plan.DryRun = true
+	results := add.AddFromSettings(items, plan, root, globalDir)
+	var dests []lifecycle.Destination
+	for i, r := range results {
+		items[i].Dest = r.Dest
+		switch r.Status {
+		case add.AddStatusAdded:
+			items[i].Status = add.StatusNew
+		case add.AddStatusUpdated, add.AddStatusSkipped:
+			items[i].Status = add.StatusOutdated
+		case add.AddStatusUpToDate:
+			items[i].Status = add.StatusInLibrary
+		}
+		if r.Status == add.AddStatusAdded || r.Status == add.AddStatusUpdated {
+			dests = append(dests, lifecycle.Destination{Type: ct, Name: r.LibraryName, Path: r.Dest})
+		}
+	}
+	attempted := make(map[string]bool, len(dests))
+	if err := overwriteRespectingPins(lifecycle.OverwriteRequest{
+		Destinations: dests,
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			ok := make(map[string]bool, len(approved))
+			for _, d := range approved {
+				ok[d.Path] = true
+			}
+			var write []add.SettingsItem
+			var indices []int
+			for i, item := range items {
+				if ok[item.Dest] {
+					write = append(write, item)
+					indices = append(indices, i)
+				}
+			}
+			// Keep the write at the destinations the pin check covered,
+			// even if the Library changed since planning the placements.
+			for i, r := range add.AddPlacedSettings(write, plan, root, globalDir) {
+				if r.Dest != write[i].Dest {
+					return nil, fmt.Errorf("the Library changed while %s was being added; add it again", write[i].Name)
+				}
+			}
+			var written []lifecycle.Written
+			for i, r := range add.AddPlacedSettings(write, opts, root, globalDir) {
+				results[indices[i]] = r
+				attempted[r.Dest] = true
+				written = append(written, lifecycle.Written{Path: r.Dest, SourceSHA: opts.SourceSHA})
+			}
+			return written, nil
+		},
+	}); err != nil {
+		return err
+	}
 	count := 0
-	for i, r := range add.AddFromSettings(items, opts, root, globalDir) {
+	for i, r := range results {
+		if (r.Status == add.AddStatusAdded || r.Status == add.AddStatusUpdated) && !attempted[r.Dest] {
+			continue
+		}
 		item := items[i]
 		switch r.Status {
 		case add.AddStatusUpToDate:
@@ -1105,38 +1160,67 @@ func runAddFromShared(projectRoot string, args []string, addAll, dryRun, force b
 		return nil
 	}
 
-	count := 0
+	dest := func(item catalog.ContentItem) string {
+		return filepath.Join(globalDir, string(item.Type), item.Name)
+	}
+	var dests []lifecycle.Destination
 	for _, item := range items {
-		destDir := filepath.Join(globalDir, string(item.Type), item.Name)
-
 		if !force {
-			if _, err := os.Stat(destDir); err == nil {
+			if _, err := os.Stat(dest(item)); err == nil {
 				fmt.Fprintf(output.Writer, "  SKIP %s (already in library, use --force to overwrite)\n", item.Name)
 				continue
 			}
 		}
+		dests = append(dests, lifecycle.Destination{Type: item.Type, Name: item.Name, Path: dest(item)})
+	}
+	count := 0
+	if err := overwriteRespectingPins(lifecycle.OverwriteRequest{
+		Destinations: dests,
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			ok := make(map[string]bool, len(approved))
+			for _, d := range approved {
+				ok[d.Path] = true
+			}
+			var written []lifecycle.Written
+			for _, item := range items {
+				destDir := dest(item)
+				if !ok[destDir] {
+					continue
+				}
+				if !force {
+					if _, err := os.Stat(destDir); err == nil {
+						fmt.Fprintf(output.Writer, "  SKIP %s (already in library, use --force to overwrite)\n", item.Name)
+						continue
+					}
+				}
 
-		if err := installer.CopyContent(item.Path, destDir); err != nil {
-			fmt.Fprintf(output.ErrWriter, "Warning: failed to copy %s: %v\n", item.Name, err)
-			continue
-		}
+				written = append(written, lifecycle.Written{Path: destDir})
+				if err := installer.CopyContent(item.Path, destDir); err != nil {
+					fmt.Fprintf(output.ErrWriter, "Warning: failed to copy %s: %v\n", item.Name, err)
+					continue
+				}
 
-		// Write metadata.
-		now := time.Now().UTC()
-		meta := &metadata.Meta{
-			ID:           metadata.NewID(),
-			Name:         item.Name,
-			Type:         string(item.Type),
-			AddedAt:      &now,
-			SourceType:   "shared",
-			SourceFormat: "md",
-		}
-		if err := metadata.Save(destDir, meta); err != nil {
-			fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", item.Name, err)
-		}
+				// Write metadata.
+				now := time.Now().UTC()
+				meta := &metadata.Meta{
+					ID:           metadata.NewID(),
+					Name:         item.Name,
+					Type:         string(item.Type),
+					AddedAt:      &now,
+					SourceType:   "shared",
+					SourceFormat: "md",
+				}
+				if err := metadata.Save(destDir, meta); err != nil {
+					fmt.Fprintf(output.ErrWriter, "Warning: failed to write metadata for %s: %v\n", item.Name, err)
+				}
 
-		fmt.Fprintf(output.Writer, "  Added %s (%s)\n", item.Name, item.Type.Label())
-		count++
+				fmt.Fprintf(output.Writer, "  Added %s (%s)\n", item.Name, item.Type.Label())
+				count++
+			}
+			return written, nil
+		},
+	}); err != nil {
+		return err
 	}
 
 	fmt.Fprintf(output.Writer, "\nAdded %d item(s) from shared content.\n", count)
