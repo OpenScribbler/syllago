@@ -2383,7 +2383,7 @@ func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcV
 	name := item.underlying.Name
 	dest := lifecycle.Destination{Type: item.itemType, Name: name, Path: add.DestDir(item.itemType, provSlug, name, contentRoot)}
 	var res addExecResult
-	_, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
+	out, err := lifecycle.New().Overwrite(lifecycle.OverwriteRequest{
 		Destinations: []lifecycle.Destination{dest},
 		Write: func([]lifecycle.Destination) ([]lifecycle.Written, error) {
 			res = writeLibraryItem(item, contentRoot, srcReg, srcVis, provSlug, srcSHA)
@@ -2397,8 +2397,10 @@ func addSingleItem(item addDiscoveryItem, contentRoot, projectRoot, srcReg, srcV
 	if err != nil {
 		return addExecResult{name: item.name, status: "error", err: err}
 	}
-	// The TUI has no stable stderr surface mid-render, so a record left
-	// unrotated is dropped, as the install path drops it.
+	for _, f := range out.Failed {
+		res.status = "error"
+		res.err = errors.Join(res.err, f.Err)
+	}
 	return res
 }
 
