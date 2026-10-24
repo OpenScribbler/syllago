@@ -7,17 +7,25 @@ import (
 )
 
 // trustedRootCapturedAt is the date testdata/trusted-root-public-good.json
-// was copied from sigstore-go. Bump it every time you refresh the fixture
-// and record the source commit in the comment. The TestTrustedRootFixture_
-// FreshnessWindow guard uses this to fail loudly once the fixture drifts
-// beyond trustedRootMaxAge, which is how we avoid silently passing sigstore
-// tests against stale Fulcio / Rekor root material.
+// was last copied from sigstore-go or re-verified against the live
+// public-good TUF root. Bump it every time you refresh or re-verify the
+// fixture, and record the source version and what was compared in the
+// comment. The TestTrustedRootFixture_FreshnessWindow guard uses this to
+// fail loudly once the fixture drifts beyond trustedRootMaxAge, which is how
+// we avoid silently passing sigstore tests against stale Fulcio / Rekor root
+// material.
 //
-// Source: sigstore-go v1.2.0 examples/trusted-root-public-good.json
-// (byte-identical to the prior v1.1.4 capture — the public-good Fulcio/Rekor
-// material did not rotate; re-verified against the pinned sigstore-go version
-// on the date below, so no fixture bytes or downstream bundle fixtures changed).
-var trustedRootCapturedAt = time.Date(2026, 7, 15, 0, 0, 0, 0, time.UTC)
+// Source: sigstore-go v1.3.0 examples/trusted-root-public-good.json,
+// byte-identical to the v1.1.4 and v1.2.0 captures. That file has not
+// changed since v1.1.4, so byte-identity says nothing about the live root.
+// On the date below the fixture was compared with the live public-good TUF
+// root. The Fulcio CA chains, CT logs, and the rekor.sigstore.dev (Rekor v1)
+// key match. The live root also adds a second log, log2025-1.rekor.sigstore.dev
+// (Rekor v2), and a timestamp authority at timestamp.sigstore.dev, and it
+// lacks the fixture's GitHub timestamp authority. The fixture was kept
+// because the tests verify Rekor v1 entries with integrated timestamps
+// (verify.WithIntegratedTimestamps(1)), which none of these differences touch.
+var trustedRootCapturedAt = time.Date(2026, 10, 24, 0, 0, 0, 0, time.UTC)
 
 // trustedRootMaxAge is the upper bound beyond which the fixture is
 // considered stale enough to fail tests. 90 days is long enough to avoid
@@ -52,9 +60,9 @@ func TestBuildBundle_FromRekorFixture(t *testing.T) {
 }
 
 // loadTrustedRoot reads the public-good trusted_root.json bundled in
-// testdata. Copied verbatim from sigstore-go@v1.1.4/examples on 2026-04-17;
-// refresh if the Fulcio / Rekor root keys rotate. TestTrustedRootFixture_
-// FreshnessWindow enforces the refresh cadence — if this test fails, bump
+// testdata. See trustedRootCapturedAt for where the fixture came from and
+// when it was last verified; refresh if the Fulcio / Rekor root keys
+// rotate. TestTrustedRootFixture_FreshnessWindow enforces the refresh cadence — if this test fails, bump
 // trustedRootCapturedAt and re-copy the fixture from the upstream source.
 func loadTrustedRoot(t *testing.T) []byte {
 	t.Helper()
