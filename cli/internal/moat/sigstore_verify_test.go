@@ -7,11 +7,13 @@ import (
 )
 
 // trustedRootCapturedAt is the date testdata/trusted-root-public-good.json
-// was copied from sigstore-go. Bump it every time you refresh the fixture
-// and record the source commit in the comment. The TestTrustedRootFixture_
-// FreshnessWindow guard uses this to fail loudly once the fixture drifts
-// beyond trustedRootMaxAge, which is how we avoid silently passing sigstore
-// tests against stale Fulcio / Rekor root material.
+// was last copied from sigstore-go or re-verified against the live
+// public-good TUF root. Bump it every time you refresh or re-verify the
+// fixture, and record the source version and what was compared in the
+// comment. The TestTrustedRootFixture_FreshnessWindow guard uses this to
+// fail loudly once the fixture drifts beyond trustedRootMaxAge, which is how
+// we avoid silently passing sigstore tests against stale Fulcio / Rekor root
+// material.
 //
 // Source: sigstore-go v1.3.0 examples/trusted-root-public-good.json,
 // byte-identical to the v1.1.4 and v1.2.0 captures. That file has not
@@ -58,9 +60,9 @@ func TestBuildBundle_FromRekorFixture(t *testing.T) {
 }
 
 // loadTrustedRoot reads the public-good trusted_root.json bundled in
-// testdata. Copied verbatim from sigstore-go@v1.1.4/examples on 2026-04-17;
-// refresh if the Fulcio / Rekor root keys rotate. TestTrustedRootFixture_
-// FreshnessWindow enforces the refresh cadence — if this test fails, bump
+// testdata. See trustedRootCapturedAt for where the fixture came from and
+// when it was last verified; refresh if the Fulcio / Rekor root keys
+// rotate. TestTrustedRootFixture_FreshnessWindow enforces the refresh cadence — if this test fails, bump
 // trustedRootCapturedAt and re-copy the fixture from the upstream source.
 func loadTrustedRoot(t *testing.T) []byte {
 	t.Helper()
