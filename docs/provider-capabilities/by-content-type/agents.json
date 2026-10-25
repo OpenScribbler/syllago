@@ -96,6 +96,22 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.claude/agents/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".claude/agents/<content-name>.md",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "codex": {
@@ -134,6 +150,22 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "developers.openai.com/codex/subagents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.codex/agents/<content-name>.toml",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "developers.openai.com/codex/subagents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".codex/agents/<content-name>.toml",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "copilot-cli": {
@@ -686,5 +718,5 @@
       "supported": true
     }
   },
-  "schema_version": "1"
+  "schema_version": "2"
 }

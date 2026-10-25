@@ -119,6 +119,22 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.claude.json",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".mcp.json",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "cline": {
@@ -135,6 +151,25 @@
           "supported": true
         }
       },
+      "supported": true
+    },
+    "codex": {
+      "install_entry_points": [
+        {
+          "as_of": "developers.openai.com/codex/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.codex/config.toml",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "developers.openai.com/codex/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".codex/config.toml",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "cursor": {
@@ -547,5 +582,5 @@
       "supported": true
     }
   },
-  "schema_version": "1"
+  "schema_version": "2"
 }

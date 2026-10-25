@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openscribbler.github.io/capmon/v2/schemas/by-content-type.json",
-  "schema_version": "1",
+  "schema_version": "2",
   "title": "By-content-type pivot document",
   "description": "by-content-type/<type>.json: one content type across all providers. providers is omitted when no provider declares the type.",
   "type": "object",

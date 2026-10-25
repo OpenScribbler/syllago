@@ -261,7 +261,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "amp",
       "status": "live"
     },
@@ -362,6 +362,41 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": "~/.claude/agents/<content-name>.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": ".claude/agents/<content-name>.md",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
+          "supported": true
+        },
+        "commands": {
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": "~/.claude/commands/<content-name>.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": ".claude/commands/<content-name>.md",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "hooks": {
@@ -444,6 +479,29 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.claude/settings.json",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".claude/settings.json",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".claude/settings.local.json",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "mcp": {
@@ -526,6 +584,22 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.claude.json",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".mcp.json",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "rules": {
@@ -601,6 +675,80 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": "~/.claude/rules/<content-name>.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.claude/CLAUDE.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": ".claude/rules/<content-name>.md",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "CLAUDE.md",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".claude/CLAUDE.md",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "CLAUDE.local.md",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "os": [
+                "darwin"
+              ],
+              "path_template": "/Library/Application Support/ClaudeCode/CLAUDE.md",
+              "scope": "managed",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "os": [
+                "linux"
+              ],
+              "path_template": "/etc/claude-code/CLAUDE.md",
+              "scope": "managed",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "os": [
+                "windows"
+              ],
+              "path_template": "C:/Program Files/ClaudeCode/CLAUDE.md",
+              "scope": "managed",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "skills": {
@@ -639,6 +787,22 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+              "layout": "directory_of_files",
+              "path_template": "~/.claude/skills/<content-name>/",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+              "layout": "directory_of_files",
+              "path_template": ".claude/skills/<content-name>/",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         }
       },
@@ -691,7 +855,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "claude-code",
       "status": "live"
     },
@@ -953,7 +1117,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "cline",
       "status": "live"
     },
@@ -995,6 +1159,34 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/subagents, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": "~/.codex/agents/<content-name>.toml",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/subagents, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": ".codex/agents/<content-name>.toml",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
+          "supported": true
+        },
+        "commands": {
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/custom-prompts, verified 2026-10-24",
+              "layout": "single_file",
+              "path_template": "~/.codex/prompts/<content-name>.md",
+              "scope": "user",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "hooks": {
@@ -1088,6 +1280,55 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.codex/hooks.json",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.codex/config.toml",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".codex/hooks.json",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".codex/config.toml",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
+          "supported": true
+        },
+        "mcp": {
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/mcp, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.codex/config.toml",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/mcp, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": ".codex/config.toml",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "rules": {
@@ -1136,6 +1377,36 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/guides/agents-md, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.codex/AGENTS.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/guides/agents-md, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "~/.codex/AGENTS.override.md",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/guides/agents-md, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "AGENTS.md",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/guides/agents-md, verified 2026-10-24",
+              "layout": "merged_into_shared_file",
+              "path_template": "AGENTS.override.md",
+              "scope": "project",
+              "status": "current"
+            }
+          ],
           "supported": true
         },
         "skills": {
@@ -1196,6 +1467,33 @@
               "supported": true
             }
           },
+          "install_entry_points": [
+            {
+              "as_of": "developers.openai.com/codex/skills, verified 2026-10-24",
+              "layout": "directory_of_files",
+              "path_template": "~/.agents/skills/<content-name>/",
+              "scope": "user",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/skills, verified 2026-10-24",
+              "layout": "directory_of_files",
+              "path_template": ".agents/skills/<content-name>/",
+              "scope": "project",
+              "status": "current"
+            },
+            {
+              "as_of": "developers.openai.com/codex/skills and developers.openai.com/codex/config-basic, verified 2026-10-24",
+              "layout": "directory_of_files",
+              "os": [
+                "darwin",
+                "linux"
+              ],
+              "path_template": "/etc/codex/skills/<content-name>/",
+              "scope": "managed",
+              "status": "current"
+            }
+          ],
           "supported": true
         }
       },
@@ -1293,7 +1591,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "codex",
       "status": "live"
     },
@@ -1475,7 +1773,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "copilot-cli",
       "status": "live"
     },
@@ -1725,7 +2023,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "crush",
       "status": "live"
     },
@@ -2068,7 +2366,7 @@
       },
       "display_name": "Cursor",
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "cursor",
       "status": "live"
     },
@@ -2507,7 +2805,7 @@
       },
       "display_name": "Devin Desktop",
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "devin",
       "status": "live"
     },
@@ -2717,7 +3015,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "factory-droid",
       "status": "live"
     },
@@ -2954,7 +3252,7 @@
       },
       "display_name": "Gemini CLI",
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "gemini-cli",
       "status": "live"
     },
@@ -3247,7 +3545,7 @@
         }
       },
       "provider_status": "beta",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "kiro",
       "status": "live"
     },
@@ -3601,7 +3899,7 @@
       },
       "display_name": "opencode",
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "opencode",
       "status": "live"
     },
@@ -3735,7 +4033,7 @@
         }
       },
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "pi",
       "status": "live"
     },
@@ -3907,7 +4205,7 @@
         }
       },
       "provider_status": "archived",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "roo-code",
       "status": "live"
     },
@@ -4095,7 +4393,7 @@
       },
       "display_name": "Zed",
       "provider_status": "active",
-      "schema_version": "2",
+      "schema_version": "3",
       "slug": "zed",
       "status": "live"
     }
