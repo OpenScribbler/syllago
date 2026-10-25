@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openscribbler.github.io/capmon/v2/schemas/provider-capabilities.json",
-  "schema_version": "2",
+  "schema_version": "3",
   "title": "Provider capabilities document",
   "description": "One self-describing provider document (capabilities/<slug>.json). Additional properties are permitted everywhere except referenceEntry: consumers MUST ignore unknown fields and producers MAY add them within a major.",
   "type": "object",
@@ -90,7 +90,25 @@
         "capabilities": {
           "type": "object",
           "additionalProperties": {"$ref": "#/$defs/capabilityNode"}
+        },
+        "install_entry_points": {
+          "description": "Where the provider reads this content type on disk: an ordered list of ACIF install-targets rows (ACIF install-targets spec §6). Order is precedence: after filtering by the target OS, the first current row for a scope is the write target.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/installEntryPoint"}
         }
+      }
+    },
+    "installEntryPoint": {
+      "description": "One ACIF install-targets row, with ACIF's field names and value spellings. scope, os members, layout and status are open strings for consumers (per the consumer contract, handle an unrecognized value as \"unknown/other\" for that row, never as a document error); path_template is in ACIF's closed template grammar (§8), and an unrecognized template token follows ACIF install-targets §11.",
+      "type": "object",
+      "required": ["scope", "path_template", "layout", "status", "as_of"],
+      "properties": {
+        "scope": {"type": "string"},
+        "os": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "path_template": {"type": "string", "minLength": 1},
+        "layout": {"type": "string"},
+        "status": {"type": "string"},
+        "as_of": {"type": "string", "minLength": 1}
       }
     },
     "eventEntry": {

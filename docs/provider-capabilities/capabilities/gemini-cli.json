@@ -231,7 +231,7 @@
   },
   "display_name": "Gemini CLI",
   "provider_status": "active",
-  "schema_version": "2",
+  "schema_version": "3",
   "slug": "gemini-cli",
   "status": "live"
 }

@@ -95,6 +95,41 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.claude/agents/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/sub-agents, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".claude/agents/<content-name>.md",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
+      "supported": true
+    },
+    "commands": {
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.claude/commands/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".claude/commands/<content-name>.md",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "hooks": {
@@ -177,6 +212,29 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.claude/settings.json",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".claude/settings.json",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".claude/settings.local.json",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "mcp": {
@@ -259,6 +317,22 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.claude.json",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/mcp, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".mcp.json",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "rules": {
@@ -334,6 +408,80 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.claude/rules/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.claude/CLAUDE.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".claude/rules/<content-name>.md",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "CLAUDE.md",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".claude/CLAUDE.md",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "CLAUDE.local.md",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "os": [
+            "darwin"
+          ],
+          "path_template": "/Library/Application Support/ClaudeCode/CLAUDE.md",
+          "scope": "managed",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "os": [
+            "linux"
+          ],
+          "path_template": "/etc/claude-code/CLAUDE.md",
+          "scope": "managed",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "os": [
+            "windows"
+          ],
+          "path_template": "C:/Program Files/ClaudeCode/CLAUDE.md",
+          "scope": "managed",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "skills": {
@@ -372,6 +520,22 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+          "layout": "directory_of_files",
+          "path_template": "~/.claude/skills/<content-name>/",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+          "layout": "directory_of_files",
+          "path_template": ".claude/skills/<content-name>/",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     }
   },
@@ -424,7 +588,7 @@
     }
   },
   "provider_status": "active",
-  "schema_version": "2",
+  "schema_version": "3",
   "slug": "claude-code",
   "status": "live"
 }

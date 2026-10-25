@@ -185,6 +185,29 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.claude/settings.json",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".claude/settings.json",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".claude/settings.local.json",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "cline": {
@@ -382,6 +405,36 @@
           "supported": true
         }
       },
+      "install_entry_points": [
+        {
+          "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.codex/hooks.json",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": "~/.codex/config.toml",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".codex/hooks.json",
+          "scope": "project",
+          "status": "current"
+        },
+        {
+          "as_of": "developers.openai.com/codex/hooks, verified 2026-10-24",
+          "layout": "merged_into_shared_file",
+          "path_template": ".codex/config.toml",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "copilot-cli": {
@@ -769,5 +822,5 @@
       "supported": true
     }
   },
-  "schema_version": "1"
+  "schema_version": "2"
 }

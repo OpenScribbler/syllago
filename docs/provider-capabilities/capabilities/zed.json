@@ -182,7 +182,7 @@
   },
   "display_name": "Zed",
   "provider_status": "active",
-  "schema_version": "2",
+  "schema_version": "3",
   "slug": "zed",
   "status": "live"
 }

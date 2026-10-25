@@ -1,6 +1,25 @@
 {
   "content_type": "commands",
   "providers": {
+    "claude-code": {
+      "install_entry_points": [
+        {
+          "as_of": "code.claude.com/docs/en/memory, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.claude/commands/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        },
+        {
+          "as_of": "code.claude.com/docs/en/skills, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": ".claude/commands/<content-name>.md",
+          "scope": "project",
+          "status": "current"
+        }
+      ],
+      "supported": true
+    },
     "cline": {
       "capabilities": {
         "builtin_commands": {
@@ -15,6 +34,18 @@
           "supported": true
         }
       },
+      "supported": true
+    },
+    "codex": {
+      "install_entry_points": [
+        {
+          "as_of": "developers.openai.com/codex/custom-prompts, verified 2026-10-24",
+          "layout": "single_file",
+          "path_template": "~/.codex/prompts/<content-name>.md",
+          "scope": "user",
+          "status": "current"
+        }
+      ],
       "supported": true
     },
     "devin": {
@@ -96,5 +127,5 @@
       "supported": true
     }
   },
-  "schema_version": "1"
+  "schema_version": "2"
 }

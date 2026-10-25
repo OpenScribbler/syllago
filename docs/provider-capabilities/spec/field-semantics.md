@@ -100,6 +100,42 @@ A sunset provider is the motivating case: its document stays `"status":
 `"provider_status": "archived"`. Per the consumer contract, both enums are
 **open** — handle unrecognized values as "unknown/other", never as an error.
 
+## `install_entry_points`
+
+A content-type node MAY carry `install_entry_points`: where the provider
+reads that content type on disk, as an ordered list of rows in the ACIF
+install-targets row model. ACIF's install-targets spec owns the meaning;
+this section only maps it onto the tree.
+
+- **Row fields** are ACIF's, verbatim: `scope` (`user`, `project`,
+  `managed`; §7), optional `os` (a sorted, duplicate-free subset of
+  `darwin`, `linux`, `windows` that never lists all three; absent means
+  every OS; §6), `path_template` (the closed grammar of §8, whose only
+  placeholders are `<content-name>` and `<appdata>`), `layout`
+  (`single_file`, `directory_of_files`, `merged_into_shared_file`; §9),
+  `status` (`current`, `superseded`; §12) and `as_of`.
+- **Order is precedence** (§6). Filter the rows by the target OS first. The
+  first `current` row for a scope is the write target; every row is a read
+  location.
+- **Content types** map to ACIF's names as `agents` → `agent`, `commands` →
+  `command`, `hooks` → `hook`, `mcp` → `mcp_config`, `rules` → `rule` and
+  `skills` → `skill`.
+- **`as_of`** is informative. It names the provider documentation page the
+  row was verified against and the date. capmon publishes what that
+  evidence shows, so a row can differ from ACIF's own Appendix A.2 row for
+  the same provider until ACIF amends it.
+- **Absent** `install_entry_points` means capmon publishes no location for
+  that pair. Per ACIF §6 and §11, an install tool MUST NOT guess one.
+- **Enum openness.** The published schema types `scope`, `os` members,
+  `layout` and `status` as strings. capmon's producer rejects any value
+  outside the sets above (`EXPORT_007`), but per the consumer contract a
+  consumer MUST treat an unrecognized value as "unknown/other" for that
+  row, and a template token it does not recognize follows ACIF §11's
+  `acif.install.placeholder_unrecognized` lane, never a document error.
+
+The prose `mechanism` strings on capabilities such as `global_scope` and
+`project_scope` are unchanged and remain descriptive text.
+
 ## nil vs. false
 
 `supported` absent means **unknown** — never treat it as `false`.

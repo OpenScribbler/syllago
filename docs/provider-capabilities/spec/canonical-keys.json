@@ -47,6 +47,11 @@
         "description": "Whether the provider ships default/built-in commands alongside user-defined custom commands.\n",
         "spec_ref": "ACIF-COMMAND §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage row)",
         "type": "bool"
+      },
+      "command_scopes": {
+        "description": "Which install scopes (project, user, managed) a command can be placed at. Determined by install location and surfaced via install_scope_capabilities; on-disk locations are in the install matrix (ACIF-INSTALL Appendix A.2). Location only, not how a provider orders or merges scopes.\n",
+        "spec_ref": "ACIF-COMMAND §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY §8.5)",
+        "type": "object"
       }
     },
     "hooks": {
@@ -117,6 +122,11 @@
         "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1)",
         "type": "bool"
       },
+      "mcp_scopes": {
+        "description": "Which install scopes (project, user, managed) an MCP server configuration can be placed at. Determined by install location and surfaced via install_scope_capabilities; on-disk locations are in the install matrix (ACIF-INSTALL Appendix A.2). Location only, not how a provider orders or merges scopes.\n",
+        "spec_ref": "ACIF-MCP §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY §8.5)",
+        "type": "object"
+      },
       "oauth_support": {
         "description": "Whether the provider supports OAuth 2.0 authentication for remote MCP servers, including token storage and automatic refresh.\n",
         "spec_ref": "ACIF-MCP §9.1 (DERIVABLE)",
@@ -163,6 +173,11 @@
         "description": "Whether rules load from multiple directory levels with defined precedence. Enables project-root rules plus subdirectory-scoped overrides.\n",
         "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; provider_capability_coverage, ACIF-REGISTRY §8.4)",
         "type": "bool"
+      },
+      "rule_scopes": {
+        "description": "Which install scopes (project, user, managed) a rule can be placed at. Determined by install location and surfaced via install_scope_capabilities; on-disk locations are in the install matrix (ACIF-INSTALL Appendix A.2). Location only, not how a provider orders or merges scopes.\n",
+        "spec_ref": "ACIF-RULE §9.2 (OUT-OF-SCOPE-AT-L1; install_scope_capabilities, ACIF-REGISTRY §8.5)",
+        "type": "object"
       }
     },
     "skills": {
