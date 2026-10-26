@@ -15,16 +15,26 @@
 //! [`Signer`] (`SshKeygenSigner` goes through `ssh-keygen`) and builds the
 //! `rekord` entry that records it.
 //!
+//! The Sigstore side ([`verify_manifest`], [`verify_registry_attestation`],
+//! [`verify_dual_attested`]) reports a [`TrustFailure`] carrying a MOAT Trust
+//! State. Rekor is reached only through the caller's [`RekorLog`].
+//!
 //! The crate reads bytes and returns facts. Apart from signing through
 //! `ssh-keygen`, which takes the message as a temporary file, it does no
 //! network or file I/O, keeps no state, and never
 //! prompts; trust on first use and the lockfile belong to its caller.
 
 mod allowed_signers;
+mod crypto_provider;
+mod dual;
+mod registry;
+mod rekor;
 mod sign;
 mod sshsig;
 #[cfg(feature = "testing")]
 pub mod testing;
+mod trust;
+mod trust_root;
 mod wire;
 
 use std::fmt;
@@ -32,10 +42,15 @@ use std::fmt;
 use sha2::{Digest, Sha256};
 
 pub use allowed_signers::{AllowedSigners, ListDigest};
+pub use dual::{DualAttested, ManifestEntry, verify_dual_attested};
+pub use registry::{RegistrySigningProfile, verify_manifest, verify_registry_attestation};
+pub use rekor::{LogEntry, RekorError, RekorLog, rekord_body};
 pub use sign::{
     NonSkKeys, Os, SignError, SignedItem, Signer, SkKeyType, SshKeygenSigner, SshPublicKey,
     default_sk_key_type, keygen_args, rekord_entry, sign_item, sign_message,
 };
+pub use trust::{Cause, Identity, TrustFailure, TrustState};
+pub use trust_root::{BUNDLED_ROOT_MAX_AGE, TrustRoot, TrustRootOrigin};
 
 const ITEM_PREFIX: &[u8] = b"moat-author-item-v1\n";
 const LIST_CHANGE_PREFIX: &[u8] = b"moat-allowed-signers-change-v1\n";

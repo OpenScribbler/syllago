@@ -225,3 +225,58 @@ fn keygen_args_for_each_type() {
         ["-t", "ecdsa-sk", "-C", "", "-f", "keys/id_moat"]
     );
 }
+
+/// The `rekord` entry a Publisher proposes and the body a verifier expects
+/// Rekor to store for it describe the same record: the body's data hash is
+/// the SHA-256 of the proposed data, its public key is the proposed one, and
+/// its signature is the proposed SSHSIG re-armored in 64-column lines.
+#[test]
+fn proposed_rekord_entry_matches_the_body_verifiers_expect() {
+    let doc = common::vectors();
+    let hash = common::content_hash(&doc["acif"][3]);
+    for signer in [
+        EmulatedSkSigner::ed25519(seed("D")),
+        EmulatedSkSigner::ecdsa_p256(seed("E")),
+    ] {
+        let signed = moat::sign_item(&signer, &hash).unwrap();
+        let message = moat::item_message(&hash);
+        let proposed: Value = serde_json::from_slice(&signed.rekord_entry).unwrap();
+        let body: Value =
+            serde_json::from_slice(&moat::rekord_body(&message, &signed.signature).unwrap())
+                .unwrap();
+
+        assert_eq!(
+            proposed["spec"]["data"]["content"],
+            common::base64(&message)
+        );
+        let digest: String = Sha256::digest(&message)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        assert_eq!(body["spec"]["data"]["hash"]["value"], digest);
+        assert_eq!(
+            proposed["spec"]["signature"]["publicKey"],
+            body["spec"]["signature"]["publicKey"]
+        );
+
+        let blob: String = signed
+            .signature
+            .lines()
+            .filter(|l| !l.starts_with("-----"))
+            .collect();
+        let mut rearmored = String::from("-----BEGIN SSH SIGNATURE-----\n");
+        for line in blob.as_bytes().chunks(64) {
+            rearmored.push_str(std::str::from_utf8(line).unwrap());
+            rearmored.push('\n');
+        }
+        rearmored.push_str("-----END SSH SIGNATURE-----\n");
+        assert_eq!(
+            body["spec"]["signature"]["content"],
+            common::base64(rearmored.as_bytes())
+        );
+        assert_eq!(
+            proposed["spec"]["signature"]["content"],
+            common::base64(signed.signature.as_bytes())
+        );
+    }
+}

@@ -92,6 +92,14 @@ jobs:
             exit 1
           fi
 
+      - name: No duplicate sha2
+        # Two sha2 versions mean two digest stacks in the verifier. Other
+        # duplicates are tolerated until the RustCrypto releases settle.
+        run: |
+          dups=$(cargo tree -d --workspace --locked -e normal,build --depth 0 --prefix none)
+          echo "$dups"
+          ! grep -q '^sha2 v' <<< "$dups"
+
       - name: cargo test
         run: cargo test --workspace --locked
 
