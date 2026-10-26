@@ -44,7 +44,11 @@ import json, sys
 # on that OS.
 ENV_BLOCKED_ALLOWED = {
     "linux": [],
-    "darwin": [],
+    "darwin": [
+        # APFS cannot hold two names that differ only by Unicode
+        # normalization, so the runner cannot build the fixture.
+        "TV-13",
+    ],
     "win32": [],
 }
 allowed = set(ENV_BLOCKED_ALLOWED.get(sys.platform, []))

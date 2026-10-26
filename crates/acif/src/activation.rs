@@ -212,6 +212,9 @@ pub enum RuleTarget {
 pub struct Rendered {
     pub output: String,
     pub diagnostics: Vec<Diagnostic>,
+    /// The documented-lossy tokens of the rendering (core Appendix A.2).
+    /// Rule rendering documents none.
+    pub lossy: Vec<&'static str>,
 }
 
 /// Renders a canonical rule to `target` (rule §11). The body is emitted
@@ -246,6 +249,7 @@ pub fn render_rule(canonical: &Map<String, Value>, target: RuleTarget) -> Result
     Ok(Rendered {
         output,
         diagnostics,
+        lossy: Vec::new(),
     })
 }
 
@@ -279,13 +283,26 @@ pub struct CrossReference {
     pub resolution: Resolution,
 }
 
+/// What a registry emits on a skill's record for its `hook_ref`
+/// (registry §9).
+#[derive(Debug, Clone, PartialEq)]
+pub struct HookRefResolution {
+    pub cross_reference: CrossReference,
+    /// The skill-side entries reciprocal to the hook-side `activation_target`
+    /// entry (skill §13.2). A declared `hook_ref` is its own reciprocal entry.
+    pub reciprocal_entries: Vec<CrossReference>,
+    /// `acif.registry.reference_unresolved` when the reference does not
+    /// resolve (registry §12).
+    pub diagnostics: Vec<Diagnostic>,
+}
+
 /// Resolves a skill's `activation.hook_ref` against the ids of the hooks a
 /// registry knows (skill §11, §13.2). The skill must declare `type: hook`
 /// with a `hook_ref`.
 pub fn resolve_skill_hook_ref(
     item: &Map<String, Value>,
     known_hooks: &[&str],
-) -> Result<CrossReference, Error> {
+) -> Result<HookRefResolution, Error> {
     let block = kind_block(item, Kind::Skill)?;
     let activation = skill_activation(block.and_then(|block| block.get("activation")))?;
     let Some(id) = activation
@@ -294,15 +311,29 @@ pub fn resolve_skill_hook_ref(
     else {
         return Err(Error::Unsupported("the skill declares no hook_ref".into()));
     };
-    Ok(CrossReference {
+    let resolved = known_hooks.contains(&id);
+    let cross_reference = CrossReference {
         source_path: "skill.activation.hook_ref",
         target_kind: Kind::Hook,
         declared_name: id.to_string(),
-        resolution: if known_hooks.contains(&id) {
+        resolution: if resolved {
             Resolution::Resolved
         } else {
             Resolution::Unresolved
         },
+    };
+    let diagnostics = if resolved {
+        Vec::new()
+    } else {
+        vec![Diagnostic::new(
+            "acif.registry.reference_unresolved",
+            &[("declared_name", Value::from(id))],
+        )]
+    };
+    Ok(HookRefResolution {
+        reciprocal_entries: vec![cross_reference.clone()],
+        cross_reference,
+        diagnostics,
     })
 }
 

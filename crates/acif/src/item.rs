@@ -5,7 +5,10 @@ use crate::activation::{
 };
 use crate::body::{hash_body, split_frontmatter};
 use crate::envelope::{check_envelope, check_forbidden_fields, check_requires};
-use crate::{Body, Classification, Error, Hash, Kind, frontmatter, malformed, metadata_hash};
+use crate::{
+    Body, Classification, Error, Hash, Install, Kind, frontmatter, malformed, metadata_hash,
+    resolve_pack,
+};
 
 /// An ingested item.
 #[derive(Debug, Clone, PartialEq)]
@@ -22,6 +25,10 @@ pub struct Item {
     /// materialized activation defaults, and for a body its `classification`
     /// (and a rule's prose as `rule.body`). It enters no hash.
     pub canonical: Map<String, Value>,
+    /// For an item record, its install disposition when no pack record is
+    /// known: a pack-less item installs, and a declared `pack_id` is
+    /// `unresolved` (publisher §8.3).
+    pub install: Option<Install>,
 }
 
 impl Item {
@@ -33,7 +40,8 @@ impl Item {
 
 /// Ingests an item from its body. `entry_file` is the body-relative POSIX
 /// path of the entry file, whose frontmatter is the item's
-/// `publisher_section`. Keys outside the envelope go into the `kind` block.
+/// `publisher_section`. Keys outside the envelope go into the block of the
+/// kind the frontmatter declares, else of `kind`.
 pub fn ingest_body(kind: Kind, body: &Body, entry_file: &str) -> Result<Item, Error> {
     let hashed = hash_body(body, entry_file)?;
     let (block, prose) = split_frontmatter(&hashed.entry_text);
@@ -71,7 +79,9 @@ pub fn ingest_sidecar(kind: Option<Kind>, sidecar: &Map<String, Value>) -> Resul
     if let Some(registry_section) = record_section(sidecar, "registry_section")? {
         check_forbidden_fields(registry_section)?;
     }
-    canonicalize(kind, publisher_section.cloned())
+    let mut item = canonicalize(kind, publisher_section.cloned())?;
+    item.install = Some(resolve_pack(sidecar, &[]).install());
+    Ok(item)
 }
 
 fn record_section<'a>(
@@ -101,10 +111,14 @@ pub fn ingest_rule_activation_source(content: Option<&Value>) -> Result<Item, Er
         classification: None,
         publisher_section: None,
         canonical,
+        install: None,
     })
 }
 
 /// Validates a `publisher_section` and builds the canonical record from it.
+/// Only skill and rule extension blocks are implemented: an item of another
+/// kind has its envelope validated, and a kind block it declares is
+/// unsupported.
 fn canonicalize(
     kind: Option<Kind>,
     publisher_section: Option<Map<String, Value>>,
@@ -146,6 +160,7 @@ fn canonicalize(
         classification: None,
         publisher_section,
         canonical,
+        install: None,
     })
 }
 
@@ -165,5 +180,19 @@ mod tests {
             serde_json::json!({"name": "x", "license": "MIT"})
         );
         assert!(!section.contains_key("license"));
+    }
+
+    // A declared kind wins over the caller's, so the extension keys belong
+    // to the declared kind's block.
+    #[test]
+    fn declared_kind_owns_extension_keys() {
+        let body = Body::from_files(&[(
+            "SKILL.md",
+            b"---\nkind: rule\nactivation: {mode: manual}\n---\nRule prose\n",
+        )]);
+        let item = ingest_body(Kind::Skill, &body, "SKILL.md").unwrap();
+        assert_eq!(item.kind, Kind::Rule);
+        assert_eq!(item.canonical["rule"]["activation"]["mode"], "manual");
+        assert!(!item.canonical.contains_key("skill"));
     }
 }

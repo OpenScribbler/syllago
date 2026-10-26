@@ -46,8 +46,9 @@ pub struct Body {
 }
 
 impl Body {
-    /// Reads the body under `root`. A symlink anywhere in it is rejected with
-    /// `acif.body.symlink`; symlinks are never followed.
+    /// Reads the body under `root`. A symlink anywhere beneath `root` is
+    /// rejected with `acif.body.symlink` and never followed. `root` itself is
+    /// resolved as given, so a symlinked item directory reads its target.
     pub fn read(root: &Path) -> Result<Body, Error> {
         let mut files = Vec::new();
         read_dir(root, "", &mut files)?;

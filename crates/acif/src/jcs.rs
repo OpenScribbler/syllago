@@ -20,6 +20,8 @@ pub fn metadata_hash(publisher_section: &Map<String, Value>) -> Hash {
     Hash::sha256(preimage.as_bytes())
 }
 
+/// Numbers are written as IEEE 754 doubles, as RFC 8785 requires, so an
+/// integer past 2^53 hashes as its nearest double.
 fn write_value(value: &Value, out: &mut String) {
     match value {
         Value::Null => out.push_str("null"),
@@ -122,7 +124,7 @@ mod tests {
 
     #[test]
     fn keys_sort_by_utf16_code_units() {
-        // U+FB01 sorts after U+1F600 in UTF-8 but before it in UTF-16.
+        // U+FB01 sorts before U+1F600 in UTF-8 but after it in UTF-16.
         let value = serde_json::json!({"\u{1F600}": 1, "\u{FB01}": 2, "a": [true, null, "\u{1}"]});
         assert_eq!(
             canonical_json(&value),

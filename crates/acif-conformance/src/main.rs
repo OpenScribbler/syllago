@@ -6,23 +6,25 @@ use std::io::{self, BufRead, Write};
 use std::path::Path;
 
 use acif::{
-    Body, Error, Install, Item, Kind, Map, PACK_NAMESPACE, RuleTarget, Value, canonical_json,
-    derive_pack_id, derived_capabilities, evaluate_requires, ingest_body,
+    Body, CrossReference, Diagnostic, Error, Install, Item, Kind, Map, PACK_NAMESPACE, RuleTarget,
+    Value, canonical_json, derive_pack_id, derived_capabilities, evaluate_requires, ingest_body,
     ingest_rule_activation_source, ingest_sidecar, render_rule, resolve_pack,
     resolve_skill_hook_ref, rule_activation_projection, validate_registry_record,
 };
 use serde_json::json;
 
 fn main() -> io::Result<()> {
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
-    for line in io::stdin().lock().lines() {
+    serve(io::stdin().lock(), io::stdout().lock())
+}
+
+fn serve(input: impl BufRead, mut out: impl Write) -> io::Result<()> {
+    for line in input.split(b'\n') {
         let line = line?;
-        let line = line.trim_end_matches('\r');
-        if line.trim().is_empty() {
+        let line = line.strip_suffix(b"\r").unwrap_or(&line);
+        if line.trim_ascii().is_empty() {
             continue;
         }
-        let response = match serde_json::from_str::<Value>(line) {
+        let response = match serde_json::from_slice::<Value>(line) {
             Ok(request) => respond(&request),
             Err(error) => {
                 json!({"ok": false, "error": format!("adapter: request is not JSON: {error}")})
@@ -40,13 +42,16 @@ fn respond(request: &Value) -> Value {
             "implementation": "acif (Rust)",
             "version": env!("CARGO_PKG_VERSION"),
             "adapter_protocol": 2,
+            // Only TV-L3-e of the registry scope is implemented, but the
+            // runner skips a vector outside every claimed scope, even under
+            // --only.
             "scopes": ["core", "skill", "rule", "registry"],
         }});
     }
-    let input = request.get("input").and_then(Value::as_object);
-    let result = match (request["op"].as_str(), input) {
+    let result = match (request["op"].as_str(), request["input"].as_object()) {
         (Some(op), Some(input)) => dispatch(op, input),
-        _ => Err(Error::Unsupported("unknown request".into())),
+        (None, _) => Err(adapter_error("op is not a string")),
+        (Some(_), None) => Err(adapter_error("input is not an object")),
     };
     match result {
         Ok(result) => json!({"ok": true, "result": result}),
@@ -114,31 +119,25 @@ fn dispatch(op: &str, input: &Map<String, Value>) -> Result<Value, Error> {
                 other => return Err(Error::Unsupported(format!("render target {other}"))),
             };
             let rendered = render_rule(object(input, "canonical")?, target)?;
-            let diagnostics: Vec<Value> = rendered
-                .diagnostics
-                .iter()
-                .map(|diagnostic| json!({"id": diagnostic.id, "params": diagnostic.params}))
-                .collect();
-            Ok(json!({"output": rendered.output, "diagnostics": diagnostics, "lossy": []}))
+            Ok(json!({
+                "output": rendered.output,
+                "diagnostics": diagnostics(&rendered.diagnostics),
+                "lossy": rendered.lossy,
+            }))
         }
         "resolve_reference" => {
             let known = strings(array(object(input, "registry_state")?, "known_hooks")?)?;
-            let reference = resolve_skill_hook_ref(object(input, "item")?, &known)?;
-            let entry = json!({
-                "source_path": reference.source_path,
-                "target_kind": reference.target_kind.as_str(),
-                "resolution": reference.resolution.as_str(),
-            });
-            let diagnostics = match reference.resolution {
-                acif::Resolution::Resolved => vec![],
-                acif::Resolution::Unresolved => vec![json!({
-                    "id": "acif.registry.reference_unresolved",
-                    "params": {"declared_name": reference.declared_name},
-                })],
-            };
-            Ok(
-                json!({"cross_reference": entry, "reciprocal_entries": [entry], "diagnostics": diagnostics}),
-            )
+            let resolution = resolve_skill_hook_ref(object(input, "item")?, &known)?;
+            let reciprocal_entries: Vec<Value> = resolution
+                .reciprocal_entries
+                .iter()
+                .map(cross_reference)
+                .collect();
+            Ok(json!({
+                "cross_reference": cross_reference(&resolution.cross_reference),
+                "reciprocal_entries": reciprocal_entries,
+                "diagnostics": diagnostics(&resolution.diagnostics),
+            }))
         }
         _ => Err(Error::Unsupported(format!("op {op}"))),
     }
@@ -176,13 +175,10 @@ fn ingest(input: &Map<String, Value>) -> Result<Value, Error> {
         )?));
     }
     if input.contains_key("sidecar") {
-        let sidecar = object(input, "sidecar")?;
-        let mut result = item_result(ingest_sidecar(kind, sidecar)?);
-        if sidecar.contains_key("publisher_section") || sidecar.contains_key("registry_section") {
-            let installable = resolve_pack(sidecar, &[]).install() == Install::Proceed;
-            result["installable"] = Value::from(installable);
-        }
-        return Ok(result);
+        return Ok(item_result(ingest_sidecar(
+            kind,
+            object(input, "sidecar")?,
+        )?));
     }
     Err(Error::Unsupported(
         "ingest without a body or sidecar".into(),
@@ -202,11 +198,29 @@ fn item_result(item: Item) -> Value {
     if let Some(classification) = item.classification {
         result["classification"] = Value::from(classification.as_str());
     }
+    if let Some(install) = item.install {
+        result["installable"] = Value::from(install == Install::Proceed);
+    }
     if let Some(section) = &item.publisher_section {
         result["metadata_hash"] = Value::from(item.metadata_hash().map(|hash| hash.value));
         result["canonical_bytes"] = Value::from(canonical_json(&Value::Object(section.clone())));
     }
     result
+}
+
+fn cross_reference(reference: &CrossReference) -> Value {
+    json!({
+        "source_path": reference.source_path,
+        "target_kind": reference.target_kind.as_str(),
+        "resolution": reference.resolution.as_str(),
+    })
+}
+
+fn diagnostics(diagnostics: &[Diagnostic]) -> Vec<Value> {
+    diagnostics
+        .iter()
+        .map(|diagnostic| json!({"id": diagnostic.id, "params": diagnostic.params}))
+        .collect()
 }
 
 fn adapter_error(message: &str) -> Error {
@@ -243,4 +257,37 @@ fn strings(values: &[Value]) -> Result<Vec<&str>, Error> {
                 .ok_or_else(|| adapter_error("expected an array of strings"))
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn responses(input: &[u8]) -> Vec<Value> {
+        let mut out = Vec::new();
+        serve(input, &mut out).unwrap();
+        out.split(|&byte| byte == b'\n')
+            .filter(|line| !line.is_empty())
+            .map(|line| serde_json::from_slice(line).unwrap())
+            .collect()
+    }
+
+    // A harness bug is an adapter error, not a coverage gap.
+    #[test]
+    fn request_without_input_is_an_adapter_error() {
+        let [response] = &responses(b"{\"op\": \"ingest\"}\n")[..] else {
+            panic!("expected one response");
+        };
+        assert_eq!(response["ok"], false);
+        assert!(response.get("unsupported").is_none());
+    }
+
+    // One bad line answers with an error; the requests after it still run.
+    #[test]
+    fn non_utf8_line_does_not_stop_the_adapter() {
+        let responses = responses(b"\xff\n{\"op\": \"hello\"}\n");
+        assert_eq!(responses.len(), 2);
+        assert_eq!(responses[0]["ok"], false);
+        assert_eq!(responses[1]["ok"], true);
+    }
 }

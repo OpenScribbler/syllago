@@ -16,14 +16,21 @@ const ENVELOPE_FIELDS: [&str; 7] = [
     "pack_id",
 ];
 
+/// The deepest frontmatter nesting accepted. The tree build and its
+/// conversion recurse once per level, so unbounded nesting overflows the
+/// stack.
+const MAX_NESTING: usize = 64;
+
 /// Reads a YAML 1.2 frontmatter block into the `publisher_section` it
-/// declares, or `None` when the block declares nothing.
+/// declares, or `None` when the block declares nothing. Keys outside the
+/// envelope go into the block of the kind the frontmatter declares, else of
+/// `kind`.
 pub(crate) fn publisher_section(
     kind: Kind,
     block: &[u8],
 ) -> Result<Option<Map<String, Value>>, Error> {
     let text = std::str::from_utf8(block).map_err(|_| malformed("frontmatter is not UTF-8"))?;
-    reject_anchors(text)?;
+    scan_events(text)?;
     let documents =
         Yaml::load_from_str(text).map_err(|error| malformed(format!("frontmatter: {error}")))?;
     let fields = match documents.as_slice() {
@@ -35,6 +42,11 @@ pub(crate) fn publisher_section(
         },
         _ => return Err(malformed("frontmatter holds more than one YAML document")),
     };
+    let kind = fields
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(Kind::parse)
+        .unwrap_or(kind);
     let mut section = Map::new();
     let mut block = Map::new();
     for (key, value) in fields {
@@ -53,23 +65,34 @@ pub(crate) fn publisher_section(
     Ok(Some(section))
 }
 
-/// Rejects anchors and aliases from the parser's events, before the loader
-/// builds a tree: the loader expands every alias, so nested aliases grow
-/// exponentially.
-fn reject_anchors(text: &str) -> Result<(), Error> {
+/// Rejects anchors, aliases and nesting deeper than [`MAX_NESTING`] from the
+/// parser's events, before the loader builds a tree: the loader expands
+/// every alias, so nested aliases grow exponentially, and it recurses once
+/// per nesting level.
+fn scan_events(text: &str) -> Result<(), Error> {
+    let mut depth = 0;
     for event in Parser::new_from_str(text) {
         let (event, _) = event.map_err(|error| malformed(format!("frontmatter: {error}")))?;
         let anchored = match event {
             Event::Alias(_) => true,
-            Event::Scalar(_, _, anchor, _)
-            | Event::SequenceStart(anchor, _)
-            | Event::MappingStart(anchor, _) => anchor != 0,
+            Event::Scalar(_, _, anchor, _) => anchor != 0,
+            Event::SequenceStart(anchor, _) | Event::MappingStart(anchor, _) => {
+                depth += 1;
+                if depth > MAX_NESTING {
+                    return Err(malformed(format!(
+                        "frontmatter nests deeper than {MAX_NESTING} levels"
+                    )));
+                }
+                anchor != 0
+            }
+            Event::SequenceEnd | Event::MappingEnd => {
+                depth -= 1;
+                false
+            }
             _ => false,
         };
         if anchored {
-            return Err(malformed(
-                "frontmatter holds a tag, alias or value outside the YAML core schema",
-            ));
+            return Err(malformed("frontmatter holds an anchor or alias"));
         }
     }
     Ok(())
@@ -120,5 +143,16 @@ mod tests {
             let result = publisher_section(Kind::Skill, document.as_bytes());
             assert!(matches!(result, Err(Error::Malformed(_))), "{document}");
         }
+    }
+
+    // The parser bounds flow nesting only. Block nesting this deep overflows
+    // the stack in the recursive tree build unless the event scan stops it.
+    #[test]
+    fn deep_block_nesting_is_malformed() {
+        let document = format!("x:\n{}0\n", "- ".repeat(3000));
+        let result = publisher_section(Kind::Skill, document.as_bytes());
+        assert!(matches!(result, Err(Error::Malformed(_))));
+        let limit = format!("x:\n{}0\n", "- ".repeat(MAX_NESTING - 1));
+        assert!(publisher_section(Kind::Skill, limit.as_bytes()).is_ok());
     }
 }

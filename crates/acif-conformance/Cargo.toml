@@ -3,6 +3,7 @@ name = "acif-conformance"
 version = "0.1.0"
 description = "ACIF conformance-runner adapter (protocol 2) for the acif crate"
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false

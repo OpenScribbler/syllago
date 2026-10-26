@@ -26,8 +26,8 @@ use std::fmt;
 pub use serde_json::{Map, Value};
 
 pub use activation::{
-    CrossReference, Rendered, Resolution, RuleTarget, derived_capabilities, render_rule,
-    resolve_skill_hook_ref, rule_activation_projection,
+    CrossReference, HookRefResolution, Rendered, Resolution, RuleTarget, derived_capabilities,
+    render_rule, resolve_skill_hook_ref, rule_activation_projection,
 };
 pub use body::{Body, Classification};
 pub use envelope::{Install, RequiresEvaluation, evaluate_requires};
