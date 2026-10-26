@@ -10,12 +10,12 @@ use sha2::{Digest, Sha256, Sha512};
 use crate::wire::{Reader, base64_decode, put_string, py_splitlines, py_strip};
 use crate::{Fingerprint, KeyType, VerifiedSigner};
 
-const MAGIC: &[u8] = b"SSHSIG";
-const NAMESPACE: &[u8] = b"file";
-const HASH_ALGORITHM: &[u8] = b"sha512";
-const BEGIN: &str = "-----BEGIN SSH SIGNATURE-----";
-const END: &str = "-----END SSH SIGNATURE-----";
-const SK_USER_PRESENT: u8 = 0x01;
+pub(crate) const MAGIC: &[u8] = b"SSHSIG";
+pub(crate) const NAMESPACE: &[u8] = b"file";
+pub(crate) const HASH_ALGORITHM: &[u8] = b"sha512";
+pub(crate) const BEGIN: &str = "-----BEGIN SSH SIGNATURE-----";
+pub(crate) const END: &str = "-----END SSH SIGNATURE-----";
+pub(crate) const SK_USER_PRESENT: u8 = 0x01;
 
 /// The longest armored signature read, in bytes. Real armor for the
 /// profile's key types is under 1 KiB. The reference reads any length, so
@@ -107,7 +107,7 @@ fn unarmor(text: &str) -> Option<Vec<u8>> {
 }
 
 /// The bytes an SSHSIG signer signs for `message` (PROTOCOL.sshsig §3).
-fn signed_data(message: &[u8]) -> Vec<u8> {
+pub(crate) fn signed_data(message: &[u8]) -> Vec<u8> {
     let mut out = MAGIC.to_vec();
     put_string(&mut out, NAMESPACE);
     put_string(&mut out, b"");

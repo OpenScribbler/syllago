@@ -80,6 +80,17 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
+      # moat's testing feature holds a signer that must never sign real
+      # content. Only moat's own dev-dependency may enable it, so it must not
+      # be among moat's resolved features once dev-dependencies are left out,
+      # whether a default feature or another crate's dependency turns it on.
+      - name: moat testing feature stays out of non-dev builds
+        run: |
+          if cargo tree --workspace --locked -e no-dev --format '{p} features=[{f}]' --prefix none | grep -E '^moat v.* features=\[(.*,)?testing(,.*)?\]'; then
+            echo "moat's testing feature is enabled outside dev-dependencies" >&2
+            exit 1
+          fi
+
       - name: cargo test
         run: cargo test --workspace --locked
 

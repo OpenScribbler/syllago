@@ -13,6 +13,13 @@ ed25519-dalek = "3.0.0"
 p256 = { version = "0.14.0", default-features = false, features = ["ecdsa"] }
 sha2 = "0.11.1"
 
+[features]
+# The emulated security-key signer in `moat::testing`. Only this crate's own
+# dev-dependency enables it; CI fails if it is enabled outside
+# dev-dependencies.
+testing = []
+
 [dev-dependencies]
+moat = { path = ".", features = ["testing"] }
 curve25519-dalek = "5.0.0"
 serde_json = "1.0.154"
