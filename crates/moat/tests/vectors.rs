@@ -17,6 +17,8 @@ fn outcome(result: &Result<VerifiedSigner, Refusal>) -> &'static str {
 
 #[test]
 fn header_names_the_moat_commit() {
+    // CI's drift step already ties the vectors to MOAT_SHA; this guards local
+    // runs, which skip that step.
     let doc = common::vectors();
     assert_eq!(
         doc["moat_commit"],
@@ -35,7 +37,7 @@ fn acif_vectors() {
     );
     for v in vectors {
         let id = v["id"].as_str().unwrap();
-        let item = common::acif_item(v["files"].as_object().unwrap());
+        let item = common::acif_item(v);
         assert_eq!(
             item.body_hash.as_ref().unwrap().to_string(),
             v["body_hash"],
@@ -110,12 +112,12 @@ fn run(doc: &Value, v: &Value) -> Result<VerifiedSigner, Refusal> {
 /// The Content Hash a verifier computes for an item vector: TV-ACIF-04's
 /// files, with scripts/run.sh tampered for TV-AK-03.
 fn item_hash(doc: &Value, v: &Value) -> moat::ContentHash {
-    let mut files = doc["acif"][3]["files"].as_object().unwrap().clone();
-    assert_eq!(doc["acif"][3]["id"], "TV-ACIF-04");
+    let mut vector = doc["acif"][3].clone();
+    assert_eq!(vector["id"], "TV-ACIF-04");
     if v["id"] == "TV-AK-03" {
-        files.insert("scripts/run.sh".into(), "#!/bin/sh\necho bye\n".into());
+        vector["files"]["scripts/run.sh"] = "#!/bin/sh\necho bye\n".into();
     }
-    let hash = common::content_hash(&files);
+    let hash = common::content_hash(&vector);
     assert_eq!(hash.to_string(), v["content_hash"], "{}", v["id"]);
     hash
 }

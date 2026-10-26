@@ -5,10 +5,11 @@
 //! item's Content Hash, and the list-change message, over a change to a
 //! source's allowed-signers list. [`verify_item`] and
 //! [`verify_list_change`] check them with the accept and reject behavior of
-//! MOAT's reference implementation, `reference/moat_author_key.py`, with one
-//! deliberate difference: Ed25519 verification is strict, so a signature by
-//! a small-order key, or with a small-order R, is refused where the
-//! reference accepts it.
+//! MOAT's reference implementation, `reference/moat_author_key.py`, with two
+//! deliberate differences, both extra refusals. Ed25519 verification is
+//! strict, so a signature by a small-order key, or with a small-order R, is
+//! refused where the reference accepts it. An armored signature longer than
+//! 16 KiB is refused before it is parsed.
 //!
 //! The crate reads bytes and returns facts. It does no network or file I/O,
 //! keeps no state, and never prompts; trust on first use and the lockfile
@@ -154,6 +155,12 @@ pub struct VerifiedSigner {
 
 /// Why an item signature or a list change was refused. The first four are
 /// MOAT's outcomes, and their identifiers are MOAT's strings.
+///
+/// `SourceUriInvalid` is syllago's own, with the id
+/// `syllago.moat.source_uri_invalid`: where this crate refuses, the
+/// reference raises an exception. [`ContentHashError`]'s
+/// `syllago.moat.item_has_no_body` is syllago's too, because the reference
+/// takes a Content Hash as given and never computes one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Refusal {
     /// The signature does not verify over the expected message under the
@@ -209,6 +216,10 @@ impl std::error::Error for Refusal {}
 
 /// The canonical Attestation Payload for a Content Hash
 /// (moat-spec.md §Attestation Payload).
+///
+/// The payload is formatted rather than JSON-encoded. That is valid JSON
+/// only because a [`ContentHash`] always displays as `sha256:<hex>`, which
+/// holds no character JSON would escape.
 pub fn attestation_payload(content_hash: &ContentHash) -> Vec<u8> {
     format!(r#"{{"_version":1,"content_hash":"{content_hash}"}}"#).into_bytes()
 }

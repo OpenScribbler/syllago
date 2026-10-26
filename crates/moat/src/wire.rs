@@ -63,11 +63,11 @@ pub(crate) fn base64_unpadded(bytes: &[u8]) -> String {
     out
 }
 
-/// Decodes standard base64 exactly as Python's
-/// `base64.b64decode(s, validate=True)` does: the length is a multiple of
-/// four, only the alphabet appears before at most two final `=`, and a final
-/// group of `X===` is refused. Like Python, it ignores the unused low bits of
-/// the last character, so `QR==` decodes as `QQ==` does.
+/// Decodes standard base64 exactly as `base64.b64decode(s, validate=True)`
+/// does in Python 3.11 or later: the length is a multiple of four, only the
+/// alphabet appears before at most two final `=`, and a final group of `X===`
+/// is refused. Like Python, it ignores the unused low bits of the last
+/// character, so `QR==` decodes as `QQ==` does.
 pub(crate) fn base64_decode(text: &str) -> Option<Vec<u8>> {
     let bytes = text.as_bytes();
     if !bytes.len().is_multiple_of(4) {

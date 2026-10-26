@@ -359,6 +359,7 @@ name = "moat"
 version = "0.1.0"
 dependencies = [
  "acif",
+ "curve25519-dalek",
  "ed25519-dalek",
  "p256",
  "serde_json",

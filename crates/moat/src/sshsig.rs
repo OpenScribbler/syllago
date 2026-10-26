@@ -17,6 +17,12 @@ const BEGIN: &str = "-----BEGIN SSH SIGNATURE-----";
 const END: &str = "-----END SSH SIGNATURE-----";
 const SK_USER_PRESENT: u8 = 0x01;
 
+/// The longest armored signature read, in bytes. Real armor for the
+/// profile's key types is under 1 KiB. The reference reads any length, so
+/// this is a deliberate extra refusal: without it, a signature of millions
+/// of blank lines allocates a slice per line before anything is checked.
+const MAX_ARMOR_BYTES: usize = 16 * 1024;
+
 /// The prime 2^255 - 19, little-endian.
 const ED25519_P: [u8; 32] = {
     let mut p = [0xff; 32];
@@ -84,8 +90,12 @@ pub(crate) fn verify(armored: &str, message: &[u8]) -> Option<VerifiedSigner> {
 }
 
 /// Python's `_unarmor`: strip, split into lines, strip each line, require
-/// the BEGIN and END lines, and decode what lies between.
+/// the BEGIN and END lines, and decode what lies between. Text longer than
+/// [`MAX_ARMOR_BYTES`] is refused first.
 fn unarmor(text: &str) -> Option<Vec<u8>> {
+    if text.len() > MAX_ARMOR_BYTES {
+        return None;
+    }
     let lines: Vec<&str> = py_splitlines(py_strip(text))
         .into_iter()
         .map(py_strip)

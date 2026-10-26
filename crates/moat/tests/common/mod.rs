@@ -36,22 +36,24 @@ impl Drop for TempDir {
     }
 }
 
-/// Writes `files` (relative POSIX path to text) into a fresh directory and
-/// ingests it as an ACIF skill whose entry file is `SKILL.md`.
-pub fn acif_item(files: &serde_json::Map<String, Value>) -> acif::Item {
+/// Writes an ACIF vector's `files` (relative POSIX path to text) into a
+/// fresh directory and ingests it as an ACIF skill with the vector's
+/// `entry_file`.
+pub fn acif_item(vector: &Value) -> acif::Item {
     let dir = TempDir::new("acif");
-    for (path, text) in files {
+    for (path, text) in vector["files"].as_object().unwrap() {
         let path = dir.path().join(path);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, text.as_str().unwrap()).unwrap();
     }
     let body = acif::Body::read(dir.path()).unwrap();
-    acif::ingest_body(acif::Kind::Skill, &body, "SKILL.md").unwrap()
+    let entry_file = vector["entry_file"].as_str().unwrap();
+    acif::ingest_body(acif::Kind::Skill, &body, entry_file).unwrap()
 }
 
-/// The Content Hash of an item made of `files`.
-pub fn content_hash(files: &serde_json::Map<String, Value>) -> ContentHash {
-    ContentHash::of_acif(&acif_item(files)).unwrap()
+/// The Content Hash of the item an ACIF vector describes.
+pub fn content_hash(vector: &Value) -> ContentHash {
+    ContentHash::of_acif(&acif_item(vector)).unwrap()
 }
 
 /// The text of a named list from the vectors.

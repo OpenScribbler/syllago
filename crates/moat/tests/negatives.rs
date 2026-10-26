@@ -4,7 +4,8 @@
 
 mod common;
 
-use ed25519_dalek::{Signer, SigningKey};
+use curve25519_dalek::Scalar;
+use ed25519_dalek::{Signer, SigningKey, Verifier};
 use moat::{ContentHash, Refusal};
 use sha2::{Digest, Sha256, Sha512};
 
@@ -32,16 +33,7 @@ impl Key {
 
     /// An armored SSHSIG over `message` under `namespace` and `hashalg`.
     fn sign_with(&self, message: &[u8], namespace: &str, hashalg: &str) -> String {
-        let hashed = match hashalg {
-            "sha512" => Sha512::digest(message).to_vec(),
-            "sha256" => Sha256::digest(message).to_vec(),
-            _ => unreachable!(),
-        };
-        let mut signed = b"SSHSIG".to_vec();
-        common::put_string(&mut signed, namespace.as_bytes());
-        common::put_string(&mut signed, b"");
-        common::put_string(&mut signed, hashalg.as_bytes());
-        common::put_string(&mut signed, &hashed);
+        let signed = signed_data(message, namespace, hashalg);
         let signature = self.signing.sign(&signed).to_bytes();
         armor(&self.blob(), namespace, hashalg, &signature)
     }
@@ -49,6 +41,21 @@ impl Key {
     fn sign(&self, message: &[u8]) -> String {
         self.sign_with(message, "file", "sha512")
     }
+}
+
+/// The bytes an SSHSIG signer signs for `message`.
+fn signed_data(message: &[u8], namespace: &str, hashalg: &str) -> Vec<u8> {
+    let hashed = match hashalg {
+        "sha512" => Sha512::digest(message).to_vec(),
+        "sha256" => Sha256::digest(message).to_vec(),
+        _ => unreachable!(),
+    };
+    let mut signed = b"SSHSIG".to_vec();
+    common::put_string(&mut signed, namespace.as_bytes());
+    common::put_string(&mut signed, b"");
+    common::put_string(&mut signed, hashalg.as_bytes());
+    common::put_string(&mut signed, &hashed);
+    signed
 }
 
 fn armor(key_blob: &[u8], namespace: &str, hashalg: &str, signature: &[u8]) -> String {
@@ -76,7 +83,7 @@ fn armor(key_blob: &[u8], namespace: &str, hashalg: &str, signature: &[u8]) -> S
 
 fn content_hash() -> ContentHash {
     let doc = common::vectors();
-    common::content_hash(doc["acif"][3]["files"].as_object().unwrap())
+    common::content_hash(&doc["acif"][3])
 }
 
 fn list(sequence: u64, lines: &[&str]) -> Vec<u8> {
@@ -223,6 +230,53 @@ fn small_order_key_forgery_is_refused() {
     let list = list(0, &[&common::signers_line(&blob)]);
     let forged = armor(&blob, "file", "sha512", &signature);
     assert_eq!(item_outcome(&forged, &list), "signature_invalid");
+}
+
+/// Divergence: the reference also accepts a real key's signature whose R is
+/// the identity, a small-order point. With s = k·a, where k is the
+/// challenge hash and a the secret scalar, [s]B - [k]A is the identity, so
+/// cofactorless verification accepts it. This crate verifies strictly and
+/// refuses it.
+#[test]
+fn small_order_r_from_a_real_key_is_refused() {
+    let key = Key::new("moat-test-key-A");
+    let list = list(0, &[&key.line]);
+    let signed = signed_data(&moat::item_message(&content_hash()), "file", "sha512");
+    let public = key.signing.verifying_key();
+    let mut r = [0u8; 32];
+    r[0] = 1;
+    let challenge = Sha512::new()
+        .chain_update(r)
+        .chain_update(public.as_bytes())
+        .chain_update(&signed)
+        .finalize();
+    let k = Scalar::from_bytes_mod_order_wide(&challenge.into());
+    let s = k * key.signing.to_scalar();
+    let signature = [r, s.to_bytes()].concat();
+
+    let parsed = ed25519_dalek::Signature::from_slice(&signature).unwrap();
+    assert!(public.verify(&signed, &parsed).is_ok());
+    assert!(public.verify_strict(&signed, &parsed).is_err());
+    let forged = armor(&key.blob(), "file", "sha512", &signature);
+    assert_eq!(item_outcome(&forged, &list), "signature_invalid");
+}
+
+/// Divergence: an armored signature longer than 16 KiB is refused before
+/// it is split into lines. Blank lines after BEGIN pad a good signature,
+/// which the reference reads at any length.
+#[test]
+fn armor_over_16_kib_is_refused() {
+    const CAP: usize = 16 * 1024;
+    let key = Key::new("moat-test-key-A");
+    let list = list(0, &[&key.line]);
+    let good = key.sign(&moat::item_message(&content_hash()));
+    let body_start = good.find('\n').unwrap() + 1;
+    let padded = |len: usize| {
+        let pad = "\n".repeat(len - good.len());
+        format!("{}{pad}{}", &good[..body_start], &good[body_start..])
+    };
+    assert_eq!(item_outcome(&padded(CAP), &list), "ok");
+    assert_eq!(item_outcome(&padded(CAP + 1), &list), "signature_invalid");
 }
 
 #[test]

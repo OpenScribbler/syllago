@@ -136,7 +136,13 @@ fn parse_sequence_line(raw: &str) -> Option<u64> {
 }
 
 fn parse_key_line(line: &str) -> Result<Fingerprint, Refusal> {
-    let fields: Vec<&str> = line.split([' ', '\t']).filter(|f| !f.is_empty()).collect();
+    // A fourth field is enough to refuse the line, so stop there rather
+    // than collecting every field of an attacker-sized line.
+    let fields: Vec<&str> = line
+        .split([' ', '\t'])
+        .filter(|f| !f.is_empty())
+        .take(4)
+        .collect();
     let [principal, key_type, encoded] = fields[..] else {
         return Err(Refusal::AllowedSignersMalformed(format!(
             "malformed allowed-signers line: {line:?}"

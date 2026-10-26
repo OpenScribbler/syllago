@@ -14,4 +14,5 @@ p256 = { version = "0.14.0", default-features = false, features = ["ecdsa"] }
 sha2 = "0.11.1"
 
 [dev-dependencies]
+curve25519-dalek = "5.0.0"
 serde_json = "1.0.154"

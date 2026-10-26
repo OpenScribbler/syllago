@@ -1,5 +1,6 @@
 //! Interoperability with OpenSSH's ssh-keygen. Every test passes without
-//! checking anything when ssh-keygen is not on PATH.
+//! checking anything when ssh-keygen is not on PATH, except under CI (`CI`
+//! set), where a missing ssh-keygen fails the test.
 
 mod common;
 
@@ -10,7 +11,9 @@ use std::process::{Command, Output, Stdio};
 use common::TempDir;
 use serde_json::Value;
 
-/// Runs ssh-keygen, or returns `None` when it is not installed.
+/// Runs ssh-keygen, or returns `None` when it is not installed. Under CI it
+/// panics instead, so a runner without ssh-keygen cannot pass these tests
+/// unchecked.
 fn ssh_keygen(args: &[&str], stdin: &[u8]) -> Option<Output> {
     let child = Command::new("ssh-keygen")
         .args(args)
@@ -20,6 +23,9 @@ fn ssh_keygen(args: &[&str], stdin: &[u8]) -> Option<Output> {
         .spawn();
     let mut child = match child {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            if std::env::var_os("CI").is_some() {
+                panic!("ssh-keygen not found; CI must run the interop tests");
+            }
             eprintln!("ssh-keygen not found; skipping");
             return None;
         }
@@ -145,7 +151,7 @@ fn ssh_keygen_signature_verifies() {
     let list = format!("# moat-sequence: 0\n{line}\n");
 
     let doc = common::vectors();
-    let hash = common::content_hash(doc["acif"][3]["files"].as_object().unwrap());
+    let hash = common::content_hash(&doc["acif"][3]);
     let message = moat::item_message(&hash);
     let signature = keygen_sign(dir.path(), "real", &message, &["-n", "file"]);
     let signer = moat::verify_item(&hash, &signature, list.as_bytes()).unwrap();
@@ -183,7 +189,7 @@ fn ssh_keygen_accepts_tv_ak_08_without_user_presence() {
     let key = &doc["author_key"]["keys"]["D"];
     let line = format!("{}\n", key["line"].as_str().unwrap());
     let principal = key["fingerprint"].as_str().unwrap();
-    let hash = common::content_hash(doc["acif"][3]["files"].as_object().unwrap());
+    let hash = common::content_hash(&doc["acif"][3]);
     for (id, ours) in [("TV-AK-06", "ok"), ("TV-AK-08", "signature_invalid")] {
         let v = vector(&doc, id);
         let signature = v["signature"].as_str().unwrap();
