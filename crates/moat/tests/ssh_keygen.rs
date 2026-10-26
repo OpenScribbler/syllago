@@ -300,6 +300,7 @@ fn ssh_keygen_signer_refuses_a_signature_by_another_key() {
 }
 
 const CHILD_DIR: &str = "MOAT_TEST_SIGN_CHILD_DIR";
+#[cfg(target_os = "linux")]
 const PASSPHRASE: &str = "moat-test-passphrase";
 
 /// With no terminal, ssh-keygen reads a key's passphrase from stdin, so a

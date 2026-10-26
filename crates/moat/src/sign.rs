@@ -184,6 +184,7 @@ struct PrivateDir(PathBuf);
 impl PrivateDir {
     fn create() -> io::Result<PrivateDir> {
         static NEXT: AtomicU32 = AtomicU32::new(0);
+        #[cfg_attr(not(unix), allow(unused_mut))]
         let mut builder = DirBuilder::new();
         #[cfg(unix)]
         std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
