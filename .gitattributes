@@ -6,3 +6,8 @@
 # Golden test files: byte-exact comparison, must not vary by platform.
 *.sh                                  text eol=lf
 cli/internal/tui/testdata/*.golden    text eol=lf
+# Rust workspace: hashing is byte-exact, so Windows checkouts must not
+# rewrite line endings.
+*.rs                                  text eol=lf
+*.toml                                text eol=lf
+Cargo.lock                            text eol=lf

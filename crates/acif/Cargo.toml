@@ -1,0 +1,19 @@
+[package]
+name = "acif"
+version = "0.1.0"
+description = "Canonicalize, hash and render Agent Content Interchange Format (ACIF) items"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ryu-js = "1.0.3"
+saphyr = { version = "0.2.2", default-features = false }
+saphyr-parser = "0.2.2"
+semver = "1.0.28"
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+spdx = "0.13.6"
+unicode-normalization = "0.1.26"
+uuid = { version = "1.29.0", features = ["v5"] }
