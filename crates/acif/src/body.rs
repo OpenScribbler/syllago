@@ -4,7 +4,7 @@ use std::path::Path;
 
 use unicode_normalization::UnicodeNormalization;
 
-use crate::{Error, Hash, malformed};
+use crate::{Error, Hash};
 
 /// Version-control metadata names excluded from the body everywhere (core §7.4).
 const VCS_NAMES: [&str; 6] = [".git", ".svn", ".hg", ".bzr", "_darcs", ".fossil"];
@@ -109,15 +109,18 @@ pub(crate) struct HashedBody {
 
 /// Classifies and hashes `body`, whose entry file is `entry_file` (core §7).
 pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Error> {
-    // Classification compares raw paths, before NFC, as §7.2 names them.
-    let content_file = |path: &str| {
-        path != ROOT_SIDECAR && !excluded_from_classification(path) && path != entry_file
-    };
-    let multi_file = body.files.iter().any(|(path, _)| content_file(path))
-        || body
-            .not_utf8
-            .iter()
-            .any(|path| content_file(&String::from_utf8_lossy(path)));
+    // Classification compares raw paths, before NFC, as §7.2 names them,
+    // and excludes the entry file at the body root only.
+    let multi_file = body.files.iter().any(|(path, _)| {
+        path != ROOT_SIDECAR
+            && !excluded_from_classification(path)
+            && !(path == entry_file && !path.contains('/'))
+    }) || body
+        .not_utf8
+        .iter()
+        // A path that is not UTF-8 is never the entry file, though its lossy
+        // spelling can match one.
+        .any(|path| !excluded_from_classification(&String::from_utf8_lossy(path)));
     // The §7.4 manifest, and so its step 3 path scans, runs only for a
     // multi-file body (§7.2). Each scan covers every path before the next.
     if multi_file {
@@ -142,6 +145,19 @@ pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Err
             return Err(Error::Reject("acif.body.path_collision"));
         }
     }
+    // The empty check and the entry lookup read raw paths too: NFC can move
+    // a name out of a root README* or LICENSE* match. A missing entry file
+    // is `acif.body.empty`, as in the reference.
+    if body
+        .files
+        .iter()
+        .all(|(path, _)| path == ROOT_SIDECAR || excluded_from_classification(path))
+    {
+        return Err(Error::Reject("acif.body.empty"));
+    }
+    let Some((_, entry_bytes)) = body.files.iter().find(|(path, _)| path == entry_file) else {
+        return Err(Error::Reject("acif.body.empty"));
+    };
     // Each file's NFC path, whether it is the entry file (matched raw), and
     // its bytes.
     let mut files: Vec<(String, bool, &[u8])> = body
@@ -150,17 +166,6 @@ pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Err
         .filter(|(path, _)| path != ROOT_SIDECAR)
         .map(|(path, bytes)| (path.nfc().collect(), path == entry_file, bytes.as_slice()))
         .collect();
-    if files
-        .iter()
-        .all(|(path, _, _)| excluded_from_classification(path))
-    {
-        return Err(Error::Reject("acif.body.empty"));
-    }
-    let Some((_, _, entry_bytes)) = files.iter().find(|(_, entry, _)| *entry) else {
-        return Err(malformed(format!(
-            "entry file {entry_file:?} is not in the body"
-        )));
-    };
     let entry_text = canonical_text(entry_bytes);
     let entry_input = split_frontmatter(&entry_text).1;
     if !multi_file {
@@ -204,14 +209,12 @@ fn collision_key(path: &[u8]) -> Vec<u8> {
 }
 
 /// `LICENSE*` and `README*` regular files at the body root, matched as a
-/// case-insensitive prefix (core §7.2).
+/// case-insensitive prefix (core §7.2). The match uppercases with Unicode
+/// full case mapping, as the reference's `str.upper()` does, so `lıcense`
+/// and `licenſe` match too.
 fn excluded_from_classification(path: &str) -> bool {
-    let prefixed = |prefix: &str| {
-        path.as_bytes()
-            .get(..prefix.len())
-            .is_some_and(|start| start.eq_ignore_ascii_case(prefix.as_bytes()))
-    };
-    !path.contains('/') && (prefixed("license") || prefixed("readme"))
+    let upper = path.to_uppercase();
+    !path.contains('/') && (upper.starts_with("LICENSE") || upper.starts_with("README"))
 }
 
 fn is_text(path: &str, bytes: &[u8]) -> bool {
@@ -295,7 +298,11 @@ mod tests {
     }
 
     fn reject_of(body: &Body) -> &'static str {
-        match hash_body(body, "SKILL.md") {
+        reject_at(body, "SKILL.md")
+    }
+
+    fn reject_at(body: &Body, entry_file: &str) -> &'static str {
+        match hash_body(body, entry_file) {
             Err(Error::Reject(id)) => id,
             Err(error) => panic!("expected a reject, got {error}"),
             Ok(_) => panic!("expected a reject, got a hash"),
@@ -334,24 +341,46 @@ mod tests {
             ("README\n.md", b"z\n"),
         ]);
         assert_eq!(reject_of(&body), "acif.body.path_control_char");
+        // A missing entry file is acif.body.empty, as in the reference.
         let body = Body::from_files(&[("S\u{212a}ILL.md", b"x\n")]);
-        assert!(matches!(
-            hash_body(&body, "SKILL.md"),
-            Err(Error::Malformed(_))
-        ));
+        assert_eq!(reject_of(&body), "acif.body.empty");
+    }
+
+    // The reference excludes the entry file from classification only at the
+    // body root, so a nested entry file makes the body multi-file.
+    #[test]
+    fn nested_entry_file_is_a_content_file() {
+        let body = Body::from_files(&[("d\n/RULE.md", b"x\n")]);
+        assert_eq!(
+            reject_at(&body, "d\n/RULE.md"),
+            "acif.body.path_control_char"
+        );
+    }
+
+    // The reference uppercases with str.upper(), so U+0131 DOTLESS I and
+    // U+017F LONG S match the I and S of LICENSE.
+    #[test]
+    fn root_exclusions_use_unicode_uppercase() {
+        for name in ["L\u{131}CENSE\n", "licen\u{17f}e\n"] {
+            let body = Body::from_files(&[("SKILL.md", b"x\n"), (name, b"y\n")]);
+            let hashed = hash_body(&body, "SKILL.md").unwrap();
+            assert_eq!(hashed.classification, Classification::SingleFile);
+        }
+        // The empty check matches the raw name: NFC composes E and U+0301
+        // into U+00C9, which would no longer start with README.
+        let body = Body::from_files(&[("README\u{301}", b"x\n")]);
+        assert_eq!(reject_at(&body, "README\u{301}"), "acif.body.empty");
     }
 
     /// A directory under the system temp dir, removed on drop. Nothing
     /// outside it is ever removed.
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     struct TempDir(std::path::PathBuf);
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     impl TempDir {
-        /// Writes `files`, each a relative path in raw bytes, into a fresh
-        /// directory.
-        fn with_files(label: &str, files: &[&[u8]]) -> TempDir {
-            use std::os::unix::ffi::OsStrExt;
+        /// Creates a fresh, empty directory.
+        fn new(label: &str) -> TempDir {
             use std::sync::atomic::{AtomicU32, Ordering};
             static NEXT: AtomicU32 = AtomicU32::new(0);
             let n = NEXT.fetch_add(1, Ordering::Relaxed);
@@ -359,6 +388,15 @@ mod tests {
                 std::env::temp_dir().join(format!("acif-test-{}-{n}-{label}", std::process::id())),
             );
             fs::create_dir(&dir.0).unwrap();
+            dir
+        }
+
+        /// Writes `files`, each a relative path in raw bytes, into a fresh
+        /// directory.
+        #[cfg(target_os = "linux")]
+        fn with_files(label: &str, files: &[&[u8]]) -> TempDir {
+            use std::os::unix::ffi::OsStrExt;
+            let dir = TempDir::new(label);
             for path in files {
                 let path = dir.0.join(std::ffi::OsStr::from_bytes(path));
                 fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -368,15 +406,16 @@ mod tests {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     impl Drop for TempDir {
         fn drop(&mut self) {
             let _ = fs::remove_dir_all(&self.0);
         }
     }
 
-    // Linux file systems hold a name that is not UTF-8; APFS and NTFS refuse
-    // one, so these run on Linux only.
+    // Linux file systems hold any byte name and APFS refuses one that is not
+    // UTF-8, so these run on Linux only. NTFS holds an unpaired UTF-16
+    // surrogate, which the Windows test below builds.
     #[cfg(target_os = "linux")]
     #[test]
     fn not_utf8_scan_runs_before_control_char_scan() {
@@ -419,6 +458,67 @@ mod tests {
         let dir = TempDir::with_files("bytes", &[b"SKILL.md", b"README\xfe", b"README\xff"]);
         let hashed = hash_body(&Body::read(&dir.0).unwrap(), "SKILL.md").unwrap();
         assert_eq!(hashed.classification, Classification::SingleFile);
+    }
+
+    // Its lossy spelling, rule\u{fffd}.md, is the entry file's name, but a
+    // path that is not UTF-8 is never the entry file.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn not_utf8_path_never_matches_entry_file() {
+        let dir = TempDir::with_files("lossy", &[b"rule\xef\xbf\xbd.md", b"rule\xff.md"]);
+        assert_eq!(
+            reject_at(&Body::read(&dir.0).unwrap(), "rule\u{fffd}.md"),
+            "acif.body.path_not_utf8"
+        );
+    }
+
+    // A symlink rejects as the tree is read (§7.4 step 2), whichever of the
+    // two the walk meets first.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn symlink_beats_not_utf8_path() {
+        let dir = TempDir::with_files("link", &[b"SKILL.md", b"z\xff.md"]);
+        std::os::unix::fs::symlink("SKILL.md", dir.0.join("link.md")).unwrap();
+        assert!(matches!(
+            Body::read(&dir.0),
+            Err(Error::Reject("acif.body.symlink"))
+        ));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn not_utf8_scan_runs_before_collision_detection() {
+        let dir = TempDir::with_files(
+            "nfc-order",
+            &[
+                b"SKILL.md",
+                b"caf\xc3\xa9.md",
+                b"cafe\xcc\x81.md",
+                b"z\xff.md",
+            ],
+        );
+        assert_eq!(
+            reject_of(&Body::read(&dir.0).unwrap()),
+            "acif.body.path_not_utf8"
+        );
+    }
+
+    // NTFS holds an unpaired UTF-16 surrogate, which is not UTF-8 either.
+    #[cfg(windows)]
+    #[test]
+    fn unpaired_surrogate_is_not_utf8() {
+        use std::os::windows::ffi::OsStringExt;
+        let dir = TempDir::new("surrogate");
+        fs::write(dir.0.join("SKILL.md"), b"x\n").unwrap();
+        let name: Vec<u16> = [0x7A, 0xD800]
+            .into_iter()
+            .chain(".md".encode_utf16())
+            .collect();
+        fs::write(dir.0.join(std::ffi::OsString::from_wide(&name)), b"y\n").unwrap();
+        assert_eq!(
+            reject_of(&Body::read(&dir.0).unwrap()),
+            "acif.body.path_not_utf8"
+        );
     }
 
     #[test]
