@@ -48,8 +48,16 @@ ENV_BLOCKED_ALLOWED = {
         # APFS cannot hold two names that differ only by Unicode
         # normalization, so the runner cannot build the fixture.
         "TV-13",
+        # APFS refuses a file name that is not UTF-8, so the runner cannot
+        # build TV-14's not_utf8 fixtures.
+        "TV-14",
     ],
-    "win32": [],
+    "win32": [
+        # NTFS names are UTF-16, so the runner cannot create a name that is
+        # not UTF-8, and NTFS refuses control characters in a name, so the
+        # runner cannot build TV-14's fixtures.
+        "TV-14",
+    ],
 }
 allowed = set(ENV_BLOCKED_ALLOWED.get(sys.platform, []))
 failed = False

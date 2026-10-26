@@ -43,6 +43,10 @@ impl Classification {
 #[derive(Debug, Clone)]
 pub struct Body {
     files: Vec<(String, Vec<u8>)>,
+    /// Paths that are not valid UTF-8 (UTF-16 on Windows), as raw bytes
+    /// (`OsStr::as_encoded_bytes`). Only classification, the §7.4 path scan
+    /// and collision detection read them.
+    not_utf8: Vec<Vec<u8>>,
 }
 
 impl Body {
@@ -50,9 +54,12 @@ impl Body {
     /// rejected with `acif.body.symlink` and never followed. `root` itself is
     /// resolved as given, so a symlinked item directory reads its target.
     pub fn read(root: &Path) -> Result<Body, Error> {
-        let mut files = Vec::new();
-        read_dir(root, "", &mut files)?;
-        Ok(Body { files })
+        let mut body = Body {
+            files: Vec::new(),
+            not_utf8: Vec::new(),
+        };
+        read_dir(root, b"", &mut body)?;
+        Ok(body)
     }
 
     #[cfg(test)]
@@ -61,29 +68,32 @@ impl Body {
             .iter()
             .map(|(path, bytes)| (path.to_string(), bytes.to_vec()))
             .collect();
-        Body { files }
+        Body {
+            files,
+            not_utf8: Vec::new(),
+        }
     }
 }
 
-fn read_dir(dir: &Path, prefix: &str, files: &mut Vec<(String, Vec<u8>)>) -> Result<(), Error> {
+fn read_dir(dir: &Path, prefix: &[u8], body: &mut Body) -> Result<(), Error> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|name| malformed(format!("file name {name:?} is not UTF-8")))?;
-        if VCS_NAMES.contains(&name.as_str()) {
+        let name = entry.file_name();
+        if name.to_str().is_some_and(|name| VCS_NAMES.contains(&name)) {
             continue;
         }
-        let path = format!("{prefix}{name}");
+        let path = [prefix, name.as_encoded_bytes()].concat();
         let file_type = entry.file_type()?;
         if file_type.is_symlink() {
             return Err(Error::Reject("acif.body.symlink"));
         }
         if file_type.is_dir() {
-            read_dir(&entry.path(), &format!("{path}/"), files)?;
+            read_dir(&entry.path(), &[&path[..], b"/"].concat(), body)?;
         } else if file_type.is_file() {
-            files.push((path, fs::read(entry.path())?));
+            match String::from_utf8(path) {
+                Ok(path) => body.files.push((path, fs::read(entry.path())?)),
+                Err(error) => body.not_utf8.push(error.into_bytes()),
+            }
         }
     }
     Ok(())
@@ -99,34 +109,60 @@ pub(crate) struct HashedBody {
 
 /// Classifies and hashes `body`, whose entry file is `entry_file` (core §7).
 pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Error> {
-    let mut seen = HashSet::new();
-    let mut files: Vec<(String, &[u8])> = Vec::new();
-    for (path, bytes) in &body.files {
-        let path: String = path.nfc().collect();
-        if !seen.insert(path.clone()) {
-            return Err(Error::Reject("acif.body.path_collision"));
+    // Classification compares raw paths, before NFC, as §7.2 names them.
+    let content_file = |path: &str| {
+        path != ROOT_SIDECAR && !excluded_from_classification(path) && path != entry_file
+    };
+    let multi_file = body.files.iter().any(|(path, _)| content_file(path))
+        || body
+            .not_utf8
+            .iter()
+            .any(|path| content_file(&String::from_utf8_lossy(path)));
+    // The §7.4 manifest, and so its step 3 path scans, runs only for a
+    // multi-file body (§7.2). Each scan covers every path before the next.
+    if multi_file {
+        if !body.not_utf8.is_empty() {
+            return Err(Error::Reject("acif.body.path_not_utf8"));
         }
-        if path != ROOT_SIDECAR {
-            files.push((path, bytes));
+        // U+0000–U+001F and U+007F; U+0080–U+009F are allowed.
+        if body
+            .files
+            .iter()
+            .any(|(path, _)| path.chars().any(|c| c.is_ascii_control()))
+        {
+            return Err(Error::Reject("acif.body.path_control_char"));
         }
     }
+    // Collision detection covers every path, a single-file body's and a path
+    // that is not UTF-8 included.
+    let mut seen = HashSet::new();
+    let raw_paths = body.files.iter().map(|(path, _)| path.as_bytes());
+    for path in raw_paths.chain(body.not_utf8.iter().map(Vec::as_slice)) {
+        if !seen.insert(collision_key(path)) {
+            return Err(Error::Reject("acif.body.path_collision"));
+        }
+    }
+    // Each file's NFC path, whether it is the entry file (matched raw), and
+    // its bytes.
+    let mut files: Vec<(String, bool, &[u8])> = body
+        .files
+        .iter()
+        .filter(|(path, _)| path != ROOT_SIDECAR)
+        .map(|(path, bytes)| (path.nfc().collect(), path == entry_file, bytes.as_slice()))
+        .collect();
     if files
         .iter()
-        .all(|(path, _)| excluded_from_classification(path))
+        .all(|(path, _, _)| excluded_from_classification(path))
     {
         return Err(Error::Reject("acif.body.empty"));
     }
-    let entry: String = entry_file.nfc().collect();
-    let Some((_, entry_bytes)) = files.iter().find(|(path, _)| *path == entry) else {
+    let Some((_, _, entry_bytes)) = files.iter().find(|(_, entry, _)| *entry) else {
         return Err(malformed(format!(
             "entry file {entry_file:?} is not in the body"
         )));
     };
     let entry_text = canonical_text(entry_bytes);
     let entry_input = split_frontmatter(&entry_text).1;
-    let multi_file = files
-        .iter()
-        .any(|(path, _)| *path != entry && !excluded_from_classification(path));
     if !multi_file {
         return Ok(HashedBody {
             hash: Hash::sha256(entry_input),
@@ -136,8 +172,8 @@ pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Err
     }
     files.sort_by(|a, b| a.0.cmp(&b.0));
     let mut manifest = String::new();
-    for (path, bytes) in &files {
-        let hash = if *path == entry {
+    for (path, entry, bytes) in &files {
+        let hash = if *entry {
             Hash::sha256(entry_input)
         } else if is_text(path, bytes) {
             Hash::sha256(&canonical_text(bytes))
@@ -151,6 +187,20 @@ pub(crate) fn hash_body(body: &Body, entry_file: &str) -> Result<HashedBody, Err
         classification: Classification::MultiFile,
         entry_text,
     })
+}
+
+/// A path's key for NFC collision detection (core §7.4 step 3): its NFC
+/// form, with each byte that is not UTF-8 kept as is. Such a byte acts as a
+/// starter, as the lone surrogate it decodes to in the reference does, so
+/// composition never crosses it, and two different bytes never collide.
+fn collision_key(path: &[u8]) -> Vec<u8> {
+    let mut key = Vec::with_capacity(path.len());
+    for chunk in path.utf8_chunks() {
+        let valid: String = chunk.valid().nfc().collect();
+        key.extend_from_slice(valid.as_bytes());
+        key.extend_from_slice(chunk.invalid());
+    }
+    key
 }
 
 /// `LICENSE*` and `README*` regular files at the body root, matched as a
@@ -242,6 +292,133 @@ mod tests {
             hash_body(&a, "SKILL.md").unwrap().hash,
             hash_body(&b, "SKILL.md").unwrap().hash
         );
+    }
+
+    fn reject_of(body: &Body) -> &'static str {
+        match hash_body(body, "SKILL.md") {
+            Err(Error::Reject(id)) => id,
+            Err(error) => panic!("expected a reject, got {error}"),
+            Ok(_) => panic!("expected a reject, got a hash"),
+        }
+    }
+
+    #[test]
+    fn control_char_scan_runs_before_collision_detection() {
+        let body = Body::from_files(&[
+            ("SKILL.md", b"x\n"),
+            ("caf\u{e9}.md", b"a\n"),
+            ("cafe\u{301}.md", b"b\n"),
+            ("z\n.md", b"c\n"),
+        ]);
+        assert_eq!(reject_of(&body), "acif.body.path_control_char");
+        let body = Body::from_files(&[("SKILL.md", b"x\n"), ("d\x7f/run.sh", b"c\n")]);
+        assert_eq!(reject_of(&body), "acif.body.path_control_char");
+    }
+
+    // A rule using char::is_control would reject U+0080–U+009F too.
+    #[test]
+    fn c1_controls_are_allowed_in_paths() {
+        let body = Body::from_files(&[("SKILL.md", b"x\n"), ("notes\u{80}.md", b"y\n")]);
+        let hashed = hash_body(&body, "SKILL.md").unwrap();
+        assert_eq!(hashed.classification, Classification::MultiFile);
+    }
+
+    // Classification and the entry lookup compare raw paths, as the
+    // reference does. U+212A KELVIN SIGN normalizes to K, so its SKILL.md
+    // spelling is NFC-equal to the entry file but is a content file.
+    #[test]
+    fn classification_compares_raw_paths_with_entry_file() {
+        let body = Body::from_files(&[
+            ("SKILL.md", b"x\n"),
+            ("S\u{212a}ILL.md", b"y\n"),
+            ("README\n.md", b"z\n"),
+        ]);
+        assert_eq!(reject_of(&body), "acif.body.path_control_char");
+        let body = Body::from_files(&[("S\u{212a}ILL.md", b"x\n")]);
+        assert!(matches!(
+            hash_body(&body, "SKILL.md"),
+            Err(Error::Malformed(_))
+        ));
+    }
+
+    /// A directory under the system temp dir, removed on drop. Nothing
+    /// outside it is ever removed.
+    #[cfg(target_os = "linux")]
+    struct TempDir(std::path::PathBuf);
+
+    #[cfg(target_os = "linux")]
+    impl TempDir {
+        /// Writes `files`, each a relative path in raw bytes, into a fresh
+        /// directory.
+        fn with_files(label: &str, files: &[&[u8]]) -> TempDir {
+            use std::os::unix::ffi::OsStrExt;
+            use std::sync::atomic::{AtomicU32, Ordering};
+            static NEXT: AtomicU32 = AtomicU32::new(0);
+            let n = NEXT.fetch_add(1, Ordering::Relaxed);
+            let dir = TempDir(
+                std::env::temp_dir().join(format!("acif-test-{}-{n}-{label}", std::process::id())),
+            );
+            fs::create_dir(&dir.0).unwrap();
+            for path in files {
+                let path = dir.0.join(std::ffi::OsStr::from_bytes(path));
+                fs::create_dir_all(path.parent().unwrap()).unwrap();
+                fs::write(path, b"x\n").unwrap();
+            }
+            dir
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    // Linux file systems hold a name that is not UTF-8; APFS and NTFS refuse
+    // one, so these run on Linux only.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn not_utf8_scan_runs_before_control_char_scan() {
+        let dir = TempDir::with_files("order", &[b"SKILL.md", b"a\n.md", b"z\xff.md"]);
+        assert_eq!(
+            reject_of(&Body::read(&dir.0).unwrap()),
+            "acif.body.path_not_utf8"
+        );
+        let dir = TempDir::with_files("dir", &[b"SKILL.md", b"d\xff/run.sh"]);
+        assert_eq!(
+            reject_of(&Body::read(&dir.0).unwrap()),
+            "acif.body.path_not_utf8"
+        );
+    }
+
+    // The §7.4 manifest, and so its path scans, runs only for a multi-file
+    // body (§7.2). Root README* files leave this body single-file.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn single_file_body_paths_are_not_scanned() {
+        let dir = TempDir::with_files("single", &[b"SKILL.md", b"README\n.md", b"README\xff"]);
+        let hashed = hash_body(&Body::read(&dir.0).unwrap(), "SKILL.md").unwrap();
+        assert_eq!(hashed.classification, Classification::SingleFile);
+    }
+
+    // The reference NFC-normalizes a path that is not UTF-8 too, with each
+    // invalid byte a lone surrogate, and checks a single-file body's paths.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn nfc_collision_covers_not_utf8_paths() {
+        let dir = TempDir::with_files(
+            "nfc",
+            &[b"SKILL.md", b"README\xffe\xcc\x81", b"README\xff\xc3\xa9"],
+        );
+        assert_eq!(
+            reject_of(&Body::read(&dir.0).unwrap()),
+            "acif.body.path_collision"
+        );
+        // Both spell README\u{fffd} lossily, but their bytes differ.
+        let dir = TempDir::with_files("bytes", &[b"SKILL.md", b"README\xfe", b"README\xff"]);
+        let hashed = hash_body(&Body::read(&dir.0).unwrap(), "SKILL.md").unwrap();
+        assert_eq!(hashed.classification, Classification::SingleFile);
     }
 
     #[test]
