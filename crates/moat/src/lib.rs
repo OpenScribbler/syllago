@@ -11,12 +11,20 @@
 //! refused where the reference accepts it. An armored signature longer than
 //! 16 KiB is refused before it is parsed.
 //!
-//! The crate reads bytes and returns facts. It does no network or file I/O,
-//! keeps no state, and never prompts; trust on first use and the lockfile
-//! belong to its caller.
+//! [`sign_item`] signs an item message with an Author Key through any
+//! [`Signer`] (`SshKeygenSigner` goes through `ssh-keygen`) and builds the
+//! `rekord` entry that records it.
+//!
+//! The crate reads bytes and returns facts. Apart from signing through
+//! `ssh-keygen`, which takes the message as a temporary file, it does no
+//! network or file I/O, keeps no state, and never
+//! prompts; trust on first use and the lockfile belong to its caller.
 
 mod allowed_signers;
+mod sign;
 mod sshsig;
+#[cfg(feature = "testing")]
+pub mod testing;
 mod wire;
 
 use std::fmt;
@@ -24,6 +32,10 @@ use std::fmt;
 use sha2::{Digest, Sha256};
 
 pub use allowed_signers::{AllowedSigners, ListDigest};
+pub use sign::{
+    NonSkKeys, Os, SignError, SignedItem, Signer, SkKeyType, SshKeygenSigner, SshPublicKey,
+    default_sk_key_type, keygen_args, rekord_entry, sign_item, sign_message,
+};
 
 const ITEM_PREFIX: &[u8] = b"moat-author-item-v1\n";
 const LIST_CHANGE_PREFIX: &[u8] = b"moat-allowed-signers-change-v1\n";

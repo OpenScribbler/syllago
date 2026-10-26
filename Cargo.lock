@@ -361,6 +361,7 @@ dependencies = [
  "acif",
  "curve25519-dalek",
  "ed25519-dalek",
+ "moat",
  "p256",
  "serde_json",
  "sha2",

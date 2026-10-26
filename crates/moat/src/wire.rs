@@ -63,6 +63,16 @@ pub(crate) fn base64_unpadded(bytes: &[u8]) -> String {
     out
 }
 
+/// Standard base64 with padding, the form an OpenSSH public key and
+/// Rekor's JSON use.
+pub(crate) fn base64(bytes: &[u8]) -> String {
+    let mut out = base64_unpadded(bytes);
+    while !out.len().is_multiple_of(4) {
+        out.push('=');
+    }
+    out
+}
+
 /// Decodes standard base64 exactly as `base64.b64decode(s, validate=True)`
 /// does in Python 3.11 or later: the length is a multiple of four, only the
 /// alphabet appears before at most two final `=`, and a final group of `X===`
