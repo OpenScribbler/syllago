@@ -338,6 +338,7 @@ fn ssh_keygen_signer_leaves_stdin_to_prompts() {
         .args(["--exact", "sign_with_passphrase_on_stdin", "--nocapture"])
         .env(CHILD_DIR, dir.path())
         .env_remove("DISPLAY")
+        .env_remove("WAYLAND_DISPLAY")
         .env_remove("SSH_ASKPASS")
         .env_remove("SSH_ASKPASS_REQUIRE")
         .stdin(Stdio::piped())

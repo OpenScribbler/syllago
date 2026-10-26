@@ -165,7 +165,7 @@ impl Signer for SshKeygenSigner {
 
 /// ssh-keygen's arguments for signing `message_file` with `key_file`.
 fn sign_args(key_file: &Path, message_file: &Path) -> Vec<OsString> {
-    let mut args: Vec<OsString> = ["-Y", "sign", "-n", "file", "-f"]
+    let mut args: Vec<OsString> = ["-Y", "sign", "-q", "-n", "file", "-f"]
         .into_iter()
         .map(OsString::from)
         .collect();
@@ -340,7 +340,7 @@ pub enum SignError {
     /// The key is not a security-key (`sk-`) key and plain keys were not
     /// allowed.
     KeyNotSecurityKey(KeyType),
-    /// ssh-keygen could not be run, failed, or wrote no usable signature.
+    /// ssh-keygen could not be run, failed, or wrote no signature file.
     SshKeygenFailed(String),
     /// The signature does not verify under the profile with the signer's
     /// configured key.
@@ -394,6 +394,7 @@ mod tests {
             [
                 "-Y",
                 "sign",
+                "-q",
                 "-n",
                 "file",
                 "-f",

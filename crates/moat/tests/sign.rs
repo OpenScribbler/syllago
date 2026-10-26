@@ -102,9 +102,10 @@ impl Signer for WrongKey {
 
 #[test]
 fn sign_message_refuses_a_signature_by_another_key() {
-    let doc = common::vectors();
     let signer = WrongKey {
-        reported: public_key(&doc, "E"),
+        reported: EmulatedSkSigner::ed25519(seed("other"))
+            .public_key()
+            .clone(),
         actual: EmulatedSkSigner::ed25519(seed("D")),
     };
     assert_eq!(

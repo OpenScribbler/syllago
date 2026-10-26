@@ -15,8 +15,8 @@ sha2 = "0.11.1"
 
 [features]
 # The emulated security-key signer in `moat::testing`. Only this crate's own
-# dev-dependency enables it; CI fails if it is enabled outside
-# dev-dependencies.
+# dev-dependency enables it; CI checks that within the workspace and fails if
+# it is enabled outside dev-dependencies.
 testing = []
 
 [dev-dependencies]

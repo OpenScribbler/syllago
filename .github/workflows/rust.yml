@@ -86,7 +86,8 @@ jobs:
       # whether a default feature or another crate's dependency turns it on.
       - name: moat testing feature stays out of non-dev builds
         run: |
-          if cargo tree --workspace --locked -e no-dev --format '{p} features=[{f}]' --prefix none | grep -E '^moat v.* features=\[(.*,)?testing(,.*)?\]'; then
+          tree=$(cargo tree --workspace --locked -e no-dev --format '{p} features=[{f}]' --prefix none)
+          if grep -E '^moat v.* features=\[(.*,)?testing(,.*)?\]' <<<"$tree"; then
             echo "moat's testing feature is enabled outside dev-dependencies" >&2
             exit 1
           fi

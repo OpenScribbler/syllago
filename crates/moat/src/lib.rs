@@ -11,8 +11,9 @@
 //! refused where the reference accepts it. An armored signature longer than
 //! 16 KiB is refused before it is parsed.
 //!
-//! [`sign_item`] signs an item message with an Author Key through
-//! `ssh-keygen` and builds the `rekord` entry that records it.
+//! [`sign_item`] signs an item message with an Author Key through any
+//! [`Signer`] (`SshKeygenSigner` goes through `ssh-keygen`) and builds the
+//! `rekord` entry that records it.
 //!
 //! The crate reads bytes and returns facts. Apart from signing through
 //! `ssh-keygen`, which takes the message as a temporary file, it does no
