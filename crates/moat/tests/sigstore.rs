@@ -339,6 +339,76 @@ fn malformed_bundle_and_profile_are_invalid() {
 }
 
 #[test]
+fn manifest_bundle_must_be_a_v0_3_message_signature() {
+    let mut registry = Registry::new();
+    let manifest = manifest();
+    let root = registry.pki.trust_root();
+    // A DSSE envelope by the profile's identity whose in-toto statement
+    // names sha256(manifest): it signs the statement, not the manifest.
+    let signer = registry.signer.clone();
+    let cert = registry.cert.clone();
+    let dsse = pki::dsse_bundle(&mut registry.log, &manifest, &signer, &cert);
+    assert_failure(
+        verify_manifest(
+            &manifest,
+            dsse.to_string().as_bytes(),
+            Some(&profile()),
+            &root,
+            now(),
+        ),
+        "MOAT_INVALID",
+        "syllago.moat.bundle_malformed",
+    );
+    // Older bundle layouts.
+    let bundle: Value = serde_json::from_slice(&signed_manifest(&mut registry, &manifest)).unwrap();
+    for version in ["0.1", "0.2"] {
+        let mut older = bundle.clone();
+        older["mediaType"] =
+            format!("application/vnd.dev.sigstore.bundle+json;version={version}").into();
+        assert_failure(
+            verify_manifest(
+                &manifest,
+                older.to_string().as_bytes(),
+                Some(&profile()),
+                &root,
+                now(),
+            ),
+            "MOAT_INVALID",
+            "syllago.moat.bundle_malformed",
+        );
+    }
+}
+
+#[test]
+fn manifest_proof_tree_size_must_match_the_checkpoint() {
+    // The manifest's entry at index 5 of a 7-entry tree. An index-5 proof
+    // computes the same root at tree size 8, so only the checkpoint's
+    // size can catch the inconsistent proof.
+    let mut registry = Registry::new();
+    registry.publish(b"filler 3".to_vec());
+    registry.publish(b"filler 4".to_vec());
+    let manifest = manifest();
+    let mut bundle: Value =
+        serde_json::from_slice(&signed_manifest(&mut registry, &manifest)).unwrap();
+    registry.publish(b"filler 6".to_vec());
+    let mut entry = registry.log.bundle_entry(5);
+    assert_eq!(entry["inclusionProof"]["treeSize"], "7");
+    entry["inclusionProof"]["treeSize"] = "8".into();
+    bundle["verificationMaterial"]["tlogEntries"][0] = entry;
+    assert_failure(
+        verify_manifest(
+            &manifest,
+            bundle.to_string().as_bytes(),
+            Some(&profile()),
+            &registry.pki.trust_root(),
+            now(),
+        ),
+        "MOAT_INVALID",
+        "syllago.moat.rekor_checkpoint_invalid",
+    );
+}
+
+#[test]
 fn stale_bundled_root_refuses_before_any_verification() {
     let far = SystemTime::UNIX_EPOCH + Duration::from_secs(4_000_000_000);
     let root = TrustRoot::bundled();
@@ -385,6 +455,40 @@ fn registry_attestation_verifies() {
     )
     .unwrap();
     assert_eq!(signer, profile());
+}
+
+#[test]
+fn registry_proof_tree_size_must_match_the_checkpoint() {
+    // As for the manifest: entry 5 of 7, its proof claiming tree size 8.
+    let mut registry = Registry::new();
+    registry.publish(b"filler 3".to_vec());
+    registry.publish(b"filler 4".to_vec());
+    let item = item();
+    let index = registry.attest(&item);
+    assert_eq!(index, 5);
+    registry.publish(b"filler 6".to_vec());
+    let mut entry = registry.log.api_entry(index);
+    assert_eq!(
+        inner(&mut entry)["verification"]["inclusionProof"]["treeSize"],
+        7
+    );
+    inner(&mut entry)["verification"]["inclusionProof"]["treeSize"] = 8.into();
+    let log = StubLog {
+        by_index: [(index, entry)].into(),
+        ..StubLog::default()
+    };
+    assert_failure(
+        verify_registry_attestation(
+            &item,
+            index,
+            &profile(),
+            &log,
+            &registry.pki.trust_root(),
+            now(),
+        ),
+        "MOAT_INVALID",
+        "syllago.moat.rekor_checkpoint_invalid",
+    );
 }
 
 #[test]
@@ -527,7 +631,7 @@ impl Dual {
     fn log(&self) -> StubLog {
         StubLog {
             by_index: [(
-                self.registry_index,
+                self.registry.log.global_index(self.registry_index),
                 self.registry.log.api_entry(self.registry_index),
             )]
             .into(),
@@ -542,7 +646,7 @@ impl Dual {
 
     fn entry(&self, key: &str) -> ManifestEntry {
         ManifestEntry {
-            rekor_log_index: self.registry_index,
+            rekor_log_index: self.registry.log.global_index(self.registry_index),
             key_fingerprint: key_fingerprint(key),
         }
     }
@@ -603,6 +707,17 @@ fn dual_attested_item_verifies() {
         log.searched.get(),
         Some(pki::sha256(&moat::item_message(&dual.item)))
     );
+}
+
+#[test]
+fn entry_index_is_global_and_proof_index_is_shard_local() {
+    // On a sharded log the entry's logIndex (which the SET covers) is
+    // global, and its inclusion proof's logIndex is local to the shard.
+    let mut dual = Dual::new(vec![rekord("TV-AK-01")]);
+    dual.registry.log.shard_offset = 1_000;
+    let verified = dual.verify("A", &l1(), &dual.log()).unwrap();
+    assert_eq!(verified.registry_log_index, dual.registry_index + 1_000);
+    assert_eq!(verified.author_log_index, dual.rekords[0] + 1_000);
 }
 
 #[test]

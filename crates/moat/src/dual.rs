@@ -56,6 +56,11 @@ pub struct DualAttested {
 /// verifies, and whose SSHSIG verifies over the item message by a key in
 /// `trusted_list` is accepted. When none is, the first selected entry's
 /// refusal is returned.
+///
+/// `now` selects whether the trusted root is stale, and for the `rekord`
+/// entry it bounds the integrated time and selects the log keys in effect.
+/// The registry entry's checks run in `sigstore-verify` on the system
+/// clock, as [`verify_registry_attestation`] says.
 #[allow(clippy::too_many_arguments)]
 pub fn verify_dual_attested(
     item: &ContentHash,

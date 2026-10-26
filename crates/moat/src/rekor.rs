@@ -271,11 +271,7 @@ pub(crate) fn verify_log_evidence(
 
     let checkpoint = Checkpoint::from_text(&proof.checkpoint)
         .map_err(|e| Cause::CheckpointInvalid(format!("the checkpoint does not parse: {e}")))?;
-    if checkpoint.root_hash() != &proof.root_hash || checkpoint.tree_size() != proof.tree_size {
-        return Err(Cause::CheckpointInvalid(
-            "the checkpoint does not match the inclusion proof's tree".into(),
-        ));
-    }
+    require_checkpoint_matches(&checkpoint, &proof.root_hash, proof.tree_size)?;
     let signed = checkpoint.signed_data();
     let verified = checkpoint.signatures().iter().any(|sig| {
         keys.keys_by_hint(&sig.key_id, now)
@@ -284,6 +280,23 @@ pub(crate) fn verify_log_evidence(
     if !verified {
         return Err(Cause::CheckpointInvalid(
             "no trusted log key signed the checkpoint".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// Requires a Rekor v1 checkpoint to name the inclusion proof's root hash
+/// and tree size. The proof's own root and size are unsigned; an index's
+/// audit path can compute the same root at more than one tree size, so the
+/// size is checked as well as the root.
+pub(crate) fn require_checkpoint_matches(
+    checkpoint: &Checkpoint,
+    root_hash: &Sha256Hash,
+    tree_size: u64,
+) -> Result<(), Cause> {
+    if checkpoint.root_hash() != root_hash || checkpoint.tree_size() != tree_size {
+        return Err(Cause::CheckpointInvalid(
+            "the checkpoint does not match the inclusion proof's tree".into(),
         ));
     }
     Ok(())

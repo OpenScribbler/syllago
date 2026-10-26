@@ -134,6 +134,12 @@ impl CryptoProvider for RustCrypto {
         digest: &[u8],
         signature: &[u8],
     ) -> Result<()> {
+        // RustCrypto truncates a long digest and accepts a short one; the
+        // digest must be exactly the scheme's hash output.
+        let algorithm = scheme.hash_algorithm().ok_or_else(|| unsupported(scheme))?;
+        if digest.len() != algorithm.digest_size() {
+            return Err(invalid(scheme));
+        }
         verify_ecdsa(scheme, spki_pubkey_bytes, digest, signature)
     }
 }
@@ -170,6 +176,28 @@ mod tests {
                 .verify_prehashed(scheme, point.as_bytes(), &prehash, der.as_bytes())
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn prehashed_digest_must_be_the_schemes_length() {
+        use p256::ecdsa::signature::hazmat::PrehashSigner;
+        let key = p256_key();
+        let point = key.verifying_key().to_sec1_point(false);
+        let scheme = SigningScheme::EcdsaP256Sha256;
+        // RustCrypto truncates a long digest to the field size, so a SHA-256
+        // signature also verifies over its digest with bytes appended.
+        let sig: p256::ecdsa::Signature = key.sign(b"message");
+        let mut long = sha2::Sha256::digest(b"message").to_vec();
+        long.extend_from_slice(&[0; 16]);
+        // And it accepts a digest shorter than the field.
+        let short = [1u8; 24];
+        let short_sig: p256::ecdsa::Signature = key.sign_prehash(&short).unwrap();
+        for (digest, sig) in [(&long[..], sig), (&short[..], short_sig)] {
+            let err = PROVIDER
+                .verify_prehashed(scheme, point.as_bytes(), digest, sig.to_der().as_bytes())
+                .unwrap_err();
+            assert!(matches!(err, Error::Verification(_)), "{err:?}");
+        }
     }
 
     #[test]

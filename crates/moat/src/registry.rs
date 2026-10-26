@@ -21,7 +21,7 @@ use sigstore_verify::types::{
 use sigstore_verify::{SubjectAltName, VerificationPolicy, VerificationResult};
 
 use crate::allowed_signers::hex;
-use crate::rekor::{LogEntry, RekorLog};
+use crate::rekor::{LogEntry, RekorLog, require_checkpoint_matches};
 use crate::trust::{Cause, Identity, TrustFailure};
 use crate::trust_root::TrustRoot;
 use crate::{ContentHash, attestation_payload};
@@ -41,6 +41,16 @@ pub type RegistrySigningProfile = Identity;
 /// trust-on-first-use decision; a declared profile that differs from the pin
 /// is `MOAT_IDENTITY_MISMATCH`. A stale bundled root refuses before any
 /// verification runs.
+///
+/// The bundle must be a v0.3 bundle whose content is a message signature,
+/// which is what `cosign sign-blob` over the raw manifest bytes produces
+/// (moat-spec.md §Signature Envelope). Older bundle layouts and DSSE
+/// envelopes are refused as malformed: a DSSE envelope signs an in-toto
+/// statement that names the manifest's digest, not the manifest. Both media
+/// type spellings `sigstore-verify` reads as v0.3 are accepted.
+///
+/// `now` selects whether the trusted root is stale. `sigstore-verify` runs
+/// the bundle's time checks on the system clock.
 pub fn verify_manifest(
     manifest: &[u8],
     bundle: &[u8],
@@ -54,6 +64,19 @@ pub fn verify_manifest(
         .ok()
         .and_then(|text| Bundle::from_json(text).ok())
         .ok_or_else(|| Cause::BundleMalformed("the bundle is not a Sigstore bundle".into()))?;
+    if bundle.media_type != MediaType::Bundle0_3 {
+        return Err(Cause::BundleMalformed(format!(
+            "the bundle is {}, not a v0.3 bundle",
+            bundle.media_type
+        ))
+        .into());
+    }
+    if !matches!(bundle.content, SignatureContent::MessageSignature(_)) {
+        return Err(Cause::BundleMalformed(
+            "the bundle holds a DSSE envelope, not a message signature over the manifest".into(),
+        )
+        .into());
+    }
     let result = verify_bundle(manifest, &bundle, root)?;
     require_identity(&result, &declared)?;
     match pinned {
@@ -71,6 +94,10 @@ pub fn verify_manifest(
 /// a `hashedrekord` 0.0.1 entry over the item's Attestation Payload, signed
 /// by `profile` (the manifest's verified `registry_signing_profile`).
 /// Returns the signer.
+///
+/// `now` selects whether the trusted root is stale. `sigstore-verify` runs
+/// the entry's time checks, such as an integrated time in the future, on the
+/// system clock.
 pub fn verify_registry_attestation(
     item: &ContentHash,
     log_index: u64,
@@ -174,11 +201,30 @@ fn rebuild_bundle(entry: &LogEntry, payload: &[u8]) -> Result<Bundle, TrustFailu
 /// Runs `sigstore-verify` over `artifact` with no identity policy; the
 /// caller matches the identity itself so it can tell a wrong signer from a
 /// bad signature.
+///
+/// First, each Rekor v1 entry's checkpoint must name its inclusion proof's
+/// tree size: `sigstore-verify` 0.15.1 compares only the root hash, and the
+/// author-key path requires both. A Rekor v2 proof takes its size from the
+/// checkpoint, so it has no separate size to disagree with.
 fn verify_bundle(
     artifact: &[u8],
     bundle: &Bundle,
     root: &TrustRoot,
 ) -> Result<VerificationResult, TrustFailure> {
+    for entry in &bundle.verification_material.tlog_entries {
+        if entry.kind_version == KindVersion::HashedRekordV002 {
+            continue;
+        }
+        let checked = entry
+            .inclusion_proof
+            .as_ref()
+            .and_then(|proof| Some((proof, proof.checkpoint.checkpoint()?)));
+        // A missing proof or checkpoint is left to sigstore-verify, which
+        // refuses a v0.3 bundle without one.
+        if let Some((proof, checkpoint)) = checked {
+            require_checkpoint_matches(checkpoint, &proof.root_hash, proof.tree_size)?;
+        }
+    }
     root.verifier
         .verify(artifact, bundle, &VerificationPolicy::any_identity())
         .map_err(|e| Cause::SigstoreVerification(e.to_string()).into())

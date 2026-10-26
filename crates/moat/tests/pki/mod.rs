@@ -350,6 +350,10 @@ fn audit_path(m: usize, leaves: &[[u8; 32]]) -> Vec<[u8; 32]> {
 pub struct Log {
     key: SigningKey,
     bodies: Vec<Vec<u8>>,
+    /// Added to an entry's shard-local index to give its global
+    /// `logIndex`, as on a sharded public-good log. The SET covers the
+    /// global index; the inclusion proof uses the local one.
+    pub shard_offset: u64,
 }
 
 /// One entry's log evidence.
@@ -365,7 +369,11 @@ impl Log {
     pub fn new(key: SigningKey) -> Log {
         // Filler leaves so every proof has a few hashes.
         let bodies = (0..3).map(|i| format!("filler {i}").into_bytes()).collect();
-        Log { key, bodies }
+        Log {
+            key,
+            bodies,
+            shard_offset: 0,
+        }
     }
 
     pub fn log_id(&self) -> [u8; 32] {
@@ -375,6 +383,11 @@ impl Log {
     pub fn append(&mut self, body: Vec<u8>) -> u64 {
         self.bodies.push(body);
         self.bodies.len() as u64 - 1
+    }
+
+    /// The global `logIndex` of the entry at shard-local `index`.
+    pub fn global_index(&self, index: u64) -> u64 {
+        index + self.shard_offset
     }
 
     pub fn body(&self, index: u64) -> &[u8] {
@@ -394,9 +407,10 @@ impl Log {
         let root = tree_hash(&leaves);
         let tree_size = leaves.len() as u64;
         let set_payload = format!(
-            r#"{{"body":"{}","integratedTime":{integrated_time},"logID":"{}","logIndex":{index}}}"#,
+            r#"{{"body":"{}","integratedTime":{integrated_time},"logID":"{}","logIndex":{}}}"#,
             base64(self.body(index)),
             hex(&self.log_id()),
+            self.global_index(index),
         );
         Evidence {
             set: sign(&self.key, set_payload.as_bytes()),
@@ -415,7 +429,7 @@ impl Log {
             "body": base64(self.body(index)),
             "integratedTime": LOGGED_AT,
             "logID": hex(&self.log_id()),
-            "logIndex": index,
+            "logIndex": self.global_index(index),
             "verification": {
                 "inclusionProof": {
                     "checkpoint": evidence.checkpoint,
@@ -433,7 +447,7 @@ impl Log {
     pub fn bundle_entry(&self, index: u64) -> Value {
         let evidence = self.evidence(index, LOGGED_AT);
         json!({
-            "logIndex": index.to_string(),
+            "logIndex": self.global_index(index).to_string(),
             "logId": {"keyId": base64(&self.log_id())},
             "kindVersion": {"kind": "hashedrekord", "version": "0.0.1"},
             "integratedTime": LOGGED_AT.to_string(),
@@ -464,6 +478,58 @@ pub fn bundle(log: &mut Log, artifact: &[u8], signer: &SigningKey, certificate: 
         "messageSignature": {
             "messageDigest": {"algorithm": "SHA2_256", "digest": base64(&sha256(artifact))},
             "signature": base64(&signature),
+        }
+    })
+}
+
+/// A v0.3 bundle whose content is a DSSE envelope instead of a message
+/// signature: `signer`'s signature over an in-toto statement naming
+/// `artifact`'s SHA-256 as its subject, logged in `log` as a `dsse` entry.
+pub fn dsse_bundle(
+    log: &mut Log,
+    artifact: &[u8],
+    signer: &SigningKey,
+    certificate: &[u8],
+) -> Value {
+    const PAYLOAD_TYPE: &str = "application/vnd.in-toto+json";
+    let statement = json!({
+        "_type": "https://in-toto.io/Statement/v1",
+        "subject": [{"name": "manifest", "digest": {"sha256": hex(&sha256(artifact))}}],
+        "predicateType": "https://example.test/approval",
+        "predicate": {"approved": false},
+    })
+    .to_string();
+    let pae = format!(
+        "DSSEv1 {} {PAYLOAD_TYPE} {} {statement}",
+        PAYLOAD_TYPE.len(),
+        statement.len()
+    );
+    let signature = sign(signer, pae.as_bytes());
+    let body = json!({
+        "apiVersion": "0.0.1",
+        "kind": "dsse",
+        "spec": {
+            "envelopeHash": {"algorithm": "sha256", "value": hex(&sha256(b"unchecked"))},
+            "payloadHash": {"algorithm": "sha256", "value": hex(&sha256(statement.as_bytes()))},
+            "signatures": [{
+                "signature": base64(&signature),
+                "verifier": base64(pem_certificate(certificate).as_bytes()),
+            }],
+        }
+    });
+    let index = log.append(body.to_string().into_bytes());
+    let mut entry = log.bundle_entry(index);
+    entry["kindVersion"] = json!({"kind": "dsse", "version": "0.0.1"});
+    json!({
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+            "certificate": {"rawBytes": base64(certificate)},
+            "tlogEntries": [entry],
+        },
+        "dsseEnvelope": {
+            "payload": base64(statement.as_bytes()),
+            "payloadType": PAYLOAD_TYPE,
+            "signatures": [{"sig": base64(&signature)}],
         }
     })
 }
