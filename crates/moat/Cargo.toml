@@ -1,7 +1,7 @@
 [package]
 name = "moat"
 version = "0.1.0"
-description = "Verify MOAT author-key signatures over ACIF content items"
+description = "Verify MOAT author-key signatures and Sigstore attestations over ACIF content items"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -11,7 +11,12 @@ repository.workspace = true
 acif = { path = "../acif" }
 ed25519-dalek = "3.0.0"
 p256 = { version = "0.14.0", default-features = false, features = ["ecdsa"] }
+jiff = { version = "0.2.38", default-features = false, features = ["std"] }
+p384 = { version = "0.14.0", default-features = false, features = ["ecdsa"] }
+serde_json = "1.0.154"
 sha2 = "0.11.1"
+sigstore-merkle = { version = "=0.15.1", default-features = false }
+sigstore-verify = { version = "=0.15.1", default-features = false }
 
 [features]
 # The emulated security-key signer in `moat::testing`. Only this crate's own
@@ -22,4 +27,3 @@ testing = []
 [dev-dependencies]
 moat = { path = ".", features = ["testing"] }
 curve25519-dalek = "5.0.0"
-serde_json = "1.0.154"

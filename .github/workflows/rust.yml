@@ -92,6 +92,22 @@ jobs:
             exit 1
           fi
 
+      - name: No duplicate sha2
+        # Two sha2 versions mean two digest stacks in the verifier. Other
+        # duplicates are tolerated until the RustCrypto releases settle.
+        run: |
+          dups=$(cargo tree -d --workspace --locked -e normal,build --depth 0 --prefix none)
+          echo "$dups"
+          ! grep -q '^sha2 v' <<< "$dups"
+
+      - name: No C build
+        # Cargo.lock carries ring and cc through rustls-webpki's optional ring
+        # dependency. Neither may enter the build graph on any target, or the
+        # crates compile C again.
+        run: |
+          tree=$(cargo tree --workspace --locked --target all -e normal,build,dev --prefix none)
+          ! grep -E '^(ring|cc) v' <<< "$tree"
+
       - name: cargo test
         run: cargo test --workspace --locked
 

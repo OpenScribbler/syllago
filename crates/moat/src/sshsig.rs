@@ -92,7 +92,7 @@ pub(crate) fn verify(armored: &str, message: &[u8]) -> Option<VerifiedSigner> {
 /// Python's `_unarmor`: strip, split into lines, strip each line, require
 /// the BEGIN and END lines, and decode what lies between. Text longer than
 /// [`MAX_ARMOR_BYTES`] is refused first.
-fn unarmor(text: &str) -> Option<Vec<u8>> {
+pub(crate) fn unarmor(text: &str) -> Option<Vec<u8>> {
     if text.len() > MAX_ARMOR_BYTES {
         return None;
     }
