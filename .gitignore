@@ -96,3 +96,6 @@ tmp/
 .wolf/designqc-captures/
 .wolf/buglog.json
 .beads/
+
+# Rust build output
+/target/
