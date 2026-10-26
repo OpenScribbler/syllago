@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenScribbler/syllago/cli/internal/catalog"
 	"github.com/OpenScribbler/syllago/cli/internal/converter/canonical"
+	"github.com/OpenScribbler/syllago/cli/internal/lifecycle"
 	"github.com/OpenScribbler/syllago/cli/internal/metadata"
 	"github.com/OpenScribbler/syllago/cli/internal/output"
 	"github.com/OpenScribbler/syllago/cli/internal/provider"
@@ -116,33 +117,66 @@ func runAddFromMonolithicFiles(cmd *cobra.Command, projectRoot string, paths []s
 		)
 	}
 
-	// Write each candidate to the library under globalDir/rules/<slug>/<name>.
-	totalWritten := 0
+	// Plan every section before writing, so a pinned section is left out
+	// without blocking the other sections or files in this import.
+	destination := func(f candidateForFile, c splitter.SplitCandidate) lifecycle.Destination {
+		slug := c.Name
+		if slug == "" {
+			// Whole-file import (single mode) — derive slug from filename stem.
+			stem := strings.TrimSuffix(filepath.Base(f.sourceFile), filepath.Ext(filepath.Base(f.sourceFile)))
+			slug = strings.ToLower(strings.TrimPrefix(stem, "."))
+			if slug == "" {
+				slug = "monolithic"
+			}
+		}
+		return lifecycle.Destination{Type: catalog.Rules, Name: slug, Path: filepath.Join(globalDir, string(catalog.Rules), f.slug, slug)}
+	}
+	var dests []lifecycle.Destination
+	seen := make(map[string]bool)
 	for _, f := range allCandidates {
 		for _, c := range f.cands {
-			slug := c.Name
-			if slug == "" {
-				// Whole-file import (single mode) — derive slug from filename stem.
-				stem := strings.TrimSuffix(filepath.Base(f.sourceFile), filepath.Ext(filepath.Base(f.sourceFile)))
-				slug = strings.ToLower(strings.TrimPrefix(stem, "."))
-				if slug == "" {
-					slug = "monolithic"
+			d := destination(f, c)
+			if !seen[d.Path] {
+				dests = append(dests, d)
+				seen[d.Path] = true
+			}
+		}
+	}
+	totalWritten := 0
+	if err := overwriteRespectingPins(lifecycle.OverwriteRequest{
+		Destinations: dests,
+		Write: func(approved []lifecycle.Destination) ([]lifecycle.Written, error) {
+			ok := make(map[string]bool, len(approved))
+			for _, d := range approved {
+				ok[d.Path] = true
+			}
+			var written []lifecycle.Written
+			for _, f := range allCandidates {
+				for _, c := range f.cands {
+					d := destination(f, c)
+					if !ok[d.Path] {
+						continue
+					}
+					meta := metadata.RuleMetadata{
+						ID:          metadata.NewID(),
+						Name:        d.Name,
+						Type:        "rule",
+						Description: c.Description,
+					}
+					canonBody := canonical.Normalize([]byte(c.Body))
+					sourceFilename := filepath.Base(f.sourceFile)
+					rulesRoot := filepath.Join(globalDir, string(catalog.Rules))
+					written = append(written, lifecycle.Written{Path: d.Path})
+					if werr := rulestore.WriteRuleWithSource(rulesRoot, f.slug, d.Name, meta, canonBody, sourceFilename, f.source); werr != nil {
+						return written, output.NewStructuredErrorDetail(output.ErrSystemIO, "writing rule "+d.Name, "", werr.Error())
+					}
+					totalWritten++
 				}
 			}
-			meta := metadata.RuleMetadata{
-				ID:          metadata.NewID(),
-				Name:        slug,
-				Type:        "rule",
-				Description: c.Description,
-			}
-			canonBody := canonical.Normalize([]byte(c.Body))
-			sourceFilename := filepath.Base(f.sourceFile)
-			rulesRoot := filepath.Join(globalDir, string(catalog.Rules))
-			if werr := rulestore.WriteRuleWithSource(rulesRoot, f.slug, slug, meta, canonBody, sourceFilename, f.source); werr != nil {
-				return output.NewStructuredErrorDetail(output.ErrSystemIO, "writing rule "+slug, "", werr.Error())
-			}
-			totalWritten++
-		}
+			return written, nil
+		},
+	}); err != nil {
+		return err
 	}
 
 	if !output.Quiet {

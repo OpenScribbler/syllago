@@ -15,7 +15,7 @@ import (
 // splitter on a monolithic CLAUDE.md, writes each section under the provider
 // slug, and tags the per-section metadata with the source block.
 func TestAddSplitRuleItem_WritesSections(t *testing.T) {
-	t.Parallel()
+	withTUIInstallRecordConfigDir(t)
 
 	tmp := t.TempDir()
 	claudePath := writeSplittableClaudeMD(t, tmp)
@@ -94,7 +94,7 @@ func TestAddSplitRuleItem_EmptyPath(t *testing.T) {
 }
 
 func TestAddSplitRuleItem_LocalFallbackSlug(t *testing.T) {
-	t.Parallel()
+	withTUIInstallRecordConfigDir(t)
 
 	tmp := t.TempDir()
 	claudePath := writeSplittableClaudeMD(t, tmp)
