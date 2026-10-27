@@ -17,10 +17,10 @@ pub(crate) const BEGIN: &str = "-----BEGIN SSH SIGNATURE-----";
 pub(crate) const END: &str = "-----END SSH SIGNATURE-----";
 pub(crate) const SK_USER_PRESENT: u8 = 0x01;
 
-/// The longest armored signature read, in bytes. Real armor for the
-/// profile's key types is under 1 KiB. The reference reads any length, so
-/// this is a deliberate extra refusal: without it, a signature of millions
-/// of blank lines allocates a slice per line before anything is checked.
+/// The longest armored signature read, in UTF-8 bytes, as in the reference.
+/// Real armor for the profile's key types is under 1 KiB. Without the cap, a
+/// signature of millions of blank lines allocates a slice per line before
+/// anything is checked.
 const MAX_ARMOR_BYTES: usize = 16 * 1024;
 
 /// The prime 2^255 - 19, little-endian.
@@ -135,9 +135,9 @@ fn sk_signed(key: &mut Reader, sig: &mut Reader, data: &[u8]) -> Option<Vec<u8>>
     Some(out)
 }
 
-/// Strict Ed25519 verification. Encodings whose y coordinate is not reduced
-/// mod p are refused first, as the reference refuses them; `verify_strict`
-/// then refuses small-order keys and R values, which the reference accepts.
+/// Strict Ed25519 verification, with the reference's checks. Encodings whose
+/// y coordinate is not reduced mod p are refused first; `verify_strict` then
+/// refuses small-order keys and R values and an S not below L.
 fn ed25519_verify(public: &[u8], message: &[u8], signature: &[u8]) -> bool {
     let (Ok(public), Ok(signature)) = (
         <[u8; 32]>::try_from(public),

@@ -1,6 +1,6 @@
 //! The extra checks in MOAT's reference/test_author_key.py, with signatures
-//! made in-process so they run on every OS, plus the cases where this crate
-//! deliberately refuses what the reference accepts.
+//! made in-process so they run on every OS, plus coverage of strict Ed25519
+//! and the armor cap beyond what TV-AK-13 and TV-AK-14 reach.
 
 mod common;
 
@@ -215,9 +215,9 @@ fn source_uri_is_checked_after_the_sequence() {
     }
 }
 
-/// Divergence: the reference verifies Ed25519 cofactorlessly and accepts a
-/// small-order key, so the identity key "signs" every message with R = B
-/// and s = 1. This crate verifies strictly and refuses it.
+/// A small-order key is refused. Without the check, the identity key
+/// "signs" every message with R = B and s = 1. TV-AK-13 uses the identity
+/// key with R as the identity and s = 0.
 #[test]
 fn small_order_key_forgery_is_refused() {
     let mut identity = [0u8; 32];
@@ -232,11 +232,11 @@ fn small_order_key_forgery_is_refused() {
     assert_eq!(item_outcome(&forged, &list), "signature_invalid");
 }
 
-/// Divergence: the reference also accepts a real key's signature whose R is
-/// the identity, a small-order point. With s = k·a, where k is the
-/// challenge hash and a the secret scalar, [s]B - [k]A is the identity, so
-/// cofactorless verification accepts it. This crate verifies strictly and
-/// refuses it.
+/// A real key's signature whose R is the identity, a small-order point, is
+/// refused. With s = k·a, where k is the challenge hash and a the secret
+/// scalar, [s]B - [k]A is the identity, so the cofactorless equation holds
+/// and only the small-order check refuses it. No published vector covers
+/// this case.
 #[test]
 fn small_order_r_from_a_real_key_is_refused() {
     let key = Key::new("moat-test-key-A");
@@ -261,9 +261,9 @@ fn small_order_r_from_a_real_key_is_refused() {
     assert_eq!(item_outcome(&forged, &list), "signature_invalid");
 }
 
-/// Divergence: an armored signature longer than 16 KiB is refused before
-/// it is split into lines. Blank lines after BEGIN pad a good signature,
-/// which the reference reads at any length.
+/// An armored signature longer than 16 KiB is refused before it is split
+/// into lines, and one of exactly 16 KiB is read. Blank lines after BEGIN
+/// pad a good signature. TV-AK-14 covers only the over-cap side.
 #[test]
 fn armor_over_16_kib_is_refused() {
     const CAP: usize = 16 * 1024;
