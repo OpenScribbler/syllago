@@ -5,11 +5,10 @@
 //! item's Content Hash, and the list-change message, over a change to a
 //! source's allowed-signers list. [`verify_item`] and
 //! [`verify_list_change`] check them with the accept and reject behavior of
-//! MOAT's reference implementation, `reference/moat_author_key.py`, with two
-//! deliberate differences, both extra refusals. Ed25519 verification is
-//! strict, so a signature by a small-order key, or with a small-order R, is
-//! refused where the reference accepts it. An armored signature longer than
-//! 16 KiB is refused before it is parsed.
+//! MOAT's reference implementation, `reference/moat_author_key.py`. As in
+//! the reference, Ed25519 verification is strict, so a signature by a
+//! small-order key, or with a small-order R, is refused, and an armored
+//! signature longer than 16 KiB is refused before it is parsed.
 //!
 //! [`sign_item`] signs an item message with an Author Key through any
 //! [`Signer`] (`SshKeygenSigner` goes through `ssh-keygen`) and builds the

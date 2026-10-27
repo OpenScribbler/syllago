@@ -1,4 +1,4 @@
-//! MOAT's published vectors: TV-ACIF-01..04 and TV-AK-01..12 with TV-AK-05b,
+//! MOAT's published vectors: TV-ACIF-01..04 and TV-AK-01..14 with TV-AK-05b,
 //! from crates/moat/tests/vectors/moat-vectors.json.
 
 mod common;
@@ -22,7 +22,7 @@ fn header_names_the_moat_commit() {
     let doc = common::vectors();
     assert_eq!(
         doc["moat_commit"],
-        "8330bf227f9894f8a88b48f9cad5e1af04044835"
+        "8bed4c033f435d2f9227c81e937f44ff46204206"
     );
 }
 
@@ -130,7 +130,7 @@ fn author_key_vectors() {
         .iter()
         .map(|v| v["id"].as_str().unwrap().into())
         .collect();
-    let want: BTreeSet<String> = (1..=12)
+    let want: BTreeSet<String> = (1..=14)
         .map(|n| format!("TV-AK-{n:02}"))
         .chain(["TV-AK-05b".to_string()])
         .collect();
