@@ -160,6 +160,12 @@ def manifest_vectors():
          MALFORMED),
         ("LM-27", "Item written as a JSON array", "work.json",
          manifest(items=f'    ["{ITEM_1}", "{pin(1)}"]\n'), MALFORMED),
+        ("LM-28", "Missing required field", "work.json",
+         '{\n  "sequence": "3",\n  "providers": ["codex"]\n}\n', MALFORMED),
+        ("LM-29", "Unknown field inside an item", "work.json",
+         manifest(items=item.replace("}\n", ', "version": 2}\n')), MALFORMED),
+        ("LM-30", "Provider outside the name grammar", "work.json",
+         manifest(providers='["Claude Code"]'), MALFORMED),
     ]
     out = []
     for vid, title, file_name, text, expected in cases:
@@ -227,6 +233,9 @@ def signature_vectors():
         ("LV-12", "Rollback while recorded inactive", SOURCE_URI, "work.json",
          WORK_2.encode(), sign("A", message(SOURCE_URI, "work", 2, WORK_2.encode())), "LA",
          record(WORK_4, 4, False), "sequence_not_greater"),
+        ("LV-17", "Changed manifest at a higher sequence while recorded inactive",
+         SOURCE_URI, "work.json", w3, sig_w3, "LA", record(WORK_2, 2, False),
+         "report_inactive"),
         ("LV-13", "Loadout copied to another name", SOURCE_URI, "home.json", w3, sig_w3,
          "LA", None, "signature_invalid"),
         ("LV-14", "Loadout replayed under another source_uri", OTHER_SOURCE_URI,
@@ -271,7 +280,8 @@ def main():
         "keys": KEYS,
         "lists": LISTS,
         "digests": [
-            {**v, "canonical": canonical(v["bytes"]), "digest": digest(v["bytes"])}
+            {**v, "canonical": canonical(v["bytes"])}
+            | ({} if "expected" in v else {"digest": digest(v["bytes"])})
             for v in digest_vectors()
         ],
         "manifests": manifest_vectors(),

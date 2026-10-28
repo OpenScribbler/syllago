@@ -2,6 +2,7 @@
 //! signatures and MOAT's item and list-change signatures.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use library::loadout::{self, Manifest, Record, SignError};
 use moat::Signer;
@@ -149,18 +150,37 @@ fn missing_signature_names_the_loadout() {
     )
     .unwrap_err();
     assert_eq!(refusal.id(), "signature_invalid");
-    assert_eq!(refusal.loadout, "work");
+    assert_eq!(refusal.loadout(), "work");
     assert!(refusal.to_string().contains(".sig"));
+}
+
+/// A directory of this test's own under the system temp dir, removed on
+/// drop, even after a panic. Nothing outside it is ever removed.
+struct TempDir(PathBuf);
+
+impl TempDir {
+    fn new(label: &str) -> TempDir {
+        static NEXT: AtomicU32 = AtomicU32::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let path =
+            std::env::temp_dir().join(format!("loadout-test-{}-{n}-{label}", std::process::id()));
+        std::fs::create_dir(&path).unwrap();
+        TempDir(path)
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
 }
 
 /// A content item ingested from a one-file skill in a directory of its own.
 fn content_hash() -> moat::ContentHash {
-    let dir: PathBuf = std::env::temp_dir().join(format!("loadout-sign-{}", std::process::id()));
-    std::fs::create_dir(&dir).unwrap();
-    std::fs::write(dir.join("SKILL.md"), "Use this to demo loadouts.\n").unwrap();
-    let body = acif::Body::read(&dir);
-    std::fs::remove_dir_all(&dir).unwrap();
-    let item = acif::ingest_body(acif::Kind::Skill, &body.unwrap(), "SKILL.md").unwrap();
+    let dir = TempDir::new("skill");
+    std::fs::write(dir.0.join("SKILL.md"), "Use this to demo loadouts.\n").unwrap();
+    let body = acif::Body::read(&dir.0).unwrap();
+    let item = acif::ingest_body(acif::Kind::Skill, &body, "SKILL.md").unwrap();
     moat::ContentHash::of_acif(&item).unwrap()
 }
 

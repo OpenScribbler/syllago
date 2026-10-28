@@ -287,20 +287,29 @@ pub fn verify_item(
     signature: &str,
     list: &[u8],
 ) -> Result<VerifiedSigner, Refusal> {
-    verify_message(&item_message(content_hash), signature, list)
+    verify_signed(&item_message(content_hash), signature, list)
 }
 
 /// Verifies an Author-Key signature over a message of a kind outside MOAT's
 /// profile. The message must open with its own separator line, distinct
 /// from MOAT's `moat-author-item-v1` and `moat-allowed-signers-change-v1`,
-/// so a signature over it never verifies as a MOAT item or list change. It
-/// is accepted only when `list` is well formed, `signature` verifies over
+/// so a signature over it never verifies as a MOAT item or list change; a
+/// message that opens with either is refused as `signature_invalid`. It is
+/// accepted only when `list` is well formed, `signature` verifies over
 /// `message`, and the signing key is in `list`.
 pub fn verify_message(
     message: &[u8],
     signature: &str,
     list: &[u8],
 ) -> Result<VerifiedSigner, Refusal> {
+    if message.starts_with(ITEM_PREFIX) || message.starts_with(LIST_CHANGE_PREFIX) {
+        return Err(Refusal::SignatureInvalid);
+    }
+    verify_signed(message, signature, list)
+}
+
+/// [`verify_message`] without the separator check, for MOAT's own kinds.
+fn verify_signed(message: &[u8], signature: &str, list: &[u8]) -> Result<VerifiedSigner, Refusal> {
     let allowed = AllowedSigners::parse(list)?;
     let signer = sshsig::verify(signature, message).ok_or(Refusal::SignatureInvalid)?;
     if !allowed.contains(&signer.fingerprint) {

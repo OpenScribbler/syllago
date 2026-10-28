@@ -82,16 +82,15 @@ impl Manifest {
     /// Refused as malformed: a file name without the extension, a name that
     /// is not one or more of `a`-`z`, `0`-`9` and `-`, a `name` field that
     /// differs from the file name, a `sequence` that is not a string in
-    /// canonical decimal from 0 to 2^53 - 1, no providers or a repeated one,
-    /// an item `id` that is not a lowercase UUID version 4 or is repeated,
-    /// an `attestation_hash` that is not `sha256:` and 64 lowercase hex
-    /// digits, a manifest or item that is not a JSON object, any other
-    /// field, and a manifest over [`MAX_MANIFEST_BYTES`].
+    /// canonical decimal from 0 to 2^53 - 1, no providers, a provider that
+    /// is repeated or outside the name grammar, an item `id` that is not a
+    /// lowercase UUID version 4 or is repeated, an `attestation_hash` that is
+    /// not `sha256:` and 64 lowercase hex digits, a manifest or item that is
+    /// not a JSON object, any other field, and a manifest over
+    /// [`MAX_MANIFEST_BYTES`].
     pub fn parse(file_name: &str, bytes: &[u8]) -> Result<Manifest, Refusal> {
-        let malformed = |loadout: &str, detail: &str| Refusal {
-            loadout: loadout.to_string(),
-            reason: Reason::Malformed(detail.to_string()),
-        };
+        let malformed =
+            |loadout: &str, detail: &str| Refusal::new(loadout, Reason::Malformed(detail.into()));
         let name = file_name
             .strip_suffix(EXTENSION)
             .ok_or_else(|| malformed(file_name, "the file name does not end in .json"))?;
@@ -109,8 +108,14 @@ impl Manifest {
         }
         let canonical = moat::canonical_text(bytes);
         let digest = format!("sha256:{}", hex(&Sha256::digest(&canonical)));
-        let invalid =
-            |e: serde_json::Error| malformed(name, &format!("the manifest is not valid: {e}"));
+        // serde's message quotes an unknown key as given, so it is escaped.
+        let invalid = |e: serde_json::Error| {
+            let error = e.to_string();
+            malformed(
+                name,
+                &format!("the manifest is not valid: {}", error.escape_debug()),
+            )
+        };
         // The derived visitors also accept a struct written as a JSON array,
         // so the shape is checked on a Value first. The Value keeps the last
         // of a repeated key, so the fields come from the derived parse.
@@ -140,10 +145,12 @@ impl Manifest {
         }
         let mut providers = BTreeSet::new();
         for provider in &raw.providers {
-            if provider.is_empty() || !providers.insert(provider) {
+            if !is_name(provider) || !providers.insert(provider) {
                 return Err(malformed(
                     name,
-                    &format!("provider {provider:?} is empty or repeated"),
+                    &format!(
+                        "provider {provider:?} is not one or more of a-z, 0-9 and -, or is repeated"
+                    ),
                 ));
             }
         }
@@ -219,10 +226,10 @@ pub fn parse_all(files: &[(&str, &[u8])]) -> Result<Vec<Manifest>, Refusal> {
     for (file_name, bytes) in files {
         let manifest = Manifest::parse(file_name, bytes)?;
         if !names.insert(manifest.name.clone()) {
-            return Err(Refusal {
-                loadout: manifest.name,
-                reason: Reason::Malformed("another manifest has the same name".into()),
-            });
+            return Err(Refusal::new(
+                &manifest.name,
+                Reason::Malformed("another manifest has the same name".into()),
+            ));
         }
         manifests.push(manifest);
     }
@@ -280,10 +287,7 @@ fn hex(bytes: &[u8]) -> String {
 /// each followed by LF.
 pub fn loadout_message(source_uri: &str, manifest: &Manifest) -> Result<Vec<u8>, Refusal> {
     if source_uri.is_empty() || source_uri.contains(['\n', '\r']) {
-        return Err(Refusal {
-            loadout: manifest.name.clone(),
-            reason: Reason::SourceUriInvalid,
-        });
+        return Err(Refusal::new(&manifest.name, Reason::SourceUriInvalid));
     }
     let text = format!(
         "{source_uri}\n{}\n{}\n{}\n",
@@ -314,10 +318,7 @@ pub fn verify_loadout(
     signature: Option<&str>,
     list: &[u8],
 ) -> Result<VerifiedSigner, Refusal> {
-    let refuse = |reason| Refusal {
-        loadout: manifest.name.clone(),
-        reason,
-    };
+    let refuse = |reason| Refusal::new(&manifest.name, reason);
     let message = loadout_message(source_uri, manifest)?;
     let signature = signature.ok_or_else(|| refuse(Reason::SignatureMissing))?;
     moat::verify_message(&message, signature, list).map_err(|e| refuse(Reason::Moat(e)))
@@ -376,13 +377,13 @@ pub fn decide(
         return Ok(Decision::ReportNoRecord);
     };
     if record.digest != manifest.digest && manifest.sequence <= record.sequence {
-        return Err(Refusal {
-            loadout: manifest.name.clone(),
-            reason: Reason::SequenceNotGreater {
+        return Err(Refusal::new(
+            &manifest.name,
+            Reason::SequenceNotGreater {
                 recorded: record.sequence,
                 new: manifest.sequence,
             },
-        });
+        ));
     }
     Ok(if record.active {
         Decision::Apply
@@ -395,7 +396,7 @@ pub fn decide(
 /// name that yields no name, the file name.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Refusal {
-    pub loadout: String,
+    loadout: String,
     pub reason: Reason,
 }
 
@@ -419,6 +420,21 @@ pub enum Reason {
 }
 
 impl Refusal {
+    /// A refusal naming `loadout`, which comes from the repository and is
+    /// untrusted: it is kept escaped, so a control character in a file name
+    /// never reaches a terminal. A name that meets the grammar is unchanged.
+    fn new(loadout: &str, reason: Reason) -> Refusal {
+        Refusal {
+            loadout: loadout.escape_debug().to_string(),
+            reason,
+        }
+    }
+
+    /// The loadout this refusal names, escaped.
+    pub fn loadout(&self) -> &str {
+        &self.loadout
+    }
+
     /// The stable identifier for this refusal. A detail never changes it.
     /// The signature refusals carry MOAT's strings, and a missing `.sig` is
     /// `signature_invalid`.
@@ -436,7 +452,7 @@ impl Refusal {
 impl fmt::Display for Refusal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let id = self.id();
-        write!(f, "loadout {:?}: ", self.loadout)?;
+        write!(f, "loadout \"{}\": ", self.loadout)?;
         match &self.reason {
             Reason::Malformed(detail) => write!(f, "{id}: {detail}"),
             Reason::SourceUriInvalid => {
@@ -529,6 +545,37 @@ mod tests {
         ] {
             assert_eq!(parse_sequence(bad), None, "{bad:?}");
         }
+    }
+
+    fn assert_printable(refusal: &Refusal) {
+        let text = refusal.to_string();
+        assert!(!text.chars().any(|c| c < ' ' || c == '\u{7f}'), "{text:?}");
+    }
+
+    /// An attacker-chosen key or file name never puts a control character
+    /// into the refusal text.
+    #[test]
+    fn refusal_text_escapes_control_characters() {
+        let key = "\\u001b[2K\\rok: applied\\u007f";
+        let item = format!(
+            "{{\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \
+             \"sha256:{}\", \"{key}\": 1}}",
+            "ab".repeat(32)
+        );
+        for text in [
+            format!(
+                "{{\"{key}\": 1, \"sequence\": \"1\", \"providers\": [\"codex\"], \"items\": []}}"
+            ),
+            format!("{{\"sequence\": \"1\", \"providers\": [\"codex\"], \"items\": [{item}]}}"),
+        ] {
+            let refusal = Manifest::parse("work.json", text.as_bytes()).unwrap_err();
+            assert_eq!(refusal.id(), "syllago.loadout.malformed");
+            assert!(refusal.to_string().contains("unknown field"), "{refusal}");
+            assert_printable(&refusal);
+        }
+        let refusal = Manifest::parse("\u{1b}[2K\r.json", b"{}").unwrap_err();
+        assert_eq!(refusal.loadout(), "\\u{1b}[2K\\r.json");
+        assert_printable(&refusal);
     }
 
     #[test]

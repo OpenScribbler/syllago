@@ -51,7 +51,7 @@ fn digests() {
 fn manifests() {
     let doc = vectors();
     let vectors = doc["manifests"].as_array().unwrap();
-    let want: Vec<String> = (1..=27).map(|n| format!("LM-{n:02}")).collect();
+    let want: Vec<String> = (1..=30).map(|n| format!("LM-{n:02}")).collect();
     assert_eq!(ids(vectors), want);
     for v in vectors {
         let id = v["id"].as_str().unwrap();
@@ -94,7 +94,7 @@ fn signatures() {
     let doc = vectors();
     let vectors = doc["signatures"].as_array().unwrap();
     let got: BTreeSet<&str> = ids(vectors).into_iter().collect();
-    let want: Vec<String> = (1..=16).map(|n| format!("LV-{n:02}")).collect();
+    let want: Vec<String> = (1..=17).map(|n| format!("LV-{n:02}")).collect();
     assert_eq!(got, want.iter().map(String::as_str).collect());
 
     for v in vectors {
@@ -117,7 +117,7 @@ fn signatures() {
         let got = match &result {
             Ok(decision) => decision.id(),
             Err(refusal) => {
-                assert_eq!(refusal.loadout, manifest.name(), "{id}");
+                assert_eq!(refusal.loadout(), manifest.name(), "{id}");
                 refusal.id()
             }
         };

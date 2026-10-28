@@ -50,8 +50,7 @@
       "file_name": "work.json",
       "bytes": " \ufeff{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"},\n    {\"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\", \"attestation_hash\": \"sha256:77ef1951f02f9226505a221e159a2aaf6ca86d961e273ea34bf3f3da801c9b98\"}\n  ]\n}\n",
       "expected": "syllago.loadout.malformed",
-      "canonical": " \ufeff{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"},\n    {\"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\", \"attestation_hash\": \"sha256:77ef1951f02f9226505a221e159a2aaf6ca86d961e273ea34bf3f3da801c9b98\"}\n  ]\n}\n",
-      "digest": "sha256:a8890629eb977380706dce8c630cff1a9cbe40021a3f1988a74407fed263a0f0"
+      "canonical": " \ufeff{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"},\n    {\"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\", \"attestation_hash\": \"sha256:77ef1951f02f9226505a221e159a2aaf6ca86d961e273ea34bf3f3da801c9b98\"}\n  ]\n}\n"
     }
   ],
   "manifests": [
@@ -246,6 +245,27 @@
       "title": "Item written as a JSON array",
       "file_name": "work.json",
       "bytes": "{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    [\"0f8fad5b-d9cb-469f-a165-70867728950e\", \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"]\n  ]\n}\n",
+      "expected": "syllago.loadout.malformed"
+    },
+    {
+      "id": "LM-28",
+      "title": "Missing required field",
+      "file_name": "work.json",
+      "bytes": "{\n  \"sequence\": \"3\",\n  \"providers\": [\"codex\"]\n}\n",
+      "expected": "syllago.loadout.malformed"
+    },
+    {
+      "id": "LM-29",
+      "title": "Unknown field inside an item",
+      "file_name": "work.json",
+      "bytes": "{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\", \"version\": 2}\n  ]\n}\n",
+      "expected": "syllago.loadout.malformed"
+    },
+    {
+      "id": "LM-30",
+      "title": "Provider outside the name grammar",
+      "file_name": "work.json",
+      "bytes": "{\n  \"sequence\": \"3\",\n  \"providers\": [\"Claude Code\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"},\n    {\"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\", \"attestation_hash\": \"sha256:77ef1951f02f9226505a221e159a2aaf6ca86d961e273ea34bf3f3da801c9b98\"}\n  ]\n}\n",
       "expected": "syllago.loadout.malformed"
     }
   ],
@@ -469,6 +489,22 @@
       },
       "message": "syllago-loadout-v1\nhttps://git.example.com/alice/library.git\nwork\n2\nsha256:7292362565bc146f409143e1fe7f2cc6b4fcfd52add4dcab915b22d42e9e6890\n",
       "expected": "sequence_not_greater"
+    },
+    {
+      "id": "LV-17",
+      "title": "Changed manifest at a higher sequence while recorded inactive",
+      "source_uri": "https://git.example.com/alice/library.git",
+      "file_name": "work.json",
+      "bytes": "{\n  \"sequence\": \"3\",\n  \"providers\": [\"claude-code\", \"codex\"],\n  \"items\": [\n    {\"id\": \"0f8fad5b-d9cb-469f-a165-70867728950e\", \"attestation_hash\": \"sha256:59908df50572502ceeabbcc669a28bcc5343d7564a581b9c9648479580f5b773\"},\n    {\"id\": \"7c9e6679-7425-40de-944b-e07fc1f90ae7\", \"attestation_hash\": \"sha256:77ef1951f02f9226505a221e159a2aaf6ca86d961e273ea34bf3f3da801c9b98\"}\n  ]\n}\n",
+      "signature": "-----BEGIN SSH SIGNATURE-----\nU1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgbm/mwT1urXv1G+OBs5w1iQTuOP\n2O8kgklSRjhoECr/UAAAAEZmlsZQAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gtZWQyNTUx\nOQAAAEDaDRS8CM7cHZONjU972gNEE1ya+B7MOAsqeGJPN8MMGtpm5g/XMerqc1Yl0Z/w1Y\nG3TyNc9aoN/fEAOUuSIgQE\n-----END SSH SIGNATURE-----\n",
+      "list": "LA",
+      "record": {
+        "sequence": 2,
+        "digest": "sha256:7292362565bc146f409143e1fe7f2cc6b4fcfd52add4dcab915b22d42e9e6890",
+        "active": false
+      },
+      "message": "syllago-loadout-v1\nhttps://git.example.com/alice/library.git\nwork\n3\nsha256:91207670b62be35db323e10455c3f599471291c3a632b1b5520d9859193c3e7a\n",
+      "expected": "report_inactive"
     },
     {
       "id": "LV-13",

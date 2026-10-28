@@ -30,7 +30,8 @@ bytes.
 ## Manifest
 
 The manifest file is at most 65536 bytes; a larger one is malformed before
-it is read further. Its canonical text is one JSON object with these fields
+it is read further. No vector carries a manifest that large, so a client
+tests the limit itself, at 65536 and 65537 bytes. Its canonical text is one JSON object with these fields
 and no others, and each item is a JSON object; an array in place of either
 is malformed. A repeated key is malformed.
 
@@ -38,7 +39,7 @@ is malformed. A repeated key is malformed.
 | ----------- | -------- | -------------------------------------------------------------------- |
 | `name`      | no       | A string equal to the file name's name; `null` is malformed.         |
 | `sequence`  | yes      | A string: canonical decimal from 0 to 2^53 - 1.                      |
-| `providers` | yes      | One or more distinct, non-empty provider strings.                    |
+| `providers` | yes      | One or more distinct provider strings, each in the name grammar.     |
 | `items`     | yes      | An array of `{"id", "attestation_hash"}` objects, `id`s distinct.     |
 
 An item's `id` is its ACIF `id`: a UUID version 4, hyphenated, with
@@ -82,14 +83,16 @@ The client keeps a record per `source_uri` and loadout name: the accepted
 sequence, the manifest digest, and whether the loadout is active on this
 machine. For each well-formed manifest it decides, in this order:
 
-1. `signature_invalid` when the `.sig` file is missing or the signature does
+1. `syllago.loadout.source_uri_invalid` when the `source_uri` is empty or
+   holds a CR or LF, since no message can be built.
+2. `signature_invalid` when the `.sig` file is missing or the signature does
    not verify over the message; `signer_not_allowed` when its key is not in
    the repository's current trusted allowed-signers list.
-2. `sequence_not_greater` when a record exists, the manifest digest differs
+3. `sequence_not_greater` when a record exists, the manifest digest differs
    from the recorded digest, and the sequence is not greater than the
    recorded sequence, whether the record is active or not. A digest equal to
    the record is unchanged.
-3. `report_no_record` when no record exists, `report_inactive` when the
+4. `report_no_record` when no record exists, `report_inactive` when the
    record is inactive, and `apply` when it is active. Only `apply` applies.
 
 ## Vectors
@@ -97,7 +100,8 @@ machine. For each well-formed manifest it decides, in this order:
 - `keys`: two `ssh-ed25519` keys from fixed seeds. `lists` holds `LA`, which
   allows key A, and `LB`, a later list that allows only key B.
 - `digests`: manifest bytes, their canonical text and their digest. A
-  vector with `expected` is malformed rather than digested.
+  vector with `expected` instead of `digest` is refused with that outcome
+  when parsed, so it has no manifest digest.
 - `manifests`: a file name and bytes, and `ok` or
   `syllago.loadout.malformed`. An `ok` vector gives the loadout's `name`.
 - `name_sets`: several manifests from one repository, and whether the set is
