@@ -272,6 +272,7 @@ fn missing_attestation_is_refused() {
     source.bundles.clear();
     let err = load(&source, &root, now(), &["tool"]).unwrap_err();
     assert_eq!(err.id(), "syllago.feed.attestation_missing");
+    assert!(err.to_string().contains("tampered"), "{err}");
     // The snapshot's directory has no attestation for another digest.
     let dir = snapshot();
     assert_eq!(
@@ -293,6 +294,19 @@ fn one_verifying_attestation_among_several_is_enough() {
         panic!("{err}");
     };
     assert_eq!(failures.len(), 2);
+}
+
+/// A list longer than the cap is refused before any bundle is verified,
+/// even when a good one is in it.
+#[test]
+fn too_many_attestations_are_refused() {
+    let (mut source, root) = signed_feed();
+    let good = source.bundles[0].clone();
+    source.bundles = vec![good; feed::MAX_ATTESTATIONS];
+    load(&source, &root, now(), &["tool"]).unwrap();
+    source.bundles.push(b"not a bundle".to_vec());
+    let err = load(&source, &root, now(), &["tool"]).unwrap_err();
+    assert_eq!(err.id(), "syllago.feed.too_many_attestations", "{err}");
 }
 
 #[test]

@@ -47,6 +47,11 @@ pub fn publisher() -> Identity {
 /// from another repository's build is never capmon's feed.
 pub const SOURCE_REPOSITORY: &str = "https://github.com/OpenScribbler/capmon";
 
+/// The most attestations of one index digest that are verified. capmon
+/// attests each index once per deploy, and the index changes on every
+/// deploy, so a longer list is refused rather than verified one by one.
+pub const MAX_ATTESTATIONS: usize = 32;
+
 /// The content types the feed exposes rows for, with capmon's name for each.
 const CONTENT_TYPES: [(Kind, &str); 2] = [(Kind::Skill, "skills"), (Kind::Rule, "rules")];
 
@@ -180,6 +185,12 @@ pub fn load(
     if bundles.is_empty() {
         return Err(FeedError::AttestationMissing {
             digest: index_sha256,
+        });
+    }
+    if bundles.len() > MAX_ATTESTATIONS {
+        return Err(FeedError::TooManyAttestations {
+            digest: index_sha256,
+            count: bundles.len(),
         });
     }
     let mut failures = Vec::new();
@@ -349,6 +360,8 @@ pub enum FeedError {
     Fetch { path: String, detail: String },
     /// No attestation names the index's digest.
     AttestationMissing { digest: String },
+    /// More attestations name the index than [`MAX_ATTESTATIONS`].
+    TooManyAttestations { digest: String, count: usize },
     /// Attestations exist, and none verifies; one failure per bundle.
     AttestationRefused {
         digest: String,
@@ -373,6 +386,7 @@ impl FeedError {
         match self {
             FeedError::Fetch { .. } => "syllago.feed.fetch_failed",
             FeedError::AttestationMissing { .. } => "syllago.feed.attestation_missing",
+            FeedError::TooManyAttestations { .. } => "syllago.feed.too_many_attestations",
             FeedError::AttestationRefused { .. } => "syllago.feed.attestation_refused",
             FeedError::IndexMalformed(_) => "syllago.feed.index_malformed",
             FeedError::ProviderMissing { .. } => "syllago.feed.provider_missing",
@@ -392,7 +406,14 @@ impl fmt::Display for FeedError {
             FeedError::AttestationMissing { digest } => write!(
                 f,
                 "{id}: no build-provenance attestation names the feed index sha256:{digest}; \
-                 the feed may be mid-deploy, so try again in a few minutes"
+                 the index may have been tampered with or substituted, or the feed may be \
+                 mid-deploy, so the feed is not trusted; try again in a few minutes, and \
+                 report it to capmon if it persists"
+            ),
+            FeedError::TooManyAttestations { digest, count } => write!(
+                f,
+                "{id}: {count} attestations name the feed index sha256:{digest}, more than the \
+                 {MAX_ATTESTATIONS} syllago verifies; the feed is not trusted"
             ),
             FeedError::AttestationRefused { digest, failures } => {
                 write!(

@@ -2,9 +2,10 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
+use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::{Error, Hash};
+use crate::{Diagnostic, Error, Hash};
 
 /// Version-control metadata names excluded from the body everywhere (core §7.4).
 const VCS_NAMES: [&str; 6] = [".git", ".svn", ".hg", ".bzr", "_darcs", ".fossil"];
@@ -297,6 +298,25 @@ pub(crate) fn rendered_files(
     files.sort_by(|a, b| a.0.cmp(&b.0));
     if files.windows(2).any(|pair| pair[0].0 == pair[1].0) {
         return Err(Error::Reject("acif.body.path_collision"));
+    }
+    // Default Windows and macOS filesystems fold case, so two paths that
+    // differ only by case would land on one file there.
+    // Each file and each directory above it counts, so `Dir/x` beside
+    // `dir/y`, or a file `a` beside `A/b`, collides as well.
+    let mut folded: Vec<(String, &str)> = Vec::new();
+    for (path, _) in &files {
+        for (end, _) in path.match_indices('/').chain([(path.len(), "")]) {
+            let spelled = &path[..end];
+            folded.push((spelled.to_lowercase(), spelled));
+        }
+    }
+    folded.sort();
+    folded.dedup();
+    if let Some(pair) = folded.windows(2).find(|pair| pair[0].0 == pair[1].0) {
+        return Err(Error::Refuse(Diagnostic::new(
+            "syllago.render.path_case_collision",
+            &[("paths", Value::from(vec![pair[0].1, pair[1].1]))],
+        )));
     }
     Ok(files)
 }

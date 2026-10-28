@@ -29,7 +29,14 @@ fn tree(placements: &[Placement]) -> Tree {
         let files = match &placement.rendering {
             Rendering::Files(files) => files
                 .iter()
-                .map(|f| (format!("{path}{}", f.path), f.bytes.clone()))
+                .map(|f| {
+                    let file = if f.path.is_empty() {
+                        path.clone()
+                    } else {
+                        format!("{}/{}", path.trim_end_matches('/'), f.path)
+                    };
+                    (file, f.bytes.clone())
+                })
                 .collect(),
             Rendering::Contribution(bytes) => vec![(path.clone(), bytes.clone())],
         };
@@ -124,37 +131,52 @@ fn write_golden(dir: &Path, manifest: &str, tree: &Tree) {
     }
 }
 
-fn check(adapter: &Adapter) {
-    let feed = snapshot_feed();
+/// Places for `adapter` from `records` and compares the result with its
+/// committed fixture, writing the fixture first when `update` is set.
+fn compare(
+    adapter: &Adapter,
+    feed: &feed::Feed,
+    records: &impl InstallRecords,
+    update: bool,
+) -> Result<(), String> {
     let items = Items::load();
-    let placed = render(adapter, &feed, &items, Os::Linux);
+    let placed = render(adapter, records, &items, Os::Linux);
     // The user-scope rows the skeleton uses apply on every OS, so every
     // target OS places the same bytes at the same anchored paths.
     for os in Os::ALL {
-        assert_eq!(render(adapter, &feed, &items, os), placed, "{os:?}");
+        assert_eq!(render(adapter, records, &items, os), placed, "{os:?}");
     }
     let placements: Vec<Placement> = placed.iter().map(|(_, _, p)| p.clone()).collect();
     let tree = tree(&placements);
-    let manifest = manifest(adapter, &feed, &placed);
+    let manifest = manifest(adapter, feed, &placed);
     let dir = golden_dir().join(adapter.slug);
-    if std::env::var_os("SYLLAGO_UPDATE_GOLDEN").is_some() {
+    if update {
         write_golden(&dir, &manifest, &tree);
     }
+    let slug = adapter.slug;
     let recorded = std::fs::read_to_string(dir.join("golden.json")).unwrap_or_default();
-    assert_eq!(
-        recorded, manifest,
-        "{}: golden.json differs; regenerate with SYLLAGO_UPDATE_GOLDEN=1",
-        adapter.slug
-    );
+    if recorded != manifest {
+        return Err(format!("{slug}: golden.json differs:\n{manifest}"));
+    }
     let on_disk = read_tree(&dir.join("home"));
-    assert_eq!(
-        on_disk.keys().collect::<Vec<_>>(),
-        tree.keys().collect::<Vec<_>>(),
-        "{}: placed paths differ; regenerate with SYLLAGO_UPDATE_GOLDEN=1",
-        adapter.slug
-    );
-    for (path, bytes) in &tree {
-        assert!(on_disk[path] == *bytes, "{}: {path} differs", adapter.slug);
+    if on_disk.keys().ne(tree.keys()) {
+        return Err(format!(
+            "{slug}: placed paths differ: {:?} on disk, {:?} placed",
+            on_disk.keys().collect::<Vec<_>>(),
+            tree.keys().collect::<Vec<_>>()
+        ));
+    }
+    match tree.iter().find(|(path, bytes)| on_disk[*path] != **bytes) {
+        Some((path, _)) => Err(format!("{slug}: {path} differs")),
+        None => Ok(()),
+    }
+}
+
+fn check(adapter: &Adapter) {
+    let feed = snapshot_feed();
+    let update = std::env::var_os("SYLLAGO_UPDATE_GOLDEN").is_some();
+    if let Err(diff) = compare(adapter, &feed, &feed, update) {
+        panic!("{diff}\nregenerate with SYLLAGO_UPDATE_GOLDEN=1 through sandbox-run --in-place");
     }
 }
 
@@ -205,21 +227,17 @@ impl InstallRecords for Moved<'_> {
     }
 }
 
-/// A feed change that moves a path the skeleton uses yields a placement the
-/// committed fixture does not hold.
+/// A feed change that moves a path the skeleton uses fails the fixture
+/// comparison until the fixture is regenerated.
 #[test]
 fn a_moved_feed_path_breaks_the_fixture() {
     let feed = snapshot_feed();
     let mut rows = feed.entry_points(CODEX.slug, Kind::Skill).unwrap().to_vec();
     rows[0].path_template = "~/.codex/skills/<content-name>/".into();
     let moved = Moved { feed: &feed, rows };
-    let items = Items::load();
-    let placed = render(&CODEX, &moved, &items, Os::Linux);
-    let placements: Vec<Placement> = placed.iter().map(|(_, _, p)| p.clone()).collect();
-    let recorded = read_tree(&golden_dir().join(CODEX.slug).join("home"));
-    assert_ne!(tree(&placements), recorded);
-    let recorded = std::fs::read_to_string(golden_dir().join(CODEX.slug).join("golden.json"));
-    assert_ne!(manifest(&CODEX, &feed, &placed), recorded.unwrap());
+    let err = compare(&CODEX, &feed, &moved, false).unwrap_err();
+    assert!(err.contains("~/.codex/skills/hello/"), "{err}");
+    compare(&CODEX, &feed, &feed, false).unwrap();
 }
 
 /// Resolved paths map to the native filesystem under the user's home.

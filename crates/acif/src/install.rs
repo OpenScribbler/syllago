@@ -8,7 +8,7 @@
 //! yields anchored POSIX paths; [`Target::native`] maps one to the
 //! filesystem, so the same rows give byte-identical results on every OS.
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use serde_json::Value;
 
@@ -208,15 +208,35 @@ impl Target {
                 self.path.as_str(),
             ),
             Anchor::Absolute => {
-                return Ok(PathBuf::from(
-                    self.path.replace('/', std::path::MAIN_SEPARATOR_STR),
-                ));
+                let path = PathBuf::from(self.path.replace('/', std::path::MAIN_SEPARATOR_STR));
+                if path
+                    .components()
+                    .any(|c| matches!(c, Component::CurDir | Component::ParentDir))
+                {
+                    return Err(malformed(format!(
+                        "{}: not a plain absolute path",
+                        self.path
+                    )));
+                }
+                return Ok(path);
             }
         };
-        Ok(rest
-            .split('/')
-            .filter(|segment| !segment.is_empty())
-            .fold(root.to_path_buf(), |path, segment| path.join(segment)))
+        // Each segment must join as one ordinary component, so none can
+        // name a drive, a root or a parent and replace the anchor.
+        let mut path = root.to_path_buf();
+        for segment in rest.split('/').filter(|segment| !segment.is_empty()) {
+            let mut components = Path::new(segment).components();
+            match (components.next(), components.next()) {
+                (Some(Component::Normal(name)), None) if name == segment => path.push(segment),
+                _ => {
+                    return Err(malformed(format!(
+                        "{}: the segment {segment:?} is not a plain name",
+                        self.path
+                    )));
+                }
+            }
+        }
+        Ok(path)
     }
 }
 
@@ -304,12 +324,31 @@ pub fn resolve(
     })
 }
 
-/// The §8.2 validity predicate.
+/// The §8.2 validity predicate, made stricter by [`portable_name`] on every
+/// target OS, so a name resolves the same way wherever it syncs.
 fn check_content_name(name: &str) -> Result<(), Error> {
-    if name.is_empty() || name.contains(['/', '\\', '\0']) || name == "." || name == ".." {
+    if name.is_empty() || name.contains(['/', '\\', '\0']) || !portable_name(name) {
         return Err(Error::Reject("acif.install.content_name_invalid"));
     }
     Ok(())
+}
+
+/// Whether Windows keeps `name` as one ordinary path component: no `:`,
+/// which would name a drive or a stream; not a reserved device name (`CON`,
+/// `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, in any case, with or
+/// without an extension); and no trailing `.` or space, which Windows trims.
+/// `.` and `..` end with a dot, so they fail too.
+fn portable_name(name: &str) -> bool {
+    if name.contains(':') || name.ends_with(['.', ' ']) {
+        return false;
+    }
+    let stem = name.split('.').next().unwrap_or(name).trim_end();
+    let stem = stem.to_ascii_uppercase();
+    let numbered = |prefix: &str| {
+        stem.strip_prefix(prefix)
+            .is_some_and(|n| n.len() == 1 && matches!(n.as_bytes()[0], b'1'..=b'9'))
+    };
+    !(matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL") || numbered("COM") || numbered("LPT"))
 }
 
 fn resolve_row(row: &EntryPoint, scope: Scope, os: Os, name: &str) -> Result<Target, Error> {
@@ -347,9 +386,9 @@ fn resolve_row(row: &EntryPoint, scope: Scope, os: Os, name: &str) -> Result<Tar
         // An empty segment is allowed only as a directory's trailing `/`
         // and before the root `/` of an absolute path.
         let root = i == 0 && anchor == Anchor::Absolute;
+        let drive = root && is_absolute(template) && !template.starts_with('/');
         if (substituted.is_empty() && !(last && i > 0) && !root)
-            || substituted == "."
-            || substituted == ".."
+            || (!substituted.is_empty() && !drive && !portable_name(&substituted))
             || substituted == "~"
             || substituted.contains('\\')
         {
@@ -663,6 +702,87 @@ mod tests {
         assert_eq!(target.path, "~/.agents/skills/review/");
         assert_eq!(target.location(), "~/.agents/skills/review");
         assert_eq!(target.layout, Layout::DirectoryOfFiles);
+    }
+
+    // A name or segment Windows reads as a drive, a device or a trimmed name
+    // would leave the anchor, so it is refused on every OS: the same rows
+    // must resolve the same way wherever the Library syncs.
+    #[test]
+    fn names_windows_would_not_keep_are_rejected() {
+        let named = rows(json!([row(
+            "user",
+            "~/.claude/rules/<content-name>.md",
+            "single_file",
+            "current"
+        )]));
+        for name in [
+            "C:style", "a:b", "con", "CON", "Nul.txt", "aux.md", "prn", "com1", "LPT9.log",
+            "style.", "style ", "..x.",
+        ] {
+            let result = resolve(&named, Scope::User, Os::Linux, name);
+            assert_eq!(
+                refusal(result).0,
+                "acif.install.content_name_invalid",
+                "{name:?}"
+            );
+        }
+        for name in [
+            "console",
+            "com10",
+            "lpt",
+            "auxiliary.md",
+            "style.v2",
+            ".hidden",
+        ] {
+            resolve(&named, Scope::User, Os::Linux, name).unwrap();
+        }
+        for template in [
+            "~/a:b/<content-name>.md",
+            "~/aux/<content-name>.md",
+            "~/x./<content-name>.md",
+            "~/x /<content-name>.md",
+            "C:x/<content-name>.md",
+        ] {
+            let bad = rows(json!([row("user", template, "single_file", "current")]));
+            let err = resolve(&bad, Scope::User, Os::Windows, "x").unwrap_err();
+            assert!(matches!(err, Error::Malformed(_)), "{template}: {err}");
+        }
+    }
+
+    // A target built by hand, past resolution's checks, still cannot
+    // replace its anchor.
+    #[test]
+    fn native_refuses_a_segment_that_is_not_a_plain_name() {
+        let home = Path::new("home").join("u");
+        let roots = Roots {
+            home: &home,
+            appdata: None,
+            project: None,
+        };
+        for path in ["~/a/../b", "~/./b", "~/a/C:b", "~/a/\\b"] {
+            let target = Target {
+                scope: Scope::User,
+                anchor: Anchor::Home,
+                path: path.into(),
+                layout: Layout::SingleFile,
+                superseded: false,
+            };
+            let err = target.native(&roots);
+            #[cfg(windows)]
+            assert!(err.is_err(), "{path}");
+            #[cfg(not(windows))]
+            if path.contains("..") || path.contains("/./") {
+                assert!(err.is_err(), "{path}");
+            }
+        }
+        let absolute = Target {
+            scope: Scope::Managed,
+            anchor: Anchor::Absolute,
+            path: "/etc/a/../b".into(),
+            layout: Layout::SingleFile,
+            superseded: false,
+        };
+        assert!(absolute.native(&roots).is_err());
     }
 
     #[test]

@@ -97,26 +97,33 @@ pub fn render_skill(body: &Body, entry_file: &str, layout: Layout) -> Result<Ren
     })
 }
 
-/// Renders a canonical rule to a target of `layout` (rule §11). A rule file
-/// of its own (`single_file`) is the provider's native rule format, which
-/// loads a bare file unconditionally, so only `mode: always` renders there.
-/// A shared memory file (`merged_into_shared_file`) has no activation
-/// declaration surface, so any other mode degrades to always-on with
+/// Renders a canonical rule to a target of `layout` (rule §11): a rule file
+/// of its own (`single_file`) or a contribution to a shared memory file
+/// (`merged_into_shared_file`).
+///
+/// Rule §11 renders a gated mode to the target's native declaration where
+/// one is recorded, and leaves the choice of mechanism to [ACIF-RENDER],
+/// which records none for any provider. Claude Code's `.claude/rules/*.md`
+/// does read a `paths` frontmatter glob (capmon's
+/// `docs/provider-capabilities/claude-code-rules.yaml`, `activation_mode`,
+/// confidence confirmed), but that is observation, not an ACIF mapping, and
+/// render-back §6.3 forbids a guessed one. So both layouts render the body
+/// alone, which loads always-on, and any other mode degrades with
 /// `acif.rule.activation_degraded`.
 pub fn render_rule_for(
     canonical: &Map<String, Value>,
     layout: Layout,
 ) -> Result<RenderOutput, Error> {
-    let (target, contribution) = match layout {
-        Layout::SingleFile => (RuleTarget::NativeRuleFormat, false),
-        Layout::MergedIntoSharedFile => (RuleTarget::NoDeclarationSurface, true),
+    let contribution = match layout {
+        Layout::SingleFile => false,
+        Layout::MergedIntoSharedFile => true,
         Layout::DirectoryOfFiles => {
             return Err(Error::Unsupported(
                 "rendering a rule to a directory target".into(),
             ));
         }
     };
-    let rendered = render_rule(canonical, target)?;
+    let rendered = render_rule(canonical, RuleTarget::NoDeclarationSurface)?;
     let bytes = rendered.output.into_bytes();
     Ok(RenderOutput {
         rendering: if contribution {
@@ -191,6 +198,40 @@ mod tests {
         assert_eq!(paths, ["README.md", "SKILL.md", "run.sh"]);
     }
 
+    // Paths that differ only by case land on one file on default Windows
+    // and macOS filesystems, so one would silently replace the other.
+    #[test]
+    fn case_aliased_paths_are_refused() {
+        for (body, entry) in [
+            (
+                Body::from_files(&[("SKILL.md", b"x\n"), ("A.txt", b"a\n"), ("a.txt", b"b\n")]),
+                "SKILL.md",
+            ),
+            (
+                Body::from_files(&[
+                    ("SKILL.md", b"x\n"),
+                    ("Dir/x.sh", b"a\n"),
+                    ("dir/y.sh", b"b\n"),
+                ]),
+                "SKILL.md",
+            ),
+            (
+                Body::from_files(&[("SKILL.md", b"x\n"), ("a", b"a\n"), ("A/b.sh", b"b\n")]),
+                "SKILL.md",
+            ),
+            (
+                Body::from_files(&[("skill.md", b"x\n"), ("Skill.md", b"a\n")]),
+                "skill.md",
+            ),
+        ] {
+            let err = render_skill(&body, entry, Layout::DirectoryOfFiles).unwrap_err();
+            let Error::Refuse(diagnostic) = err else {
+                panic!("{err}");
+            };
+            assert_eq!(diagnostic.id, "syllago.render.path_case_collision");
+        }
+    }
+
     #[test]
     fn single_file_skill_renders_to_a_single_file_target() {
         let body = Body::from_files(&[
@@ -250,18 +291,33 @@ mod tests {
         ));
     }
 
+    // ACIF records no rule-file declaration for any provider, so a gated
+    // mode renders as its body to either layout, with the degradation named.
     #[test]
-    fn gated_rule_degrades_in_a_shared_file_and_is_refused_as_its_own_file() {
-        let body = Body::from_files(&[(
-            "style.md",
-            b"---\nactivation:\n  mode: manual\n---\nOnly when asked.\n",
-        )]);
-        let item = ingest_body(Kind::Rule, &body, "style.md").unwrap();
-        let shared = render_rule_for(&item.canonical, Layout::MergedIntoSharedFile).unwrap();
-        assert_eq!(shared.diagnostics[0].id, "acif.rule.activation_degraded");
-        assert!(matches!(
-            render_rule_for(&item.canonical, Layout::SingleFile),
-            Err(Error::Unsupported(_))
-        ));
+    fn gated_rules_degrade_in_both_layouts() {
+        for (frontmatter, mode) in [
+            ("activation:\n  mode: manual\n", "manual"),
+            (
+                "activation:\n  mode: glob\n  globs: [\"**/*.rs\"]\n",
+                "glob",
+            ),
+            ("activation:\n  mode: model_decision\n", "model_decision"),
+        ] {
+            let text = format!("---\n{frontmatter}---\nOnly when asked.\n");
+            let body = Body::from_files(&[("style.md", text.as_bytes())]);
+            let item = ingest_body(Kind::Rule, &body, "style.md").unwrap();
+            for layout in [Layout::SingleFile, Layout::MergedIntoSharedFile] {
+                let output = render_rule_for(&item.canonical, layout).unwrap();
+                let bytes = match output.rendering {
+                    Rendering::Files(files) => files[0].bytes.clone(),
+                    Rendering::Contribution(bytes) => bytes,
+                };
+                assert_eq!(bytes, b"Only when asked.\n");
+                let degraded = &output.diagnostics[0];
+                assert_eq!(degraded.id, "acif.rule.activation_degraded");
+                assert_eq!(degraded.params["mode_lost"], mode);
+                assert_eq!(degraded.params["effective_behavior"], "always-on");
+            }
+        }
     }
 }
