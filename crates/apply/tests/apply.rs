@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime};
 
-use acif::{Anchor, Body, Kind, Layout, Os, Rendering, Roots, Scope, Target, ingest_body};
-use adapters::{ADAPTERS, Adapter, CLAUDE_CODE, CODEX, Placement, Source, feed_providers, place};
+use acif::{Body, Kind, Os, Roots, Scope, ingest_body};
+use adapters::{ADAPTERS, Adapter, CLAUDE_CODE, CODEX, Source, feed_providers, place};
 use apply::{
     Action, Engine, Entry, Error, Fs, ManualStep, Node, Options, Placed, RealFs, Reason, Rollback,
 };
@@ -234,6 +234,9 @@ impl Fs for FailingFs {
     fn remove_temps(&self, path: &Path) -> io::Result<()> {
         self.tick()?;
         RealFs.remove_temps(path)
+    }
+    fn canonical(&self, path: &Path) -> io::Result<PathBuf> {
+        RealFs.canonical(path)
     }
 }
 
@@ -1210,6 +1213,9 @@ impl Fs for FoldingFs {
     fn remove_temps(&self, path: &Path) -> io::Result<()> {
         RealFs.remove_temps(&self.map(path))
     }
+    fn canonical(&self, path: &Path) -> io::Result<PathBuf> {
+        RealFs.canonical(&self.map(path))
+    }
 }
 
 /// Renaming an item's content name only by case, on a case-insensitive
@@ -1446,8 +1452,14 @@ fn an_item_takes_over_a_file_another_item_in_the_run_dropped() {
 #[cfg(unix)]
 #[test]
 fn two_shared_paths_through_one_symlink_collide() {
+    use acif::{Anchor, Layout, Rendering, Target};
+    use adapters::Placement;
     let dir = TempDir::new("one-target");
-    let home = dir.home();
+    // The home directory is reached through a symlink, as macOS reaches
+    // its temporary directories through /var -> /private/var, so a
+    // resolved link target and a plain path differ until made canonical.
+    let home = dir.0.join("home-link");
+    std::os::unix::fs::symlink(dir.home(), &home).unwrap();
     dir.write("a/AGENTS.md", b"# Mine\n");
     std::fs::create_dir_all(home.join("b")).unwrap();
     std::os::unix::fs::symlink(home.join("a/AGENTS.md"), home.join("b/AGENTS.md")).unwrap();

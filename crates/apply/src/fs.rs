@@ -45,6 +45,10 @@ pub trait Fs {
     /// Deletes what a [`Fs::write`] to `path` left beside it when the
     /// process died before the write finished.
     fn remove_temps(&self, path: &Path) -> io::Result<()>;
+    /// `path` with every symlink in it resolved, for telling whether two
+    /// paths name one file. A path that does not exist resolves through
+    /// its nearest existing ancestor.
+    fn canonical(&self, path: &Path) -> io::Result<PathBuf>;
 }
 
 /// [`Fs`] over `std::fs`.
@@ -138,6 +142,18 @@ impl Fs for RealFs {
             }
         }
         Ok(())
+    }
+
+    fn canonical(&self, path: &Path) -> io::Result<PathBuf> {
+        match fs::canonicalize(path) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                match (path.parent(), path.file_name()) {
+                    (Some(parent), Some(name)) => Ok(self.canonical(parent)?.join(name)),
+                    _ => Ok(path.to_path_buf()),
+                }
+            }
+            result => result,
+        }
     }
 }
 

@@ -725,11 +725,17 @@ impl<'a, F: Fs> Engine<'a, F> {
             }
         }
         // Two shared paths that are one file through a symlink would each
-        // be merged from the same bytes, and the last write would win.
+        // be merged from the same bytes, and the last write would win. A
+        // resolved link target is canonical while a plain path may not be,
+        // as under macOS's /var -> /private/var, so both are compared in
+        // canonical form.
         let mut targets: BTreeMap<PathBuf, &PathBuf> = BTreeMap::new();
         for path in &shared_paths {
             if let Ok((target, _)) = self.resolve(path)?
-                && let Some(other) = targets.insert(target.clone(), path)
+                && let Some(other) = targets.insert(
+                    self.fs.canonical(&target).map_err(read_failed(&target))?,
+                    path,
+                )
             {
                 return Err(Error::Collision {
                     path: other.clone(),
