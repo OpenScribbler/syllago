@@ -3,18 +3,17 @@
 //! Publisher's `rekord` entry for Dual-Attested items.
 
 mod common;
-mod pki;
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime};
 
+use moat::testing::pki::{self, ISSUER, Instance, LOGGED_AT, Log, SUBJECT, San};
 use moat::{
     Cause, ContentHash, Identity, LogEntry, ManifestEntry, RekorError, RekorLog, TrustFailure,
     TrustRoot, TrustState, verify_dual_attested, verify_manifest, verify_registry_attestation,
 };
 use p256::ecdsa::SigningKey;
-use pki::{ISSUER, Instance, LOGGED_AT, Log, SUBJECT, San};
 use serde_json::{Value, json};
 
 /// A day after every test entry was logged.

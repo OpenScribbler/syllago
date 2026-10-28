@@ -109,6 +109,14 @@ pub enum Cause {
     CheckpointInvalid(String),
     /// The author-key signature was refused.
     AuthorKey(Refusal),
+    /// An attestation's DSSE payload is not an in-toto v1 statement.
+    StatementMalformed(String),
+    /// An attestation's statement names a predicate type other than the
+    /// expected one.
+    PredicateTypeMismatch { expected: String, found: String },
+    /// No subject of an attestation's statement carries the SHA-256 of the
+    /// artifact.
+    SubjectDigestMismatch { digest: String },
 }
 
 impl Cause {
@@ -133,6 +141,9 @@ impl Cause {
             Cause::InclusionProofInvalid(_) => "syllago.moat.rekor_inclusion_proof_invalid",
             Cause::CheckpointInvalid(_) => "syllago.moat.rekor_checkpoint_invalid",
             Cause::AuthorKey(refusal) => refusal.id(),
+            Cause::StatementMalformed(_) => "syllago.moat.statement_malformed",
+            Cause::PredicateTypeMismatch { .. } => "syllago.moat.predicate_type_mismatch",
+            Cause::SubjectDigestMismatch { .. } => "syllago.moat.subject_digest_mismatch",
         }
     }
 
@@ -162,7 +173,8 @@ impl fmt::Display for Cause {
             | Cause::RekorEntryMalformed(detail)
             | Cause::SetInvalid(detail)
             | Cause::InclusionProofInvalid(detail)
-            | Cause::CheckpointInvalid(detail) => write!(f, "{id}: {detail}"),
+            | Cause::CheckpointInvalid(detail)
+            | Cause::StatementMalformed(detail) => write!(f, "{id}: {detail}"),
             Cause::TrustedRootStale { age, max_age } => write!(
                 f,
                 "{id}: the bundled trusted root is {} days old, past the {}-day limit; \
@@ -190,6 +202,14 @@ impl fmt::Display for Cause {
                 write!(f, "{id}: the rekord entry's public key carries a comment")
             }
             Cause::AuthorKey(refusal) => refusal.fmt(f),
+            Cause::PredicateTypeMismatch { expected, found } => write!(
+                f,
+                "{id}: the attestation's predicate type is {found:?}, not {expected:?}"
+            ),
+            Cause::SubjectDigestMismatch { digest } => write!(
+                f,
+                "{id}: no subject of the attestation has the fetched bytes' sha256 {digest}"
+            ),
         }
     }
 }

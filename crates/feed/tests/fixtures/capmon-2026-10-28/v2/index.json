@@ -1,0 +1,151 @@
+{
+  "cadence": "daily",
+  "data_revision": "d82839e3709483447d22cbbc5a0b2e3b8f1de3294552a776d0e817da95b8bb61",
+  "files": {
+    "advisories.json": {
+      "sha256": "deddbb22674d330c52383b1fc7022118e76d597abca1b7fb69e446151b352851"
+    },
+    "by-content-type/agents.json": {
+      "sha256": "1d2ecef3c211b8fa169b97b262314c5e46170dc3c7de5385a46c084725b622f8"
+    },
+    "by-content-type/commands.json": {
+      "sha256": "7e1ca0d8c74b622db0745998deb209eb4fe0e7f8964b917a091ebd17ad5bea07"
+    },
+    "by-content-type/hooks.json": {
+      "sha256": "8482a5173a557b2f966a490b8ac9baacd652c8df62dc71b89b36c0233ee879f8"
+    },
+    "by-content-type/mcp.json": {
+      "sha256": "83f75c4fcf6e02c59fd95fb91d22d9ca75d095c81d429a63db41a72fb3367b61"
+    },
+    "by-content-type/rules.json": {
+      "sha256": "cf177cff71db9eb75b225165b4b1eae3b7562ec1a9a733d23cf38c2038a080f1"
+    },
+    "by-content-type/skills.json": {
+      "sha256": "d61f3887284ef400731ffecfdd4006218a535547888dfe0672b7a3c87b778bb5"
+    },
+    "capabilities/all.json": {
+      "sha256": "d82839e3709483447d22cbbc5a0b2e3b8f1de3294552a776d0e817da95b8bb61"
+    },
+    "schemas/advisories.json": {
+      "sha256": "fa5ae97a45e6c05930dee2125b996e54588f8fb72c11514011712ac10bfcecff"
+    },
+    "schemas/all-providers.json": {
+      "sha256": "e9a25f2c4e4812ce659f6560ee9a8e5783ce4fba9026c7e914033052eea1b3a7"
+    },
+    "schemas/by-content-type.json": {
+      "sha256": "4aa37fe80e19a3d9caeb8ea72b073b4eb25ecfe3ecbebfed088f03a5b4e110a6"
+    },
+    "schemas/canonical-keys.json": {
+      "sha256": "21f5ecb67528fb9a760cc2889d7197eae7766fa2ab075d3b6edb626f5c6d01fa"
+    },
+    "schemas/index.json": {
+      "sha256": "151eba649378550d2d9de94f681a5e8fbf33611285341a9cd7867a45beef6f99"
+    },
+    "schemas/provider-capabilities.json": {
+      "sha256": "7ccd7456f0e9a5a37986dbb92038f31fb93cbdcf09a1ee49be451351ecd4a2b8"
+    },
+    "spec/canonical-keys.json": {
+      "sha256": "3adb7447e80218e8959d7ac696ba2c60f0b53c754e19769caf9e1a768aa300bf"
+    },
+    "spec/field-semantics.md": {
+      "sha256": "3cd3b66442a1d2ec6de6d660c5eef75a20e1a89b65af60869181e33a262af50b"
+    }
+  },
+  "generated_at": "2026-10-28T09:11:22Z",
+  "max_staleness_hours": 48,
+  "providers": [
+    {
+      "path": "capabilities/amp.json",
+      "sha256": "32818a2b4f7f58f7f64f47ddc7dbd2ab8414bc5f7a301efa86f04334d78dfa60",
+      "slug": "amp",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/claude-code.json",
+      "sha256": "1ea7f75c97587077aca69ddd9a21d1e96b45ffc6a2ae1778689439f0a987389d",
+      "slug": "claude-code",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/cline.json",
+      "sha256": "8f142d47b8bfbeb7fbe7dc8165993b0f54034358b1193e84b47471f16509f434",
+      "slug": "cline",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/codex.json",
+      "sha256": "a36ab0cc368598d0847986a95315a5203444eb0b3309f62acdd59384d9dbf702",
+      "slug": "codex",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/copilot-cli.json",
+      "sha256": "c960af69b9a357f241abd75cbdde6fa0691e0d5502b9d2d1c6c10c8a27784bd3",
+      "slug": "copilot-cli",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/crush.json",
+      "sha256": "1bacc458681263868168fd18202c0cbd067bc39c6c373e9105b483e262248754",
+      "slug": "crush",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/cursor.json",
+      "sha256": "367b7f450f17311e5e232fa89d86a1329f9ab9dd8510630813b8db928e352dd9",
+      "slug": "cursor",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/devin.json",
+      "sha256": "b333f7eab1f0b10a276ef6e12f13a426e483eee9760154f80e70a8054995bb9c",
+      "slug": "devin",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/factory-droid.json",
+      "sha256": "91c1418a19e3896e9ccf666c1efb73fe7fcdbae5ebc910aec40c38ce77363fb3",
+      "slug": "factory-droid",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/gemini-cli.json",
+      "sha256": "237e31be738a6cd184f0a694d7507058854260b4b297396cebfea8f81ecec0d6",
+      "slug": "gemini-cli",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/kiro.json",
+      "sha256": "df2de434ad73ca58f628aa18499c306d9a1adaae1f39677a465093e4361a3b09",
+      "slug": "kiro",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/opencode.json",
+      "sha256": "fee010bc330bbfdf2298eef61f4104f8988b0de8a69f5d2009695fa8426f6302",
+      "slug": "opencode",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/pi.json",
+      "sha256": "d76e86ec144a1abc6bc39ee371f65eca20327fa67ba1d25096405934221d8878",
+      "slug": "pi",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/roo-code.json",
+      "sha256": "ec0cbc55b347db3de51de06c6c1d8f77b9630a06038d8ceb87064730e55d660d",
+      "slug": "roo-code",
+      "status": "tracked"
+    },
+    {
+      "path": "capabilities/zed.json",
+      "sha256": "9cbe5d73883d6f106303ec45876890843db7dd0a69d4d300e7c547ef8fc3f3d3",
+      "slug": "zed",
+      "status": "tracked"
+    }
+  ],
+  "schema_version": "1",
+  "source_commit": "eabd8de632962982e825324d37a9448222106bbd",
+  "status": "live"
+}

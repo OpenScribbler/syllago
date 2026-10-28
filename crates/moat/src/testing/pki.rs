@@ -6,15 +6,13 @@
 //! They carry what `sigstore-verify` checks: a CODE_SIGNING EKU, a critical
 //! SAN, the Fulcio issuer extension and an embedded SCT from the CT log.
 
-#![allow(dead_code)]
-
-use moat::{TrustRoot, TrustRootOrigin};
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-use crate::common::base64;
+use crate::wire;
+use crate::{TrustRoot, TrustRootOrigin};
 
 /// When every test entry was logged: 2026-01-01T00:00:00Z.
 pub const LOGGED_AT: i64 = 1_767_225_600;
@@ -35,6 +33,10 @@ const OID_SUBJECT_ALT_NAME: &[u8] = &[0x55, 0x1d, 0x11];
 const OID_CODE_SIGNING: &[u8] = &[0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x03, 0x03];
 /// 1.3.6.1.4.1.57264.1.8, Fulcio's OIDC issuer as a DER UTF8String.
 const OID_FULCIO_ISSUER: &[u8] = &[0x2b, 0x06, 0x01, 0x04, 0x01, 0x83, 0xbf, 0x30, 0x01, 0x08];
+/// 1.3.6.1.4.1.57264.1.12, Fulcio's Source Repository URI as a DER
+/// UTF8String.
+const OID_FULCIO_SOURCE_REPOSITORY: &[u8] =
+    &[0x2b, 0x06, 0x01, 0x04, 0x01, 0x83, 0xbf, 0x30, 0x01, 0x0c];
 /// 1.3.6.1.4.1.11129.2.4.2, the embedded SCT list.
 const OID_SCT_LIST: &[u8] = &[0x2b, 0x06, 0x01, 0x04, 0x01, 0xd6, 0x79, 0x02, 0x04, 0x02];
 
@@ -127,6 +129,11 @@ pub fn sign(key: &SigningKey, data: &[u8]) -> Vec<u8> {
     signature.to_der().as_bytes().to_vec()
 }
 
+/// Standard base64 with padding.
+pub fn base64(bytes: &[u8]) -> String {
+    wire::base64(bytes)
+}
+
 pub fn sha256(data: &[u8]) -> [u8; 32] {
     Sha256::digest(data).into()
 }
@@ -136,7 +143,7 @@ pub fn hex(bytes: &[u8]) -> String {
 }
 
 fn pem_certificate(der: &[u8]) -> String {
-    let encoded = base64(der);
+    let encoded = wire::base64(der);
     let lines: Vec<&str> = encoded
         .as_bytes()
         .chunks(64)
@@ -160,6 +167,12 @@ pub struct Instance {
     ca_cert: Vec<u8>,
     ct: SigningKey,
     pub rekor: SigningKey,
+}
+
+impl Default for Instance {
+    fn default() -> Instance {
+        Instance::new()
+    }
 }
 
 impl Instance {
@@ -199,11 +212,11 @@ impl Instance {
                 "baseUrl": url,
                 "hashAlgorithm": "SHA2_256",
                 "publicKey": {
-                    "rawBytes": base64(&spki(key)),
+                    "rawBytes": wire::base64(&spki(key)),
                     "keyDetails": "PKIX_ECDSA_P256_SHA_256",
                     "validFor": {"start": "2025-01-01T00:00:00Z"}
                 },
-                "logId": {"keyId": base64(&sha256(&spki(key)))}
+                "logId": {"keyId": wire::base64(&sha256(&spki(key)))}
             })
         };
         json!({
@@ -212,7 +225,7 @@ impl Instance {
             "certificateAuthorities": [{
                 "subject": {"organization": "moat test", "commonName": "moat test ca"},
                 "uri": "https://fulcio.test",
-                "certChain": {"certificates": [{"rawBytes": base64(&self.ca_cert)}]},
+                "certChain": {"certificates": [{"rawBytes": wire::base64(&self.ca_cert)}]},
                 "validFor": {"start": "2025-01-01T00:00:00Z"}
             }],
             "ctlogs": [log(&self.ct, "https://ct.test")],
@@ -236,6 +249,20 @@ impl Instance {
     /// A Fulcio-style leaf for `signer`, valid for ten minutes from a minute
     /// before `at`, with an SCT from the CT log.
     pub fn leaf(&self, signer: &SigningKey, san: San<'_>, issuer: &str, at: i64) -> Vec<u8> {
+        self.ci_leaf(signer, san, issuer, at, None)
+    }
+
+    /// [`Instance::leaf`], also carrying Fulcio's Source Repository URI
+    /// extension when `source_repository` is given, as a certificate issued
+    /// to a CI workload does.
+    pub fn ci_leaf(
+        &self,
+        signer: &SigningKey,
+        san: San<'_>,
+        issuer: &str,
+        at: i64,
+        source_repository: Option<&str>,
+    ) -> Vec<u8> {
         let san = match san {
             San::Uri(uri) => tlv(0x86, uri.as_bytes()),
             San::Email(email) => tlv(0x81, email.as_bytes()),
@@ -247,6 +274,13 @@ impl Instance {
             extension(OID_SUBJECT_ALT_NAME, true, seq(&[san])),
             extension(OID_FULCIO_ISSUER, false, tlv(0x0c, issuer.as_bytes())),
         ];
+        if let Some(repository) = source_repository {
+            extensions.push(extension(
+                OID_FULCIO_SOURCE_REPOSITORY,
+                false,
+                tlv(0x0c, repository.as_bytes()),
+            ));
+        }
         let tbs = |extensions: &[Vec<u8>]| {
             seq(&[
                 tlv(0xa0, &integer(2)),
@@ -297,8 +331,8 @@ pub fn hashedrekord_body(artifact: &[u8], signature: &[u8], certificate: &[u8]) 
     format!(
         r#"{{"apiVersion":"0.0.1","kind":"hashedrekord","spec":{{"data":{{"hash":{{"algorithm":"sha256","value":"{}"}}}},"signature":{{"content":"{}","publicKey":{{"content":"{}"}}}}}}}}"#,
         hex(&sha256(artifact)),
-        base64(signature),
-        base64(pem_certificate(certificate).as_bytes()),
+        wire::base64(signature),
+        wire::base64(pem_certificate(certificate).as_bytes()),
     )
     .into_bytes()
 }
@@ -396,10 +430,10 @@ impl Log {
 
     /// A signed checkpoint over the tree, by `key`.
     pub fn checkpoint(key: &SigningKey, tree_size: u64, root: &[u8; 32]) -> String {
-        let note = format!("rekor.test - 1\n{tree_size}\n{}\n", base64(root));
+        let note = format!("rekor.test - 1\n{tree_size}\n{}\n", wire::base64(root));
         let mut signature = sha256(&spki(key))[..4].to_vec();
         signature.extend_from_slice(&sign(key, note.as_bytes()));
-        format!("{note}\n\u{2014} rekor.test {}\n", base64(&signature))
+        format!("{note}\n\u{2014} rekor.test {}\n", wire::base64(&signature))
     }
 
     pub fn evidence(&self, index: u64, integrated_time: i64) -> Evidence {
@@ -408,7 +442,7 @@ impl Log {
         let tree_size = leaves.len() as u64;
         let set_payload = format!(
             r#"{{"body":"{}","integratedTime":{integrated_time},"logID":"{}","logIndex":{}}}"#,
-            base64(self.body(index)),
+            wire::base64(self.body(index)),
             hex(&self.log_id()),
             self.global_index(index),
         );
@@ -426,7 +460,7 @@ impl Log {
         let evidence = self.evidence(index, LOGGED_AT);
         let uuid = hex(&leaf_hash(self.body(index)));
         json!({ uuid: {
-            "body": base64(self.body(index)),
+            "body": wire::base64(self.body(index)),
             "integratedTime": LOGGED_AT,
             "logID": hex(&self.log_id()),
             "logIndex": self.global_index(index),
@@ -438,7 +472,7 @@ impl Log {
                     "rootHash": hex(&evidence.root),
                     "treeSize": evidence.tree_size,
                 },
-                "signedEntryTimestamp": base64(&evidence.set),
+                "signedEntryTimestamp": wire::base64(&evidence.set),
             }
         }})
     }
@@ -448,18 +482,18 @@ impl Log {
         let evidence = self.evidence(index, LOGGED_AT);
         json!({
             "logIndex": self.global_index(index).to_string(),
-            "logId": {"keyId": base64(&self.log_id())},
+            "logId": {"keyId": wire::base64(&self.log_id())},
             "kindVersion": {"kind": "hashedrekord", "version": "0.0.1"},
             "integratedTime": LOGGED_AT.to_string(),
-            "inclusionPromise": {"signedEntryTimestamp": base64(&evidence.set)},
+            "inclusionPromise": {"signedEntryTimestamp": wire::base64(&evidence.set)},
             "inclusionProof": {
                 "logIndex": index.to_string(),
-                "rootHash": base64(&evidence.root),
+                "rootHash": wire::base64(&evidence.root),
                 "treeSize": evidence.tree_size.to_string(),
-                "hashes": evidence.hashes.iter().map(|h| base64(h)).collect::<Vec<_>>(),
+                "hashes": evidence.hashes.iter().map(|h| wire::base64(h)).collect::<Vec<_>>(),
                 "checkpoint": {"envelope": evidence.checkpoint},
             },
-            "canonicalizedBody": base64(self.body(index)),
+            "canonicalizedBody": wire::base64(self.body(index)),
         })
     }
 }
@@ -472,12 +506,12 @@ pub fn bundle(log: &mut Log, artifact: &[u8], signer: &SigningKey, certificate: 
     json!({
         "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
         "verificationMaterial": {
-            "certificate": {"rawBytes": base64(certificate)},
+            "certificate": {"rawBytes": wire::base64(certificate)},
             "tlogEntries": [log.bundle_entry(index)],
         },
         "messageSignature": {
-            "messageDigest": {"algorithm": "SHA2_256", "digest": base64(&sha256(artifact))},
-            "signature": base64(&signature),
+            "messageDigest": {"algorithm": "SHA2_256", "digest": wire::base64(&sha256(artifact))},
+            "signature": wire::base64(&signature),
         }
     })
 }
@@ -491,7 +525,6 @@ pub fn dsse_bundle(
     signer: &SigningKey,
     certificate: &[u8],
 ) -> Value {
-    const PAYLOAD_TYPE: &str = "application/vnd.in-toto+json";
     let statement = json!({
         "_type": "https://in-toto.io/Statement/v1",
         "subject": [{"name": "manifest", "digest": {"sha256": hex(&sha256(artifact))}}],
@@ -499,21 +532,47 @@ pub fn dsse_bundle(
         "predicate": {"approved": false},
     })
     .to_string();
-    let pae = format!(
-        "DSSEv1 {} {PAYLOAD_TYPE} {} {statement}",
-        PAYLOAD_TYPE.len(),
-        statement.len()
-    );
-    let signature = sign(signer, pae.as_bytes());
+    dsse_statement_bundle(
+        log,
+        "application/vnd.in-toto+json",
+        statement.as_bytes(),
+        signer,
+        certificate,
+    )
+}
+
+/// A v0.3 bundle whose content is a DSSE envelope over `payload` of
+/// `payload_type`, signed by `signer` with `certificate` and logged in `log`
+/// as a `dsse` 0.0.1 entry.
+pub fn dsse_statement_bundle(
+    log: &mut Log,
+    payload_type: &str,
+    payload: &[u8],
+    signer: &SigningKey,
+    certificate: &[u8],
+) -> Value {
+    let mut pae = format!(
+        "DSSEv1 {} {payload_type} {} ",
+        payload_type.len(),
+        payload.len()
+    )
+    .into_bytes();
+    pae.extend_from_slice(payload);
+    let signature = sign(signer, &pae);
+    let envelope = json!({
+        "payload": wire::base64(payload),
+        "payloadType": payload_type,
+        "signatures": [{"sig": wire::base64(&signature)}],
+    });
     let body = json!({
         "apiVersion": "0.0.1",
         "kind": "dsse",
         "spec": {
-            "envelopeHash": {"algorithm": "sha256", "value": hex(&sha256(b"unchecked"))},
-            "payloadHash": {"algorithm": "sha256", "value": hex(&sha256(statement.as_bytes()))},
+            "envelopeHash": {"algorithm": "sha256", "value": hex(&sha256(envelope.to_string().as_bytes()))},
+            "payloadHash": {"algorithm": "sha256", "value": hex(&sha256(payload))},
             "signatures": [{
-                "signature": base64(&signature),
-                "verifier": base64(pem_certificate(certificate).as_bytes()),
+                "signature": wire::base64(&signature),
+                "verifier": wire::base64(pem_certificate(certificate).as_bytes()),
             }],
         }
     });
@@ -523,13 +582,9 @@ pub fn dsse_bundle(
     json!({
         "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
         "verificationMaterial": {
-            "certificate": {"rawBytes": base64(certificate)},
+            "certificate": {"rawBytes": wire::base64(certificate)},
             "tlogEntries": [entry],
         },
-        "dsseEnvelope": {
-            "payload": base64(statement.as_bytes()),
-            "payloadType": PAYLOAD_TYPE,
-            "signatures": [{"sig": base64(&signature)}],
-        }
+        "dsseEnvelope": envelope,
     })
 }

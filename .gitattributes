@@ -11,3 +11,7 @@ cli/internal/tui/testdata/*.golden    text eol=lf
 *.rs                                  text eol=lf
 *.toml                                text eol=lf
 Cargo.lock                            text eol=lf
+# Pinned feed snapshot and golden fixtures: their digests and bytes are
+# compared exactly, so no checkout may convert them.
+crates/feed/tests/fixtures/**         -text
+crates/adapters/tests/golden/**       -text

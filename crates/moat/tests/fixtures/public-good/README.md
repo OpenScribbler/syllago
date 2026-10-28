@@ -3,7 +3,7 @@
 A bundle captured from the Sigstore public-good instance and the trusted root
 it verifies under. `src/registry.rs` tests use it to check that verification
 works on real Fulcio, CT and Rekor output, not only on the instance
-`tests/pki` generates.
+`moat::testing::pki` (`src/testing/pki.rs`) generates.
 
 | File | SHA-256 |
 |---|---|

@@ -1,0 +1,32 @@
+{
+  "feed": {
+    "index_sha256": "7d3d2ad15d229365c6e769fd89c613d8e4327131d0b0fd161075ed8f84c8c9a5",
+    "source_commit": "eabd8de632962982e825324d37a9448222106bbd"
+  },
+  "placements": [
+    {
+      "content_name": "hello",
+      "diagnostics": [],
+      "kind": "skill",
+      "layout": "directory_of_files",
+      "path": "~/.agents/skills/hello/",
+      "providers": [
+        "codex"
+      ]
+    },
+    {
+      "content_name": "style",
+      "diagnostics": [],
+      "kind": "rule",
+      "layout": "merged_into_shared_file",
+      "path": "~/.codex/AGENTS.md",
+      "providers": [
+        "codex"
+      ]
+    }
+  ],
+  "provider": "codex",
+  "scope": "user",
+  "tier": "stable",
+  "tool_version": "0.162.1"
+}

@@ -56,6 +56,8 @@ fn respond(request: &Value) -> Value {
     match result {
         Ok(result) => json!({"ok": true, "result": result}),
         Err(Error::Reject(id)) => json!({"ok": false, "error": id, "diagnostics": []}),
+        // No dispatched op resolves install targets yet.
+        Err(Error::Refuse(refusal)) => json!({"ok": false, "error": refusal.id, "diagnostics": []}),
         Err(Error::Nonconformant(reason)) => json!({"ok": true, "result": {
             "conformant": false,
             "reason": reason.id,

@@ -206,7 +206,7 @@ fn rebuild_bundle(entry: &LogEntry, payload: &[u8]) -> Result<Bundle, TrustFailu
 /// tree size: `sigstore-verify` 0.15.1 compares only the root hash, and the
 /// author-key path requires both. A Rekor v2 proof takes its size from the
 /// checkpoint, so it has no separate size to disagree with.
-fn verify_bundle(
+pub(crate) fn verify_bundle(
     artifact: &[u8],
     bundle: &Bundle,
     root: &TrustRoot,
@@ -232,7 +232,10 @@ fn verify_bundle(
 
 /// Requires the verified certificate's SAN URI and issuer to equal
 /// `expected`.
-fn require_identity(result: &VerificationResult, expected: &Identity) -> Result<(), TrustFailure> {
+pub(crate) fn require_identity(
+    result: &VerificationResult,
+    expected: &Identity,
+) -> Result<(), TrustFailure> {
     let found = Identity {
         subject: result
             .identity()

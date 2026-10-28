@@ -5,6 +5,11 @@
 //! nonce is derived from the key and digest, so it must never sign real
 //! content. It exists only under the `testing` feature, which only
 //! dev-dependencies enable; CI checks that within the workspace.
+//!
+//! [`pki`] is a Sigstore instance generated at test time, for tests of every
+//! crate that verifies Sigstore bundles through this one.
+
+pub mod pki;
 
 use ed25519_dalek::Signer as _;
 use p256::elliptic_curve::Field as _;

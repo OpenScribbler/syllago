@@ -1,0 +1,18 @@
+[package]
+name = "feed"
+version = "0.1.0"
+description = "Syllago's capmon feed: verify its build provenance and expose install-target rows per provider"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+acif = { path = "../acif" }
+moat = { path = "../moat" }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+
+[dev-dependencies]
+moat = { path = "../moat", features = ["testing"] }
