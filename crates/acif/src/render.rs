@@ -26,6 +26,9 @@ pub struct RenderedFile {
     /// `/`-separated and relative to the target.
     pub path: String,
     pub bytes: Vec<u8>,
+    /// The body file was read executable, as a skill's script is. No hash
+    /// covers the bit, and only Linux and macOS read or write it.
+    pub executable: bool,
 }
 
 /// A rendering and the diagnostics it emitted.
@@ -63,7 +66,7 @@ pub fn render_skill(body: &Body, entry_file: &str, layout: Layout) -> Result<Ren
                 // LICENSE or README lies outside its body_hash.
                 files
                     .into_iter()
-                    .filter(|(path, _)| path == "SKILL.md")
+                    .filter(|(path, _, _)| path == "SKILL.md")
                     .collect()
             } else {
                 files
@@ -77,7 +80,7 @@ pub fn render_skill(body: &Body, entry_file: &str, layout: Layout) -> Result<Ren
             }
             rendered_files(body, entry_file, "")?
                 .into_iter()
-                .filter(|(path, _)| path.is_empty())
+                .filter(|(path, _, _)| path.is_empty())
                 .collect()
         }
         Layout::MergedIntoSharedFile => {
@@ -90,7 +93,11 @@ pub fn render_skill(body: &Body, entry_file: &str, layout: Layout) -> Result<Ren
         rendering: Rendering::Files(
             files
                 .into_iter()
-                .map(|(path, bytes)| RenderedFile { path, bytes })
+                .map(|(path, bytes, executable)| RenderedFile {
+                    path,
+                    bytes,
+                    executable,
+                })
                 .collect(),
         ),
         diagnostics: Vec::new(),
@@ -132,6 +139,7 @@ pub fn render_rule_for(
             Rendering::Files(vec![RenderedFile {
                 path: String::new(),
                 bytes,
+                executable: false,
             }])
         },
         diagnostics: rendered.diagnostics,

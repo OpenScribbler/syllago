@@ -36,6 +36,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "apply"
+version = "0.1.0"
+dependencies = [
+ "acif",
+ "adapters",
+ "feed",
+ "moat",
+ "serde",
+ "serde_json",
+ "sha2",
+ "unicode-normalization",
+]
+
+[[package]]
 name = "arraydeque"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

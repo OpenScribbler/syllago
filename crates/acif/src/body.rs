@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -48,6 +48,9 @@ pub struct Body {
     /// (`OsStr::as_encoded_bytes`). Only classification, the §7.4 path scan
     /// and collision detection read them.
     not_utf8: Vec<Vec<u8>>,
+    /// Paths of files read with an executable bit set. Only Linux and macOS
+    /// record one; no hash covers it, and only a render carries it.
+    executable: BTreeSet<String>,
 }
 
 impl Body {
@@ -60,6 +63,7 @@ impl Body {
         let mut body = Body {
             files: Vec::new(),
             not_utf8: Vec::new(),
+            executable: BTreeSet::new(),
         };
         read_dir(root, b"", &mut body)?;
         Ok(body)
@@ -74,6 +78,7 @@ impl Body {
         Body {
             files,
             not_utf8: Vec::new(),
+            executable: BTreeSet::new(),
         }
     }
 }
@@ -94,12 +99,28 @@ fn read_dir(dir: &Path, prefix: &[u8], body: &mut Body) -> Result<(), Error> {
             read_dir(&entry.path(), &[&path[..], b"/"].concat(), body)?;
         } else if file_type.is_file() {
             match String::from_utf8(path) {
-                Ok(path) => body.files.push((path, fs::read(entry.path())?)),
+                Ok(path) => {
+                    if is_executable(&entry.metadata()?) {
+                        body.executable.insert(path.clone());
+                    }
+                    body.files.push((path, fs::read(entry.path())?))
+                }
                 Err(error) => body.not_utf8.push(error.into_bytes()),
             }
         }
     }
     Ok(())
+}
+
+#[cfg(unix)]
+fn is_executable(metadata: &fs::Metadata) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    metadata.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_: &fs::Metadata) -> bool {
+    false
 }
 
 /// A hashed body: its `body_hash`, its classification, and the canonical
@@ -274,24 +295,26 @@ pub(crate) fn split_frontmatter(text: &[u8]) -> (Option<&[u8]>, &[u8]) {
 /// with the canonical text of a text file, so a Windows checkout renders
 /// the same bytes, or a binary file's bytes as they are. The entry file is
 /// renamed to `entry_name` and carries its frontmatter. The root sidecar is
-/// left out. The body must pass every check [`hash_body`] makes.
+/// left out. Each file says whether it was read executable. The body must
+/// pass every check [`hash_body`] makes.
 pub(crate) fn rendered_files(
     body: &Body,
     entry_file: &str,
     entry_name: &str,
-) -> Result<Vec<(String, Vec<u8>)>, Error> {
+) -> Result<Vec<(String, Vec<u8>, bool)>, Error> {
     hash_body(body, entry_file)?;
-    let mut files: Vec<(String, Vec<u8>)> = body
+    let mut files: Vec<(String, Vec<u8>, bool)> = body
         .files
         .iter()
         .filter(|(path, _)| path != ROOT_SIDECAR)
         .map(|(path, bytes)| {
+            let executable = body.executable.contains(path);
             if path == entry_file {
-                (entry_name.to_string(), canonical_text(bytes))
+                (entry_name.to_string(), canonical_text(bytes), executable)
             } else if is_text(path, bytes) {
-                (path.nfc().collect(), canonical_text(bytes))
+                (path.nfc().collect(), canonical_text(bytes), executable)
             } else {
-                (path.nfc().collect(), bytes.clone())
+                (path.nfc().collect(), bytes.clone(), executable)
             }
         })
         .collect();
@@ -304,7 +327,7 @@ pub(crate) fn rendered_files(
     // Each file and each directory above it counts, so `Dir/x` beside
     // `dir/y`, or a file `a` beside `A/b`, collides as well.
     let mut folded: Vec<(String, &str)> = Vec::new();
-    for (path, _) in &files {
+    for (path, _, _) in &files {
         for (end, _) in path.match_indices('/').chain([(path.len(), "")]) {
             let spelled = &path[..end];
             folded.push((spelled.to_lowercase(), spelled));
