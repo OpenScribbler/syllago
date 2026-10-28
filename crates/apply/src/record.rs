@@ -97,19 +97,32 @@ pub struct Prior {
 /// a crash included. It is deleted once the run or its rollback finishes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Snapshot {
-    /// The run wrote its record and only deleting the snapshot was left.
+    /// The run wrote its record, so it stands: recovering only deletes the
+    /// snapshot. This flag, written after the record, is the commit point.
     pub committed: bool,
     /// The ownership record before the run, with every original it holds;
-    /// `None` when there was none.
+    /// `None` when there was none. Only syllago writes the record, so
+    /// undoing always puts it back.
     pub record: Option<Prior>,
-    /// Each file the run writes or deletes, with what was there before
-    /// (`None`: nothing, so undoing deletes it).
-    pub files: Vec<(PathBuf, Option<Prior>)>,
+    /// Each file the run writes or deletes.
+    pub files: Vec<Saved>,
     /// Directories the run creates, which undoing removes.
     pub created_dirs: Vec<PathBuf>,
-    /// Existing empty-or-not directories the run may remove, which undoing
-    /// recreates, shallowest first.
+    /// Directories there before the run that it may remove once empty,
+    /// which undoing recreates, shallowest first.
     pub prunable_dirs: Vec<PathBuf>,
+}
+
+/// One file a run changes.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct Saved {
+    pub path: PathBuf,
+    /// What was there before (`None`: nothing, so undoing deletes it).
+    pub prior: Option<Prior>,
+    /// The lowercase hex SHA-256 of what the run writes there (`None`: the
+    /// run deletes it). Undoing touches the path only while it holds the
+    /// prior or this, so an edit made after a crash is never lost.
+    pub planned: Option<String>,
 }
 
 pub(crate) fn sha256(bytes: &[u8]) -> String {

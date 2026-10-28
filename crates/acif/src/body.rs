@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fs;
 use std::path::Path;
 
@@ -50,7 +50,7 @@ pub struct Body {
     not_utf8: Vec<Vec<u8>>,
     /// Paths of files read with an executable bit set. Only Linux and macOS
     /// record one; no hash covers it, and only a render carries it.
-    executable: Vec<String>,
+    executable: BTreeSet<String>,
 }
 
 impl Body {
@@ -63,7 +63,7 @@ impl Body {
         let mut body = Body {
             files: Vec::new(),
             not_utf8: Vec::new(),
-            executable: Vec::new(),
+            executable: BTreeSet::new(),
         };
         read_dir(root, b"", &mut body)?;
         Ok(body)
@@ -78,7 +78,7 @@ impl Body {
         Body {
             files,
             not_utf8: Vec::new(),
-            executable: Vec::new(),
+            executable: BTreeSet::new(),
         }
     }
 }
@@ -101,7 +101,7 @@ fn read_dir(dir: &Path, prefix: &[u8], body: &mut Body) -> Result<(), Error> {
             match String::from_utf8(path) {
                 Ok(path) => {
                     if is_executable(&entry.metadata()?) {
-                        body.executable.push(path.clone());
+                        body.executable.insert(path.clone());
                     }
                     body.files.push((path, fs::read(entry.path())?))
                 }

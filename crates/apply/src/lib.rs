@@ -12,10 +12,12 @@
 //! The engine keeps two files in a state directory the caller chooses: the
 //! ownership record, `ownership.json`, written atomically only once a run's
 //! changes are all made, and the snapshot, `snapshot.json`, which holds
-//! everything a run is about to change, the previous record included. It
-//! outlives a run only when the run crashed or its rollback could not
-//! finish; [`Engine::recover`] then replays it, and every run refuses to
-//! start until it has.
+//! everything a run is about to change, the previous record included, and
+//! is marked committed once the run's record is written. It outlives a run
+//! when the run crashed, when its rollback could not finish, or when only
+//! deleting it failed after the run committed. Every run refuses to start
+//! while it is there; [`Engine::recover`] undoes an uncommitted run from it
+//! and then deletes it.
 
 mod fs;
 mod record;
@@ -32,7 +34,7 @@ use unicode_normalization::UnicodeNormalization;
 
 pub use fs::{Fs, Node, RealFs};
 pub use record::{Entry, Prior, Record};
-use record::{Snapshot, sha256};
+use record::{Saved, Snapshot, sha256};
 
 const RECORD_FILE: &str = "ownership.json";
 const SNAPSHOT_FILE: &str = "snapshot.json";
@@ -231,11 +233,21 @@ pub struct Outcome {
 /// One step of a rollback that failed, to be done by hand, in order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManualStep {
-    /// Write `bytes` to `path`, executable when `executable` is set.
+    /// Write `bytes` to `path`, executable when `executable` is set. The
+    /// bytes are also saved, hex-encoded, in `snapshot`.
     Restore {
         path: PathBuf,
         bytes: Vec<u8>,
         executable: bool,
+        snapshot: PathBuf,
+    },
+    /// `path` was changed after the run stopped, so it was left as it is.
+    /// `original` is what was there before the run (`None`: nothing),
+    /// also saved, hex-encoded, in `snapshot`.
+    Changed {
+        path: PathBuf,
+        original: Option<Vec<u8>>,
+        snapshot: PathBuf,
     },
     /// Delete the file at `path`, which the run created.
     Delete { path: PathBuf },
@@ -248,9 +260,34 @@ pub enum ManualStep {
 impl fmt::Display for ManualStep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ManualStep::Restore { path, .. } => {
-                write!(f, "write the saved bytes back to {}", path.display())
-            }
+            ManualStep::Restore { path, snapshot, .. } => write!(
+                f,
+                "write back the original of {}, saved hex-encoded in {}",
+                path.display(),
+                snapshot.display()
+            ),
+            ManualStep::Changed {
+                path,
+                original: Some(_),
+                snapshot,
+            } => write!(
+                f,
+                "{} was changed after the run stopped and was left as it is; keep a copy of it \
+                 if you want it, write back its original, saved hex-encoded in {}, and run \
+                 recover again",
+                path.display(),
+                snapshot.display()
+            ),
+            ManualStep::Changed {
+                path,
+                original: None,
+                ..
+            } => write!(
+                f,
+                "{} was changed after the run stopped and was left as it is; it did not exist \
+                 before the run, so move it aside and run recover again",
+                path.display()
+            ),
             ManualStep::Delete { path } => write!(f, "delete {}", path.display()),
             ManualStep::RemoveDir { path } => write!(f, "remove the directory {}", path.display()),
             ManualStep::CreateDir { path } => write!(f, "create the directory {}", path.display()),
@@ -286,8 +323,11 @@ pub enum Error {
     InvalidTarget(String),
     /// The ownership record cannot be read.
     RecordMalformed { path: PathBuf, message: String },
-    /// A snapshot from an earlier run is still there.
-    SnapshotPending(PathBuf),
+    /// A snapshot from an earlier run is still there. `committed`: that
+    /// run finished, and only deleting the snapshot failed.
+    SnapshotPending { path: PathBuf, committed: bool },
+    /// The snapshot cannot be read, so it cannot be recovered from.
+    SnapshotMalformed { path: PathBuf, message: String },
     /// Reading `path` failed before anything was changed.
     Io { path: PathBuf, error: io::Error },
     /// A change to `path` failed, and the run was rolled back.
@@ -306,7 +346,8 @@ impl Error {
             Error::CaseCollision { .. } => "syllago.apply.case_collision",
             Error::InvalidTarget(_) => "syllago.apply.invalid_target",
             Error::RecordMalformed { .. } => "syllago.apply.record_malformed",
-            Error::SnapshotPending(_) => "syllago.apply.snapshot_pending",
+            Error::SnapshotPending { .. } => "syllago.apply.snapshot_pending",
+            Error::SnapshotMalformed { .. } => "syllago.apply.snapshot_malformed",
             Error::Io { .. } => "syllago.apply.read_failed",
             Error::Failed {
                 rollback: Rollback::Complete,
@@ -342,22 +383,46 @@ impl fmt::Display for Error {
                 a.display(),
                 b.display()
             ),
-            Error::InvalidTarget(message) => write!(f, "{id}: {message}"),
+            Error::InvalidTarget(message) => write!(
+                f,
+                "{id}: {message}; the item's files cannot be placed as they are, so rename \
+                 the file in the item"
+            ),
             Error::RecordMalformed { path, message } => write!(
                 f,
                 "{id}: the ownership record {} cannot be read ({message}); restore it from a \
                  backup, since remove and drift detection rely on it",
                 path.display()
             ),
-            Error::SnapshotPending(path) => write!(
+            Error::SnapshotPending {
+                path,
+                committed: true,
+            } => write!(
+                f,
+                "{id}: an earlier run finished but could not delete {}; run recover, which \
+                 deletes it and changes nothing else",
+                path.display()
+            ),
+            Error::SnapshotPending {
+                path,
+                committed: false,
+            } => write!(
                 f,
                 "{id}: an earlier run stopped before it finished and left {}; run recover, \
                  which puts back what that run changed, before anything else",
                 path.display()
             ),
+            Error::SnapshotMalformed { path, message } => write!(
+                f,
+                "{id}: the snapshot {} cannot be read ({message}); the ownership record is \
+                 untouched, so inspect the snapshot for any original you need, then move it \
+                 aside",
+                path.display()
+            ),
             Error::Io { path, error } => write!(
                 f,
-                "{id}: reading {}: {error}; nothing was changed",
+                "{id}: reading {}: {error}; nothing was changed, so fix access to it and run \
+                 again",
                 path.display()
             ),
             Error::Failed {
@@ -367,7 +432,10 @@ impl fmt::Display for Error {
             } => {
                 write!(f, "{id}: changing {}: {error}; ", path.display())?;
                 match rollback {
-                    Rollback::Complete => write!(f, "every change was rolled back"),
+                    Rollback::Complete => write!(
+                        f,
+                        "every change was rolled back, so fix the cause and run again"
+                    ),
                     Rollback::Incomplete { snapshot, steps } => {
                         write!(
                             f,
@@ -465,8 +533,13 @@ impl<'a, F: Fs> Engine<'a, F> {
     }
 
     /// Every owned file and contribution that differs from the record,
-    /// with its owner and what is there now, so it can be captured.
+    /// with its owner and what is there now, so it can be captured. An
+    /// owned file that is gone is reported with no current bytes, and a
+    /// contribution is compared with CRLF read as LF. A snapshot left by an
+    /// unfinished run is reported instead, since its half-made changes would
+    /// read as drift.
     pub fn drift(&self) -> Result<Vec<Conflict>, Error> {
+        self.check_snapshot()?;
         let mut drifted = Vec::new();
         for entry in self.record()?.entries {
             let current = match &entry {
@@ -482,11 +555,14 @@ impl<'a, F: Fs> Engine<'a, F> {
                         Ok((_, Node::File { bytes, .. })) => bytes,
                         _ => Vec::new(),
                     };
-                    match shared::find(&text, key).as_slice() {
-                        [block] if record::sha256(&text[block.inner.clone()]) == *sha256 => {
-                            continue;
+                    match shared::scan(&text, key).blocks.as_slice() {
+                        [block] => {
+                            let on_disk = &text[block.inner.clone()];
+                            if record::sha256(&shared::fold(on_disk)) == *sha256 {
+                                continue;
+                            }
+                            Some(on_disk.to_vec())
                         }
-                        [block] => Some(text[block.inner.clone()].to_vec()),
                         _ => None,
                     }
                 }
@@ -508,8 +584,49 @@ impl<'a, F: Fs> Engine<'a, F> {
         Ok(drifted)
     }
 
+    /// Undoes a run that stopped part way, from the snapshot it left: a
+    /// failure whose rollback could not finish, or a crash. The commit
+    /// point is the snapshot's `committed` mark, written after the record:
+    /// a run marked committed stands, and recovering only deletes its
+    /// snapshot; any other run is undone, its record included. A path
+    /// changed since the run stopped is left as it is and reported.
+    /// Recovery can be run again until it is [`Rollback::Complete`]; with
+    /// no snapshot there is nothing to do.
+    pub fn recover(&self) -> Result<Rollback, Error> {
+        Ok(match self.load_snapshot()? {
+            None => Rollback::Complete,
+            Some(snapshot) => self.replay(&snapshot),
+        })
+    }
+
     fn read(&self, path: &Path) -> Result<Node, Error> {
         self.fs.read(path).map_err(read_failed(path))
+    }
+
+    fn load_snapshot(&self) -> Result<Option<Snapshot>, Error> {
+        let path = self.snapshot_path();
+        let malformed = |message: String| Error::SnapshotMalformed {
+            path: path.clone(),
+            message,
+        };
+        match self.read(&path)? {
+            Node::Missing => Ok(None),
+            Node::File { bytes, .. } => serde_json::from_slice(&bytes)
+                .map(Some)
+                .map_err(|e| malformed(e.to_string())),
+            _ => Err(malformed("not a file".into())),
+        }
+    }
+
+    /// Refuses to go on while a snapshot is pending.
+    fn check_snapshot(&self) -> Result<(), Error> {
+        match self.load_snapshot()? {
+            Some(snapshot) => Err(Error::SnapshotPending {
+                path: self.snapshot_path(),
+                committed: snapshot.committed,
+            }),
+            None => Ok(()),
+        }
     }
 
     /// The path a shared file is written at and what is there: the file
@@ -538,10 +655,7 @@ impl<'a, F: Fs> Engine<'a, F> {
     ) -> Result<Plan, Error> {
         // What an unfinished run left would read as conflicts, or be
         // planned over, so it is reported first.
-        let snapshot_path = self.snapshot_path();
-        if self.read(&snapshot_path)? != Node::Missing {
-            return Err(Error::SnapshotPending(snapshot_path));
-        }
+        self.check_snapshot()?;
         let old = self.record()?;
         let mut files: BTreeMap<PathBuf, (&str, &[u8], bool)> = BTreeMap::new();
         let mut contributions: BTreeMap<PathBuf, Vec<Wanted<'_>>> = BTreeMap::new();
@@ -562,13 +676,6 @@ impl<'a, F: Fs> Engine<'a, F> {
                     }
                 }
                 Rendering::Contribution(bytes) => {
-                    if !shared::valid_key(&p.name) {
-                        return Err(Error::InvalidTarget(format!(
-                            "{:?} cannot key a contribution to {}",
-                            p.name,
-                            target.display()
-                        )));
-                    }
                     let list = contributions.entry(target.clone()).or_default();
                     if list.iter().any(|(_, key, _)| *key == p.name) {
                         return Err(Error::Collision {
@@ -598,6 +705,7 @@ impl<'a, F: Fs> Engine<'a, F> {
         let mut planner = Planner {
             engine: self,
             options,
+            owners: owners.iter().map(|o| o.to_string()).collect(),
             next: old.entries.iter().filter(|e| !mine(e)).cloned().collect(),
             changes: Vec::new(),
             conflicts: Vec::new(),
@@ -616,15 +724,21 @@ impl<'a, F: Fs> Engine<'a, F> {
                 shared_paths.insert(path.clone());
             }
         }
-        for (path, file) in &files {
-            if shared_paths.contains(path) {
+        // Two shared paths that are one file through a symlink would each
+        // be merged from the same bytes, and the last write would win.
+        let mut targets: BTreeMap<PathBuf, &PathBuf> = BTreeMap::new();
+        for path in &shared_paths {
+            if let Ok((target, _)) = self.resolve(path)?
+                && let Some(other) = targets.insert(target.clone(), path)
+            {
                 return Err(Error::Collision {
-                    path: path.clone(),
+                    path: other.clone(),
                     key: None,
                 });
             }
-            planner.place_file(&old, path, *file)?;
         }
+        // Files an owner here no longer places go first, so a file renamed
+        // only by case is deleted before its new spelling is written.
         for entry in &old.entries {
             if let Entry::File { path, .. } = entry
                 && mine(entry)
@@ -638,6 +752,15 @@ impl<'a, F: Fs> Engine<'a, F> {
                 }
                 planner.unplace_file(entry)?;
             }
+        }
+        for (path, file) in &files {
+            if shared_paths.contains(path) {
+                return Err(Error::Collision {
+                    path: path.clone(),
+                    key: None,
+                });
+            }
+            planner.place_file(&old, path, *file)?;
         }
         for path in &shared_paths {
             let wanted = contributions.get(path).map_or(&[][..], Vec::as_slice);
@@ -680,20 +803,17 @@ impl<'a, F: Fs> Engine<'a, F> {
     }
 
     /// Snapshots, makes the plan's changes, prunes empty directories the
-    /// record owns and writes the record; on any failure, undoes the run
-    /// from its snapshot.
+    /// record owns, writes the record and marks the snapshot committed; on
+    /// any failure before that mark, undoes the run from its snapshot.
     fn commit(&self, plan: Plan) -> Result<Outcome, Error> {
         if !plan.conflicts.is_empty() {
             return Err(Error::Blocked(plan.conflicts));
         }
+        self.check_snapshot()?;
         let snapshot_path = self.snapshot_path();
-        if self.read(&snapshot_path)? != Node::Missing {
-            return Err(Error::SnapshotPending(snapshot_path));
-        }
-        let record_path = self.record_path();
         let mut snapshot = Snapshot {
             committed: false,
-            record: match self.read(&record_path)? {
+            record: match self.read(&self.record_path())? {
                 Node::File { bytes, .. } => Some(Prior {
                     bytes,
                     executable: false,
@@ -715,7 +835,15 @@ impl<'a, F: Fs> Engine<'a, F> {
                     });
                 }
             };
-            snapshot.files.push((op.path().to_path_buf(), prior));
+            let planned = match op {
+                Op::Write { bytes, .. } => Some(sha256(bytes)),
+                Op::Delete(_) => None,
+            };
+            snapshot.files.push(Saved {
+                path: op.path().to_path_buf(),
+                prior,
+                planned,
+            });
         }
         let mut record = plan.record;
         // Shallowest first; pruning walks them in reverse, so a directory
@@ -732,18 +860,18 @@ impl<'a, F: Fs> Engine<'a, F> {
         prunable.sort_by_key(|dir| dir.components().count());
         snapshot.prunable_dirs = prunable.clone();
 
-        let failed = |path: &Path, error| Error::Failed {
-            path: path.to_path_buf(),
-            error,
-            rollback: Rollback::Complete,
-        };
         if self.read(self.state)? == Node::Missing {
-            self.fs
-                .create_dir(self.state)
-                .map_err(|e| failed(self.state, e))?;
+            self.fs.create_dir(self.state).map_err(|error| Error::Io {
+                path: self.state.to_path_buf(),
+                error,
+            })?;
         }
         self.write_snapshot(&snapshot)
-            .map_err(|e| failed(&snapshot_path, e))?;
+            .map_err(|error| Error::Failed {
+                path: snapshot_path.clone(),
+                error,
+                rollback: Rollback::Complete,
+            })?;
 
         let result = self
             .execute(&plan.mkdirs, &plan.ops, &prunable, &mut record)
@@ -805,12 +933,12 @@ impl<'a, F: Fs> Engine<'a, F> {
                 },
             }
         }
+        // A directory that cannot go now, because it is not empty or is
+        // held open, keeps its entry and is tried again on a later run.
         for dir in prunable.iter().rev() {
             let gone = match self.fs.remove_dir(dir) {
                 Ok(()) => true,
-                Err(e) if e.kind() == io::ErrorKind::NotFound => true,
-                Err(e) if e.kind() == io::ErrorKind::DirectoryNotEmpty => false,
-                Err(e) => return Err((dir.clone(), e)),
+                Err(e) => e.kind() == io::ErrorKind::NotFound,
             };
             if gone {
                 record
@@ -824,38 +952,16 @@ impl<'a, F: Fs> Engine<'a, F> {
         self.fs.write(&path, &json, false).map_err(at(&path))
     }
 
-    /// Undoes a run that stopped part way, from the snapshot it left: a
-    /// failure whose rollback could not finish, or a crash. A run that had
-    /// written its record is kept, and only its snapshot deleted. Recovery
-    /// can be run again until it is [`Rollback::Complete`]; with no
-    /// snapshot there is nothing to do.
-    pub fn recover(&self) -> Result<Rollback, Error> {
-        let path = self.snapshot_path();
-        let bytes = match self.read(&path)? {
-            Node::Missing => return Ok(Rollback::Complete),
-            Node::File { bytes, .. } => bytes,
-            _ => {
-                return Err(Error::RecordMalformed {
-                    path,
-                    message: "the snapshot is not a file".into(),
-                });
-            }
-        };
-        let snapshot: Snapshot =
-            serde_json::from_slice(&bytes).map_err(|e| Error::RecordMalformed {
-                path: path.clone(),
-                message: e.to_string(),
-            })?;
-        Ok(self.replay(&snapshot))
-    }
-
     /// Puts back everything `snapshot` saved, unless the run committed:
     /// pruned directories, then each file, then the created directories,
-    /// then the record. Every step is safe to repeat. A step that fails,
-    /// and whose path is not already as it should be, becomes a manual step
-    /// and the rest still run, so what is left to do by hand is as short as
-    /// it can be; the snapshot is kept until none is left.
+    /// then the record. A file is put back only while it holds what the run
+    /// found or what it wrote; anything else was changed since and is left
+    /// as it is. Every step is safe to repeat. A step that fails, and
+    /// whose path is not already as it should be, becomes a manual step and
+    /// the rest still run, so what is left to do by hand is as short as it
+    /// can be; the snapshot is kept until none is left.
     fn replay(&self, snapshot: &Snapshot) -> Rollback {
+        let saved_in = self.snapshot_path();
         let mut steps = Vec::new();
         if !snapshot.committed {
             for path in &snapshot.prunable_dirs {
@@ -863,8 +969,13 @@ impl<'a, F: Fs> Engine<'a, F> {
                     steps.push(ManualStep::CreateDir { path: path.clone() });
                 }
             }
-            for (path, prior) in &snapshot.files {
-                self.put_back(path, prior, &mut steps);
+            for saved in &snapshot.files {
+                self.undo(saved, &saved_in, &mut steps);
+            }
+            // A write cut off part way leaves its temporary file, which
+            // would keep a directory the run created from going.
+            for saved in &snapshot.files {
+                let _ = self.fs.remove_temps(&saved.path);
             }
             for path in snapshot.created_dirs.iter().rev() {
                 if self.fs.remove_dir(path).is_err()
@@ -873,49 +984,84 @@ impl<'a, F: Fs> Engine<'a, F> {
                     steps.push(ManualStep::RemoveDir { path: path.clone() });
                 }
             }
-            self.put_back(&self.record_path(), &snapshot.record, &mut steps);
+            let record = Saved {
+                path: self.record_path(),
+                prior: snapshot.record.clone(),
+                planned: None,
+            };
+            self.put_back(&record, &saved_in, &mut steps);
+            let _ = self.fs.remove_temps(&record.path);
         }
-        let snapshot_path = self.snapshot_path();
-        if steps.is_empty() && self.fs.remove_file(&snapshot_path).is_ok() {
+        let _ = self.fs.remove_temps(&saved_in);
+        if steps.is_empty() && self.fs.remove_file(&saved_in).is_ok() {
             return Rollback::Complete;
         }
         Rollback::Incomplete {
-            snapshot: snapshot_path,
+            snapshot: saved_in,
             steps,
         }
     }
 
-    /// Writes `prior` back to `path`, or deletes `path` when there was
-    /// nothing.
-    fn put_back(&self, path: &Path, prior: &Option<Prior>, steps: &mut Vec<ManualStep>) {
-        match prior {
-            Some(prior) => {
-                let done = |node: Node| {
-                    node == Node::File {
-                        bytes: prior.bytes.clone(),
-                        executable: prior.executable,
-                    }
-                };
-                if self.fs.write(path, &prior.bytes, prior.executable).is_err()
-                    && !self.fs.read(path).is_ok_and(done)
-                {
-                    steps.push(ManualStep::Restore {
-                        path: path.to_path_buf(),
-                        bytes: prior.bytes.clone(),
-                        executable: prior.executable,
-                    });
-                }
+    /// Undoes the run's change to one file, unless the file has been
+    /// changed since: it holds neither what the run found nor what it
+    /// wrote.
+    fn undo(&self, saved: &Saved, saved_in: &Path, steps: &mut Vec<ManualStep>) {
+        let planned = |node: &Node| match (&saved.planned, node) {
+            (Some(hash), Node::File { bytes, .. }) => sha256(bytes) == *hash,
+            (None, Node::Missing) => true,
+            _ => false,
+        };
+        match self.fs.read(&saved.path) {
+            Ok(node) if is_prior(&saved.prior, &node) => return,
+            Ok(node) if !planned(&node) => {
+                steps.push(ManualStep::Changed {
+                    path: saved.path.clone(),
+                    original: saved.prior.as_ref().map(|p| p.bytes.clone()),
+                    snapshot: saved_in.to_path_buf(),
+                });
+                return;
             }
-            None => {
-                if self.fs.remove_file(path).is_err()
-                    && self.fs.read(path).ok() != Some(Node::Missing)
-                {
-                    steps.push(ManualStep::Delete {
-                        path: path.to_path_buf(),
-                    });
-                }
-            }
+            _ => {}
         }
+        self.put_back(saved, saved_in, steps);
+    }
+
+    /// Writes a file's prior back, or deletes the file when there was
+    /// none.
+    fn put_back(&self, saved: &Saved, saved_in: &Path, steps: &mut Vec<ManualStep>) {
+        let path = &saved.path;
+        let result = match &saved.prior {
+            Some(prior) => self.fs.write(path, &prior.bytes, prior.executable),
+            None => self.fs.remove_file(path),
+        };
+        if result.is_ok()
+            || self
+                .fs
+                .read(path)
+                .is_ok_and(|node| is_prior(&saved.prior, &node))
+        {
+            return;
+        }
+        steps.push(match &saved.prior {
+            Some(prior) => ManualStep::Restore {
+                path: path.clone(),
+                bytes: prior.bytes.clone(),
+                executable: prior.executable,
+                snapshot: saved_in.to_path_buf(),
+            },
+            None => ManualStep::Delete { path: path.clone() },
+        });
+    }
+}
+
+/// Whether `node` is exactly what `prior` says was there.
+fn is_prior(prior: &Option<Prior>, node: &Node) -> bool {
+    match (prior, node) {
+        (Some(prior), Node::File { bytes, executable }) => {
+            *bytes == prior.bytes && *executable == prior.executable
+        }
+        (None, Node::Missing) => true,
+        _ => false,
     }
 }
 
@@ -973,6 +1119,9 @@ fn join(target: &Path, relative: &str) -> Result<PathBuf, Error> {
 struct Planner<'e, 'a, F: Fs> {
     engine: &'e Engine<'a, F>,
     options: Options,
+    /// The items in this run. One of them may take over what another one
+    /// no longer places.
+    owners: BTreeSet<String>,
     /// The record after the run: every entry no owner here holds, and what
     /// the run places.
     next: Vec<Entry>,
@@ -1000,6 +1149,12 @@ impl<F: Fs> Planner<'_, '_, F> {
             owner: owner.to_string(),
             action,
         });
+    }
+
+    /// Whether an entry `recorded` for may be taken over by `owner`: it is
+    /// `owner`'s, or another item's in this run that no longer places it.
+    fn mine(&self, recorded: &str, owner: &str) -> bool {
+        recorded == owner || self.owners.contains(recorded)
     }
 
     /// Plans the directories missing above `path`. `false`, with a
@@ -1032,36 +1187,55 @@ impl<F: Fs> Planner<'_, '_, F> {
         path: &Path,
         (owner, bytes, executable): (&str, &[u8], bool),
     ) -> Result<(), Error> {
-        let recorded = old.entries.iter().find(|e| e.path() == path);
-        let mut prior = None;
-        match recorded {
-            Some(
-                recorded @ Entry::File {
-                    owner: o, prior: p, ..
-                },
-            ) if o == owner => {
-                prior = p.clone();
-                let node = self.engine.read(path)?;
-                if let Node::File { bytes: on_disk, .. } = &node
-                    && edited(recorded, &node)
-                    && !self.options.overwrite
-                {
-                    let reason = Reason::Drifted {
-                        owner: owner.into(),
-                    };
-                    self.conflict(path, None, reason, Some(on_disk));
+        if let Some(entry) = old.entries.iter().find(|e| e.path() == path) {
+            match entry {
+                Entry::File {
+                    owner: o, prior, ..
+                } if self.mine(o, owner) => {
+                    let node = self.engine.read(path)?;
+                    if let Node::File { bytes: on_disk, .. } = &node
+                        && edited(entry, &node)
+                        && !self.options.overwrite
+                    {
+                        let reason = Reason::Drifted { owner: o.clone() };
+                        self.conflict(path, None, reason, Some(on_disk));
+                        return Ok(());
+                    }
+                    return self.write_file(path, owner, bytes, executable, node, prior.clone());
+                }
+                _ => {
+                    let owner = entry.owner().unwrap_or("another apply").to_string();
+                    self.conflict(path, None, Reason::OwnedBy { owner }, None);
                     return Ok(());
                 }
-                return self.write_file(path, owner, bytes, executable, node, prior);
             }
-            Some(entry) => {
-                let owner = entry.owner().unwrap_or("another apply").to_string();
-                self.conflict(path, None, Reason::OwnedBy { owner }, None);
+        }
+        let mut node = self.engine.read(path)?;
+        let mut prior = None;
+        // The same name under another spelling that the record owns. On a
+        // case-insensitive filesystem both spellings read the same file,
+        // which the stale pass deletes before this write, so the path is
+        // as good as empty and the original it replaced carries over.
+        let alias = old.entries.iter().find(|e| {
+            matches!(e, Entry::File { .. }) && e.path() != path && folded(e.path()) == folded(path)
+        });
+        if let Some(Entry::File {
+            path: spelled,
+            owner: o,
+            prior: p,
+            ..
+        }) = alias
+        {
+            if !self.mine(o, owner) {
+                let reason = Reason::OwnedBy { owner: o.clone() };
+                self.conflict(path, None, reason, None);
                 return Ok(());
             }
-            None => {}
+            if node != Node::Missing && node == self.engine.read(spelled)? {
+                node = Node::Missing;
+                prior = p.clone();
+            }
         }
-        let node = self.engine.read(path)?;
         if let Node::File {
             bytes: on_disk,
             executable: x,
@@ -1220,62 +1394,72 @@ impl<F: Fs> Planner<'_, '_, F> {
                     owner,
                     key: k,
                     sha256,
-                    separator,
-                } if p == path && k == key => Some((owner, sha256, separator)),
+                    ..
+                } if p == path && k == key => Some((owner, sha256)),
                 _ => None,
             })
         };
+        // Each block's separator by key, kept current as blocks come and
+        // go, since removing a block can change the one after it.
+        let mut separators: BTreeMap<String, String> = old
+            .entries
+            .iter()
+            .filter_map(|e| match e {
+                Entry::Contribution {
+                    path: p,
+                    key,
+                    separator,
+                    ..
+                } if p == path => Some((key.clone(), separator.clone())),
+                _ => None,
+            })
+            .collect();
         let overwrite = self.options.overwrite;
         let mut text = before.clone();
 
         for &(owner, key, bytes) in wanted {
             let inner = shared::inner_bytes(bytes);
-            let blocks = shared::find(&text, key);
+            let scan = shared::scan(&text, key);
             let record = recorded(key);
-            if let Some((o, _, _)) = record
-                && o != owner
+            if let Some((o, _)) = record
+                && !self.mine(o, owner)
             {
                 let reason = Reason::OwnedBy { owner: o.clone() };
                 self.conflict(path, Some(key), reason, None);
                 continue;
             }
-            let block_text = |b: &shared::Block| text[b.inner.clone()].to_vec();
-            let (action, separator) = match (record, blocks.as_slice()) {
-                (Some((_, sha, separator)), [block]) => {
-                    let on_disk = block_text(block);
+            let raw = |b: &shared::Block| text[b.inner.clone()].to_vec();
+            let action = match (record, scan.blocks.as_slice()) {
+                (Some((_, sha)), [block]) => {
+                    let on_disk = shared::fold(&text[block.inner.clone()]);
                     if record::sha256(&on_disk) != *sha && !overwrite {
                         let reason = Reason::Drifted {
                             owner: owner.into(),
                         };
-                        self.conflict(path, Some(key), reason, Some(&on_disk));
+                        self.conflict(path, Some(key), reason, Some(&raw(block)));
                         continue;
                     }
-                    let action = if on_disk == inner {
+                    if on_disk == inner {
                         Action::Unchanged
                     } else {
+                        text = shared::replace(&text, block, key, &inner);
                         Action::Update
-                    };
-                    text = shared::replace(&text, block, &inner);
-                    (action, separator.clone())
+                    }
                 }
-                // The markers are gone or damaged: a hand edit.
-                (Some(_), []) if !overwrite => {
-                    let reason = Reason::Drifted {
-                        owner: owner.into(),
-                    };
-                    self.conflict(path, Some(key), reason, None);
-                    continue;
-                }
-                (Some(_), []) => {
+                // Gone without a trace: already removed (install-targets
+                // §10), so it goes back in, disclosed.
+                (Some(_), []) if !scan.damaged || overwrite => {
                     self.not_found(path, key, owner);
                     let (appended, separator) = shared::append(&text, key, &inner);
                     text = appended;
-                    (Action::Create, separator)
+                    separators.insert(key.to_string(), separator);
+                    Action::Create
                 }
                 (None, []) => {
                     let (appended, separator) = shared::append(&text, key, &inner);
                     text = appended;
-                    (Action::Create, separator)
+                    separators.insert(key.to_string(), separator);
+                    Action::Create
                 }
                 (record, blocks) => {
                     if !overwrite {
@@ -1285,17 +1469,18 @@ impl<F: Fs> Planner<'_, '_, F> {
                             },
                             None => Reason::Unowned,
                         };
-                        let current = (blocks.len() == 1).then(|| block_text(&blocks[0]));
+                        let current = (blocks.len() == 1).then(|| raw(&blocks[0]));
                         self.conflict(path, Some(key), reason, current.as_deref());
                         continue;
                     }
                     // Every block carrying the key goes, and one is written.
                     for block in blocks.iter().rev() {
-                        text = shared::remove(&text, block, "");
+                        text = cut(&text, block, "", &mut separators);
                     }
                     let (appended, separator) = shared::append(&text, key, &inner);
                     text = appended;
-                    (Action::Update, separator)
+                    separators.insert(key.to_string(), separator);
+                    Action::Update
                 }
             };
             self.change(path, Some(key), owner, action);
@@ -1304,53 +1489,61 @@ impl<F: Fs> Planner<'_, '_, F> {
                 owner: owner.to_string(),
                 key: key.to_string(),
                 sha256: sha256(&inner),
-                separator,
+                separator: String::new(),
             });
         }
 
-        for entry in stale {
+        for &entry in stale {
             let Entry::Contribution {
-                owner,
-                key,
-                sha256,
-                separator,
-                ..
+                owner, key, sha256, ..
             } = entry
             else {
                 continue;
             };
-            let blocks = shared::find(&text, key);
-            match blocks.as_slice() {
-                [] if overwrite => self.not_found(path, key, owner),
-                [] => {
-                    let reason = Reason::Drifted {
-                        owner: owner.clone(),
-                    };
-                    self.conflict(path, Some(key), reason, None);
-                }
-                [block] if record::sha256(&text[block.inner.clone()]) == *sha256 || overwrite => {
-                    text = shared::remove(&text, block, separator);
+            let scan = shared::scan(&text, key);
+            let drifted = Reason::Drifted {
+                owner: owner.clone(),
+            };
+            match scan.blocks.as_slice() {
+                // Gone without a trace: already removed (install-targets
+                // §10); the entry goes, disclosed.
+                [] if !scan.damaged || overwrite => self.not_found(path, key, owner),
+                [block]
+                    if record::sha256(&shared::fold(&text[block.inner.clone()])) == *sha256
+                        || overwrite =>
+                {
+                    let separator = separators.get(key).cloned().unwrap_or_default();
+                    text = cut(&text, block, &separator, &mut separators);
                     self.change(path, Some(key), owner, Action::Delete);
                 }
-                _ if overwrite => {
+                blocks if overwrite => {
                     for block in blocks.iter().rev() {
-                        text = shared::remove(&text, block, "");
+                        text = cut(&text, block, "", &mut separators);
                     }
                     self.change(path, Some(key), owner, Action::Delete);
                 }
                 [block] => {
                     let on_disk = text[block.inner.clone()].to_vec();
-                    let reason = Reason::Drifted {
-                        owner: owner.clone(),
-                    };
-                    self.conflict(path, Some(key), reason, Some(&on_disk));
+                    self.conflict(path, Some(key), drifted, Some(&on_disk));
+                    self.next.push(entry.clone());
                 }
                 _ => {
-                    let reason = Reason::Drifted {
-                        owner: owner.clone(),
-                    };
-                    self.conflict(path, Some(key), reason, None);
+                    self.conflict(path, Some(key), drifted, None);
+                    self.next.push(entry.clone());
                 }
+            }
+        }
+        for entry in &mut self.next {
+            if let Entry::Contribution {
+                path: p,
+                key,
+                separator,
+                ..
+            } = entry
+                && p == path
+                && let Some(current) = separators.get(key.as_str())
+            {
+                separator.clone_from(current);
             }
         }
 
@@ -1398,4 +1591,23 @@ impl<F: Fs> Planner<'_, '_, F> {
                 .collect(),
         });
     }
+}
+
+/// `text` without `block`, with the separator of the block after it, if
+/// one of ours follows, brought up to date in `separators`.
+fn cut(
+    text: &[u8],
+    block: &shared::Block,
+    separator: &str,
+    separators: &mut BTreeMap<String, String>,
+) -> Vec<u8> {
+    let (out, handover) = shared::remove(text, block, separator);
+    if let Some((encoded, separator)) = handover
+        && let Some((_, current)) = separators
+            .iter_mut()
+            .find(|(key, _)| shared::encode_key(key) == encoded)
+    {
+        *current = separator;
+    }
+    out
 }

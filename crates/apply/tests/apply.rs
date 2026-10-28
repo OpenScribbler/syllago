@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime};
 
-use acif::{Body, Kind, Os, Roots, Scope, ingest_body};
-use adapters::{ADAPTERS, Adapter, CLAUDE_CODE, CODEX, Source, feed_providers, place};
+use acif::{Anchor, Body, Kind, Layout, Os, Rendering, Roots, Scope, Target, ingest_body};
+use adapters::{ADAPTERS, Adapter, CLAUDE_CODE, CODEX, Placement, Source, feed_providers, place};
 use apply::{
     Action, Engine, Entry, Error, Fs, ManualStep, Node, Options, Placed, RealFs, Reason, Rollback,
 };
@@ -231,6 +231,32 @@ impl Fs for FailingFs {
         self.tick()?;
         RealFs.remove_dir(path)
     }
+    fn remove_temps(&self, path: &Path) -> io::Result<()> {
+        self.tick()?;
+        RealFs.remove_temps(path)
+    }
+}
+
+/// How many changes `run` makes on a filesystem that never fails.
+fn changes_made(run: impl FnOnce(&FailingFs)) -> usize {
+    let fs = FailingFs::new(usize::MAX, false);
+    run(&fs);
+    fs.count.get()
+}
+
+/// The marker lines around `inner` for `key`.
+fn block(key: &str, inner: &[u8]) -> Vec<u8> {
+    use sha2::{Digest, Sha256};
+    let nonce: String = Sha256::digest(inner)[..8]
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    [
+        format!("<!-- syllago:begin {key} {nonce} -->\n").as_bytes(),
+        inner,
+        format!("<!-- syllago:end {key} {nonce} -->\n").as_bytes(),
+    ]
+    .concat()
 }
 
 #[test]
@@ -278,12 +304,7 @@ fn apply_to_both_providers_then_remove_restores_the_tree() {
         assert_eq!(dir.read(".agents/skills/hello/SKILL.md"), skill);
         assert_eq!(dir.read(".claude/rules/style.md"), RULE);
         let agents = dir.read(".codex/AGENTS.md");
-        let block = [
-            &b"<!-- syllago:begin style -->\n"[..],
-            RULE,
-            b"<!-- syllago:end style -->\n",
-        ]
-        .concat();
+        let block = block("style", RULE);
         let expected = if with_agents_md {
             [&b"# My rules\n\nBe brief.\n\n"[..], &block].concat()
         } else {
@@ -310,19 +331,46 @@ fn apply_to_both_providers_then_remove_restores_the_tree() {
 }
 
 /// Fails each change of an apply, then each change of a remove, in turn:
-/// every failure leaves the home directory and the record as they were.
+/// every failure leaves the home directory and the record as they were. A
+/// failure that does not stop the run, pruning a directory or deleting
+/// the snapshot at the end, leaves the run's result and nothing pending
+/// once recovered.
 #[test]
 fn failure_at_each_step_rolls_back_byte_for_byte() {
-    let mut steps = 0;
-    for fail_at in 0.. {
+    let setup = |dir: &TempDir| user_files(dir, true);
+    let total = changes_made(|fs| {
+        let dir = TempDir::new("count-apply");
+        setup(&dir);
+        let home = dir.home();
+        engine(fs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .unwrap();
+    });
+    let applied_clean = {
+        let dir = TempDir::new("clean-apply");
+        setup(&dir);
+        let home = dir.home();
+        engine(&RealFs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .unwrap();
+        tree(&dir)
+    };
+    // Snapshot, directories, files, the shared file, the record and the
+    // commit mark.
+    assert!(total > 10, "{total}");
+    for fail_at in 0..total {
         let dir = TempDir::new("fail-apply");
-        user_files(&dir, true);
+        setup(&dir);
         let before = tree(&dir);
         let home = dir.home();
         let fs = FailingFs::new(fail_at, false);
         let engine = engine(&fs, &dir, &home);
         match engine.apply(&both(&dir), Options::default()) {
-            Ok(_) => break,
+            Ok(_) => {
+                engine.recover().unwrap();
+                assert_eq!(tree(&dir), applied_clean, "step {fail_at}");
+                assert!(engine.drift().unwrap().is_empty(), "step {fail_at}");
+            }
             Err(Error::Failed { rollback, .. }) => {
                 assert_eq!(rollback, Rollback::Complete, "step {fail_at}");
                 // Files the apply created are gone again, the shared file
@@ -333,15 +381,24 @@ fn failure_at_each_step_rolls_back_byte_for_byte() {
             }
             Err(e) => panic!("step {fail_at}: {e}"),
         }
-        steps += 1;
     }
-    // Snapshot, directories, files, the shared file and the record.
-    assert!(steps > 10, "{steps}");
 
-    let mut steps = 0;
-    for fail_at in 0.. {
+    let owners = ["skill-hello", "rule-style"];
+    let total = changes_made(|fs| {
+        let dir = TempDir::new("count-remove");
+        setup(&dir);
+        let home = dir.home();
+        engine(&RealFs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .unwrap();
+        engine(fs, &dir, &home)
+            .remove(&owners, Options::default())
+            .unwrap();
+    });
+    assert!(total > 10, "{total}");
+    for fail_at in 0..total {
         let dir = TempDir::new("fail-remove");
-        user_files(&dir, true);
+        setup(&dir);
         let home = dir.home();
         engine(&RealFs, &dir, &home)
             .apply(&both(&dir), Options::default())
@@ -350,8 +407,24 @@ fn failure_at_each_step_rolls_back_byte_for_byte() {
         let record = std::fs::read(engine(&RealFs, &dir, &home).record_path()).unwrap();
         let fs = FailingFs::new(fail_at, false);
         let engine = engine(&fs, &dir, &home);
-        match engine.remove(&["skill-hello", "rule-style"], Options::default()) {
-            Ok(_) => break,
+        match engine.remove(&owners, Options::default()) {
+            Ok(_) => {
+                engine.recover().unwrap();
+                assert!(engine.drift().unwrap().is_empty(), "step {fail_at}");
+                // A directory that could not be pruned stays owned.
+                let record = engine.record().unwrap();
+                for (path, node) in tree(&dir) {
+                    if node.is_none() && !applied.contains_key(&path) {
+                        panic!("step {fail_at}: {path} appeared");
+                    }
+                }
+                assert!(
+                    record
+                        .entries
+                        .iter()
+                        .all(|e| matches!(e, Entry::Dir { .. }))
+                );
+            }
             Err(Error::Failed { rollback, .. }) => {
                 assert_eq!(rollback, Rollback::Complete, "step {fail_at}");
                 assert_eq!(tree(&dir), applied, "step {fail_at}");
@@ -359,9 +432,7 @@ fn failure_at_each_step_rolls_back_byte_for_byte() {
             }
             Err(e) => panic!("step {fail_at}: {e}"),
         }
-        steps += 1;
     }
-    assert!(steps > 10, "{steps}");
 }
 
 /// A rollback whose own changes fail keeps the snapshot and names each step
@@ -396,7 +467,7 @@ fn rollback_that_cannot_finish_keeps_the_snapshot_and_says_what_to_restore() {
         )
         .apply(&both(&dir), Options::default());
         assert!(
-            matches!(next, Err(Error::SnapshotPending(_))),
+            matches!(next, Err(Error::SnapshotPending { .. })),
             "step {fail_at}"
         );
 
@@ -406,7 +477,9 @@ fn rollback_that_cannot_finish_keeps_the_snapshot_and_says_what_to_restore() {
                     path,
                     bytes,
                     executable,
+                    ..
                 } => RealFs.write(&path, &bytes, executable).unwrap(),
+                ManualStep::Changed { path, .. } => panic!("{} changed", path.display()),
                 ManualStep::Delete { path } => std::fs::remove_file(path).unwrap(),
                 ManualStep::RemoveDir { path } => std::fs::remove_dir(path).unwrap(),
                 ManualStep::CreateDir { path } => std::fs::create_dir(path).unwrap(),
@@ -645,9 +718,9 @@ fn two_items_writing_one_file_collide() {
     assert!(matches!(result, Err(Error::Collision { .. })));
 }
 
-/// A contribution the user deleted by hand stops remove as drift; with
-/// `--overwrite` it is already removed: remove discloses it, touches
-/// nothing else in the file, and forgets it.
+/// A contribution the user deleted by hand is already removed
+/// (install-targets §10): remove discloses it, touches nothing else in the
+/// file, and forgets it, without `--overwrite`.
 #[test]
 fn remove_discloses_a_contribution_that_is_gone() {
     let dir = TempDir::new("gone");
@@ -660,13 +733,7 @@ fn remove_discloses_a_contribution_that_is_gone() {
         .apply(&placements(&[&CODEX], &[style]), Options::default())
         .unwrap();
     dir.write(".codex/AGENTS.md", b"rewritten by hand\n");
-    assert!(matches!(
-        engine.remove(&["rule-style"], Options::default()),
-        Err(Error::Blocked(_))
-    ));
-    let outcome = engine
-        .remove(&["rule-style"], Options { overwrite: true })
-        .unwrap();
+    let outcome = engine.remove(&["rule-style"], Options::default()).unwrap();
     assert_eq!(
         outcome.diagnostics[0].id,
         "acif.install.contribution_not_found"
@@ -782,7 +849,7 @@ fn a_damaged_marker_is_drift() {
     let placed = both(&dir);
     engine.apply(&placed, Options::default()).unwrap();
     let agents = String::from_utf8(dir.read(".codex/AGENTS.md")).unwrap();
-    let damaged = agents.replace("<!-- syllago:end style -->", "<!-- end of style -->");
+    let damaged = agents.replace("<!-- syllago:end style ", "<!-- end of style ");
     dir.write(".codex/AGENTS.md", damaged.as_bytes());
 
     assert_eq!(engine.drift().unwrap().len(), 1);
@@ -909,7 +976,7 @@ fn recover_after_a_crash_at_any_step() {
             let engine = engine(&RealFs, &dir, &home);
             if dir.state().join("snapshot.json").exists() {
                 let next = engine.apply(&both(&dir), overwrite);
-                let Err(pending @ Error::SnapshotPending(_)) = next else {
+                let Err(pending @ Error::SnapshotPending { .. }) = next else {
                     panic!("step {fail_at}: ran over a pending snapshot");
                 };
                 assert!(pending.to_string().contains("recover"));
@@ -989,7 +1056,7 @@ fn a_symlinked_shared_file_is_written_through() {
             .is_symlink()
     );
     let target = String::from_utf8(dir.read("dotfiles/AGENTS.md")).unwrap();
-    assert!(target.starts_with("# Mine\n\n<!-- syllago:begin style -->\n"));
+    assert!(target.starts_with("# Mine\n\n<!-- syllago:begin style "));
     assert!(engine.drift().unwrap().is_empty());
     engine.remove(&["rule-style"], Options::default()).unwrap();
     assert_eq!(tree(&dir), before);
@@ -1033,4 +1100,397 @@ fn a_dangling_or_directory_symlink_for_a_shared_file_is_refused() {
         Reason::Symlink { target: Some(_) }
     ));
     assert!(conflicts[0].to_string().contains("not a regular file"));
+}
+
+/// A rule item under `dir` named `name`, whose body is `text`.
+fn rule_body(dir: &TempDir, name: &str, text: &str) -> Body {
+    let root = dir.0.join("items").join(name);
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("rule.md"), text).unwrap();
+    Body::read(&root).unwrap()
+}
+
+/// A crash leaves a snapshot; the user then edits a file the run was
+/// going to change. Recover keeps the edit and names the file, and once
+/// the user puts the original back it finishes.
+#[test]
+fn recover_keeps_an_edit_made_after_the_crash() {
+    let dir = TempDir::new("edit-after-crash");
+    user_files(&dir, true);
+    let before = tree(&dir);
+    let home = dir.home();
+    // The first change after the snapshot fails, and so does everything
+    // after it, as if the process died there.
+    let fs = FailingFs::new(1, true);
+    assert!(
+        engine(&fs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .is_err()
+    );
+    dir.write(".codex/AGENTS.md", b"my post-crash edit\n");
+
+    let engine = engine(&RealFs, &dir, &home);
+    let Rollback::Incomplete { steps, .. } = engine.recover().unwrap() else {
+        panic!("recover overwrote an edit");
+    };
+    assert_eq!(dir.read(".codex/AGENTS.md"), b"my post-crash edit\n");
+    let [ManualStep::Changed { path, original, .. }] = steps.as_slice() else {
+        panic!("{steps:?}");
+    };
+    assert_eq!(*path, home.join(".codex/AGENTS.md"));
+    assert_eq!(original.as_deref(), Some(&b"# My rules\n\nBe brief."[..]));
+    assert!(steps[0].to_string().contains("run recover again"));
+
+    dir.write(".codex/AGENTS.md", b"# My rules\n\nBe brief.");
+    assert_eq!(engine.recover().unwrap(), Rollback::Complete);
+    assert_eq!(tree(&dir), before);
+}
+
+/// A crash in the middle of a write leaves its temporary file in a
+/// directory the run created; recover still removes the directory.
+#[test]
+fn recover_removes_a_temporary_file_a_crash_left() {
+    let mut reached = 0;
+    for fail_at in 1.. {
+        let dir = TempDir::new("temp-left");
+        let before = tree(&dir);
+        let home = dir.home();
+        let fs = FailingFs::new(fail_at, true);
+        if engine(&fs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .is_ok()
+        {
+            break;
+        }
+        let skill = home.join(".claude/skills/hello");
+        if skill.is_dir() {
+            reached += 1;
+            std::fs::write(skill.join(".SKILL.md.syllago-999-1.tmp"), b"half").unwrap();
+        }
+        let engine = engine(&RealFs, &dir, &home);
+        assert_eq!(
+            engine.recover().unwrap(),
+            Rollback::Complete,
+            "step {fail_at}"
+        );
+        assert_eq!(tree(&dir), before, "step {fail_at}");
+    }
+    assert!(reached > 0);
+}
+
+/// [`RealFs`] on a case-insensitive filesystem, as macOS and Windows have
+/// by default: every name under the home directory is lowercased.
+struct FoldingFs(PathBuf);
+
+impl FoldingFs {
+    fn map(&self, path: &Path) -> PathBuf {
+        match path.strip_prefix(&self.0) {
+            Ok(rest) => self.0.join(rest.to_str().unwrap().to_lowercase()),
+            Err(_) => path.to_path_buf(),
+        }
+    }
+}
+
+impl Fs for FoldingFs {
+    fn read(&self, path: &Path) -> io::Result<Node> {
+        RealFs.read(&self.map(path))
+    }
+    fn write(&self, path: &Path, bytes: &[u8], executable: bool) -> io::Result<()> {
+        RealFs.write(&self.map(path), bytes, executable)
+    }
+    fn remove_file(&self, path: &Path) -> io::Result<()> {
+        RealFs.remove_file(&self.map(path))
+    }
+    fn create_dir(&self, path: &Path) -> io::Result<()> {
+        RealFs.create_dir(&self.map(path))
+    }
+    fn remove_dir(&self, path: &Path) -> io::Result<()> {
+        RealFs.remove_dir(&self.map(path))
+    }
+    fn remove_temps(&self, path: &Path) -> io::Result<()> {
+        RealFs.remove_temps(&self.map(path))
+    }
+}
+
+/// Renaming an item's content name only by case, on a case-insensitive
+/// filesystem, keeps its file: the old spelling goes first, then the new
+/// one is written, and the record owns the new one.
+#[test]
+fn renaming_only_by_case_keeps_the_file_on_a_case_insensitive_filesystem() {
+    let dir = TempDir::new("case-rename");
+    let home = dir.home();
+    let fs = FoldingFs(home.clone());
+    let engine = engine(&fs, &dir, &home);
+    let rule = Body::read(&golden_item("style")).unwrap();
+    let as_named = |name| {
+        placements(
+            &[&CLAUDE_CODE],
+            &[("rule-style", name, Kind::Rule, &rule, "style.md")],
+        )
+    };
+    engine
+        .apply(&as_named("Style"), Options::default())
+        .unwrap();
+    engine
+        .apply(&as_named("style"), Options::default())
+        .unwrap();
+    assert_eq!(dir.read(".claude/rules/style.md"), RULE);
+    let record = engine.record().unwrap();
+    let files: Vec<_> = record
+        .entries
+        .iter()
+        .filter_map(|e| match e {
+            Entry::File { path, prior, .. } => Some((path.clone(), prior.clone())),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(files, [(home.join(".claude/rules/style.md"), None)]);
+    assert!(engine.drift().unwrap().is_empty());
+    engine.remove(&["rule-style"], Options::default()).unwrap();
+    assert!(!home.join(".claude/rules/style.md").exists());
+}
+
+/// Any content name works as a key, and a rule that quotes marker lines,
+/// its own key's included, is still one block.
+#[test]
+fn any_rule_round_trips_through_a_shared_file() {
+    let dir = TempDir::new("markers");
+    user_files(&dir, true);
+    let before = tree(&dir);
+    let home = dir.home();
+    let engine = engine(&RealFs, &dir, &home);
+    let quoting = rule_body(
+        &dir,
+        "quoting",
+        "Write markers like this:\n\n```\n<!-- syllago:end style -->\n\
+         <!-- syllago:end style 0123456789abcdef -->\n```\n",
+    );
+    let plain = Body::read(&golden_item("style")).unwrap();
+    let placed = placements(
+        &[&CODEX],
+        &[
+            ("rule-style", "style", Kind::Rule, &quoting, "rule.md"),
+            (
+                "rule-strict",
+                "style--strict>",
+                Kind::Rule,
+                &plain,
+                "style.md",
+            ),
+        ],
+    );
+    engine.apply(&placed, Options::default()).unwrap();
+    assert!(engine.drift().unwrap().is_empty());
+    let again = engine.apply(&placed, Options::default()).unwrap();
+    assert!(again.changes.iter().all(|c| c.action == Action::Unchanged));
+    engine
+        .remove(&["rule-style", "rule-strict"], Options::default())
+        .unwrap();
+    assert_eq!(tree(&dir), before);
+}
+
+/// A block deleted by hand loses no edit: re-apply puts it back, and
+/// says so.
+#[test]
+fn reapply_puts_back_a_contribution_that_is_gone() {
+    let dir = TempDir::new("gone-reapply");
+    user_files(&dir, true);
+    let home = dir.home();
+    let engine = engine(&RealFs, &dir, &home);
+    let rule = Body::read(&golden_item("style")).unwrap();
+    let placed = placements(
+        &[&CODEX],
+        &[("rule-style", "style", Kind::Rule, &rule, "style.md")],
+    );
+    engine.apply(&placed, Options::default()).unwrap();
+    let applied = dir.read(".codex/AGENTS.md");
+    dir.write(".codex/AGENTS.md", b"# My rules\n\nBe brief.");
+    assert_eq!(engine.drift().unwrap().len(), 1);
+    let outcome = engine.apply(&placed, Options::default()).unwrap();
+    assert_eq!(
+        outcome.diagnostics[0].id,
+        "acif.install.contribution_not_found"
+    );
+    assert_eq!(dir.read(".codex/AGENTS.md"), applied);
+}
+
+/// A CRLF shared file gets a CRLF block, and an editor that normalizes the
+/// whole file's line endings has not edited the block.
+#[test]
+fn line_ending_normalization_is_not_an_edit() {
+    let dir = TempDir::new("crlf");
+    dir.write(".codex/AGENTS.md", b"# Mine\r\n\r\nBe brief.\r\n");
+    let home = dir.home();
+    let engine = engine(&RealFs, &dir, &home);
+    let rule = Body::read(&golden_item("style")).unwrap();
+    let placed = placements(
+        &[&CODEX],
+        &[("rule-style", "style", Kind::Rule, &rule, "style.md")],
+    );
+    engine.apply(&placed, Options::default()).unwrap();
+    let agents = dir.read(".codex/AGENTS.md");
+    assert!(!agents.windows(2).any(|w| w[1] == b'\n' && w[0] != b'\r'));
+
+    for normalized in [
+        String::from_utf8(agents.clone())
+            .unwrap()
+            .replace("\r\n", "\n"),
+        String::from_utf8(agents).unwrap(),
+    ] {
+        let lf_block_in_crlf = normalized.replace("\r\n", "\n").replace('\n', "\r\n");
+        for text in [normalized.clone(), lf_block_in_crlf] {
+            dir.write(".codex/AGENTS.md", text.as_bytes());
+            assert!(engine.drift().unwrap().is_empty());
+            let again = engine.apply(&placed, Options::default()).unwrap();
+            assert_eq!(again.changes[0].action, Action::Unchanged);
+        }
+    }
+    engine.remove(&["rule-style"], Options::default()).unwrap();
+    assert_eq!(dir.read(".codex/AGENTS.md"), b"# Mine\r\n\r\nBe brief.\r\n");
+}
+
+/// A snapshot left after a run that finished says so, and recover only
+/// deletes it; drift detection reports it first.
+#[test]
+fn a_snapshot_left_after_success_is_reported_as_such() {
+    let total = changes_made(|fs| {
+        let dir = TempDir::new("count-leftover");
+        let home = dir.home();
+        engine(fs, &dir, &home)
+            .apply(&both(&dir), Options::default())
+            .unwrap();
+    });
+    let dir = TempDir::new("leftover");
+    let home = dir.home();
+    let fs = FailingFs::new(total - 1, false);
+    let outcome = engine(&fs, &dir, &home)
+        .apply(&both(&dir), Options::default())
+        .unwrap();
+    assert!(outcome.leftover_snapshot.is_some());
+    let applied = tree(&dir);
+    let engine = engine(&RealFs, &dir, &home);
+    let Err(pending) = engine.apply(&both(&dir), Options::default()) else {
+        panic!("ran over a snapshot");
+    };
+    assert!(matches!(
+        pending,
+        Error::SnapshotPending {
+            committed: true,
+            ..
+        }
+    ));
+    assert!(pending.to_string().contains("finished"));
+    assert!(matches!(engine.drift(), Err(Error::SnapshotPending { .. })));
+    assert_eq!(engine.recover().unwrap(), Rollback::Complete);
+    assert_eq!(tree(&dir), applied);
+    assert!(engine.drift().unwrap().is_empty());
+}
+
+#[test]
+fn an_unreadable_snapshot_is_named_as_the_snapshot() {
+    let dir = TempDir::new("bad-snapshot");
+    let home = dir.home();
+    let engine = engine(&RealFs, &dir, &home);
+    std::fs::write(engine.snapshot_path(), b"{").unwrap();
+    for error in [
+        engine.recover().unwrap_err(),
+        engine.apply(&both(&dir), Options::default()).unwrap_err(),
+    ] {
+        assert!(matches!(error, Error::SnapshotMalformed { .. }));
+        assert!(error.to_string().contains("ownership record is untouched"));
+    }
+}
+
+/// An item in the run takes over a file another item in the same run no
+/// longer places.
+#[test]
+fn an_item_takes_over_a_file_another_item_in_the_run_dropped() {
+    let dir = TempDir::new("handover");
+    let home = dir.home();
+    let engine = engine(&RealFs, &dir, &home);
+    let rule = Body::read(&golden_item("style")).unwrap();
+    engine
+        .apply(
+            &placements(
+                &[&CLAUDE_CODE],
+                &[("a", "style", Kind::Rule, &rule, "style.md")],
+            ),
+            Options::default(),
+        )
+        .unwrap();
+    let both = placements(
+        &[&CLAUDE_CODE],
+        &[
+            ("a", "other", Kind::Rule, &rule, "style.md"),
+            ("b", "style", Kind::Rule, &rule, "style.md"),
+        ],
+    );
+    engine.apply(&both, Options::default()).unwrap();
+    let owner_of = |name: &str| {
+        engine
+            .record()
+            .unwrap()
+            .entries
+            .into_iter()
+            .find_map(|e| match e {
+                Entry::File { path, owner, .. } if path.ends_with(name) => Some(owner),
+                _ => None,
+            })
+    };
+    assert_eq!(owner_of("style.md").as_deref(), Some("b"));
+    assert_eq!(owner_of("other.md").as_deref(), Some("a"));
+}
+
+/// Two shared paths that are one file through a symlink are refused
+/// rather than merged apart.
+#[cfg(unix)]
+#[test]
+fn two_shared_paths_through_one_symlink_collide() {
+    let dir = TempDir::new("one-target");
+    let home = dir.home();
+    dir.write("a/AGENTS.md", b"# Mine\n");
+    std::fs::create_dir_all(home.join("b")).unwrap();
+    std::os::unix::fs::symlink(home.join("a/AGENTS.md"), home.join("b/AGENTS.md")).unwrap();
+    let shared = |owner: &str, path: &str| Placed {
+        owner: owner.into(),
+        name: owner.into(),
+        placement: Placement {
+            target: Target {
+                scope: Scope::User,
+                anchor: Anchor::Home,
+                path: path.into(),
+                layout: Layout::MergedIntoSharedFile,
+                superseded: false,
+            },
+            providers: vec!["codex"],
+            rendering: Rendering::Contribution(b"x\n".to_vec()),
+            diagnostics: Vec::new(),
+        },
+    };
+    let placed = [
+        shared("one", "~/a/AGENTS.md"),
+        shared("two", "~/b/AGENTS.md"),
+    ];
+    let result = engine(&RealFs, &dir, &home).apply(&placed, Options::default());
+    assert!(matches!(result, Err(Error::Collision { .. })));
+    assert_eq!(dir.read("a/AGENTS.md"), b"# Mine\n");
+}
+
+#[test]
+fn a_state_directory_that_cannot_be_made_changes_nothing() {
+    let dir = TempDir::new("no-state");
+    let home = dir.home();
+    let state: &Path = Box::leak(dir.0.join("missing/state").into_boxed_path());
+    let roots = Roots {
+        home: &home,
+        appdata: None,
+        project: None,
+    };
+    let before = tree(&dir);
+    let result = Engine::new(&RealFs, roots, state).apply(&both(&dir), Options::default());
+    let Err(error @ Error::Io { .. }) = result else {
+        panic!("{result:?}");
+    };
+    assert!(error.to_string().contains("nothing was changed"));
+    assert_eq!(tree(&dir), before);
 }
