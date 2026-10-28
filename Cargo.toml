@@ -3,6 +3,7 @@ members = [
     "crates/acif",
     "crates/acif-conformance",
     "crates/adapters",
+    "crates/apply",
     "crates/feed",
     "crates/library",
     "crates/moat",
