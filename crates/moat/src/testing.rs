@@ -3,8 +3,8 @@
 //! signs as a FIDO authenticator would, with the reference's defaults:
 //! application `ssh:` and counter 1. It is not constant-time and its ECDSA
 //! nonce is derived from the key and digest, so it must never sign real
-//! content. It exists only under the `testing` feature, which only this
-//! crate's dev-dependency enables; CI checks that within the workspace.
+//! content. It exists only under the `testing` feature, which only
+//! dev-dependencies enable; CI checks that within the workspace.
 
 use ed25519_dalek::Signer as _;
 use p256::elliptic_curve::Field as _;

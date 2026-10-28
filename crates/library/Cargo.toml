@@ -1,0 +1,19 @@
+[package]
+name = "library"
+version = "0.1.0"
+description = "Syllago's Library and sync: signed loadout manifests and their sequence records"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+moat = { path = "../moat" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+
+[dev-dependencies]
+acif = { path = "../acif" }
+moat = { path = "../moat", features = ["testing"] }

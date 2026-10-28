@@ -177,3 +177,30 @@ fn rotated_key_is_not_allowed_by_the_previous_list() {
     );
     assert_eq!(result.unwrap_err(), Refusal::SignerNotAllowed);
 }
+
+/// A signature over a MOAT item or list-change message never verifies
+/// through the generic verifier, even where `verify_item` and
+/// `verify_list_change` accept it.
+#[test]
+fn verify_message_refuses_moat_messages() {
+    let doc = common::vectors();
+    for id in ["TV-AK-01", "TV-AK-05"] {
+        let v = doc["author_key"]["vectors"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["id"] == id)
+            .unwrap();
+        assert_eq!(v["expected"], "ok", "{id}");
+        let list = match v["kind"].as_str().unwrap() {
+            "item" => common::list(&doc, v["list"].as_str().unwrap()),
+            _ => common::list(&doc, v["previous_list"].as_str().unwrap()),
+        };
+        let result = moat::verify_message(
+            v["message"].as_str().unwrap().as_bytes(),
+            v["signature"].as_str().unwrap(),
+            list,
+        );
+        assert_eq!(result.unwrap_err(), Refusal::SignatureInvalid, "{id}");
+    }
+}

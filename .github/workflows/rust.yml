@@ -71,6 +71,13 @@ jobs:
           MOAT_DIR: moat
         run: python scripts/moat-vectors.py | diff -u crates/moat/tests/vectors/moat-vectors.json -
 
+      # The loadout vectors are signed with MOAT's reference signer and must
+      # be exactly what the generator emits.
+      - name: Loadout vector drift
+        env:
+          MOAT_DIR: moat
+        run: python scripts/loadout-vectors.py | diff -u crates/library/tests/vectors/loadout-vectors.json -
+
       - name: Install rustfmt and clippy
         run: rustup component add rustfmt clippy
 
@@ -81,9 +88,10 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       # moat's testing feature holds a signer that must never sign real
-      # content. Only moat's own dev-dependency may enable it, so it must not
-      # be among moat's resolved features once dev-dependencies are left out,
-      # whether a default feature or another crate's dependency turns it on.
+      # content. Only dev-dependencies may enable it (moat's own and the
+      # library crate's), so it must not be among moat's resolved features
+      # once dev-dependencies are left out, whether a default feature or
+      # another crate's normal dependency turns it on.
       - name: moat testing feature stays out of non-dev builds
         run: |
           tree=$(cargo tree --workspace --locked -e no-dev --format '{p} features=[{f}]' --prefix none)
