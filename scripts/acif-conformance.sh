@@ -3,10 +3,11 @@
 #
 # Usage: ACIF_DIR=<agent-content-interchange-format checkout> scripts/acif-conformance.sh
 #
-# The first run claims the core, skill and rule scopes; the second runs
-# TV-L3-e (the attestation input digest) on its own. The script exits non-zero
-# unless the runner terminated normally both times, the core, skill and rule
-# scopes each pass, and TV-L3-e passes. An env-blocked vector (the runner could
+# The first run claims the core, skill and rule scopes; the next two run
+# TV-L2-g (frontmatter to publisher_section) and TV-L3-e (the attestation
+# input digest) on their own. The script exits non-zero unless the runner
+# terminated normally each time, the core, skill and rule scopes each pass,
+# and TV-L2-g and TV-L3-e pass. An env-blocked vector (the runner could
 # not build its fixture on this filesystem) fails the run unless the
 # allowlist below names it for this OS.
 set -euo pipefail
@@ -33,10 +34,13 @@ runner() {
 
 scopes_exit=0
 runner --report "$reports/scopes.json" --scope core --scope skill --scope rule || scopes_exit=$?
+l2g_exit=0
+runner --report "$reports/l2g.json" --only TV-L2-g || l2g_exit=$?
 l3e_exit=0
 runner --report "$reports/l3e.json" --only TV-L3-e || l3e_exit=$?
 
-"$PYTHON" - "$reports/scopes.json" "$scopes_exit" "$reports/l3e.json" "$l3e_exit" <<'EOF'
+"$PYTHON" - "$reports/scopes.json" "$scopes_exit" "$reports/l2g.json" "$l2g_exit" \
+  "$reports/l3e.json" "$l3e_exit" <<'EOF'
 import json, sys
 
 # Vector IDs allowed to be env-blocked, keyed by sys.platform (linux, darwin,
@@ -90,7 +94,7 @@ def load(path, exit_code):
 
 
 scopes = load(sys.argv[1], int(sys.argv[2]))
-l3e = load(sys.argv[3], int(sys.argv[4]))
+singles = {"TV-L2-g": load(sys.argv[3], int(sys.argv[4])), "TV-L3-e": load(sys.argv[5], int(sys.argv[6]))}
 for row in scopes["vectors"]:
     if row["status"] in {"fail", "harness-error", "unsupported"}:
         fail(f"{row['id']} [{row['status']}] {row.get('message', '')}")
@@ -109,9 +113,11 @@ for scope in ("core", "skill", "rule"):
     if info["status"] != "pass" and not tolerated:
         blocking = ", ".join(f"{b['id']} [{b['status']}]" for b in info["blocking"])
         fail(f"scope {scope} is {info['status']}" + (f": {blocking}" if blocking else ""))
-l3e_status = next((row["status"] for row in l3e["vectors"] if row["id"] == "TV-L3-e"), "missing")
-print(f"TV-L3-e: {l3e_status}")
-if l3e_status != "pass":
-    fail(f"TV-L3-e is {l3e_status}")
+for vector_id, report in singles.items():
+    row = next((row for row in report["vectors"] if row["id"] == vector_id), None)
+    status = row["status"] if row else "missing"
+    print(f"{vector_id}: {status}")
+    if status != "pass":
+        fail(f"{vector_id} is {status}" + (f": {row.get('message', '')}" if row else ""))
 sys.exit(1 if failed else 0)
 EOF
