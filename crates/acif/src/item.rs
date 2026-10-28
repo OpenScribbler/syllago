@@ -217,6 +217,34 @@ mod tests {
         );
     }
 
+    // The forbidden names are checked in the sections, not among the
+    // record's own keys (core §5.2).
+    #[test]
+    fn record_level_forbidden_name_is_not_checked() {
+        let record = serde_json::json!({
+            "publisher_section": {"kind": "skill", "display_name": "Demo"},
+            "resolved_version": "1.0.0",
+        });
+        assert!(ingest_sidecar(Some(Kind::Skill), record.as_object().unwrap()).is_ok());
+    }
+
+    // A plain sidecar is the `publisher_section`, so a forbidden name as a
+    // direct member of its kind block rejects (core §5.2).
+    #[test]
+    fn sidecar_kind_block_forbidden_name_rejects() {
+        let sidecar = serde_json::json!({
+            "kind": "skill",
+            "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "display_name": "Demo",
+            "skill": {"resolved_version": "1.0.0"},
+        });
+        rejects_with(
+            ingest_sidecar(Some(Kind::Skill), sidecar.as_object().unwrap()),
+            "acif.envelope.forbidden_field",
+            Some("resolved_version"),
+        );
+    }
+
     // A null-valued forbidden key is absent, so it does not reject (publisher
     // §5.6 step 3).
     #[test]
