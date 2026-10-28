@@ -1,5 +1,12 @@
 [workspace]
-members = ["crates/acif", "crates/acif-conformance", "crates/library", "crates/moat"]
+members = [
+    "crates/acif",
+    "crates/acif-conformance",
+    "crates/adapters",
+    "crates/feed",
+    "crates/library",
+    "crates/moat",
+]
 resolver = "3"
 
 [workspace.package]

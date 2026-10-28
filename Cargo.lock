@@ -26,6 +26,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "adapters"
+version = "0.1.0"
+dependencies = [
+ "acif",
+ "feed",
+ "moat",
+ "serde_json",
+]
+
+[[package]]
 name = "arraydeque"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -329,6 +339,16 @@ dependencies = [
  "sec1",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "feed"
+version = "0.1.0"
+dependencies = [
+ "acif",
+ "moat",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

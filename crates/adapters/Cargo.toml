@@ -1,0 +1,17 @@
+[package]
+name = "adapters"
+version = "0.1.0"
+description = "Syllago's provider adapters: tier, cross-reads and placement from the capmon feed"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+acif = { path = "../acif" }
+feed = { path = "../feed" }
+
+[dev-dependencies]
+moat = { path = "../moat" }
+serde_json = "1.0.154"

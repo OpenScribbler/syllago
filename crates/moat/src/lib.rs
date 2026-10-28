@@ -19,6 +19,9 @@
 //! The Sigstore side ([`verify_manifest`], [`verify_registry_attestation`],
 //! [`verify_dual_attested`]) reports a [`TrustFailure`] carrying a MOAT Trust
 //! State. Rekor is reached only through the caller's [`RekorLog`].
+//! [`verify_attestation`] checks a build-provenance attestation (a DSSE
+//! in-toto bundle) through the same Sigstore core, for an artifact outside
+//! MOAT such as syllago's capability feed.
 //!
 //! The crate reads bytes and returns facts. Apart from signing through
 //! `ssh-keygen`, which takes the message as a temporary file, it does no
@@ -26,6 +29,7 @@
 //! prompts; trust on first use and the lockfile belong to its caller.
 
 mod allowed_signers;
+mod attestation;
 mod crypto_provider;
 mod dual;
 mod registry;
@@ -43,6 +47,7 @@ use std::fmt;
 use sha2::{Digest, Sha256};
 
 pub use allowed_signers::{AllowedSigners, ListDigest, canonical_text};
+pub use attestation::{Attested, verify_attestation};
 pub use dual::{DualAttested, ManifestEntry, verify_dual_attested};
 pub use registry::{RegistrySigningProfile, verify_manifest, verify_registry_attestation};
 pub use rekor::{LogEntry, RekorError, RekorLog, rekord_body};

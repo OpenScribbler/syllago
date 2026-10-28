@@ -269,6 +269,44 @@ pub(crate) fn split_frontmatter(text: &[u8]) -> (Option<&[u8]>, &[u8]) {
     (None, text)
 }
 
+/// The files a render emits for `body`, sorted by path: each NFC path
+/// with the canonical text of a text file, so a Windows checkout renders
+/// the same bytes, or a binary file's bytes as they are. The entry file is
+/// renamed to `entry_name` and carries its frontmatter. The root sidecar is
+/// left out. The body must pass every check [`hash_body`] makes.
+pub(crate) fn rendered_files(
+    body: &Body,
+    entry_file: &str,
+    entry_name: &str,
+) -> Result<Vec<(String, Vec<u8>)>, Error> {
+    hash_body(body, entry_file)?;
+    let mut files: Vec<(String, Vec<u8>)> = body
+        .files
+        .iter()
+        .filter(|(path, _)| path != ROOT_SIDECAR)
+        .map(|(path, bytes)| {
+            if path == entry_file {
+                (entry_name.to_string(), canonical_text(bytes))
+            } else if is_text(path, bytes) {
+                (path.nfc().collect(), canonical_text(bytes))
+            } else {
+                (path.nfc().collect(), bytes.clone())
+            }
+        })
+        .collect();
+    files.sort_by(|a, b| a.0.cmp(&b.0));
+    if files.windows(2).any(|pair| pair[0].0 == pair[1].0) {
+        return Err(Error::Reject("acif.body.path_collision"));
+    }
+    Ok(files)
+}
+
+/// Whether the body carries a root sidecar, whose values would have to be
+/// projected into the rendered frontmatter.
+pub(crate) fn has_root_sidecar(body: &Body) -> bool {
+    body.files.iter().any(|(path, _)| path == ROOT_SIDECAR)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -19,9 +19,10 @@ sigstore-merkle = { version = "=0.15.1", default-features = false }
 sigstore-verify = { version = "=0.15.1", default-features = false }
 
 [features]
-# The emulated security-key signer in `moat::testing`. Only dev-dependencies
-# may enable it (this crate's own and the library crate's); CI fails if it is
-# enabled once dev-dependencies are left out.
+# The emulated security-key signer and test Sigstore instance in
+# `moat::testing`. Only dev-dependencies may enable it (this crate's own and
+# the library and feed crates'); CI fails if it is enabled once
+# dev-dependencies are left out.
 testing = []
 
 [dev-dependencies]

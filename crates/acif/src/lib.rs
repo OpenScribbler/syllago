@@ -3,9 +3,10 @@
 //!
 //! This crate implements the ACIF core, skill and rule specifications far
 //! enough to pass their conformance vectors, plus the attestation input
-//! digest of the registry specification. It reads bytes and JSON values; it
-//! knows nothing about any provider's filesystem layout, git, signing or the
-//! network.
+//! digest of the registry specification, the install-targets resolution of
+//! entry-point rows, and rendering a skill or rule for a resolved target. It
+//! reads bytes and JSON values; it holds no provider's rows, which a caller
+//! supplies, and knows nothing about git, signing or the network.
 //!
 //! Items, sections and canonical records are JSON objects
 //! ([`serde_json::Map`]), because that is the shape the specifications define
@@ -16,10 +17,12 @@ mod body;
 mod envelope;
 mod frontmatter;
 mod hash;
+mod install;
 mod item;
 mod jcs;
 mod pack;
 mod registry;
+mod render;
 
 use std::fmt;
 
@@ -32,10 +35,14 @@ pub use activation::{
 pub use body::{Body, Classification};
 pub use envelope::{Install, RequiresEvaluation, evaluate_requires};
 pub use hash::{Hash, attestation_input_digest};
+pub use install::{
+    Anchor, EntryPoint, InstallResolution, Layout, Os, Roots, Scope, Target, resolve,
+};
 pub use item::{Item, ingest_body, ingest_rule_activation_source, ingest_sidecar};
 pub use jcs::{canonical_json, metadata_hash};
 pub use pack::{PACK_NAMESPACE, PackResolution, derive_pack_id, resolve_pack};
 pub use registry::validate_registry_record;
+pub use render::{RenderOutput, RenderedFile, Rendering, render_rule_for, render_skill};
 
 /// An ACIF content type (core §5.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -106,6 +113,9 @@ pub enum Error {
     Reject(&'static str),
     /// The input is non-conformant. The diagnostic names the verdict reason.
     Nonconformant(Diagnostic),
+    /// An install is refused with a spec-minted identifier and its
+    /// parameters, such as `acif.install.scope_unavailable`.
+    Refuse(Diagnostic),
     /// The input is malformed in a way no spec identifier covers.
     Malformed(String),
     /// The input asks for something this crate does not implement.
@@ -119,6 +129,7 @@ impl fmt::Display for Error {
         match self {
             Error::Reject(id) => write!(f, "rejected: {id}"),
             Error::Nonconformant(diagnostic) => write!(f, "non-conformant: {}", diagnostic.id),
+            Error::Refuse(diagnostic) => write!(f, "refused: {}", diagnostic.id),
             Error::Malformed(message) => write!(f, "malformed: {message}"),
             Error::Unsupported(message) => write!(f, "unsupported: {message}"),
             Error::Io(error) => write!(f, "i/o error: {error}"),
