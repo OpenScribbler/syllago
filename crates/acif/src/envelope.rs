@@ -74,7 +74,8 @@ pub fn evaluate_requires(
 }
 
 /// Rejects a reserved version-inheritance field at the top level of `section`
-/// (core §5.2).
+/// (core §5.2). A section's kind block is checked by passing it here too; a
+/// key of the same name nested deeper is extension data.
 pub(crate) fn check_forbidden_fields(section: &Map<String, Value>) -> Result<(), Error> {
     match FORBIDDEN_FIELDS
         .iter()
@@ -144,9 +145,12 @@ pub(crate) fn check_requires(block: &Map<String, Value>) -> Result<(), Error> {
     }
 }
 
-/// A UUID version 4 in its 36-character hyphenated form ([RFC9562]).
+/// A UUID version 4 in its 36-character hyphenated form ([RFC9562]) with
+/// lowercase hex digits. Lowercase-only is ACIF's own restriction (core
+/// §5.1): `id` is compared and hashed byte for byte.
 fn is_uuid_v4(value: &str) -> bool {
     value.len() == 36
+        && !value.bytes().any(|byte| byte.is_ascii_uppercase())
         && Uuid::try_parse(value)
             .is_ok_and(|uuid| uuid.get_version_num() == 4 && uuid.get_variant() == Variant::RFC4122)
 }

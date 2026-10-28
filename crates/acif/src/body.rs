@@ -50,7 +50,9 @@ pub struct Body {
 }
 
 impl Body {
-    /// Reads the body under `root`. A symlink anywhere beneath `root` is
+    /// Reads the body under `root`. A path component with a version-control
+    /// name is excluded whatever its file type, so a symlink under `.git` is
+    /// skipped (core §7.4 step 1). Any other symlink beneath `root` is
     /// rejected with `acif.body.symlink` and never followed. `root` itself is
     /// resolved as given, so a symlinked item directory reads its target.
     pub fn read(root: &Path) -> Result<Body, Error> {
@@ -470,6 +472,26 @@ mod tests {
             reject_at(&Body::read(&dir.0).unwrap(), "rule\u{fffd}.md"),
             "acif.body.path_not_utf8"
         );
+    }
+
+    // Step 1 excludes a version-control name whatever its file type, before
+    // step 2 checks for symlinks: a `.git` file (a worktree or submodule
+    // pointer), a `.svn` symlink, and a symlink under `.hg` are all skipped.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn vcs_names_are_excluded_whatever_their_file_type() {
+        let dir = TempDir::with_files("vcs", &[b"SKILL.md", b"helper.md", b".git", b"sub/x.md"]);
+        fs::create_dir(dir.0.join(".hg")).unwrap();
+        std::os::unix::fs::symlink("../helper.md", dir.0.join(".hg/link")).unwrap();
+        std::os::unix::fs::symlink("../helper.md", dir.0.join("sub/.svn")).unwrap();
+        let mut paths: Vec<_> = Body::read(&dir.0)
+            .unwrap()
+            .files
+            .into_iter()
+            .map(|(path, _)| path)
+            .collect();
+        paths.sort();
+        assert_eq!(paths, ["SKILL.md", "helper.md", "sub/x.md"]);
     }
 
     // A symlink rejects as the tree is read (§7.4 step 2), whichever of the
