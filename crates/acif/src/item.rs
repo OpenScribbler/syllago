@@ -40,8 +40,8 @@ impl Item {
 
 /// Ingests an item from its body. `entry_file` is the body-relative POSIX
 /// path of the entry file, whose frontmatter is the item's
-/// `publisher_section`. Keys outside the envelope go into the block of the
-/// kind the frontmatter declares, else of `kind`.
+/// `publisher_section`. Keys outside the envelope go into the block of
+/// `kind`, and a frontmatter `kind` naming another kind rejects.
 pub fn ingest_body(kind: Kind, body: &Body, entry_file: &str) -> Result<Item, Error> {
     let hashed = hash_body(body, entry_file)?;
     let (block, prose) = split_frontmatter(&hashed.entry_text);
@@ -127,7 +127,7 @@ fn canonicalize(
     // The forbidden fields are checked at the section's top level and as
     // direct members of its kind block (core §5.2), before `kind` itself
     // (publisher §5.6 steps 4 and 5). The kind block is the declared kind's
-    // when that kind is valid, else the caller's, as frontmatter places it.
+    // when that kind is valid, else the caller's.
     check_forbidden_fields(section)?;
     let block_kind = section
         .get("kind")
@@ -337,17 +337,17 @@ mod tests {
         assert!(!section.contains_key("license"));
     }
 
-    // A declared kind wins over the caller's, so the extension keys belong
-    // to the declared kind's block.
+    // The entry file fixes a body's kind: a frontmatter `kind` naming
+    // another rejects rather than taking over (publisher §5.6 step 5).
     #[test]
-    fn declared_kind_owns_extension_keys() {
+    fn declared_kind_other_than_entry_file_rejects() {
         let body = Body::from_files(&[(
             "SKILL.md",
             b"---\nkind: rule\nactivation: {mode: manual}\n---\nRule prose\n",
         )]);
-        let item = ingest_body(Kind::Skill, &body, "SKILL.md").unwrap();
-        assert_eq!(item.kind, Kind::Rule);
-        assert_eq!(item.canonical["rule"]["activation"]["mode"], "manual");
-        assert!(!item.canonical.contains_key("skill"));
+        assert!(matches!(
+            ingest_body(Kind::Skill, &body, "SKILL.md"),
+            Err(Error::Reject("acif.publisher.frontmatter_kind_mismatch"))
+        ));
     }
 }

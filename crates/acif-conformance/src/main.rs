@@ -42,10 +42,10 @@ fn respond(request: &Value) -> Value {
             "implementation": "acif (Rust)",
             "version": env!("CARGO_PKG_VERSION"),
             "adapter_protocol": 2,
-            // Only TV-L3-e of the registry scope is implemented, but the
-            // runner skips a vector outside every claimed scope, even under
-            // --only.
-            "scopes": ["core", "skill", "rule", "registry"],
+            // Only TV-L2-g of the publisher scope and TV-L3-e of the
+            // registry scope are implemented, but the runner skips a vector
+            // outside every claimed scope, even under --only.
+            "scopes": ["core", "skill", "rule", "publisher", "registry"],
         }});
     }
     let result = match (request["op"].as_str(), request["input"].as_object()) {
@@ -189,7 +189,6 @@ fn item_result(item: Item) -> Value {
     let mut result = json!({
         "conformant": true,
         "canonical": item.canonical,
-        "publisher_section": item.publisher_section,
         "diagnostics": [],
     });
     if let Some(body_hash) = &item.body_hash {
@@ -202,6 +201,7 @@ fn item_result(item: Item) -> Value {
         result["installable"] = Value::from(install == Install::Proceed);
     }
     if let Some(section) = &item.publisher_section {
+        result["publisher_section"] = Value::Object(section.clone());
         result["metadata_hash"] = Value::from(item.metadata_hash().map(|hash| hash.value));
         result["canonical_bytes"] = Value::from(canonical_json(&Value::Object(section.clone())));
     }
