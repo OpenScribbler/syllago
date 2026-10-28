@@ -1,11 +1,13 @@
 //! Verify MOAT Author-Key Profile signatures (moat-spec.md §Author-Key
 //! Profile) over ACIF content items.
 //!
-//! An Author Key signs two kinds of message: the item message, over an
+//! An Author Key signs two kinds of MOAT message: the item message, over an
 //! item's Content Hash, and the list-change message, over a change to a
 //! source's allowed-signers list. [`verify_item`] and
 //! [`verify_list_change`] check them with the accept and reject behavior of
-//! MOAT's reference implementation, `reference/moat_author_key.py`. As in
+//! MOAT's reference implementation, `reference/moat_author_key.py`.
+//! [`verify_message`] checks any other message an Author Key signs under the
+//! same scheme, such as syllago's loadout message. As in
 //! the reference, Ed25519 verification is strict, so a signature by a
 //! small-order key, or with a small-order R, is refused, and an armored
 //! signature longer than 16 KiB is refused before it is parsed.
@@ -40,7 +42,7 @@ use std::fmt;
 
 use sha2::{Digest, Sha256};
 
-pub use allowed_signers::{AllowedSigners, ListDigest};
+pub use allowed_signers::{AllowedSigners, ListDigest, canonical_text};
 pub use dual::{DualAttested, ManifestEntry, verify_dual_attested};
 pub use registry::{RegistrySigningProfile, verify_manifest, verify_registry_attestation};
 pub use rekor::{LogEntry, RekorError, RekorLog, rekord_body};
@@ -285,9 +287,22 @@ pub fn verify_item(
     signature: &str,
     list: &[u8],
 ) -> Result<VerifiedSigner, Refusal> {
+    verify_message(&item_message(content_hash), signature, list)
+}
+
+/// Verifies an Author-Key signature over a message of a kind outside MOAT's
+/// profile. The message must open with its own separator line, distinct
+/// from MOAT's `moat-author-item-v1` and `moat-allowed-signers-change-v1`,
+/// so a signature over it never verifies as a MOAT item or list change. It
+/// is accepted only when `list` is well formed, `signature` verifies over
+/// `message`, and the signing key is in `list`.
+pub fn verify_message(
+    message: &[u8],
+    signature: &str,
+    list: &[u8],
+) -> Result<VerifiedSigner, Refusal> {
     let allowed = AllowedSigners::parse(list)?;
-    let signer =
-        sshsig::verify(signature, &item_message(content_hash)).ok_or(Refusal::SignatureInvalid)?;
+    let signer = sshsig::verify(signature, message).ok_or(Refusal::SignatureInvalid)?;
     if !allowed.contains(&signer.fingerprint) {
         return Err(Refusal::SignerNotAllowed);
     }

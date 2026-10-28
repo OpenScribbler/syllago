@@ -71,6 +71,13 @@ jobs:
           MOAT_DIR: moat
         run: python scripts/moat-vectors.py | diff -u crates/moat/tests/vectors/moat-vectors.json -
 
+      # The loadout vectors are signed with MOAT's reference signer and must
+      # be exactly what the generator emits.
+      - name: Loadout vector drift
+        env:
+          MOAT_DIR: moat
+        run: python scripts/loadout-vectors.py | diff -u crates/library/tests/vectors/loadout-vectors.json -
+
       - name: Install rustfmt and clippy
         run: rustup component add rustfmt clippy
 

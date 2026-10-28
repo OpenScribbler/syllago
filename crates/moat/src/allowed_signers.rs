@@ -97,9 +97,10 @@ impl AllowedSigners {
     }
 }
 
-/// The list's bytes with a leading UTF-8 byte-order mark removed and each
-/// CRLF and lone CR replaced by LF.
-fn canonical_text(bytes: &[u8]) -> Vec<u8> {
+/// A text's canonical form, as a list digest takes it: its bytes with a
+/// leading UTF-8 byte-order mark removed and each CRLF and lone CR replaced
+/// by LF.
+pub fn canonical_text(bytes: &[u8]) -> Vec<u8> {
     let bytes = bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(bytes);
     let mut out = Vec::with_capacity(bytes.len());
     let mut iter = bytes.iter().peekable();
