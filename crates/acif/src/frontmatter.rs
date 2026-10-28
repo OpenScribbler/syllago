@@ -149,27 +149,58 @@ fn scan_events(text: &str) -> Result<(), Error> {
 /// The text with each `:` TAB the scanner would refuse made `:` SPACE.
 /// YAML 1.2 separates with a tab as with a space, but saphyr's scanner
 /// refuses a tab after a value indicator's colon. Outside a quoted or block
-/// scalar, `:` followed by whitespace is always an indicator, so the swap
-/// changes no value there; inside one the tab is content, so a first parse
-/// of the fully swapped text finds those scalars and their tabs are put
-/// back. A text the swap leaves unparseable is returned swapped, for the
-/// event scan to reject.
+/// scalar or a comment, `:` followed by whitespace is always an indicator,
+/// so the swap changes no value there; inside a scalar the tab is content,
+/// so a first parse of the fully swapped text finds those scalars and
+/// their tabs are put back. A text the swap leaves unparseable is returned
+/// swapped, for the event scan to reject. Where the scalars cannot be
+/// placed, the text is returned as it was, and the event scan rejects the
+/// first refused tab.
 fn separate_tabs(text: &str) -> Cow<'_, str> {
     if !text.contains(":\t") {
         return Cow::Borrowed(text);
     }
     let swapped = text.replace(":\t", ": ");
-    // The parser's markers count characters, not bytes.
-    let byte_at: Vec<usize> = swapped
+    // The scanner counts a directive's parameters in bytes and everything
+    // else in characters. Directive lines, which can only come before the
+    // first `---`, are made comments of the same length for this parse, so
+    // every marker counts characters.
+    let mut located = swapped.clone().into_bytes();
+    let mut at = 0;
+    for line in swapped.split_inclusive('\n') {
+        if line.starts_with("---") {
+            break;
+        }
+        if line.starts_with('%') {
+            located[at] = b'#';
+        }
+        at += line.len();
+    }
+    let located = String::from_utf8(located).expect("only ASCII bytes were swapped");
+    let byte_at: Vec<usize> = located
         .char_indices()
         .map(|(at, _)| at)
-        .chain([swapped.len()])
+        .chain([located.len()])
         .collect();
     let mut content = Vec::new();
-    for event in Parser::new_from_str(&swapped) {
+    for event in Parser::new_from_str(&located) {
         match event {
             Ok((Event::Scalar(_, style, ..), span)) if style != ScalarStyle::Plain => {
-                content.push(byte_at[span.start.index()]..byte_at[span.end.index()]);
+                let (Some(&start), Some(&end)) = (
+                    byte_at.get(span.start.index()),
+                    byte_at.get(span.end.index()),
+                ) else {
+                    return Cow::Borrowed(text);
+                };
+                let quote = match style {
+                    ScalarStyle::DoubleQuoted => Some(b'"'),
+                    ScalarStyle::SingleQuoted => Some(b'\''),
+                    _ => None,
+                };
+                if quote.is_some_and(|quote| located.as_bytes().get(start) != Some(&quote)) {
+                    return Cow::Borrowed(text);
+                }
+                content.push(start..end);
             }
             Ok(_) => {}
             Err(_) => return Cow::Owned(swapped),
@@ -178,7 +209,7 @@ fn separate_tabs(text: &str) -> Cow<'_, str> {
     let mut bytes = swapped.into_bytes();
     for range in content {
         for at in range.clone().skip(1) {
-            if text.as_bytes()[at - 1..=at] == *b":\t" {
+            if text.as_bytes().get(at - 1..=at) == Some(b":\t") {
                 bytes[at] = b'\t';
             }
         }
@@ -190,7 +221,14 @@ fn to_json(node: &Yaml) -> Result<Value, Error> {
     Ok(match node {
         Yaml::Value(Scalar::Null) => Value::Null,
         Yaml::Value(Scalar::Boolean(value)) => Value::Bool(*value),
-        Yaml::Value(Scalar::Integer(value)) => Value::from(*value),
+        // The loader also reads signed hex and octal and a doubled sign as
+        // ints, which the source-text check does not see.
+        Yaml::Value(Scalar::Integer(value)) if value.unsigned_abs() <= MAX_SAFE_INTEGER => {
+            Value::from(*value)
+        }
+        Yaml::Value(Scalar::Integer(_)) => {
+            return Err(malformed("frontmatter holds an integer beyond 2^53-1"));
+        }
         Yaml::Value(Scalar::FloatingPoint(value)) => Number::from_f64(value.into_inner())
             .map(Value::Number)
             .ok_or_else(|| malformed("frontmatter holds a non-finite number"))?,
@@ -328,6 +366,14 @@ mod tests {
             section("description: Café — x\ndisplay_name:\t\tDemo\n"),
             section("description: Café — x\ndisplay_name: Demo\n")
         );
+        for padding in ["", "# pad\n"] {
+            let document = format!("%FOO ééé\n--- \nx: \"a:\tb\"\ny:\t1\n{padding}");
+            assert_eq!(
+                section(&document),
+                section("x: \"a:\tb\"\ny: 1\n"),
+                "{document:?}"
+            );
+        }
         assert_eq!(
             section("x: \"éééé:\tb\"\n").unwrap()["skill"]["x"],
             "éééé:\tb"
@@ -380,11 +426,14 @@ mod tests {
             "a: \"\u{1B}[1m\"\n",
             "a: one\u{2028}two\n",
             "a: \"\\uFDD0\"\n",
-            "\u{FFFF}: x\n",
+            "\u{FDD0}: x\n",
             "a: 9007199254740992\n",
             "a: -9007199254740992\n",
             "a: 99999999999999999999\n",
             "a: 0x20000000000000\n",
+            "a: 0x-20000000000000\n",
+            "a: ++9007199254740992\n",
+            "a: 0o+777777777777777777\n",
         ] {
             assert_eq!(
                 reject(document),
