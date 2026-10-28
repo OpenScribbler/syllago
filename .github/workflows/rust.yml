@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  ACIF_SHA: e26f4624873946c20920d4ec59def0fea7187552
+  ACIF_SHA: d5260f766f2988cbf7ae5ad0675422935fa6ba6a
   MOAT_SHA: 8bed4c033f435d2f9227c81e937f44ff46204206
   CARGO_TERM_COLOR: always
 

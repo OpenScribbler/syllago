@@ -71,7 +71,6 @@ pub fn ingest_body(kind: Kind, body: &Body, entry_file: &str) -> Result<Item, Er
 /// `publisher_section` itself. A `kind` the section declares wins over
 /// the `kind` argument.
 pub fn ingest_sidecar(kind: Option<Kind>, sidecar: &Map<String, Value>) -> Result<Item, Error> {
-    check_forbidden_fields(sidecar)?;
     if !(sidecar.contains_key("publisher_section") || sidecar.contains_key("registry_section")) {
         return canonicalize(kind, Some(sidecar.clone()));
     }
@@ -125,7 +124,19 @@ fn canonicalize(
 ) -> Result<Item, Error> {
     let empty = Map::new();
     let section = publisher_section.as_ref().unwrap_or(&empty);
+    // The forbidden fields are checked at the section's top level and as
+    // direct members of its kind block (core §5.2), before `kind` itself
+    // (publisher §5.6 steps 4 and 5). The kind block is the declared kind's
+    // when that kind is valid, else the caller's, as frontmatter places it.
     check_forbidden_fields(section)?;
+    let block_kind = section
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(Kind::parse)
+        .or(kind);
+    if let Some(Value::Object(block)) = block_kind.and_then(|kind| section.get(kind.as_str())) {
+        check_forbidden_fields(block)?;
+    }
     let kind = check_envelope(section)?
         .or(kind)
         .ok_or_else(|| Error::Unsupported("the item's kind is unknown".into()))?;
@@ -167,6 +178,150 @@ fn canonicalize(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn skill_from(frontmatter: &str) -> Result<Item, Error> {
+        let text = format!("---\n{frontmatter}---\nUse this skill.\n");
+        ingest_body(
+            Kind::Skill,
+            &Body::from_files(&[("SKILL.md", text.as_bytes())]),
+            "SKILL.md",
+        )
+    }
+
+    fn rejects_with(result: Result<Item, Error>, id: &str, field: Option<&str>) {
+        match result {
+            Err(Error::Nonconformant(diagnostic)) => {
+                assert_eq!(diagnostic.id, id);
+                if let Some(field) = field {
+                    assert_eq!(diagnostic.params["field"], field);
+                }
+            }
+            other => panic!("expected {id}, got {other:?}"),
+        }
+    }
+
+    // A top-level frontmatter key outside the envelope is a direct member of
+    // the kind block, so a forbidden name there rejects (publisher §5.6 step
+    // 4), ahead of the step 5 `kind` check.
+    #[test]
+    fn forbidden_frontmatter_key_rejects_before_kind() {
+        rejects_with(
+            skill_from("display_name: Demo\nresolved_version: 1.0.0\n"),
+            "acif.envelope.forbidden_field",
+            Some("resolved_version"),
+        );
+        rejects_with(
+            skill_from("kind: widget\nderived_version: 1.0.0\n"),
+            "acif.envelope.forbidden_field",
+            Some("derived_version"),
+        );
+    }
+
+    // The forbidden names are checked in the sections, not among the
+    // record's own keys (core §5.2).
+    #[test]
+    fn record_level_forbidden_name_is_not_checked() {
+        let record = serde_json::json!({
+            "publisher_section": {"kind": "skill", "display_name": "Demo"},
+            "resolved_version": "1.0.0",
+        });
+        assert!(ingest_sidecar(Some(Kind::Skill), record.as_object().unwrap()).is_ok());
+    }
+
+    // A plain sidecar is the `publisher_section`, so a forbidden name as a
+    // direct member of its kind block rejects (core §5.2).
+    #[test]
+    fn sidecar_kind_block_forbidden_name_rejects() {
+        let sidecar = serde_json::json!({
+            "kind": "skill",
+            "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+            "display_name": "Demo",
+            "skill": {"resolved_version": "1.0.0"},
+        });
+        rejects_with(
+            ingest_sidecar(Some(Kind::Skill), sidecar.as_object().unwrap()),
+            "acif.envelope.forbidden_field",
+            Some("resolved_version"),
+        );
+    }
+
+    // A null-valued forbidden key is absent, so it does not reject (publisher
+    // §5.6 step 3).
+    #[test]
+    fn null_forbidden_frontmatter_key_is_absent() {
+        let item = skill_from("display_name: Demo\nresolved_version:\n").unwrap();
+        assert_eq!(
+            item.publisher_section,
+            Some(
+                serde_json::json!({"display_name": "Demo"})
+                    .as_object()
+                    .unwrap()
+                    .clone()
+            )
+        );
+    }
+
+    // Only the section's top level and the kind block's direct members are
+    // checked (core §5.2); a forbidden name nested deeper is extension data.
+    #[test]
+    fn nested_forbidden_name_is_extension_data() {
+        let item = skill_from(
+            "display_name: Demo\nskill:\n  resolved_version: 1.0.0\nmetadata:\n  resolved_version: 1.0.0\n",
+        )
+        .unwrap();
+        assert_eq!(
+            item.publisher_section.unwrap()["skill"],
+            serde_json::json!({
+                "skill": {"resolved_version": "1.0.0"},
+                "metadata": {"resolved_version": "1.0.0"},
+            })
+        );
+    }
+
+    // `id` is lowercase hex only (core §5.1), from frontmatter as from a
+    // sidecar.
+    #[test]
+    fn uppercase_hex_id_is_invalid() {
+        for id in [
+            "F47AC10B-58CC-4372-A567-0E02B2C3D479",
+            "f47ac10b-58cc-4372-A567-0e02b2c3d479",
+        ] {
+            rejects_with(
+                skill_from(&format!("id: {id}\ndisplay_name: Demo\n")),
+                "acif.envelope.id_invalid",
+                None,
+            );
+        }
+        assert!(skill_from("id: f47ac10b-58cc-4372-a567-0e02b2c3d479\n").is_ok());
+    }
+
+    // On an item record the forbidden names are checked at the top level of
+    // `registry_section` too, and nowhere deeper.
+    #[test]
+    fn record_checks_forbidden_names_per_section() {
+        let record = |value: serde_json::Value| value.as_object().unwrap().clone();
+        rejects_with(
+            ingest_sidecar(
+                Some(Kind::Skill),
+                &record(serde_json::json!({
+                    "publisher_section": {"display_name": "Demo"},
+                    "registry_section": {"resolved_version": "1.0.0"},
+                })),
+            ),
+            "acif.envelope.forbidden_field",
+            Some("resolved_version"),
+        );
+        assert!(
+            ingest_sidecar(
+                Some(Kind::Skill),
+                &record(serde_json::json!({
+                    "publisher_section": {"display_name": "Demo"},
+                    "registry_section": {"metadata": {"resolved_version": "1.0.0"}},
+                })),
+            )
+            .is_ok()
+        );
+    }
 
     // Agent Skills declares `license` as a string. It is not the envelope's
     // license object, so it stays in the skill block as written.

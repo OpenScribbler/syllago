@@ -33,7 +33,7 @@ pub(crate) fn publisher_section(
     scan_events(text)?;
     let documents =
         Yaml::load_from_str(text).map_err(|error| malformed(format!("frontmatter: {error}")))?;
-    let fields = match documents.as_slice() {
+    let mut fields = match documents.as_slice() {
         [] => return Ok(None),
         [document] => match to_json(document)? {
             Value::Null => return Ok(None),
@@ -42,6 +42,13 @@ pub(crate) fn publisher_section(
         },
         _ => return Err(malformed("frontmatter holds more than one YAML document")),
     };
+    // A null-valued top-level key is absent, dropped before every later step;
+    // a block left with no key, `{}` included, declares nothing (publisher
+    // §5.6 steps 2 and 3).
+    fields.retain(|_, value| !value.is_null());
+    if fields.is_empty() {
+        return Ok(None);
+    }
     let kind = fields
         .get("kind")
         .and_then(Value::as_str)
@@ -129,6 +136,34 @@ fn to_json(node: &Yaml) -> Result<Value, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Null-valued top-level keys are dropped before the forbidden-field check
+    // and placement; nested nulls stay. A block holding only nulls, or `{}`,
+    // declares nothing (publisher §5.6 steps 2 and 3).
+    #[test]
+    fn null_top_level_keys_are_absent() {
+        let section = |document: &str| publisher_section(Kind::Skill, document.as_bytes()).unwrap();
+        assert_eq!(
+            section("display_name: Demo\nresolved_version:\ndescription: ~\nallowed-tools: null\n"),
+            Some(
+                serde_json::json!({"display_name": "Demo"})
+                    .as_object()
+                    .unwrap()
+                    .clone()
+            )
+        );
+        assert_eq!(
+            section("display_name: Demo\nmetadata:\n  x: null\n"),
+            Some(
+                serde_json::json!({"display_name": "Demo", "skill": {"metadata": {"x": null}}})
+                    .as_object()
+                    .unwrap()
+                    .clone()
+            )
+        );
+        assert_eq!(section("description:\n"), None);
+        assert_eq!(section("{}\n"), None);
+    }
 
     // Aliases are rejected before the loader can expand them: a few hundred
     // bytes of nested aliases otherwise expand to gigabytes. These documents
