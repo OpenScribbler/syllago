@@ -16,7 +16,7 @@ require (
 	github.com/lrstanley/bubblezone v1.0.0
 	github.com/muesli/termenv v0.16.0
 	github.com/pelletier/go-toml/v2 v2.4.3
-	github.com/sigstore/protobuf-specs v0.5.1
+	github.com/sigstore/protobuf-specs v0.5.2
 	github.com/sigstore/rekor v1.5.3
 	github.com/sigstore/sigstore v1.10.9
 	github.com/sigstore/sigstore-go v1.3.0
